@@ -1,7 +1,7 @@
 
 
 import User from "../models/userShema.js";
-import EmployeeMaster from "../models/employeeMasterSchema.js"; // ✅ ADD THIS
+import EmployeeMaster from "../models/employeeMasterSchema.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -16,6 +16,11 @@ export const register = async (req, res) => {
       department
     } = req.body;
 
+    // 🔍 check duplicate user
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ msg: "Email already exists" });
+
     const hash = await bcrypt.hash(password, 10);
 
     // 🔥 CREATE USER
@@ -28,19 +33,25 @@ export const register = async (req, res) => {
       department
     });
 
-    // 🔥 CREATE EMPLOYEE MASTER
-    await EmployeeMaster.create({
-      employeeId,
-      name,
-      position,
-      department
-    });
+    // 🔥 CREATE EMPLOYEE MASTER (avoid crash if duplicate)
+    const existingEmp = await EmployeeMaster.findOne({ employeeId });
+
+    if (!existingEmp) {
+      await EmployeeMaster.create({
+        employeeId,
+        name,
+        position,
+        department
+      });
+    }
 
     res.status(201).json(user);
 
   } catch (err) {
     console.error("REGISTER ERROR:", err);
-    res.status(500).json({ msg: err.message });
+    res.status(500).json({
+      msg: err.message || "Server error"
+    });
   }
 };
 
