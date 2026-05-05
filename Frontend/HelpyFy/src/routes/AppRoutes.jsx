@@ -4,10 +4,12 @@ import Register from "../pages/Register";
 import Dashboard from "../pages/Dashboard";
 import CreateTicket from "../pages/CreateTicket";
 import AdminTickets from "../pages/AdminTickets";
+import AdminEmployeeMaster from "../pages/AdminEmployeeMaster";
+import AdminAssets from "../pages/AdminAsset"; // ✅ NEW
 import ProtectedRoute from "../components/ProtectedRoute";
 import Layout from "../layouts/Mainlayout";
 import AdminLayout from "../layouts/AdminLayout";
-import MyTickets from "../pages/MyTickets"; // ✅ ADD THIS
+import MyTickets from "../pages/MyTickets";
 
 export default function AppRoutes() {
   return (
@@ -23,8 +25,6 @@ export default function AppRoutes() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create" element={<CreateTicket />} />
-
-          {/* ✅ FIX: My Tickets page */}
           <Route path="/tickets" element={<MyTickets />} />
         </Route>
       </Route>
@@ -32,7 +32,12 @@ export default function AppRoutes() {
       {/* admin routes */}
       <Route element={<ProtectedRoute role="admin" />}>
         <Route element={<AdminLayout />}>
+
           <Route path="/admin" element={<AdminTickets />} />
+          <Route path="/employees" element={<AdminEmployeeMaster />} />
+          {/* 🔥 ASSET MANAGEMENT */}
+          <Route path="/assets" element={<AdminAssets />} />
+
         </Route>
       </Route>
 

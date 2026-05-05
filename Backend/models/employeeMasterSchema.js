@@ -1,14 +1,15 @@
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema(
+const employeeSchema = new mongoose.Schema(
   {
-    name: String,
-    email: { type: String, unique: true },
-    password: String,
-
     employeeId: {
       type: String,
       unique: true,
+      required: true
+    },
+
+    name: {
+      type: String,
       required: true
     },
 
@@ -22,13 +23,13 @@ const userSchema = new mongoose.Schema(
       default: "General"
     },
 
-    role: {
+    status: {
       type: String,
-      enum: ["user", "admin"],
-      default: "user"
+      enum: ["active", "inactive"],
+      default: "active"
     }
   },
   { timestamps: true }
 );
 
-export default mongoose.model("User", userSchema);
+export default mongoose.model("EmployeeMaster", employeeSchema);

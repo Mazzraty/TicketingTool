@@ -18,6 +18,7 @@ export default function Navbar() {
     navigate("/login");
   };
 
+  // close dropdown when click outside
   useEffect(() => {
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -33,20 +34,22 @@ export default function Navbar() {
       ? "text-indigo-600 font-semibold"
       : "text-gray-600 hover:text-indigo-600";
 
-  // 🔥 CLEAN ROLE-BASED NAV RULES
+  // 🔥 ROLE BASED MENU
   const navItems = useMemo(() => {
     if (role === "admin") {
       return [
         { label: "Dashboard", path: "/" },
         { label: "Admin Panel", path: "/admin" },
+        { label: "Assets", path: "/assets" },
+        { label: "Employees", path: "/employees" } // 🔥 NEW
       ];
     }
 
-    // USER ROLE
     return [
       { label: "Dashboard", path: "/" },
       { label: "Create Ticket", path: "/create" },
       { label: "My Tickets", path: "/tickets" },
+      { label: "Employees", path: "/employees" }
     ];
   }, [role]);
 
@@ -71,7 +74,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* NAV */}
+        {/* NAV (DESKTOP) */}
         <nav className="hidden md:flex items-center gap-6 text-sm">
           {navItems.map((item) => (
             <Link
@@ -134,7 +137,7 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* MOBILE */}
+          {/* MOBILE MENU BUTTON */}
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
             className="md:hidden p-2 rounded hover:bg-gray-100"
@@ -144,7 +147,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* MOBILE NAV */}
+      {/* MOBILE MENU */}
       {mobileMenu && (
         <div className="md:hidden border-t bg-white px-6 py-4 space-y-3 text-sm">
           {navItems.map((item) => (
@@ -152,7 +155,7 @@ export default function Navbar() {
               key={item.path}
               to={item.path}
               onClick={() => setMobileMenu(false)}
-              className="block text-gray-700"
+              className="block text-gray-700 hover:text-indigo-600"
             >
               {item.label}
             </Link>
