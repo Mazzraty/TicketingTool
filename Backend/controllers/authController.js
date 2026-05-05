@@ -1,37 +1,47 @@
+
+
 import User from "../models/userShema.js";
+import EmployeeMaster from "../models/employeeMasterSchema.js"; // ✅ ADD THIS
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 export const register = async (req, res) => {
-  const {
-    name,
-    email,
-    password,
-    employeeId,
-    position,
-    department
-  } = req.body;
+  try {
+    const {
+      name,
+      email,
+      password,
+      employeeId,
+      position,
+      department
+    } = req.body;
 
-  const hash = await bcrypt.hash(password, 10);
+    const hash = await bcrypt.hash(password, 10);
 
-  const user = await User.create({
-    name,
-    email,
-    password: hash,
-    employeeId,
-    position,
-    department
-  });
+    // 🔥 CREATE USER
+    const user = await User.create({
+      name,
+      email,
+      password: hash,
+      employeeId,
+      position,
+      department
+    });
 
-  // 🔥 CREATE EMPLOYEE MASTER AUTOMATICALLY
-  await EmployeeMaster.create({
-    employeeId,
-    name,
-    position,
-    department
-  });
+    // 🔥 CREATE EMPLOYEE MASTER
+    await EmployeeMaster.create({
+      employeeId,
+      name,
+      position,
+      department
+    });
 
-  res.json(user);
+    res.status(201).json(user);
+
+  } catch (err) {
+    console.error("REGISTER ERROR:", err);
+    res.status(500).json({ msg: err.message });
+  }
 };
 
 export const login = async (req, res) => {
