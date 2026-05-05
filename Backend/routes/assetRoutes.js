@@ -1,25 +1,27 @@
 import express from "express";
 import {
+  createAsset,
+  getAssets,
   assignAsset,
   returnAsset,
   getEmployeeHistory,
-  getAssetHistory,
+  getAssetHistory
 } from "../controllers/assetController.js";
 
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 🔥 ASSIGN (Admin only)
-router.post("/assign", protect, adminOnly, assignAsset);
+// ASSET CRUD
+router.post("/", protect, adminOnly, createAsset);
+router.get("/", protect, adminOnly, getAssets);
 
-// 🔥 RETURN (Admin only)
+// ASSIGN / RETURN
+router.post("/assign", protect, adminOnly, assignAsset);
 router.post("/return", protect, adminOnly, returnAsset);
 
-// 🔥 EMPLOYEE HISTORY
+// HISTORY
 router.get("/employee/:id", protect, getEmployeeHistory);
-
-// 🔥 ASSET HISTORY
 router.get("/asset/:code", protect, getAssetHistory);
 
 export default router;

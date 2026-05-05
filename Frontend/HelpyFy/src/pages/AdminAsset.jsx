@@ -3,178 +3,172 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 
 export default function AdminAssets() {
-  const [employeeId, setEmployeeId] = useState("");
   const [assetCode, setAssetCode] = useState("");
+  const [name, setName] = useState("");
+  const [type, setType] = useState("");
+
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState("");
 
   const [empHistory, setEmpHistory] = useState([]);
-  const [assetHistory, setAssetHistory] = useState([]);
 
-  // 🔥 ASSIGN ASSET
+  // 🔥 LOAD EMPLOYEES
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const res = await api.get("/employees");
+        setEmployees(res.data);
+      } catch (err) {
+        toast.error("Failed to load employees");
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  // ➕ ADD ASSET
+  const addAsset = async () => {
+    try {
+      await api.post("/assets", { assetCode, name, type });
+      toast.success("Asset Added");
+
+      setAssetCode("");
+      setName("");
+      setType("");
+    } catch (err) {
+      toast.error(err.response?.data?.msg || "Error");
+    }
+  };
+
+  // 🔥 ASSIGN
   const assign = async () => {
     try {
       await api.post("/assets/assign", {
-        employeeId,
-        assetCode,
+        employeeId: selectedEmployee,
+        assetCode
       });
+
       toast.success("Asset Assigned");
     } catch (err) {
-      toast.error(err.response?.data?.msg || "Assign Failed");
+      toast.error(err.response?.data?.msg || "Error");
     }
   };
 
-  // 🔥 RETURN ASSET
+  // 🔄 RETURN
   const returnAsset = async () => {
     try {
-      await api.post("/assets/return", {
-        assetCode,
-      });
+      await api.post("/assets/return", { assetCode });
       toast.success("Asset Returned");
     } catch (err) {
-      toast.error(err.response?.data?.msg || "Return Failed");
-    }
-  };
-
-  // 🔥 EMPLOYEE HISTORY
-  const loadEmployeeHistory = async () => {
-    try {
-      const res = await api.get(`/assets/employee/${employeeId}`);
-      setEmpHistory(res.data);
-    } catch (err) {
-      toast.error("Employee not found");
-    }
-  };
-
-  // 🔥 ASSET HISTORY
-  const loadAssetHistory = async () => {
-    try {
-      const res = await api.get(`/assets/asset/${assetCode}`);
-      setAssetHistory(res.data);
-    } catch (err) {
-      toast.error("Asset not found");
+      toast.error(err.response?.data?.msg || "Error");
     }
   };
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
 
-      <h1 className="text-2xl font-bold">Asset Management</h1>
+      {/* HEADER */}
+      <h1 className="text-3xl font-bold text-gray-800">
+        Asset Management System
+      </h1>
 
-      {/* ASSIGN */}
-      <div className="p-4 bg-white shadow rounded">
-        <h2 className="font-semibold mb-2">Assign Asset</h2>
+      {/* GRID */}
+      <div className="grid md:grid-cols-2 gap-6">
 
-        <input
-          className="border p-2 mr-2"
-          placeholder="Employee ID"
-          value={employeeId}
-          onChange={(e) => setEmployeeId(e.target.value)}
-        />
+        {/* ➕ ADD ASSET CARD */}
+        <div className="bg-white rounded-2xl shadow p-6 space-y-4">
+          <h2 className="text-xl font-semibold text-gray-700">
+            ➕ Add New Asset
+          </h2>
 
-        <input
-          className="border p-2 mr-2"
-          placeholder="Asset Code"
-          value={assetCode}
-          onChange={(e) => setAssetCode(e.target.value)}
-        />
+          <input
+            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-400 outline-none"
+            placeholder="Asset Code (e.g. LAP001)"
+            value={assetCode}
+            onChange={(e) => setAssetCode(e.target.value)}
+          />
 
-        <button onClick={assign} className="bg-blue-600 text-white px-4 py-2">
-          Assign
-        </button>
-      </div>
+          <input
+            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-400 outline-none"
+            placeholder="Asset Name (Dell Laptop)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-      {/* RETURN */}
-      <div className="p-4 bg-white shadow rounded">
-        <h2 className="font-semibold mb-2">Return Asset</h2>
+          <input
+            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-400 outline-none"
+            placeholder="Type (Laptop/Desktop)"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+          />
 
-        <input
-          className="border p-2 mr-2"
-          placeholder="Asset Code"
-          value={assetCode}
-          onChange={(e) => setAssetCode(e.target.value)}
-        />
-
-        <button
-          onClick={returnAsset}
-          className="bg-red-600 text-white px-4 py-2"
-        >
-          Return
-        </button>
-      </div>
-
-      {/* EMPLOYEE HISTORY */}
-      <div className="p-4 bg-white shadow rounded">
-        <h2 className="font-semibold mb-2">Employee History</h2>
-
-        <input
-          className="border p-2 mr-2"
-          placeholder="Employee ID"
-          value={employeeId}
-          onChange={(e) => setEmployeeId(e.target.value)}
-        />
-
-        <button
-          onClick={loadEmployeeHistory}
-          className="bg-green-600 text-white px-4 py-2"
-        >
-          Load
-        </button>
-
-        <div className="mt-4">
-          {empHistory.map((h) => (
-            <div key={h._id} className="border p-2 mb-2">
-              <p>Asset: {h.asset?.assetCode}</p>
-              <p>Status: {h.status}</p>
-              <p>
-                From: {new Date(h.assignedDate).toLocaleString()}
-              </p>
-              <p>
-                To:{" "}
-                {h.returnedDate
-                  ? new Date(h.returnedDate).toLocaleString()
-                  : "Active"}
-              </p>
-            </div>
-          ))}
+          <button
+            onClick={addAsset}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition"
+          >
+            Add Asset
+          </button>
         </div>
-      </div>
 
-      {/* ASSET HISTORY */}
-      <div className="p-4 bg-white shadow rounded">
-        <h2 className="font-semibold mb-2">Asset History</h2>
+        {/* 🔥 ASSIGN CARD */}
+        <div className="bg-white rounded-2xl shadow p-6 space-y-4">
+          <h2 className="text-xl font-semibold text-gray-700">
+            🔥 Assign Asset
+          </h2>
 
-        <input
-          className="border p-2 mr-2"
-          placeholder="Asset Code"
-          value={assetCode}
-          onChange={(e) => setAssetCode(e.target.value)}
-        />
+          {/* Employee Dropdown */}
+          <select
+            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-green-400 outline-none"
+            value={selectedEmployee}
+            onChange={(e) => setSelectedEmployee(e.target.value)}
+          >
+            <option value="">Select Employee</option>
+            {employees.map((emp) => (
+              <option key={emp._id} value={emp.employeeId}>
+                {emp.name} ({emp.employeeId})
+              </option>
+            ))}
+          </select>
 
-        <button
-          onClick={loadAssetHistory}
-          className="bg-purple-600 text-white px-4 py-2"
-        >
-          Load
-        </button>
+          <input
+            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-green-400 outline-none"
+            placeholder="Asset Code"
+            value={assetCode}
+            onChange={(e) => setAssetCode(e.target.value)}
+          />
 
-        <div className="mt-4">
-          {assetHistory.map((h) => (
-            <div key={h._id} className="border p-2 mb-2">
-              <p>Employee: {h.employee?.employeeId}</p>
-              <p>Status: {h.status}</p>
-              <p>
-                From: {new Date(h.assignedDate).toLocaleString()}
-              </p>
-              <p>
-                To:{" "}
-                {h.returnedDate
-                  ? new Date(h.returnedDate).toLocaleString()
-                  : "Active"}
-              </p>
-            </div>
-          ))}
+          <button
+            onClick={assign}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold transition"
+          >
+            Assign Asset
+          </button>
         </div>
-      </div>
 
+        {/* 🔄 RETURN CARD */}
+        <div className="bg-white rounded-2xl shadow p-6 space-y-4 md:col-span-2">
+          <h2 className="text-xl font-semibold text-gray-700">
+            🔄 Return Asset
+          </h2>
+
+          <div className="flex gap-3">
+            <input
+              className="flex-1 border rounded-xl p-3 focus:ring-2 focus:ring-red-400 outline-none"
+              placeholder="Asset Code"
+              value={assetCode}
+              onChange={(e) => setAssetCode(e.target.value)}
+            />
+
+            <button
+              onClick={returnAsset}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 rounded-xl font-semibold"
+            >
+              Return
+            </button>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

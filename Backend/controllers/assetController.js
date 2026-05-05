@@ -2,71 +2,136 @@ import Asset from "../models/assetSchema.js";
 import EmployeeMaster from "../models/employeeMasterSchema.js";
 import AssetAssignment from "../models/assignmentSchema.js";
 
+/* =========================
+   ➕ CREATE ASSET
+========================= */
+export const createAsset = async (req, res) => {
+  try {
+    const { assetCode, name, type } = req.body;
+
+    const exists = await Asset.findOne({ assetCode });
+    if (exists)
+      return res.status(400).json({ msg: "Asset already exists" });
+
+    const asset = await Asset.create({
+      assetCode,
+      name,
+      type,
+      status: "available"
+    });
+
+    res.status(201).json(asset);
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
+/* =========================
+   📦 GET ALL ASSETS
+========================= */
+export const getAssets = async (req, res) => {
+  const assets = await Asset.find().sort({ createdAt: -1 });
+  res.json(assets);
+};
+
+/* =========================
+   🔥 ASSIGN ASSET
+========================= */
 export const assignAsset = async (req, res) => {
-  const { employeeId, assetCode } = req.body;
+  try {
+    const { employeeId, assetCode } = req.body;
 
-  const employee = await EmployeeMaster.findOne({ employeeId });
-  const asset = await Asset.findOne({ assetCode });
+    const employee = await EmployeeMaster.findOne({ employeeId });
+    const asset = await Asset.findOne({ assetCode });
 
-  if (!employee) return res.status(404).json({ msg: "Employee not found" });
-  if (!asset || asset.status !== "available")
-    return res.status(400).json({ msg: "Asset not available" });
+    if (!employee)
+      return res.status(404).json({ msg: "Employee not found" });
 
-  const assignment = await AssetAssignment.create({
-    employee: employee._id,
-    asset: asset._id
-  });
+    if (!asset)
+      return res.status(404).json({ msg: "Asset not found" });
 
-  asset.status = "assigned";
-  await asset.save();
+    if (asset.status !== "available")
+      return res.status(400).json({ msg: "Asset already assigned" });
 
-  res.json(assignment);
+    const assignment = await AssetAssignment.create({
+      employee: employee._id,
+      asset: asset._id,
+      status: "active",
+      assignedDate: new Date()
+    });
+
+    asset.status = "assigned";
+    await asset.save();
+
+    res.json(assignment);
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
 };
 
-
+/* =========================
+   🔄 RETURN ASSET
+========================= */
 export const returnAsset = async (req, res) => {
-  const { assetCode } = req.body;
+  try {
+    const { assetCode } = req.body;
 
-  const asset = await Asset.findOne({ assetCode });
+    const asset = await Asset.findOne({ assetCode });
 
-  const assignment = await AssetAssignment.findOne({
-    asset: asset._id,
-    status: "active"
-  });
+    if (!asset)
+      return res.status(404).json({ msg: "Asset not found" });
 
-  if (!assignment)
-    return res.status(404).json({ msg: "No active assignment" });
+    const assignment = await AssetAssignment.findOne({
+      asset: asset._id,
+      status: "active"
+    });
 
-  assignment.status = "closed";
-  assignment.returnedDate = new Date();
-  await assignment.save();
+    if (!assignment)
+      return res.status(404).json({ msg: "No active assignment" });
 
-  asset.status = "available";
-  await asset.save();
+    assignment.status = "closed";
+    assignment.returnedDate = new Date();
+    await assignment.save();
 
-  res.json({ msg: "Returned" });
+    asset.status = "available";
+    await asset.save();
+
+    res.json({ msg: "Asset returned" });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
 };
 
-
-
+/* =========================
+   👨 EMPLOYEE HISTORY
+========================= */
 export const getEmployeeHistory = async (req, res) => {
   const employee = await EmployeeMaster.findOne({
     employeeId: req.params.id
   });
 
+  if (!employee)
+    return res.status(404).json({ msg: "Employee not found" });
+
   const history = await AssetAssignment.find({
     employee: employee._id
   })
-    .populate("asset") // get laptop details
+    .populate("asset")
     .sort({ createdAt: -1 });
 
   res.json(history);
 };
 
+/* =========================
+   💻 ASSET HISTORY
+========================= */
 export const getAssetHistory = async (req, res) => {
   const asset = await Asset.findOne({
     assetCode: req.params.code
   });
+
+  if (!asset)
+    return res.status(404).json({ msg: "Asset not found" });
 
   const history = await AssetAssignment.find({
     asset: asset._id
