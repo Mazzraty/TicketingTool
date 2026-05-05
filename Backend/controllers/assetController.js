@@ -1,143 +1,297 @@
-import Asset from "../models/assetSchema.js";
-import EmployeeMaster from "../models/employeeMasterSchema.js";
-import AssetAssignment from "../models/assignmentSchema.js";
+import { useEffect, useState } from "react";
+import api from "../api/axios";
+import toast from "react-hot-toast";
 
-/* =========================
-   ➕ CREATE ASSET
-========================= */
-export const createAsset = async (req, res) => {
-  try {
-    const { assetCode, name, type } = req.body;
+export default function AdminAssets() {
+  const [assetCode, setAssetCode] = useState("");
+  const [name, setName] = useState("");
+  const [type, setType] = useState("");
 
-    const exists = await Asset.findOne({ assetCode });
-    if (exists)
-      return res.status(400).json({ msg: "Asset already exists" });
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState("");
 
-    const asset = await Asset.create({
-      assetCode,
-      name,
-      type,
-      status: "available"
-    });
+  const [empHistory, setEmpHistory] = useState([]);
+  const [assetHistory, setAssetHistory] = useState([]);
 
-    res.status(201).json(asset);
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
-  }
-};
+  // =========================
+  // LOAD EMPLOYEES
+  // =========================
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const res = await api.get("/employees");
+        setEmployees(res.data);
+      } catch (err) {
+        toast.error("Failed to load employees");
+      }
+    };
 
-/* =========================
-   📦 GET ALL ASSETS
-========================= */
-export const getAssets = async (req, res) => {
-  const assets = await Asset.find().sort({ createdAt: -1 });
-  res.json(assets);
-};
+    fetchEmployees();
+  }, []);
 
-/* =========================
-   🔥 ASSIGN ASSET
-========================= */
-export const assignAsset = async (req, res) => {
-  try {
-    const { employeeId, assetCode } = req.body;
+  // =========================
+  // ADD ASSET
+  // =========================
+  const addAsset = async () => {
+    try {
+      await api.post("/assets", {
+        assetCode,
+        name,
+        type,
+      });
 
-    const employee = await EmployeeMaster.findOne({ employeeId });
-    const asset = await Asset.findOne({ assetCode });
+      toast.success("Asset Added");
 
-    if (!employee)
-      return res.status(404).json({ msg: "Employee not found" });
+      setAssetCode("");
+      setName("");
+      setType("");
+    } catch (err) {
+      toast.error(err.response?.data?.msg || "Error adding asset");
+    }
+  };
 
-    if (!asset)
-      return res.status(404).json({ msg: "Asset not found" });
+  // =========================
+  // ASSIGN ASSET
+  // =========================
+  const assign = async () => {
+    try {
+      await api.post("/assets/assign", {
+        employeeId: selectedEmployee,
+        assetCode,
+      });
 
-    if (asset.status !== "available")
-      return res.status(400).json({ msg: "Asset already assigned" });
+      toast.success("Asset Assigned");
 
-    const assignment = await AssetAssignment.create({
-      employee: employee._id,
-      asset: asset._id,
-      status: "active",
-      assignedDate: new Date()
-    });
+      loadEmpHistory();
+      loadAssetHistory();
+    } catch (err) {
+      toast.error(err.response?.data?.msg || "Assign failed");
+    }
+  };
 
-    asset.status = "assigned";
-    await asset.save();
+  // =========================
+  // RETURN ASSET
+  // =========================
+  const returnAsset = async () => {
+    try {
+      await api.post("/assets/return", { assetCode });
 
-    res.json(assignment);
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
-  }
-};
+      toast.success("Asset Returned");
 
-/* =========================
-   🔄 RETURN ASSET
-========================= */
-export const returnAsset = async (req, res) => {
-  try {
-    const { assetCode } = req.body;
+      loadEmpHistory();
+      loadAssetHistory();
+    } catch (err) {
+      toast.error(err.response?.data?.msg || "Return failed");
+    }
+  };
 
-    const asset = await Asset.findOne({ assetCode });
+  // =========================
+  // EMPLOYEE HISTORY
+  // =========================
+  const loadEmpHistory = async () => {
+    if (!selectedEmployee) {
+      toast.error("Select employee");
+      return;
+    }
 
-    if (!asset)
-      return res.status(404).json({ msg: "Asset not found" });
+    try {
+      const res = await api.get(
+        `/assets/employee/${selectedEmployee}`
+      );
+      setEmpHistory(res.data);
+    } catch (err) {
+      toast.error("No employee history");
+    }
+  };
 
-    const assignment = await AssetAssignment.findOne({
-      asset: asset._id,
-      status: "active"
-    });
+  // =========================
+  // ASSET HISTORY
+  // =========================
+  const loadAssetHistory = async () => {
+    if (!assetCode) {
+      toast.error("Enter asset code");
+      return;
+    }
 
-    if (!assignment)
-      return res.status(404).json({ msg: "No active assignment" });
+    try {
+      const res = await api.get(`/assets/asset/${assetCode}`);
+      setAssetHistory(res.data);
+    } catch (err) {
+      toast.error("No asset history");
+    }
+  };
 
-    assignment.status = "closed";
-    assignment.returnedDate = new Date();
-    await assignment.save();
+  return (
+    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
 
-    asset.status = "available";
-    await asset.save();
+      <h1 className="text-3xl font-bold text-gray-800">
+        Asset Management System
+      </h1>
 
-    res.json({ msg: "Asset returned" });
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
-  }
-};
+      {/* ===================== */}
+      {/* GRID */}
+      {/* ===================== */}
+      <div className="grid md:grid-cols-2 gap-6">
 
-/* =========================
-   👨 EMPLOYEE HISTORY
-========================= */
-export const getEmployeeHistory = async (req, res) => {
-  const employee = await EmployeeMaster.findOne({
-    employeeId: req.params.id
-  });
+        {/* ADD ASSET */}
+        <div className="bg-white p-6 rounded-2xl shadow space-y-4">
+          <h2 className="text-xl font-semibold">➕ Add Asset</h2>
 
-  if (!employee)
-    return res.status(404).json({ msg: "Employee not found" });
+          <input
+            className="w-full border p-3 rounded-xl"
+            placeholder="Asset Code"
+            value={assetCode}
+            onChange={(e) => setAssetCode(e.target.value)}
+          />
 
-  const history = await AssetAssignment.find({
-    employee: employee._id
-  })
-    .populate("asset")
-    .sort({ createdAt: -1 });
+          <input
+            className="w-full border p-3 rounded-xl"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-  res.json(history);
-};
+          <input
+            className="w-full border p-3 rounded-xl"
+            placeholder="Type"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+          />
 
-/* =========================
-   💻 ASSET HISTORY
-========================= */
-export const getAssetHistory = async (req, res) => {
-  const asset = await Asset.findOne({
-    assetCode: req.params.code
-  });
+          <button
+            onClick={addAsset}
+            className="w-full bg-blue-600 text-white p-3 rounded-xl"
+          >
+            Add Asset
+          </button>
+        </div>
 
-  if (!asset)
-    return res.status(404).json({ msg: "Asset not found" });
+        {/* ASSIGN */}
+        <div className="bg-white p-6 rounded-2xl shadow space-y-4">
+          <h2 className="text-xl font-semibold">🔥 Assign Asset</h2>
 
-  const history = await AssetAssignment.find({
-    asset: asset._id
-  })
-    .populate("employee")
-    .sort({ createdAt: -1 });
+          <select
+            className="w-full border p-3 rounded-xl"
+            value={selectedEmployee}
+            onChange={(e) => setSelectedEmployee(e.target.value)}
+          >
+            <option value="">Select Employee</option>
+            {employees.map((emp) => (
+              <option key={emp._id} value={emp.employeeId}>
+                {emp.name} ({emp.employeeId})
+              </option>
+            ))}
+          </select>
 
-  res.json(history);
-};
+          <input
+            className="w-full border p-3 rounded-xl"
+            placeholder="Asset Code"
+            value={assetCode}
+            onChange={(e) => setAssetCode(e.target.value)}
+          />
+
+          <button
+            onClick={assign}
+            className="w-full bg-green-600 text-white p-3 rounded-xl"
+          >
+            Assign
+          </button>
+        </div>
+
+        {/* RETURN */}
+        <div className="bg-white p-6 rounded-2xl shadow md:col-span-2 space-y-4">
+          <h2 className="text-xl font-semibold">🔄 Return Asset</h2>
+
+          <div className="flex gap-3">
+            <input
+              className="flex-1 border p-3 rounded-xl"
+              placeholder="Asset Code"
+              value={assetCode}
+              onChange={(e) => setAssetCode(e.target.value)}
+            />
+
+            <button
+              onClick={returnAsset}
+              className="bg-red-600 text-white px-6 rounded-xl"
+            >
+              Return
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ===================== */}
+      {/* HISTORY SECTION */}
+      {/* ===================== */}
+      <div className="grid md:grid-cols-2 gap-6 mt-10">
+
+        {/* EMP HISTORY */}
+        <div className="bg-white p-6 rounded-2xl shadow">
+          <h2 className="text-xl font-semibold mb-3">
+            👨 Employee History
+          </h2>
+
+          <button
+            onClick={loadEmpHistory}
+            className="bg-blue-600 text-white px-4 py-2 rounded mb-3"
+          >
+            Load History
+          </button>
+
+          <div className="space-y-3">
+            {empHistory.map((h) => (
+              <div key={h._id} className="border p-3 rounded">
+                <p><b>Asset:</b> {h.asset?.assetCode}</p>
+                <p><b>Status:</b> {h.status}</p>
+                <p>
+                  <b>From:</b>{" "}
+                  {new Date(h.assignedDate).toLocaleString()}
+                </p>
+                <p>
+                  <b>To:</b>{" "}
+                  {h.returnedDate
+                    ? new Date(h.returnedDate).toLocaleString()
+                    : "Active"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ASSET HISTORY */}
+        <div className="bg-white p-6 rounded-2xl shadow">
+          <h2 className="text-xl font-semibold mb-3">
+            💻 Asset History
+          </h2>
+
+          <button
+            onClick={loadAssetHistory}
+            className="bg-green-600 text-white px-4 py-2 rounded mb-3"
+          >
+            Load History
+          </button>
+
+          <div className="space-y-3">
+            {assetHistory.map((h) => (
+              <div key={h._id} className="border p-3 rounded">
+                <p><b>Employee:</b> {h.employee?.employeeId}</p>
+                <p><b>Status:</b> {h.status}</p>
+                <p>
+                  <b>From:</b>{" "}
+                  {new Date(h.assignedDate).toLocaleString()}
+                </p>
+                <p>
+                  <b>To:</b>{" "}
+                  {h.returnedDate
+                    ? new Date(h.returnedDate).toLocaleString()
+                    : "Active"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
