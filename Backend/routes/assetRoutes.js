@@ -5,10 +5,12 @@ import {
   assignAsset,
   returnAsset,
   getEmployeeHistory,
-  getAssetHistory,bulkUploadAssets
+  getAssetHistory,
+  bulkUploadAssets
 } from "../controllers/assetController.js";
 
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
+import {excelUpload} from "../uploads/multerFile.js";
 
 const router = express.Router();
 
@@ -24,6 +26,13 @@ router.post("/return", protect, adminOnly, returnAsset);
 router.get("/employee/:id", protect, getEmployeeHistory);
 router.get("/asset/:code", protect, getAssetHistory);
 
-router.post("/bulk-upload", protect, adminOnly, bulkUploadAssets);
+// 🚀 BULK UPLOAD (FIXED)
+router.post(
+  "/bulk-upload",
+  protect,
+  adminOnly,
+  excelUpload.single("file"), // 🔥 THIS WAS MISSING
+  bulkUploadAssets
+);
 
 export default router;

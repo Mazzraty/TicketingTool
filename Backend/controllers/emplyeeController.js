@@ -1,44 +1,43 @@
 import EmployeeMaster from "../models/employeeMasterSchema.js";
 import XLSX from "xlsx";
 
-// GET ALL EMPLOYEES
+// GET ALL
 export const getEmployees = async (req, res) => {
   const data = await EmployeeMaster.find().sort({ createdAt: -1 });
   res.json(data);
 };
 
-// GET SINGLE EMPLOYEE
+// GET ONE
 export const getEmployee = async (req, res) => {
   const emp = await EmployeeMaster.findOne({
     employeeId: req.params.id
   });
-
   res.json(emp);
 };
 
-// UPDATE EMPLOYEE
+// UPDATE
 export const updateEmployee = async (req, res) => {
   const emp = await EmployeeMaster.findOneAndUpdate(
     { employeeId: req.params.id },
     req.body,
     { new: true }
   );
-
   res.json(emp);
 };
 
-// DELETE EMPLOYEE
+// DELETE
 export const deleteEmployee = async (req, res) => {
   await EmployeeMaster.deleteOne({
     employeeId: req.params.id
   });
-
   res.json({ msg: "Deleted" });
 };
 
-// 🚀 BULK UPLOAD (FIXED)
+// 🚀 BULK UPLOAD
 export const bulkUploadEmployees = async (req, res) => {
   try {
+    console.log("FILE:", req.file); // debug
+
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
@@ -46,6 +45,10 @@ export const bulkUploadEmployees = async (req, res) => {
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet);
+
+    if (!data.length) {
+      return res.status(400).json({ message: "Excel is empty" });
+    }
 
     const formatted = data.map((item) => ({
       employeeId: item.employeeId,
@@ -65,10 +68,7 @@ export const bulkUploadEmployees = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
-
-    res.status(500).json({
-      message: err.message
-    });
+    console.error("UPLOAD ERROR:", err);
+    res.status(500).json({ message: err.message });
   }
 };
