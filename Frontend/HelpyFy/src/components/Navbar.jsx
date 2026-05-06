@@ -18,7 +18,6 @@ export default function Navbar() {
     navigate("/login");
   };
 
-  // close dropdown when click outside
   useEffect(() => {
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -31,18 +30,22 @@ export default function Navbar() {
 
   const isActive = (path) =>
     location.pathname === path
-      ? "text-indigo-600 font-semibold"
-      : "text-gray-600 hover:text-indigo-600";
+      ? "text-green-700 font-semibold"
+      : "text-gray-600 hover:text-green-700";
 
-  // ✅ ROLE BASED MENU (FINAL FIXED)
+  // 🔥 UPDATED NAV ITEMS (ADMIN EXCEL ADDED)
   const navItems = useMemo(() => {
     if (role === "admin") {
       return [
         { label: "Dashboard", path: "/" },
         { label: "Tickets", path: "/admin" },
         { label: "Assets", path: "/admin/assets" },
+
+        // 🔥 NEW ADMIN FEATURE
+        { label: "Upload Excel", path: "/admin/assets/upload-excel" },
+
         { label: "Asset History", path: "/admin/assets/history" },
-        { label: "Employees", path: "/admin/employees" } // ✅ FIXED
+        { label: "Employees", path: "/admin/employees" }
       ];
     }
 
@@ -55,18 +58,20 @@ export default function Navbar() {
   }, [role]);
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
+    <header className="sticky top-0 z-50 bg-white border-b border-green-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
-        {/* BRAND */}
+        {/* LOGO */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
-            H
-          </div>
+          <img
+            src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+            alt="Mazzraty"
+            className="h-10 object-contain"
+          />
 
           <div className="leading-tight">
-            <div className="text-sm font-semibold text-gray-900">
-              HelpyFy
+            <div className="text-sm font-semibold text-green-700">
+              Mazzraty
             </div>
             <div className="text-[11px] text-gray-500">
               IT Ticketing System
@@ -91,31 +96,31 @@ export default function Navbar() {
         <div className="flex items-center gap-4 relative" ref={dropdownRef}>
 
           {/* NOTIFICATIONS */}
-          <button className="relative p-2 rounded-lg hover:bg-gray-100">
+          <button className="relative p-2 rounded-lg hover:bg-green-50">
             🔔
             {notifications > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+              <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                 {notifications}
               </span>
             )}
           </button>
 
           {/* ROLE */}
-          <span className="hidden sm:inline-flex text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 capitalize">
+          <span className="hidden sm:inline-flex text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 capitalize">
             {role}
           </span>
 
           {/* AVATAR */}
           <button
             onClick={() => setOpen(!open)}
-            className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold"
+            className="w-9 h-9 rounded-full bg-green-600 text-white flex items-center justify-center font-semibold"
           >
             {user?.name?.charAt(0).toUpperCase() || "U"}
           </button>
 
           {/* DROPDOWN */}
           {open && (
-            <div className="absolute right-0 top-12 w-56 bg-white border rounded-xl shadow-lg overflow-hidden">
+            <div className="absolute right-0 top-12 w-56 bg-white border border-green-100 rounded-xl shadow-lg overflow-hidden">
               <div className="px-4 py-3 border-b">
                 <p className="text-xs text-gray-500">Signed in as</p>
                 <p className="text-sm font-semibold text-gray-800 truncate">
@@ -136,10 +141,10 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* MOBILE BTN */}
+          {/* MOBILE */}
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
-            className="md:hidden p-2 rounded hover:bg-gray-100"
+            className="md:hidden p-2 rounded hover:bg-green-50"
           >
             ☰
           </button>
@@ -148,13 +153,13 @@ export default function Navbar() {
 
       {/* MOBILE MENU */}
       {mobileMenu && (
-        <div className="md:hidden border-t bg-white px-6 py-4 space-y-3 text-sm">
+        <div className="md:hidden border-t border-green-100 bg-white px-6 py-4 space-y-3 text-sm">
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
               onClick={() => setMobileMenu(false)}
-              className="block text-gray-700 hover:text-indigo-600"
+              className="block text-gray-700 hover:text-green-700"
             >
               {item.label}
             </Link>

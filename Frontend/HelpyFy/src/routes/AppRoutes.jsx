@@ -14,6 +14,7 @@ import AdminTickets from "../pages/AdminTickets";
 import AdminEmployeeMaster from "../pages/AdminEmployeeMaster";
 import AdminAssets from "../pages/AdminAsset";
 import AssetHistoryPage from "../pages/AssetHistory";
+import AssetExcelUpload from "../pages/AssetUpload"; // ✅ NEW
 
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -31,31 +32,30 @@ export default function AppRoutes() {
       {/* ================= USER ================= */}
       <Route element={<ProtectedRoute role="user" />}>
         <Route element={<Layout />}>
-
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create" element={<CreateTicket />} />
           <Route path="/tickets" element={<MyTickets />} />
-
         </Route>
       </Route>
 
       {/* ================= ADMIN ================= */}
       <Route element={<ProtectedRoute role="admin" />}>
         <Route element={<AdminLayout />}>
-
           <Route path="/admin" element={<AdminTickets />} />
           <Route path="/admin/employees" element={<AdminEmployeeMaster />} />
 
-          {/* ✅ ASSETS */}
+          {/* ASSETS */}
           <Route path="/admin/assets" element={<AdminAssets />} />
           <Route path="/admin/assets/history" element={<AssetHistoryPage />} />
+
+          {/* 🔥 EXCEL UPLOAD (ADMIN ONLY) */}
+          <Route path="/admin/assets/upload-excel" element={<AssetExcelUpload />} />
 
         </Route>
       </Route>
 
-      {/* ================= SAFETY REDIRECT ================= */}
-      {/* 🔥 FIX FOR YOUR ERROR */}
+      {/* SAFETY REDIRECT */}
       <Route path="/assets" element={<Navigate to="/admin/assets" replace />} />
 
     </Routes>

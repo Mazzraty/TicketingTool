@@ -5,7 +5,7 @@ import {
   assignAsset,
   returnAsset,
   getEmployeeHistory,
-  getAssetHistory
+  getAssetHistory,bulkUploadAssets
 } from "../controllers/assetController.js";
 
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
@@ -23,5 +23,7 @@ router.post("/return", protect, adminOnly, returnAsset);
 // HISTORY
 router.get("/employee/:id", protect, getEmployeeHistory);
 router.get("/asset/:code", protect, getAssetHistory);
+
+router.post("/bulk-upload", protect, adminOnly, bulkUploadAssets);
 
 export default router;

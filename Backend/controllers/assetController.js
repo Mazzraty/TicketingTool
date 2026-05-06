@@ -157,3 +157,47 @@ export const getAssetHistory = async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 };
+
+
+//bulk update
+export const bulkUploadAssets = async (req, res) => {
+  try {
+    const { assets } = req.body;
+
+    if (!assets || !assets.length) {
+      return res.status(400).json({ message: "No data found" });
+    }
+
+    // 🔥 clean + map to your schema
+    const formatted = assets.map((item) => ({
+      assetCode: item.assetCode,
+      type: item.type || "Laptop",
+      model: item.model || "",
+      status: item.status?.toLowerCase() === "assigned"
+        ? "assigned"
+        : "available",
+    }));
+
+    // ❗ avoid duplicate crash
+    const inserted = await Asset.insertMany(formatted, {
+      ordered: false, // continues even if duplicates exist
+    });
+
+    res.json({
+      message: "Bulk upload successful",
+      insertedCount: inserted.length,
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    // duplicate key handling
+    if (err.code === 11000) {
+      return res.status(400).json({
+        message: "Duplicate assetCode found in database",
+      });
+    }
+
+    res.status(500).json({ message: "Server error" });
+  }
+};

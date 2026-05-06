@@ -48,17 +48,22 @@ export default function AdminEmployeeMaster() {
 
           <thead className="bg-gray-100">
             <tr>
+              <th className="p-3 text-left">SI</th>
               <th className="p-3 text-left">Employee ID</th>
               <th className="p-3 text-left">Name</th>
               <th className="p-3 text-left">Position</th>
               <th className="p-3 text-left">Department</th>
-              <th className="p-3 text-left">Email</th>
             </tr>
           </thead>
 
           <tbody>
-            {filtered.map((emp) => (
+            {filtered.map((emp, index) => (
               <tr key={emp._id} className="border-t hover:bg-gray-50">
+
+                {/* SERIAL NUMBER */}
+                <td className="p-3 font-bold">
+                  {index + 1}
+                </td>
 
                 <td className="p-3 font-medium">
                   {emp.employeeId}
@@ -74,10 +79,6 @@ export default function AdminEmployeeMaster() {
 
                 <td className="p-3">
                   {emp.department}
-                </td>
-
-                <td className="p-3">
-                  {emp.email}
                 </td>
 
               </tr>
