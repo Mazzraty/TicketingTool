@@ -34,14 +34,15 @@ export default function Navbar() {
       ? "text-indigo-600 font-semibold"
       : "text-gray-600 hover:text-indigo-600";
 
-  // 🔥 ROLE BASED MENU
+  // ✅ ROLE BASED MENU (FINAL FIXED)
   const navItems = useMemo(() => {
     if (role === "admin") {
       return [
         { label: "Dashboard", path: "/" },
-        { label: "Admin Panel", path: "/admin" },
-        { label: "Assets", path: "/assets" },
-        { label: "Employees", path: "/employees" } // 🔥 NEW
+        { label: "Tickets", path: "/admin" },
+        { label: "Assets", path: "/admin/assets" },
+        { label: "Asset History", path: "/admin/assets/history" },
+        { label: "Employees", path: "/admin/employees" } // ✅ FIXED
       ];
     }
 
@@ -55,7 +56,6 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
-
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
         {/* BRAND */}
@@ -74,7 +74,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* NAV (DESKTOP) */}
+        {/* NAV */}
         <nav className="hidden md:flex items-center gap-6 text-sm">
           {navItems.map((item) => (
             <Link
@@ -87,7 +87,7 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* RIGHT SIDE */}
+        {/* RIGHT */}
         <div className="flex items-center gap-4 relative" ref={dropdownRef}>
 
           {/* NOTIFICATIONS */}
@@ -100,7 +100,7 @@ export default function Navbar() {
             )}
           </button>
 
-          {/* ROLE BADGE */}
+          {/* ROLE */}
           <span className="hidden sm:inline-flex text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 capitalize">
             {role}
           </span>
@@ -116,7 +116,6 @@ export default function Navbar() {
           {/* DROPDOWN */}
           {open && (
             <div className="absolute right-0 top-12 w-56 bg-white border rounded-xl shadow-lg overflow-hidden">
-
               <div className="px-4 py-3 border-b">
                 <p className="text-xs text-gray-500">Signed in as</p>
                 <p className="text-sm font-semibold text-gray-800 truncate">
@@ -137,7 +136,7 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* MOBILE MENU BUTTON */}
+          {/* MOBILE BTN */}
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
             className="md:hidden p-2 rounded hover:bg-gray-100"
