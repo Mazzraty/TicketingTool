@@ -38,14 +38,25 @@ export default function CreateTicket() {
 
       const token = localStorage.getItem("token");
 
-      await api.post("/tickets", data, {
+      const res = await api.post("/tickets", data, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      toast.success("Ticket submitted successfully");
+      // ✅ SUCCESS HANDLING (BASED ON BACKEND)
+      if (res.data?.success) {
+        toast.success(res.data.message || "Ticket created");
 
+        // ⚠️ EMAIL STATUS CHECK
+        if (res.data.emailStatus === "failed") {
+          toast.error("Ticket created but email failed");
+        }
+      } else {
+        toast.error("Ticket creation failed");
+      }
+
+      // RESET FORM
       setForm({
         title: "",
         description: "",
@@ -80,7 +91,6 @@ export default function CreateTicket() {
   return (
     <div className="min-h-screen bg-slate-100">
 
-      {/* TOP HEADER (REAL SAAS STYLE) */}
       <div className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-6 py-5">
           <h1 className="text-lg font-semibold text-gray-900">
@@ -92,173 +102,89 @@ export default function CreateTicket() {
         </div>
       </div>
 
-      {/* MAIN LAYOUT */}
       <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* FORM PANEL */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl shadow-sm">
-
+        {/* FORM */}
+        <div className="lg:col-span-2 bg-white border rounded-xl shadow-sm">
           <div className="px-6 py-5 border-b">
             <h2 className="text-sm font-semibold text-gray-800">
               Ticket Information
             </h2>
-            <p className="text-xs text-gray-500 mt-1">
-              Fill in required details
-            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
 
-            {/* TITLE */}
-            <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Title
-              </label>
-              <input
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                placeholder="Enter issue title"
-                className="w-full mt-2 px-4 py-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 focus:bg-white"
-              />
+            <input
+              name="title"
+              value={form.title}
+              onChange={handleChange}
+              placeholder="Title"
+              className="w-full px-4 py-3 border rounded-lg"
+            />
+
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              placeholder="Description"
+              className="w-full px-4 py-3 border rounded-lg"
+            />
+
+            <div className="flex gap-2 flex-wrap">
+              {["Low", "Medium", "High", "Critical"].map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setPriority(level)}
+                  className={`px-3 py-1 text-xs border rounded-md ${
+                    form.priority === level ? "bg-indigo-600 text-white" : ""
+                  }`}
+                >
+                  {level}
+                </button>
+              ))}
             </div>
 
-            {/* DESCRIPTION */}
-            <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                rows="5"
-                placeholder="Describe the issue clearly..."
-                className="w-full mt-2 px-4 py-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 focus:bg-white"
-              />
-            </div>
+            <input
+              name="department"
+              value={form.department}
+              onChange={handleChange}
+              placeholder="Department"
+              className="w-full px-4 py-3 border rounded-lg"
+            />
 
-            {/* PRIORITY */}
-            <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Priority Level
-              </label>
+            <input
+              type="file"
+              multiple
+              onChange={(e) => setFiles([...e.target.files])}
+            />
 
-              <div className="flex gap-2 mt-3 flex-wrap">
-                {["Low", "Medium", "High", "Critical"].map((level) => (
-                  <button
-                    key={level}
-                    type="button"
-                    onClick={() => setPriority(level)}
-                    className={`px-3 py-1.5 text-xs rounded-md border transition ${
-                      form.priority === level
-                        ? priorityStyle(level)
-                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    {level}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* DEPARTMENT */}
-            <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Department
-              </label>
-              <input
-                name="department"
-                value={form.department}
-                onChange={handleChange}
-                placeholder="Finance,HR,Sales,etc."
-                className="w-full mt-2 px-4 py-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 focus:bg-white"
-              />
-            </div>
-
-            {/* ATTACHMENTS */}
-            <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Attachments
-              </label>
-              <input
-                type="file"
-                multiple
-                onChange={(e) => setFiles([...e.target.files])}
-                className="w-full mt-2 text-sm border border-gray-200 rounded-lg bg-gray-50 p-2"
-              />
-            </div>
-
-            {/* ACTION */}
             <button
               type="submit"
               disabled={loading}
-              className={`w-full mt-2 py-3 rounded-lg text-sm font-medium text-white transition ${
-                loading
-                  ? "bg-gray-400"
-                  : "bg-indigo-600 hover:bg-indigo-700 shadow-sm"
-              }`}
+              className="w-full bg-indigo-600 text-white py-3 rounded-lg"
             >
               {loading ? "Submitting..." : "Submit Ticket"}
             </button>
-
           </form>
         </div>
 
-        {/* PREVIEW PANEL (INSPECTOR STYLE) */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+        {/* PREVIEW */}
+        <div className="bg-white border rounded-xl p-6">
+          <h3 className="font-semibold mb-4">Live Preview</h3>
 
-          <div className="px-6 py-5 border-b">
-            <h3 className="text-sm font-semibold text-gray-800">
-              Live Preview
-            </h3>
-            <p className="text-xs text-gray-500 mt-1">
-              Ticket preview panel
-            </p>
-          </div>
+          <p><b>Title:</b> {form.title || "-"}</p>
+          <p><b>Description:</b> {form.description || "-"}</p>
+          <p><b>Priority:</b> {form.priority}</p>
+          <p><b>Department:</b> {form.department || "-"}</p>
 
-          <div className="p-6 space-y-5 text-sm">
-
-            <div>
-              <p className="text-xs text-gray-400">TITLE</p>
-              <p className="font-medium text-gray-900">
-                {form.title || "—"}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-400">DESCRIPTION</p>
-              <p className="text-gray-600">
-                {form.description || "—"}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-400">PRIORITY</p>
-              <span className={`inline-block mt-1 px-3 py-1 rounded-md text-xs border ${priorityStyle(form.priority)}`}>
-                {form.priority}
-              </span>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-400">DEPARTMENT</p>
-              <p className="text-gray-700">
-                {form.department || "—"}
-              </p>
-            </div>
-
-            {files.length > 0 && (
-              <div>
-                <p className="text-xs text-gray-400">FILES</p>
-                <ul className="text-xs text-gray-600 list-disc ml-5 mt-1">
-                  {files.map((f, i) => (
-                    <li key={i}>{f.name}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-          </div>
+          {files.length > 0 && (
+            <ul className="mt-3 text-sm">
+              {files.map((f, i) => (
+                <li key={i}>{f.name}</li>
+              ))}
+            </ul>
+          )}
         </div>
 
       </div>

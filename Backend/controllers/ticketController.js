@@ -4,23 +4,26 @@ import { sendEmail } from "../utils/emailUtility.js";
 
 
 // ==========================
-// ✅ CREATE TICKET
+
+// ==========================
+// ✅ CREATE TICKET (PRO FIXED)
 // ==========================
 export const createTicket = async (req, res) => {
   try {
     const { title, description, department, priority } = req.body;
 
-    // ✅ VALIDATION
+    // VALIDATION
     if (!title || !description) {
       return res.status(400).json({
+        success: false,
         message: "Title & Description required",
       });
     }
 
-    // ✅ FILES
+    // FILES
     const attachments = req.files?.map((f) => f.path || f.filename) || [];
 
-    // ✅ SLA CALCULATION
+    // SLA CALCULATION
     const slaHours = {
       Low: 72,
       Medium: 24,
@@ -32,7 +35,7 @@ export const createTicket = async (req, res) => {
       Date.now() + (slaHours[priority] || 72) * 60 * 60 * 1000
     );
 
-    // ✅ CREATE TICKET
+    // CREATE TICKET
     const ticket = await Ticket.create({
       title,
       description,
@@ -43,10 +46,10 @@ export const createTicket = async (req, res) => {
       slaDue,
     });
 
-    // ✅ GET USER
+    // GET USER
     const user = await User.findById(req.user.id).select("email name");
 
-    // 🔥 REAL-TIME NOTIFICATION (SAFE)
+    // SOCKET NOTIFICATION
     if (global.io) {
       try {
         const admins = await User.find({ role: "admin" });
@@ -66,7 +69,9 @@ export const createTicket = async (req, res) => {
       }
     }
 
-    // ✅ EMAIL (SAFE - DON'T BREAK FLOW)
+    // EMAIL STATUS TRACKING
+    let emailStatus = "sent";
+
     try {
       await sendEmail(
         process.env.ADMIN_EMAIL,
@@ -81,24 +86,26 @@ export const createTicket = async (req, res) => {
         }
       );
     } catch (emailErr) {
-      console.log("Email failed:", emailErr.message);
+      emailStatus = "failed";
+      console.log("EMAIL ERROR:", emailErr.message);
     }
 
-    // ✅ RESPONSE
-    res.status(201).json({
+    // RESPONSE
+    return res.status(201).json({
       success: true,
       message: "Ticket created successfully",
       data: ticket,
+      emailStatus, // 🔥 IMPORTANT FOR FRONTEND
     });
 
   } catch (error) {
     console.log("CREATE TICKET ERROR:", error);
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: "Server error",
     });
   }
 };
-
 // ==========================
 // ✅ USER TICKETS
 // ==========================
