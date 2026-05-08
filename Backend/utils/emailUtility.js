@@ -1,34 +1,30 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendEmail = async (to, subject, ticketData) => {
   try {
-    console.log("📧 EMAIL TRIGGERED");
-
-    await transporter.sendMail({
-      from: `"IT Helpdesk System" <${process.env.EMAIL_USER}>`,
+    const response = await resend.emails.send({
+      from: "IT Helpdesk <onboarding@resend.dev>",
       to,
       subject,
       html: `
-        <h2>New Ticket</h2>
-        <p><b>Title:</b> ${ticketData.title}</p>
-        <p><b>Description:</b> ${ticketData.description}</p>
+        <div style="font-family:Arial;padding:20px">
+          <h2>🚨 New Support Ticket</h2>
+
+          <p><b>Title:</b> ${ticketData.title}</p>
+          <p><b>Description:</b> ${ticketData.description}</p>
+          <p><b>Department:</b> ${ticketData.department}</p>
+          <p><b>Priority:</b> ${ticketData.priority}</p>
+          <p><b>Status:</b> ${ticketData.status}</p>
+          <p><b>User:</b> ${ticketData.userEmail}</p>
+        </div>
       `,
     });
 
-    console.log("✅ EMAIL SENT SUCCESS");
+    console.log("✅ Email sent:", response);
 
   } catch (error) {
-    console.log("❌ EMAIL ERROR:");
-    console.log(error);
+    console.log("❌ Email Error:", error);
   }
 };
