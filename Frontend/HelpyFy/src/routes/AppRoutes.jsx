@@ -14,22 +14,22 @@ import AdminTickets from "../pages/AdminTickets";
 import AdminEmployeeMaster from "../pages/AdminEmployeeMaster";
 import AdminAssets from "../pages/AdminAsset";
 import AssetHistoryPage from "../pages/AssetHistory";
-import AssetExcelUpload from "../pages/AssetUpload"; // ✅ NEW
+import AssetExcelUpload from "../pages/AssetUpload";
 
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute";
-import Layout from "../layouts/Mainlayout";
+import Layout from "../layouts/MainLayout";
 import AdminLayout from "../layouts/AdminLayout";
 
 export default function AppRoutes() {
   return (
     <Routes>
 
-      {/* ================= PUBLIC ================= */}
+      {/* PUBLIC */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* ================= USER ================= */}
+      {/* USER */}
       <Route element={<ProtectedRoute role="user" />}>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
@@ -39,24 +39,30 @@ export default function AppRoutes() {
         </Route>
       </Route>
 
-      {/* ================= ADMIN ================= */}
+      {/* ADMIN */}
       <Route element={<ProtectedRoute role="admin" />}>
         <Route element={<AdminLayout />}>
+
           <Route path="/admin" element={<AdminTickets />} />
           <Route path="/admin/employees" element={<AdminEmployeeMaster />} />
-
-          {/* ASSETS */}
           <Route path="/admin/assets" element={<AdminAssets />} />
-          <Route path="/admin/assets/history" element={<AssetHistoryPage />} />
 
-          {/* 🔥 EXCEL UPLOAD (ADMIN ONLY) */}
-          <Route path="/admin/assets/upload-excel" element={<AssetExcelUpload />} />
+          {/* FIXED ROUTE */}
+          <Route
+            path="/admin/assets/history"
+            element={<AssetHistoryPage />}
+          />
+
+          <Route
+            path="/admin/assets/upload-excel"
+            element={<AssetExcelUpload />}
+          />
 
         </Route>
       </Route>
 
-      {/* SAFETY REDIRECT */}
-      <Route path="/assets" element={<Navigate to="/admin/assets" replace />} />
+      {/* FALLBACK */}
+      <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>
   );

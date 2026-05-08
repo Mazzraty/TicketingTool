@@ -10,8 +10,24 @@ export default function Navbar() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notifications] = useState(2);
 
-  const user = JSON.parse(localStorage.getItem("user") || "null");
-  const role = user?.role || "guest";
+  // ✅ FIX: reactive user state (IMPORTANT)
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = () => {
+      const stored = localStorage.getItem("user");
+      setUser(stored ? JSON.parse(stored) : null);
+    };
+
+    loadUser();
+
+    // sync across tabs / updates
+    window.addEventListener("storage", loadUser);
+
+    return () => window.removeEventListener("storage", loadUser);
+  }, []);
+
+  const role = (user?.role || "guest").toLowerCase();
 
   const logout = () => {
     localStorage.clear();
@@ -24,6 +40,7 @@ export default function Navbar() {
         setOpen(false);
       }
     };
+
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
@@ -33,19 +50,16 @@ export default function Navbar() {
       ? "text-green-700 font-semibold"
       : "text-gray-600 hover:text-green-700";
 
-  // 🔥 UPDATED NAV ITEMS (ADMIN EXCEL ADDED)
+  // NAV ITEMS (ROLE BASED)
   const navItems = useMemo(() => {
     if (role === "admin") {
       return [
         { label: "Dashboard", path: "/" },
-        { label: "Tickets", path: "/admin" },
+        { label: "Admin Tickets", path: "/admin" },
         { label: "Assets", path: "/admin/assets" },
-
-        // 🔥 NEW ADMIN FEATURE
         { label: "Upload Excel", path: "/admin/assets/upload-excel" },
-
         { label: "Asset History", path: "/admin/assets/history" },
-        { label: "Employees", path: "/admin/employees" }
+        { label: "Employees", path: "/admin/employees" },
       ];
     }
 
@@ -53,33 +67,32 @@ export default function Navbar() {
       { label: "Dashboard", path: "/" },
       { label: "Create Ticket", path: "/create" },
       { label: "My Tickets", path: "/tickets" },
-      { label: "Employees", path: "/employees" }
     ];
   }, [role]);
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-green-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-50 bg-gradient-to-r from-green-50 via-white to-green-50 border-b shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
 
         {/* LOGO */}
         <div className="flex items-center gap-3">
           <img
             src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
-            alt="Mazzraty"
-            className="h-10 object-contain"
+            alt="logo"
+            className="h-9"
           />
 
           <div className="leading-tight">
-            <div className="text-sm font-semibold text-green-700">
-              Mazzraty
-            </div>
-            <div className="text-[11px] text-gray-500">
-              IT Ticketing System
-            </div>
+            <p className="text-sm font-bold text-green-700">
+              HelpyFy
+            </p>
+            <p className="text-[11px] text-gray-500">
+              IT Helpdesk System
+            </p>
           </div>
         </div>
 
-        {/* NAV */}
+        {/* DESKTOP MENU */}
         <nav className="hidden md:flex items-center gap-6 text-sm">
           {navItems.map((item) => (
             <Link
@@ -92,25 +105,25 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* RIGHT */}
-        <div className="flex items-center gap-4 relative" ref={dropdownRef}>
+        {/* RIGHT SIDE */}
+        <div className="flex items-center gap-3 relative" ref={dropdownRef}>
 
-          {/* NOTIFICATIONS */}
-          <button className="relative p-2 rounded-lg hover:bg-green-50">
+          {/* NOTIFICATION */}
+          <button className="relative p-2 rounded-lg hover:bg-green-100">
             🔔
             {notifications > 0 && (
-              <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+              <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[10px] px-1.5 rounded-full">
                 {notifications}
               </span>
             )}
           </button>
 
-          {/* ROLE */}
-          <span className="hidden sm:inline-flex text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 capitalize">
+          {/* ROLE BADGE */}
+          <span className="hidden sm:inline-flex text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full capitalize">
             {role}
           </span>
 
-          {/* AVATAR */}
+          {/* USER AVATAR */}
           <button
             onClick={() => setOpen(!open)}
             className="w-9 h-9 rounded-full bg-green-600 text-white flex items-center justify-center font-semibold"
@@ -120,10 +133,11 @@ export default function Navbar() {
 
           {/* DROPDOWN */}
           {open && (
-            <div className="absolute right-0 top-12 w-56 bg-white border border-green-100 rounded-xl shadow-lg overflow-hidden">
+            <div className="absolute right-0 top-12 w-56 bg-white border rounded-xl shadow-lg overflow-hidden">
+
               <div className="px-4 py-3 border-b">
                 <p className="text-xs text-gray-500">Signed in as</p>
-                <p className="text-sm font-semibold text-gray-800 truncate">
+                <p className="text-sm font-medium truncate">
                   {user?.email || "Guest"}
                 </p>
               </div>
@@ -141,10 +155,10 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* MOBILE */}
+          {/* MOBILE MENU BUTTON */}
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
-            className="md:hidden p-2 rounded hover:bg-green-50"
+            className="md:hidden text-xl px-2"
           >
             ☰
           </button>
@@ -153,13 +167,13 @@ export default function Navbar() {
 
       {/* MOBILE MENU */}
       {mobileMenu && (
-        <div className="md:hidden border-t border-green-100 bg-white px-6 py-4 space-y-3 text-sm">
+        <div className="md:hidden bg-white border-t px-4 py-3 space-y-2 text-sm">
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
               onClick={() => setMobileMenu(false)}
-              className="block text-gray-700 hover:text-green-700"
+              className="block py-2 text-gray-700 hover:text-green-700"
             >
               {item.label}
             </Link>

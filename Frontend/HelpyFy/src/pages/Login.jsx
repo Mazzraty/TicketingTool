@@ -3,6 +3,8 @@ import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
+import milkImage from "../assets/milk2.png";
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +24,6 @@ export default function Login() {
       localStorage.setItem("role", res.data.user.role);
 
       toast.success("Login successful");
-
       navigate("/");
     } catch (err) {
       toast.error(err.response?.data?.message || "Invalid email or password");
@@ -30,105 +31,151 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#eef5e8] flex items-center justify-center p-4">
 
-      <div className="w-full max-w-md">
+      {/* MAIN WRAPPER */}
+      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6">
 
-        {/* Logo and Header */}
-        <div className="text-center mb-8">
+        {/* ================= LEFT SIDE CARD ================= */}
+        <div className="relative rounded-[32px] overflow-hidden shadow-2xl hidden lg:block">
 
-          {/* Mazzraty Logo */}
-          <div className="flex items-center justify-center mb-4">
-            <img
-              src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
-              alt="Mazzraty"
-              className="h-14 object-contain"
-            />
+          <img
+            src={milkImage}
+            alt="Milk Farm"
+            className="absolute inset-0 w-full h-full object-cover scale-105"
+          />
+
+          <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/30 to-green-900/70"></div>
+
+          <div className="relative z-10 p-10 h-full flex flex-col justify-between text-white">
+
+            {/* TOP CARD */}
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-2xl w-fit">
+              <img
+                src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+                className="h-10"
+                alt="logo"
+              />
+            </div>
+
+            {/* CENTER CONTENT */}
+            <div className="space-y-5">
+
+              <p className="text-green-200 tracking-[6px] text-sm">
+                ENTERPRISE PLATFORM
+              </p>
+
+              <h1 className="text-5xl font-bold leading-tight">
+                Smart IT Helpdesk
+                <br />
+                System
+              </h1>
+
+              <p className="text-white/80 text-lg">
+                Manage tickets, employees, assets and IT operations
+                in a single unified enterprise system.
+              </p>
+
+              {/* MINI STATS CARDS */}
+              <div className="grid grid-cols-3 gap-4 mt-6">
+
+                <div className="bg-white/10 border border-white/10 backdrop-blur-lg p-4 rounded-xl text-center">
+                  <h3 className="text-xl font-bold">24/7</h3>
+                  <p className="text-xs text-white/70">Support</p>
+                </div>
+
+                <div className="bg-white/10 border border-white/10 backdrop-blur-lg p-4 rounded-xl text-center">
+                  <h3 className="text-xl font-bold">Secure</h3>
+                  <p className="text-xs text-white/70">Login</p>
+                </div>
+
+                <div className="bg-white/10 border border-white/10 backdrop-blur-lg p-4 rounded-xl text-center">
+                  <h3 className="text-xl font-bold">Fast</h3>
+                  <p className="text-xs text-white/70">System</p>
+                </div>
+
+              </div>
+            </div>
+
+            {/* BOTTOM */}
+            <div className="text-xs text-white/60 border-t border-white/10 pt-5">
+              © 2026 Mazzraty Enterprise System
+            </div>
+
           </div>
-
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome Back
-          </h1>
-
-          <p className="text-gray-600">
-            Sign in to your IT Helpdesk account
-          </p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-green-100 p-8">
+        {/* ================= RIGHT SIDE CARD ================= */}
+        <div className="flex items-center justify-center">
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          {/* LOGIN CARD */}
+          <div className="w-full max-w-md bg-white rounded-[28px] shadow-2xl border border-green-100 p-8">
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Address
-              </label>
+            {/* HEADER CARD */}
+            <div className="text-center mb-8">
 
-              <input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-gray-50/50"
-                required
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
-              </label>
-
-              <input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-gray-50/50"
-                required
-              />
-            </div>
-
-            {/* Login Button */}
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              Sign In
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="mt-8 mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
+              <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-xs font-semibold mb-4">
+                🔐 Secure Login
               </div>
 
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  Don't have an account?
-                </span>
-              </div>
+              <h2 className="text-3xl font-bold text-gray-900">
+                Welcome Back
+              </h2>
+
+              <p className="text-gray-500 text-sm mt-2">
+                Sign in to your enterprise dashboard
+              </p>
             </div>
-          </div>
 
-          {/* Register Button */}
-          <button
-            onClick={() => navigate("/register")}
-            className="w-full bg-white border-2 border-gray-200 text-gray-700 py-3 px-4 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transform hover:scale-[1.02] transition-all duration-200"
-          >
-            Create New Account
-          </button>
+            {/* FORM CARD */}
+            <form onSubmit={handleLogin} className="space-y-5">
 
-          {/* Footer */}
-          <div className="mt-8 text-center">
-            <p className="text-xs text-gray-500">
-              © 2026 Mazzraty - IT Ticketing System
-            </p>
+              <div className="bg-gray-50 p-4 rounded-2xl border">
+                <label className="text-xs text-gray-500">Email</label>
+                <input
+                  type="email"
+                  className="w-full bg-transparent outline-none mt-1 text-sm"
+                  placeholder="name@mazzraty.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-2xl border">
+                <label className="text-xs text-gray-500">Password</label>
+                <input
+                  type="password"
+                  className="w-full bg-transparent outline-none mt-1 text-sm"
+                  placeholder="Enter password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+
+              {/* ACTION CARD */}
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-semibold shadow-lg hover:scale-[1.02] transition"
+              >
+                Sign In
+              </button>
+            </form>
+
+            {/* SECONDARY CARD */}
+            <div className="mt-5 space-y-3">
+
+              <button
+                onClick={() => navigate("/register")}
+                className="w-full border border-gray-200 py-3 rounded-2xl hover:bg-gray-50 transition"
+              >
+                Create New Account
+              </button>
+
+              <p className="text-center text-xs text-gray-400">
+                Secure enterprise authentication system
+              </p>
+            </div>
+
           </div>
         </div>
       </div>

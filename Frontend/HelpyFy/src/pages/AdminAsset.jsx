@@ -10,9 +10,8 @@ export default function AdminAssets() {
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState("");
 
-  const [empHistory, setEmpHistory] = useState([]);
+  const [open, setOpen] = useState(null);
 
-  // 🔥 LOAD EMPLOYEES
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -26,7 +25,6 @@ export default function AdminAssets() {
     fetchEmployees();
   }, []);
 
-  // ➕ ADD ASSET
   const addAsset = async () => {
     try {
       await api.post("/assets", { assetCode, name, type });
@@ -40,7 +38,6 @@ export default function AdminAssets() {
     }
   };
 
-  // 🔥 ASSIGN
   const assign = async () => {
     try {
       await api.post("/assets/assign", {
@@ -54,7 +51,6 @@ export default function AdminAssets() {
     }
   };
 
-  // 🔄 RETURN
   const returnAsset = async () => {
     try {
       await api.post("/assets/return", { assetCode });
@@ -65,107 +61,142 @@ export default function AdminAssets() {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen">
 
-      {/* HEADER */}
-      <h1 className="text-3xl font-bold text-gray-800">
-        Asset Management System
-      </h1>
+      {/* HEADER (LEFT ALIGNED) */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">
+          Asset Management
+        </h1>
+        <p className="text-sm text-gray-500">
+          Quick access asset operations
+        </p>
+      </div>
 
-      {/* GRID */}
-      <div className="grid md:grid-cols-2 gap-6">
+      {/* FULL WIDTH LAYOUT */}
+      <div className="space-y-4 w-full">
 
-        {/* ➕ ADD ASSET CARD */}
-        <div className="bg-white rounded-2xl shadow p-6 space-y-4">
-          <h2 className="text-xl font-semibold text-gray-700">
-            ➕ Add New Asset
-          </h2>
-
-          <input
-            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-400 outline-none"
-            placeholder="Asset Code (e.g. LAP001)"
-            value={assetCode}
-            onChange={(e) => setAssetCode(e.target.value)}
-          />
-
-          <input
-            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-400 outline-none"
-            placeholder="Asset Name (Dell Laptop)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-
-          <input
-            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-400 outline-none"
-            placeholder="Type (Laptop/Desktop)"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-          />
+        {/* ADD ASSET */}
+        <div className="bg-white border rounded-lg shadow-sm">
 
           <button
-            onClick={addAsset}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition"
+            onClick={() => setOpen(open === "add" ? null : "add")}
+            className="w-full flex justify-between items-center px-5 py-3 text-left font-semibold text-gray-700 hover:bg-gray-50"
           >
-            Add Asset
+            <span>➕ Add Asset</span>
+            <span>{open === "add" ? "−" : "+"}</span>
           </button>
+
+          {open === "add" && (
+            <div className="p-4 border-t grid md:grid-cols-4 gap-3">
+
+              <input
+                className="border rounded-md p-2 text-sm"
+                placeholder="Asset Code"
+                value={assetCode}
+                onChange={(e) => setAssetCode(e.target.value)}
+              />
+
+              <input
+                className="border rounded-md p-2 text-sm"
+                placeholder="Asset Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+
+              <input
+                className="border rounded-md p-2 text-sm"
+                placeholder="Type"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+              />
+
+              <button
+                onClick={addAsset}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-md py-2 text-sm"
+              >
+                Create
+              </button>
+
+            </div>
+          )}
         </div>
 
-        {/* 🔥 ASSIGN CARD */}
-        <div className="bg-white rounded-2xl shadow p-6 space-y-4">
-          <h2 className="text-xl font-semibold text-gray-700">
-            🔥 Assign Asset
-          </h2>
-
-          {/* Employee Dropdown */}
-          <select
-            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-green-400 outline-none"
-            value={selectedEmployee}
-            onChange={(e) => setSelectedEmployee(e.target.value)}
-          >
-            <option value="">Select Employee</option>
-            {employees.map((emp) => (
-              <option key={emp._id} value={emp.employeeId}>
-                {emp.name} ({emp.employeeId})
-              </option>
-            ))}
-          </select>
-
-          <input
-            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-green-400 outline-none"
-            placeholder="Asset Code"
-            value={assetCode}
-            onChange={(e) => setAssetCode(e.target.value)}
-          />
+        {/* ASSIGN */}
+        <div className="bg-white border rounded-lg shadow-sm">
 
           <button
-            onClick={assign}
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold transition"
+            onClick={() => setOpen(open === "assign" ? null : "assign")}
+            className="w-full flex justify-between items-center px-5 py-3 text-left font-semibold text-gray-700 hover:bg-gray-50"
           >
-            Assign Asset
+            <span>👤 Assign Asset</span>
+            <span>{open === "assign" ? "−" : "+"}</span>
           </button>
+
+          {open === "assign" && (
+            <div className="p-4 border-t grid md:grid-cols-3 gap-3">
+
+              <select
+                className="border rounded-md p-2 text-sm"
+                value={selectedEmployee}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+              >
+                <option value="">Select Employee</option>
+                {employees.map((emp) => (
+                  <option key={emp._id} value={emp.employeeId}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                className="border rounded-md p-2 text-sm"
+                placeholder="Asset Code"
+                value={assetCode}
+                onChange={(e) => setAssetCode(e.target.value)}
+              />
+
+              <button
+                onClick={assign}
+                className="bg-green-600 hover:bg-green-700 text-white rounded-md py-2 text-sm"
+              >
+                Assign
+              </button>
+
+            </div>
+          )}
         </div>
 
-        {/* 🔄 RETURN CARD */}
-        <div className="bg-white rounded-2xl shadow p-6 space-y-4 md:col-span-2">
-          <h2 className="text-xl font-semibold text-gray-700">
-            🔄 Return Asset
-          </h2>
+        {/* RETURN */}
+        <div className="bg-white border rounded-lg shadow-sm">
 
-          <div className="flex gap-3">
-            <input
-              className="flex-1 border rounded-xl p-3 focus:ring-2 focus:ring-red-400 outline-none"
-              placeholder="Asset Code"
-              value={assetCode}
-              onChange={(e) => setAssetCode(e.target.value)}
-            />
+          <button
+            onClick={() => setOpen(open === "return" ? null : "return")}
+            className="w-full flex justify-between items-center px-5 py-3 text-left font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            <span>🔄 Return Asset</span>
+            <span>{open === "return" ? "−" : "+"}</span>
+          </button>
 
-            <button
-              onClick={returnAsset}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 rounded-xl font-semibold"
-            >
-              Return
-            </button>
-          </div>
+          {open === "return" && (
+            <div className="p-4 border-t flex gap-3">
+
+              <input
+                className="flex-1 border rounded-md p-2 text-sm"
+                placeholder="Asset Code"
+                value={assetCode}
+                onChange={(e) => setAssetCode(e.target.value)}
+              />
+
+              <button
+                onClick={returnAsset}
+                className="bg-red-600 hover:bg-red-700 text-white rounded-md px-4 text-sm"
+              >
+                Return
+              </button>
+
+            </div>
+          )}
         </div>
 
       </div>

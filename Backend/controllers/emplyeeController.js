@@ -36,39 +36,30 @@ export const deleteEmployee = async (req, res) => {
 // 🚀 BULK UPLOAD
 export const bulkUploadEmployees = async (req, res) => {
   try {
-    console.log("FILE:", req.file); // debug
+    const { employees } = req.body;
 
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+    if (!employees || !employees.length) {
+      return res.status(400).json({ message: "No employee data found" });
     }
 
-    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(sheet);
-
-    if (!data.length) {
-      return res.status(400).json({ message: "Excel is empty" });
-    }
-
-    const formatted = data.map((item) => ({
-      employeeId: item.employeeId,
-      name: item.name,
-      position: item.position || "Employee",
-      department: item.department || "General",
-      status: (item.status || "active").toLowerCase()
+    // optional cleanup (normalize fields)
+    const formatted = employees.map(emp => ({
+      employeeId: emp.employeeId,
+      name: emp.name,
+      department: emp.department,
+      position: emp.position,
+      status: emp.status || "active"
     }));
 
-    const inserted = await EmployeeMaster.insertMany(formatted, {
-      ordered: false
-    });
+    await EmployeeMaster.insertMany(formatted);
 
     res.json({
       message: "Employees uploaded successfully",
-      insertedCount: inserted.length
+      count: formatted.length
     });
 
   } catch (err) {
-    console.error("UPLOAD ERROR:", err);
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 };

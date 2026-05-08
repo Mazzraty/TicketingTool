@@ -3,6 +3,8 @@ import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
+import milkImage from "../assets/milk.png";
+
 export default function Register() {
   const [form, setForm] = useState({
     name: "",
@@ -24,7 +26,6 @@ export default function Register() {
 
     try {
       await api.post("/auth/register", form);
-
       toast.success("Account created successfully");
       navigate("/login");
     } catch (err) {
@@ -33,83 +34,137 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#eef5e8] flex items-center justify-center p-4">
 
-      <div className="w-full max-w-md">
+      {/* MAIN WRAPPER */}
+      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6">
 
-        {/* HEADER */}
-        <div className="text-center mb-8">
+        {/* ================= LEFT INFO SECTION ================= */}
+        <div className="space-y-6">
 
-          {/* LOGO */}
-          <div className="flex items-center justify-center mb-4">
+          {/* HERO CARD */}
+          <div className="relative rounded-3xl overflow-hidden shadow-xl">
             <img
-              src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
-              alt="Mazzraty"
-              className="h-14 object-contain"
+              src={milkImage}
+              className="h-72 w-full object-cover"
+              alt="milk"
             />
+            <div className="absolute inset-0 bg-black/50"></div>
+
+            <div className="absolute bottom-6 left-6 text-white">
+              <h2 className="text-3xl font-bold">Join Mazzraty</h2>
+              <p className="text-white/80">
+                Enterprise IT & Asset Platform
+              </p>
+            </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Create Account
-          </h1>
+          {/* FEATURE CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
-          <p className="text-gray-600">
-            Join our IT Helpdesk system
-          </p>
+            <div className="bg-white rounded-2xl shadow p-5 border border-green-100">
+              <h3 className="text-xl font-bold text-green-700">Secure</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Role-based authentication system
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow p-5 border border-green-100">
+              <h3 className="text-xl font-bold text-green-700">Smart</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Automated ticket handling
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow p-5 border border-green-100">
+              <h3 className="text-xl font-bold text-green-700">Fast</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Real-time IT support system
+              </p>
+            </div>
+
+          </div>
+
+          {/* INFO CARD */}
+          <div className="bg-white rounded-3xl shadow p-6 border border-green-100">
+            <h4 className="text-lg font-bold mb-2">
+              Enterprise Access
+            </h4>
+
+            <p className="text-sm text-gray-500 leading-relaxed">
+              This system is designed for Mazzraty employees to manage IT tickets,
+              assets, and internal support efficiently with full tracking and security.
+            </p>
+          </div>
+
         </div>
 
-        {/* CARD */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-green-100 p-8">
+        {/* ================= RIGHT FORM CARD ================= */}
+        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-green-100">
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          {/* HEADER */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">
+              Create Account
+            </h1>
+            <p className="text-gray-500">
+              Register your enterprise profile
+            </p>
+          </div>
+
+          {/* FORM */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              <input
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Full Name"
+                className="input"
+                required
+              />
+
+              <input
+                name="employeeId"
+                value={form.employeeId}
+                onChange={handleChange}
+                placeholder="Employee ID"
+                className="input"
+                required
+              />
+
+            </div>
 
             <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Full Name"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 bg-gray-50"
-              required
-            />
-
-            <input
-              type="text"
-              name="employeeId"
-              value={form.employeeId}
-              onChange={handleChange}
-              placeholder="Employee ID (EMP001)"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 bg-gray-50"
-              required
-            />
-
-            <input
-              type="email"
               name="email"
               value={form.email}
               onChange={handleChange}
               placeholder="Email Address"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 bg-gray-50"
+              className="input"
               required
             />
 
-            <input
-              type="text"
-              name="position"
-              value={form.position}
-              onChange={handleChange}
-              placeholder="Position (e.g. IT Support)"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 bg-gray-50"
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-            <input
-              type="text"
-              name="department"
-              value={form.department}
-              onChange={handleChange}
-              placeholder="Department (IT / HR / Finance)"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 bg-gray-50"
-            />
+              <input
+                name="position"
+                value={form.position}
+                onChange={handleChange}
+                placeholder="Position"
+                className="input"
+              />
+
+              <input
+                name="department"
+                value={form.department}
+                onChange={handleChange}
+                placeholder="Department"
+                className="input"
+              />
+
+            </div>
 
             <input
               type="password"
@@ -117,33 +172,53 @@ export default function Register() {
               value={form.password}
               onChange={handleChange}
               placeholder="Password"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 bg-gray-50"
+              className="input"
               required
             />
 
             {/* BUTTON */}
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 hover:scale-[1.02] transition-all"
+              className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-semibold hover:scale-[1.01] transition"
             >
               Create Account
             </button>
           </form>
 
-          {/* LOGIN LINK */}
+          {/* LOGIN */}
           <button
             onClick={() => navigate("/login")}
-            className="w-full mt-6 border border-gray-300 py-3 rounded-xl hover:bg-gray-50"
+            className="w-full mt-4 border py-3 rounded-2xl hover:bg-gray-50"
           >
             Already have account? Login
           </button>
 
           {/* FOOTER */}
-          <p className="text-xs text-center mt-6 text-gray-500">
-            © 2026 Mazzraty - IT Ticketing System
+          <p className="text-xs text-center mt-6 text-gray-400">
+            © 2026 Mazzraty Enterprise System
           </p>
+
         </div>
       </div>
+
+      {/* INPUT STYLE */}
+      <style>
+        {`
+          .input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            outline: none;
+          }
+          .input:focus {
+            border-color: #22c55e;
+            box-shadow: 0 0 0 2px rgba(34,197,94,0.2);
+          }
+        `}
+      </style>
+
     </div>
   );
 }

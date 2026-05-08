@@ -7,152 +7,77 @@ export default function Sidebar() {
 
   const isActive = (path) =>
     location.pathname === path
-      ? "bg-indigo-50 text-indigo-600 border-r-2 border-indigo-600"
-      : "text-gray-600 hover:bg-gray-50 hover:text-indigo-600";
+      ? "bg-blue-50 text-blue-700 font-semibold border-r-4 border-blue-600"
+      : "text-gray-600 hover:bg-gray-100 hover:text-blue-700";
+
+  const NavItem = ({ to, icon, label }) => (
+    <Link
+      to={to}
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition ${isActive(
+        to
+      )}`}
+    >
+      <span className="text-lg">{icon}</span>
+      <span className="text-sm">{label}</span>
+    </Link>
+  );
 
   return (
-    <aside className="w-64 h-screen bg-white border-r fixed left-0 top-0 flex flex-col">
+    <aside className="h-screen w-[260px] bg-white border-r flex flex-col">
 
-      {/* TOP BRAND (SAAS STYLE) */}
-      <div className="h-16 flex items-center px-6 border-b">
-        <div className="flex items-center gap-3">
-
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
-            H
-          </div>
-
-          <div className="leading-tight">
-            <p className="text-sm font-semibold text-gray-900">
-              HelpyFy
-            </p>
-            <p className="text-[11px] text-gray-500">
-              IT Service Desk
-            </p>
-          </div>
-
-        </div>
+      {/* LOGO */}
+      <div className="h-16 flex items-center px-5 border-b bg-white">
+        <img
+          src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+          className="h-9 object-contain"
+          alt="logo"
+        />
       </div>
 
-      {/* NAV CONTENT */}
-      <nav className="flex-1 px-3 py-4 space-y-6 text-sm">
+      {/* MENU */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
 
-        {/* WORKSPACE */}
-        <div>
-          <p className="px-3 text-[11px] text-gray-400 uppercase tracking-wider">
-            Workspace
-          </p>
-
-          <div className="mt-2 space-y-1">
-
-            <Link
-              to="/"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${isActive("/")}`}
-            >
-              📊 Dashboard
-            </Link>
-
-            <Link
-              to="/tickets"
-              className={`flex items-center justify-between px-3 py-2 rounded-lg transition ${isActive("/tickets")}`}
-            >
-              <span>🎫 My Tickets</span>
-
-              {/* REAL-TIME BADGE READY */}
-              <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full">
-                3
-              </span>
-            </Link>
-
-          </div>
-        </div>
-
-        {/* ACTIONS (USER ONLY) */}
+        {/* USER SECTION ONLY */}
         {role === "user" && (
           <div>
-            <p className="px-3 text-[11px] text-gray-400 uppercase tracking-wider">
-              Actions
+            <p className="text-[11px] text-gray-400 uppercase px-3 mb-2">
+              User Menu
             </p>
 
-            <div className="mt-2 space-y-1">
-
-              <Link
-                to="/create"
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${isActive("/create")}`}
-              >
-                ➕ Create Ticket
-              </Link>
-
+            <div className="space-y-1">
+              <NavItem to="/" icon="📊" label="Dashboard" />
+              <NavItem to="/tickets" icon="🎫" label="My Tickets" />
+              <NavItem to="/create" icon="➕" label="Create Ticket" />
             </div>
           </div>
         )}
 
-        {/* ADMIN PANEL */}
+        {/* ADMIN SECTION (UNCHANGED - DO NOT TOUCH) */}
         {role === "admin" && (
-          <div>
-            <p className="px-3 text-[11px] text-gray-400 uppercase tracking-wider">
-              Admin
+          <div className="pt-2 border-t">
+            <p className="text-[11px] text-gray-400 uppercase px-3 mb-2">
+              Admin Panel
             </p>
 
-            <div className="mt-2 space-y-1">
-
-              <Link
-                to="/admin"
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${isActive("/admin")}`}
-              >
-                🛠 Admin Dashboard
-              </Link>
-
+            <div className="space-y-1">
+              <NavItem to="/admin" icon="🛠" label="Admin Dashboard" />
+              <NavItem to="/admin/employees" icon="👨‍💼" label="Employees" />
+              <NavItem to="/admin/assets/upload-excel" icon="📤" label="Upload Excel" />
+              <NavItem to="/admin/assets" icon="📦" label="Assets" />
+              <NavItem to="/admin/assets/history" icon="📊" label="Asset History" />
             </div>
           </div>
         )}
 
-        {/* SYSTEM */}
-        <div>
-          <p className="px-3 text-[11px] text-gray-400 uppercase tracking-wider">
-            System
-          </p>
+      </div>
 
-          <div className="mt-2 space-y-1">
-
-            <Link
-              to="/about"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${isActive("/about")}`}
-            >
-              ℹ️ About
-            </Link>
-
-            <Link
-              to="/contact"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${isActive("/contact")}`}
-            >
-              📩 Support
-            </Link>
-
-          </div>
-        </div>
-
-      </nav>
-
-      {/* FOOTER (REAL SAAS STYLE) */}
-      <div className="p-4 border-t bg-gray-50">
-
-        <div className="flex items-center justify-between">
-
-          <div>
-            <p className="text-xs text-gray-500">
-              Signed in as
-            </p>
-            <p className="text-sm font-medium text-gray-800 truncate">
-              {user?.name || "Guest"}
-            </p>
-          </div>
-
-          <span className="text-[10px] px-2 py-1 rounded-full bg-gray-200 text-gray-600 capitalize">
-            {role}
-          </span>
-
-        </div>
-
+      {/* USER INFO */}
+      <div className="border-t px-4 py-3 bg-gray-50">
+        <p className="text-xs text-gray-500">Signed in as</p>
+        <p className="text-sm font-semibold text-gray-800">
+          {user?.name || "Guest"}
+        </p>
+        <p className="text-xs text-blue-600 capitalize">{role}</p>
       </div>
 
     </aside>

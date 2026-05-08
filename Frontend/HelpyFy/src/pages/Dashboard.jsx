@@ -20,7 +20,6 @@ export default function Dashboard() {
 
       const res = await api.get("/tickets/my?page=1");
       setTickets(res.data.data || []);
-
     } catch (err) {
       setError("Failed to load dashboard data");
     } finally {
@@ -33,97 +32,155 @@ export default function Dashboard() {
   const resolved = tickets.filter(t => t.status === "Resolved").length;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="min-h-screen bg-[#f4f6f9] p-6">
 
       {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">
-          Overview
+      <div className="bg-white border rounded-xl p-5 shadow-sm mb-6">
+        <h1 className="text-xl font-bold text-gray-800">
+          IT Service Dashboard
         </h1>
         <p className="text-sm text-gray-500">
-          Your ticket activity at a glance
+          SAP-style ITSM overview panel
         </p>
       </div>
 
-      {/* ERROR STATE */}
+      {/* ERROR */}
       {error && (
-        <div className="mb-4 bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm">
+        <div className="mb-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg border">
           {error}
         </div>
       )}
 
-      {/* LOADING STATE */}
+      {/* LOADING */}
       {loading ? (
         <div className="bg-white border rounded-xl p-10 text-center text-gray-500">
           Loading dashboard...
         </div>
       ) : (
         <>
-          {/* KPI GRID (SAAS STYLE CARDS) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-            <div className="bg-white border rounded-xl p-5 hover:shadow-sm transition">
-              <p className="text-sm text-gray-500">Open Tickets</p>
-              <h2 className="text-3xl font-bold text-amber-600 mt-1">
-                {open}
-              </h2>
+          {/* KPI GRID (SAP STYLE) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+            {/* OPEN */}
+            <div className="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
+              <p className="text-xs text-gray-500 uppercase">Open Tickets</p>
+
+              <div className="flex items-center justify-between mt-4">
+                <h2 className="text-3xl font-bold text-yellow-600">
+                  {open}
+                </h2>
+                <span className="text-3xl">🟡</span>
+              </div>
+
+              <div className="h-1 mt-4 bg-yellow-100 rounded">
+                <div className="h-1 bg-yellow-500 w-2/3 rounded"></div>
+              </div>
+
+              <p className="text-xs text-gray-400 mt-2">
+                Waiting for action
+              </p>
             </div>
 
-            <div className="bg-white border rounded-xl p-5 hover:shadow-sm transition">
-              <p className="text-sm text-gray-500">In Progress</p>
-              <h2 className="text-3xl font-bold text-blue-600 mt-1">
-                {progress}
-              </h2>
+            {/* IN PROGRESS */}
+            <div className="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
+              <p className="text-xs text-gray-500 uppercase">In Progress</p>
+
+              <div className="flex items-center justify-between mt-4">
+                <h2 className="text-3xl font-bold text-blue-600">
+                  {progress}
+                </h2>
+                <span className="text-3xl">🔵</span>
+              </div>
+
+              <div className="h-1 mt-4 bg-blue-100 rounded">
+                <div className="h-1 bg-blue-500 w-1/2 rounded"></div>
+              </div>
+
+              <p className="text-xs text-gray-400 mt-2">
+                Being worked on
+              </p>
             </div>
 
-            <div className="bg-white border rounded-xl p-5 hover:shadow-sm transition">
-              <p className="text-sm text-gray-500">Resolved</p>
-              <h2 className="text-3xl font-bold text-emerald-600 mt-1">
-                {resolved}
-              </h2>
+            {/* RESOLVED */}
+            <div className="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
+              <p className="text-xs text-gray-500 uppercase">Resolved</p>
+
+              <div className="flex items-center justify-between mt-4">
+                <h2 className="text-3xl font-bold text-green-600">
+                  {resolved}
+                </h2>
+                <span className="text-3xl">🟢</span>
+              </div>
+
+              <div className="h-1 mt-4 bg-green-100 rounded">
+                <div className="h-1 bg-green-500 w-3/4 rounded"></div>
+              </div>
+
+              <p className="text-xs text-gray-400 mt-2">
+                Completed successfully
+              </p>
             </div>
 
           </div>
 
-          {/* EMPTY STATE */}
-          {tickets.length === 0 && (
-            <div className="mt-8 bg-white border rounded-xl p-10 text-center">
-              <h3 className="text-gray-700 font-medium">
-                No tickets yet
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Create your first support ticket to get started
-              </p>
+          {/* QUICK ACTION BAR */}
+          <div className="mt-6 bg-white border rounded-xl p-5 shadow-sm">
+
+            <h3 className="text-sm font-semibold text-gray-700 mb-4 uppercase">
+              Quick Actions
+            </h3>
+
+            <div className="flex flex-wrap gap-3">
 
               <button
                 onClick={() => navigate("/create")}
-                className="mt-4 bg-black text-white px-4 py-2 rounded-lg text-sm"
-              >
-                + Create Ticket
-              </button>
-            </div>
-          )}
-
-          {/* QUICK ACTIONS */}
-          {tickets.length > 0 && (
-            <div className="mt-6 flex gap-3">
-
-              <button
-                onClick={() => navigate("/create")}
-                className="bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-800"
+                className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm shadow"
               >
                 + Create Ticket
               </button>
 
               <button
                 onClick={() => navigate("/tickets")}
-                className="border px-4 py-2 rounded-lg text-sm hover:bg-white"
+                className="border px-5 py-2 rounded-lg text-sm hover:bg-gray-50"
               >
-                View My Tickets
+                View Tickets
+              </button>
+
+              <button
+                onClick={load}
+                className="border px-5 py-2 rounded-lg text-sm hover:bg-gray-50"
+              >
+                Refresh
+              </button>
+
+            </div>
+          </div>
+
+          {/* EMPTY STATE */}
+          {tickets.length === 0 && (
+            <div className="mt-6 bg-white border rounded-xl p-10 text-center shadow-sm">
+
+              <div className="text-5xl">📭</div>
+
+              <h3 className="mt-3 text-gray-700 font-semibold">
+                No tickets available
+              </h3>
+
+              <p className="text-sm text-gray-500 mt-1">
+                Create your first request to get started
+              </p>
+
+              <button
+                onClick={() => navigate("/create")}
+                className="mt-4 bg-black text-white px-5 py-2 rounded-lg text-sm"
+              >
+                Create Ticket
               </button>
 
             </div>
           )}
+
         </>
       )}
 
