@@ -21,7 +21,8 @@ export const createTicket = async (req, res) => {
     }
 
     // FILES
-    const attachments = req.files?.map((f) => f.path || f.filename) || [];
+    const attachments =
+      req.files?.map((f) => f.path || f.filename) || [];
 
     // SLA CALCULATION
     const slaHours = {
@@ -47,9 +48,13 @@ export const createTicket = async (req, res) => {
     });
 
     // GET USER
-    const user = await User.findById(req.user.id).select("email name");
+    const user = await User.findById(req.user.id).select(
+      "email name"
+    );
 
-    // SOCKET NOTIFICATION (NON-BLOCKING)
+    // ==========================
+    // SOCKET NOTIFICATION (FAST)
+    // ==========================
     if (global.io) {
       try {
         const admins = await User.find({ role: "admin" });
@@ -65,29 +70,44 @@ export const createTicket = async (req, res) => {
           });
         });
       } catch (socketErr) {
-        console.log("Socket error:", socketErr.message);
+        console.log("❌ Socket error:", socketErr.message);
       }
     }
 
-    // 🔥 EMAIL (ZERO DELAY - BACKGROUND)
-    setImmediate(() => {
-      sendEmail(
-        process.env.ADMIN_EMAIL,
-        "New Ticket Raised",
-        {
-          title,
-          description,
-          department,
-          priority,
-          status: "Open",
-          userEmail: user?.email,
+    // ==========================
+    // EMAIL (NON-BLOCKING SAFE)
+    // ==========================
+    const sendNotificationEmail = async () => {
+      try {
+        if (!process.env.ADMIN_EMAIL) {
+          throw new Error("ADMIN_EMAIL missing in .env");
         }
-      ).catch((err) => {
-        console.log("EMAIL FAILED:", err.message);
-      });
-    });
 
-    // 🚀 RESPONSE SENT IMMEDIATELY
+        await sendEmail(
+          process.env.ADMIN_EMAIL,
+          "New Ticket Raised",
+          {
+            title,
+            description,
+            department,
+            priority,
+            status: "Open",
+            userEmail: user?.email,
+          }
+        );
+
+        console.log("📧 Email sent successfully");
+      } catch (err) {
+        console.log("❌ EMAIL FAILED:", err.message);
+      }
+    };
+
+    // FIRE & FORGET EMAIL
+    sendNotificationEmail();
+
+    // ==========================
+    // RESPONSE (IMMEDIATE)
+    // ==========================
     return res.status(201).json({
       success: true,
       message: "Ticket created successfully",
