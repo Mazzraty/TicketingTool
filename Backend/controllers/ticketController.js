@@ -49,7 +49,7 @@ export const createTicket = async (req, res) => {
     // GET USER
     const user = await User.findById(req.user.id).select("email name");
 
-    // SOCKET NOTIFICATION
+    // SOCKET NOTIFICATION (NON-BLOCKING)
     if (global.io) {
       try {
         const admins = await User.find({ role: "admin" });
@@ -69,11 +69,9 @@ export const createTicket = async (req, res) => {
       }
     }
 
-    // EMAIL STATUS TRACKING
-    let emailStatus = "sent";
-
-    try {
-      await sendEmail(
+    // 🔥 EMAIL (ZERO DELAY - BACKGROUND)
+    setImmediate(() => {
+      sendEmail(
         process.env.ADMIN_EMAIL,
         "New Ticket Raised",
         {
@@ -84,18 +82,16 @@ export const createTicket = async (req, res) => {
           status: "Open",
           userEmail: user?.email,
         }
-      );
-    } catch (emailErr) {
-      emailStatus = "failed";
-      console.log("EMAIL ERROR:", emailErr.message);
-    }
+      ).catch((err) => {
+        console.log("EMAIL FAILED:", err.message);
+      });
+    });
 
-    // RESPONSE
+    // 🚀 RESPONSE SENT IMMEDIATELY
     return res.status(201).json({
       success: true,
       message: "Ticket created successfully",
       data: ticket,
-      emailStatus, // 🔥 IMPORTANT FOR FRONTEND
     });
 
   } catch (error) {
