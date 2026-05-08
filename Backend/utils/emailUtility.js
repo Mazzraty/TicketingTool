@@ -1,25 +1,23 @@
 import nodemailer from "nodemailer";
 
-const emailUser = process.env.EMAIL_USER;
-const emailPass = process.env.EMAIL_PASS;
-
-if (!emailUser || !emailPass) {
-  console.error("Missing email credentials in environment:", {
-    EMAIL_USER: Boolean(emailUser),
-    EMAIL_PASS: Boolean(emailPass),
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
   });
-}
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: emailUser,
-    pass: emailPass, // Google App Password
-  },
-});
+};
 
 export const sendEmail = async (to, subject, ticketData) => {
   try {
+    const transporter = createTransporter();
+
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      throw new Error("Email credentials missing in env");
+    }
+
     await transporter.sendMail({
       from: `"IT Helpdesk System" <${process.env.EMAIL_USER}>`,
       to,
@@ -30,56 +28,26 @@ export const sendEmail = async (to, subject, ticketData) => {
 
           <h2 style="color:#dc2626;">🚨 New Support Ticket</h2>
 
-          <p style="color:#555;">
-            A new issue has been reported in the IT Helpdesk system.
-          </p>
+          <p>A new issue has been reported.</p>
 
-          <hr style="margin:15px 0;" />
+          <hr />
 
           <h3>📌 Ticket Information</h3>
 
-          <table style="width:100%;font-size:14px;">
-            <tr>
-              <td><b>User:</b></td>
-              <td>${ticketData.userEmail || "Unknown"}</td>
-            </tr>
-            <tr>
-              <td><b>Title:</b></td>
-              <td>${ticketData.title || "-"}</td>
-            </tr>
-            <tr>
-              <td><b>Description:</b></td>
-              <td>${ticketData.description || "-"}</td>
-            </tr>
-            <tr>
-              <td><b>Department:</b></td>
-              <td>${ticketData.department || "-"}</td>
-            </tr>
-            <tr>
-              <td><b>Priority:</b></td>
-              <td>${ticketData.priority || "Medium"}</td>
-            </tr>
-            <tr>
-              <td><b>Status:</b></td>
-              <td style="color:#f59e0b;"><b>${ticketData.status || "Open"}</b></td>
-            </tr>
-          </table>
-
-          <div style="margin-top:20px;padding:10px;background:#fff3f3;border-left:4px solid #dc2626;">
-            ⚡ Please check and resolve this ticket as soon as possible.
-          </div>
-
-          <p style="margin-top:30px;font-size:12px;color:#999;">
-            © IT Helpdesk System
-          </p>
+          <p><b>User:</b> ${ticketData.userEmail || "Unknown"}</p>
+          <p><b>Title:</b> ${ticketData.title || "-"}</p>
+          <p><b>Description:</b> ${ticketData.description || "-"}</p>
+          <p><b>Department:</b> ${ticketData.department || "-"}</p>
+          <p><b>Priority:</b> ${ticketData.priority || "Medium"}</p>
+          <p><b>Status:</b> ${ticketData.status || "Open"}</p>
 
         </div>
       </div>
       `,
     });
 
-    console.log("✅ HTML Email sent successfully");
+    console.log("✅ Email sent successfully");
   } catch (error) {
-    console.error("❌ Email Error:", error);
+    console.error("❌ Email Error:", error.message);
   }
 };
