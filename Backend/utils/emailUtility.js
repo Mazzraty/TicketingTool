@@ -1,67 +1,86 @@
+// utils/emailUtility.js
+
 import nodemailer from "nodemailer";
 
-export const sendEmail = async (to, subject, ticketData) => {
-  try {
-    console.log("━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("📧 EMAIL DEBUG START");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━");
+// ===============================
+// 🔌 CREATE TRANSPORTER
+// ===============================
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS, // Gmail App Password ONLY
+    },
+  });
+};
 
-    // 1. ENV CHECK
-    console.log("EMAIL_USER:", process.env.EMAIL_USER);
-    console.log("EMAIL_PASS exists:", !!process.env.EMAIL_PASS);
-    console.log("ADMIN_EMAIL:", process.env.ADMIN_EMAIL);
+// ===============================
+// 📧 SEND EMAIL FUNCTION
+// ===============================
+export const sendEmail = async (to, subject, ticketData = {}) => {
+  try {
+    console.log("📧 sendEmail triggered");
+    console.log("TO:", to);
+    console.log("FROM:", process.env.EMAIL_USER);
 
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      throw new Error("Missing EMAIL credentials in .env");
+      throw new Error("Missing EMAIL_USER or EMAIL_PASS in .env");
     }
 
-    // 2. CREATE TRANSPORTER
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    const transporter = createTransporter();
 
-    console.log("🔌 Verifying SMTP connection...");
-
-    // 3. VERIFY CONNECTION (VERY IMPORTANT)
+    // ===============================
+    // 🔥 VERIFY SMTP BEFORE SENDING
+    // ===============================
     await transporter.verify();
-    console.log("✅ SMTP connection SUCCESS");
+    console.log("✅ SMTP Verified successfully");
 
-    // 4. SEND EMAIL
-    console.log("📨 Sending email to:", to);
-
+    // ===============================
+    // 📤 SEND MAIL
+    // ===============================
     const result = await transporter.sendMail({
-      from: `"IT Helpdesk" <${process.env.EMAIL_USER}>`,
+      from: `"IT Helpdesk System" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html: `
-        <h2>New Ticket</h2>
-        <p><b>Title:</b> ${ticketData.title}</p>
-        <p><b>Description:</b> ${ticketData.description}</p>
-        <p><b>Priority:</b> ${ticketData.priority}</p>
+        <div style="font-family:Arial;background:#f4f6f8;padding:20px;">
+          <div style="max-width:600px;margin:auto;background:#fff;padding:20px;border-radius:10px;">
+
+            <h2 style="color:#dc2626;">🚨 New Support Ticket</h2>
+
+            <p>A new issue has been reported in your system.</p>
+
+            <hr/>
+
+            <h3>📌 Ticket Details</h3>
+
+            <p><b>User:</b> ${ticketData.userEmail || "Unknown"}</p>
+            <p><b>Title:</b> ${ticketData.title || "-"}</p>
+            <p><b>Description:</b> ${ticketData.description || "-"}</p>
+            <p><b>Department:</b> ${ticketData.department || "-"}</p>
+            <p><b>Priority:</b> ${ticketData.priority || "Medium"}</p>
+            <p><b>Status:</b> ${ticketData.status || "Open"}</p>
+
+            <br/>
+
+            <small style="color:#999;">
+              IT Helpdesk Notification System
+            </small>
+
+          </div>
+        </div>
       `,
     });
 
-    console.log("✅ EMAIL SENT SUCCESSFULLY");
-    console.log("Message ID:", result.messageId);
-    console.log("━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("📨 Email sent successfully:", result.messageId);
 
     return result;
 
   } catch (error) {
-    console.log("━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("❌ EMAIL FAILED");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━");
-
-    console.log("Error Name:", error.name);
-    console.log("Error Message:", error.message);
-
-    if (error.response) {
-      console.log("SMTP Response:", error.response);
-    }
+    console.error("❌ EMAIL ERROR:");
+    console.error("Message:", error.message);
+    console.error("Stack:", error.stack);
 
     throw error;
   }

@@ -2,7 +2,9 @@ import dotenv from "dotenv";
 
 // ✅ Load env safely (works local + Render)
 dotenv.config();
-
+console.log("🔥 ENV LOADED CHECK");
+console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "OK" : "MISSING");
 import express from "express";
 import cors from "cors";
 import connectDB from "./config/db.js";
