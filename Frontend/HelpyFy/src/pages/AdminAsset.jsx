@@ -12,6 +12,7 @@ export default function AdminAssets() {
 
   const [open, setOpen] = useState(null);
 
+  // ================= LOAD EMPLOYEES =================
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -25,181 +26,203 @@ export default function AdminAssets() {
     fetchEmployees();
   }, []);
 
+  // ================= ADD ASSET =================
   const addAsset = async () => {
     try {
-      await api.post("/assets", { assetCode, name, type });
+      await api.post("/assets", {
+        assetCode,
+        name,
+        type,
+      });
+
       toast.success("Asset Added");
 
       setAssetCode("");
       setName("");
       setType("");
     } catch (err) {
-      toast.error(err.response?.data?.msg || "Error");
+      toast.error(err.response?.data?.msg || "Error adding asset");
     }
   };
 
+  // ================= ASSIGN ASSET (FIXED) =================
   const assign = async () => {
     try {
-      await api.post("/assets/assign", {
+      if (!selectedEmployee || !assetCode) {
+        return toast.error("Select employee and asset code");
+      }
+
+      console.log("ASSIGN PAYLOAD:", {
         employeeId: selectedEmployee,
-        assetCode
+        assetCode,
       });
 
-      toast.success("Asset Assigned");
+      await api.post("/assets/assign", {
+        employeeId: selectedEmployee, // ✅ MUST BE _id
+        assetCode,
+      });
+
+      toast.success("Asset Assigned Successfully");
+
+      setAssetCode("");
+      setSelectedEmployee("");
     } catch (err) {
-      toast.error(err.response?.data?.msg || "Error");
+      console.error(err);
+      toast.error(err.response?.data?.msg || "Assignment Failed");
     }
   };
 
+  // ================= RETURN ASSET =================
   const returnAsset = async () => {
     try {
       await api.post("/assets/return", { assetCode });
+
       toast.success("Asset Returned");
+
+      setAssetCode("");
     } catch (err) {
-      toast.error(err.response?.data?.msg || "Error");
+      toast.error(err.response?.data?.msg || "Return Failed");
     }
   };
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
 
-      {/* HEADER (LEFT ALIGNED) */}
+      {/* HEADER */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">
-          Asset Management
+          Asset Management (SAP Style)
         </h1>
         <p className="text-sm text-gray-500">
-          Quick access asset operations
+          Manage assets, assign & return in real-time
         </p>
       </div>
 
-      {/* FULL WIDTH LAYOUT */}
-      <div className="space-y-4 w-full">
+      {/* ================= ADD ASSET ================= */}
+      <div className="bg-white border rounded-lg shadow-sm mb-4">
 
-        {/* ADD ASSET */}
-        <div className="bg-white border rounded-lg shadow-sm">
+        <button
+          onClick={() => setOpen(open === "add" ? null : "add")}
+          className="w-full flex justify-between px-5 py-3 font-semibold"
+        >
+          ➕ Add Asset
+          <span>{open === "add" ? "−" : "+"}</span>
+        </button>
 
-          <button
-            onClick={() => setOpen(open === "add" ? null : "add")}
-            className="w-full flex justify-between items-center px-5 py-3 text-left font-semibold text-gray-700 hover:bg-gray-50"
-          >
-            <span>➕ Add Asset</span>
-            <span>{open === "add" ? "−" : "+"}</span>
-          </button>
+        {open === "add" && (
+          <div className="p-4 grid md:grid-cols-4 gap-3 border-t">
 
-          {open === "add" && (
-            <div className="p-4 border-t grid md:grid-cols-4 gap-3">
+            <input
+              className="border p-2 rounded"
+              placeholder="Asset Code"
+              value={assetCode}
+              onChange={(e) => setAssetCode(e.target.value)}
+            />
 
-              <input
-                className="border rounded-md p-2 text-sm"
-                placeholder="Asset Code"
-                value={assetCode}
-                onChange={(e) => setAssetCode(e.target.value)}
-              />
+            <input
+              className="border p-2 rounded"
+              placeholder="Asset Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
 
-              <input
-                className="border rounded-md p-2 text-sm"
-                placeholder="Asset Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+            <input
+              className="border p-2 rounded"
+              placeholder="Type"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+            />
 
-              <input
-                className="border rounded-md p-2 text-sm"
-                placeholder="Type"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-              />
+            <button
+              onClick={addAsset}
+              className="bg-blue-600 text-white rounded"
+            >
+              Create
+            </button>
 
-              <button
-                onClick={addAsset}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-md py-2 text-sm"
-              >
-                Create
-              </button>
-
-            </div>
-          )}
-        </div>
-
-        {/* ASSIGN */}
-        <div className="bg-white border rounded-lg shadow-sm">
-
-          <button
-            onClick={() => setOpen(open === "assign" ? null : "assign")}
-            className="w-full flex justify-between items-center px-5 py-3 text-left font-semibold text-gray-700 hover:bg-gray-50"
-          >
-            <span>👤 Assign Asset</span>
-            <span>{open === "assign" ? "−" : "+"}</span>
-          </button>
-
-          {open === "assign" && (
-            <div className="p-4 border-t grid md:grid-cols-3 gap-3">
-
-              <select
-                className="border rounded-md p-2 text-sm"
-                value={selectedEmployee}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
-              >
-                <option value="">Select Employee</option>
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp.employeeId}>
-                    {emp.name}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                className="border rounded-md p-2 text-sm"
-                placeholder="Asset Code"
-                value={assetCode}
-                onChange={(e) => setAssetCode(e.target.value)}
-              />
-
-              <button
-                onClick={assign}
-                className="bg-green-600 hover:bg-green-700 text-white rounded-md py-2 text-sm"
-              >
-                Assign
-              </button>
-
-            </div>
-          )}
-        </div>
-
-        {/* RETURN */}
-        <div className="bg-white border rounded-lg shadow-sm">
-
-          <button
-            onClick={() => setOpen(open === "return" ? null : "return")}
-            className="w-full flex justify-between items-center px-5 py-3 text-left font-semibold text-gray-700 hover:bg-gray-50"
-          >
-            <span>🔄 Return Asset</span>
-            <span>{open === "return" ? "−" : "+"}</span>
-          </button>
-
-          {open === "return" && (
-            <div className="p-4 border-t flex gap-3">
-
-              <input
-                className="flex-1 border rounded-md p-2 text-sm"
-                placeholder="Asset Code"
-                value={assetCode}
-                onChange={(e) => setAssetCode(e.target.value)}
-              />
-
-              <button
-                onClick={returnAsset}
-                className="bg-red-600 hover:bg-red-700 text-white rounded-md px-4 text-sm"
-              >
-                Return
-              </button>
-
-            </div>
-          )}
-        </div>
-
+          </div>
+        )}
       </div>
+
+      {/* ================= ASSIGN ASSET ================= */}
+      <div className="bg-white border rounded-lg shadow-sm mb-4">
+
+        <button
+          onClick={() => setOpen(open === "assign" ? null : "assign")}
+          className="w-full flex justify-between px-5 py-3 font-semibold"
+        >
+          👤 Assign Asset
+          <span>{open === "assign" ? "−" : "+"}</span>
+        </button>
+
+        {open === "assign" && (
+          <div className="p-4 grid md:grid-cols-3 gap-3 border-t">
+
+            {/* ✅ FIXED: USE _id */}
+            <select
+              className="border p-2 rounded"
+              value={selectedEmployee}
+              onChange={(e) => setSelectedEmployee(e.target.value)}
+            >
+              <option value="">Select Employee</option>
+
+              {employees.map((emp) => (
+                <option key={emp._id} value={emp._id}>
+                  {emp.name} ({emp.staffCode})
+                </option>
+              ))}
+            </select>
+
+            <input
+              className="border p-2 rounded"
+              placeholder="Asset Code"
+              value={assetCode}
+              onChange={(e) => setAssetCode(e.target.value)}
+            />
+
+            <button
+              onClick={assign}
+              className="bg-green-600 text-white rounded"
+            >
+              Assign
+            </button>
+
+          </div>
+        )}
+      </div>
+
+      {/* ================= RETURN ================= */}
+      <div className="bg-white border rounded-lg shadow-sm">
+
+        <button
+          onClick={() => setOpen(open === "return" ? null : "return")}
+          className="w-full flex justify-between px-5 py-3 font-semibold"
+        >
+          🔄 Return Asset
+          <span>{open === "return" ? "−" : "+"}</span>
+        </button>
+
+        {open === "return" && (
+          <div className="p-4 flex gap-3 border-t">
+
+            <input
+              className="flex-1 border p-2 rounded"
+              placeholder="Asset Code"
+              value={assetCode}
+              onChange={(e) => setAssetCode(e.target.value)}
+            />
+
+            <button
+              onClick={returnAsset}
+              className="bg-red-600 text-white px-4 rounded"
+            >
+              Return
+            </button>
+
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

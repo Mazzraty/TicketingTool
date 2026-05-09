@@ -23,7 +23,7 @@ export default function Sidebar() {
   );
 
   return (
-    <aside className="h-screen w-[260px] bg-white border-r flex flex-col">
+    <aside className="sticky top-0 h-screen w-[260px] bg-white border-r flex flex-col">
 
       {/* LOGO */}
       <div className="h-16 flex items-center px-5 border-b bg-white">
@@ -52,7 +52,7 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* ADMIN SECTION (UNCHANGED - DO NOT TOUCH) */}
+        {/* ADMIN SECTION */}
         {role === "admin" && (
           <div className="pt-2 border-t">
             <p className="text-[11px] text-gray-400 uppercase px-3 mb-2">
@@ -62,9 +62,17 @@ export default function Sidebar() {
             <div className="space-y-1">
               <NavItem to="/admin" icon="🛠" label="Admin Dashboard" />
               <NavItem to="/admin/employees" icon="👨‍💼" label="Employees" />
-              <NavItem to="/admin/assets/upload-excel" icon="📤" label="Upload Excel" />
+              <NavItem
+                to="/admin/assets/upload-excel"
+                icon="📤"
+                label="Upload Excel"
+              />
               <NavItem to="/admin/assets" icon="📦" label="Assets" />
-              <NavItem to="/admin/assets/history" icon="📊" label="Asset History" />
+              <NavItem
+                to="/admin/assets/history"
+                icon="📊"
+                label="Asset History"
+              />
             </div>
           </div>
         )}
