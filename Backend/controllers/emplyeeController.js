@@ -39,10 +39,10 @@ export const bulkUploadEmployees = async (req, res) => {
     const { employees } = req.body;
 
     if (!Array.isArray(employees)) {
-      return res.status(400).json({ message: "Invalid data" });
+      return res.status(400).json({ message: "Invalid data format" });
     }
 
-    const clean = (v) => v?.toString().trim();
+    const clean = (v) => (v ? v.toString().trim() : "");
 
     const formatted = employees.map((e) => ({
       staffCode: clean(e.staffCode),
@@ -50,24 +50,38 @@ export const bulkUploadEmployees = async (req, res) => {
       department: clean(e.department),
       designation: clean(e.designation),
       division: clean(e.division),
+      placeOfWork: clean(e.placeOfWork),
+      visaNo: clean(e.visaNo),
+      dateOfJoining: e.dateOfJoining ? new Date(e.dateOfJoining) : null,
       status: "active",
     }));
 
-    const valid = formatted.filter((e) => e.staffCode && e.name);
-    const failed = formatted.filter((e) => !(e.staffCode && e.name));
+    // strict validation
+    const valid = formatted.filter(
+      (e) => e.staffCode.length > 0 && e.name.length > 0
+    );
 
+    const failed = formatted.filter(
+      (e) => !(e.staffCode.length > 0 && e.name.length > 0)
+    );
+
+    // optional: prevent duplicates inside DB
     const inserted = await EmployeeMaster.insertMany(valid, {
       ordered: false,
     });
 
     res.json({
       success: true,
-      inserted: inserted.length,
+      insertedCount: inserted.length,
       failedCount: failed.length,
-      failed,
+      failedRows: failed,
     });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: err.message });
+    console.error("BULK UPLOAD ERROR:", err);
+
+    res.status(500).json({
+      message: err.message,
+    });
   }
 };
