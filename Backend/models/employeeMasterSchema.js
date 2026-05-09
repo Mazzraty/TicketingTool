@@ -2,32 +2,51 @@ import mongoose from "mongoose";
 
 const employeeSchema = new mongoose.Schema(
   {
-    employeeId: {
+    staffCode: {
       type: String,
+      required: true,
       unique: true,
-      required: true
     },
 
     name: {
       type: String,
-      required: true
+      required: true,
     },
 
-    position: {
+    dateOfJoining: {
+      type: Date,
+    },
+
+    division: {
       type: String,
-      default: "Employee"
+      default: "",
     },
 
     department: {
       type: String,
-      default: "General"
+      default: "",
+    },
+
+    designation: {
+      type: String,
+      default: "",
+    },
+
+    placeOfWork: {
+      type: String,
+      default: "",
+    },
+
+    visaNo: {
+      type: String,
+      default: "",
     },
 
     status: {
       type: String,
       enum: ["active", "inactive"],
-      default: "active"
-    }
+      default: "active",
+    },
   },
   { timestamps: true }
 );

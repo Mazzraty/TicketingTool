@@ -39,27 +39,38 @@ export const bulkUploadEmployees = async (req, res) => {
     const { employees } = req.body;
 
     if (!employees || !employees.length) {
-      return res.status(400).json({ message: "No employee data found" });
+      return res.status(400).json({
+        message: "No employee data found",
+      });
     }
 
-    // optional cleanup (normalize fields)
-    const formatted = employees.map(emp => ({
-      employeeId: emp.employeeId,
+    // 🔥 Map Excel → DB Schema
+    const formatted = employees.map((emp) => ({
+      staffCode: emp.staffCode,
       name: emp.name,
+      dateOfJoining: emp.dateOfJoining,
+      division: emp.division,
       department: emp.department,
-      position: emp.position,
-      status: emp.status || "active"
+      designation: emp.designation,
+      placeOfWork: emp.placeOfWork,
+      visaNo: emp.visaNo,
+      status: emp.status || "active",
     }));
 
     await EmployeeMaster.insertMany(formatted);
 
     res.json({
+      success: true,
       message: "Employees uploaded successfully",
-      count: formatted.length
+      count: formatted.length,
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: err.message });
+    console.error("BULK UPLOAD ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
