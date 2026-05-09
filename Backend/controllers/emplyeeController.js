@@ -1,50 +1,112 @@
 import EmployeeMaster from "../models/employeeMasterSchema.js";
 
-// GET ALL
+/* =========================
+   GET ALL EMPLOYEES
+========================= */
 export const getEmployees = async (req, res) => {
-  const data = await EmployeeMaster.find().sort({ createdAt: -1 });
-  res.json(data);
-};
-
-// GET ONE
-export const getEmployee = async (req, res) => {
-  const emp = await EmployeeMaster.findById(req.params.id);
-  res.json(emp);
-};
-
-// UPDATE
-export const updateEmployee = async (req, res) => {
-  const emp = await EmployeeMaster.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true }
-  );
-  res.json(emp);
-};
-
-// DELETE
-export const deleteEmployee = async (req, res) => {
-  await EmployeeMaster.findByIdAndDelete(req.params.id);
-  res.json({ msg: "Deleted" });
-};
-
-// CREATE SINGLE EMPLOYEE
-export const createEmployee = async (req, res) => {
   try {
-    const emp = await EmployeeMaster.create(req.body);
+    const data = await EmployeeMaster.find().sort({ createdAt: -1 });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* =========================
+   GET EMPLOYEE BY ID (Mongo ID)
+========================= */
+export const getEmployee = async (req, res) => {
+  try {
+    const emp = await EmployeeMaster.findById(req.params.id);
+
+    if (!emp) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
     res.json(emp);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// BULK UPLOAD
+/* =========================
+   UPDATE EMPLOYEE
+========================= */
+export const updateEmployee = async (req, res) => {
+  try {
+    const emp = await EmployeeMaster.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    if (!emp) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    res.json(emp);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* =========================
+   DELETE EMPLOYEE
+========================= */
+export const deleteEmployee = async (req, res) => {
+  try {
+    const emp = await EmployeeMaster.findByIdAndDelete(req.params.id);
+
+    if (!emp) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    res.json({ msg: "Deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* =========================
+   CREATE EMPLOYEE
+========================= */
+export const createEmployee = async (req, res) => {
+  try {
+    const { staffCode, name } = req.body;
+
+    if (!staffCode || !name) {
+      return res.status(400).json({
+        message: "staffCode and name required",
+      });
+    }
+
+    const exists = await EmployeeMaster.findOne({ staffCode });
+
+    if (exists) {
+      return res.status(400).json({
+        message: "Employee already exists",
+      });
+    }
+
+    const emp = await EmployeeMaster.create(req.body);
+
+    res.json(emp);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* =========================
+   BULK UPLOAD EMPLOYEES
+========================= */
 export const bulkUploadEmployees = async (req, res) => {
   try {
     const employees = req.body.employees || [];
 
     if (!Array.isArray(employees)) {
-      return res.status(400).json({ message: "Invalid data format" });
+      return res.status(400).json({
+        message: "Invalid data format",
+      });
     }
 
     const clean = (v) => (v ? v.toString().trim() : "");
@@ -68,7 +130,9 @@ export const bulkUploadEmployees = async (req, res) => {
           continue;
         }
 
-        const exists = await EmployeeMaster.findOne({ staffCode });
+        const exists = await EmployeeMaster.findOne({
+          staffCode,
+        });
 
         if (exists) {
           skipped++;
@@ -92,7 +156,10 @@ export const bulkUploadEmployees = async (req, res) => {
         inserted++;
       } catch (err) {
         skipped++;
-        failedRows.push({ e, reason: err.message });
+        failedRows.push({
+          row: e,
+          reason: err.message,
+        });
       }
     }
 
@@ -104,6 +171,8 @@ export const bulkUploadEmployees = async (req, res) => {
       failedRows,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({
+      message: err.message,
+    });
   }
 };
