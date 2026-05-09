@@ -49,7 +49,9 @@ export const assignAsset = async (req, res) => {
   try {
     const { employeeId, assetCode } = req.body;
 
-    const employee = await EmployeeMaster.findOne({ employeeId });
+    console.log("ASSIGN PAYLOAD:", req.body);
+
+    const employee = await EmployeeMaster.findById(employeeId);
     const asset = await Asset.findOne({ assetCode });
 
     if (!employee)
@@ -71,12 +73,16 @@ export const assignAsset = async (req, res) => {
     asset.status = "assigned";
     await asset.save();
 
-    res.status(201).json(assignment);
+    return res.status(201).json({
+      msg: "Asset assigned successfully",
+      assignment,
+    });
+
   } catch (err) {
+    console.error(err);
     res.status(500).json({ msg: err.message });
   }
 };
-
 /* =========================
    🔄 RETURN ASSET
 ========================= */
