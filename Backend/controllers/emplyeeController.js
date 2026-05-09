@@ -1,5 +1,4 @@
 import EmployeeMaster from "../models/employeeMasterSchema.js";
-import XLSX from "xlsx";
 
 // GET ALL
 export const getEmployees = async (req, res) => {
@@ -9,16 +8,14 @@ export const getEmployees = async (req, res) => {
 
 // GET ONE
 export const getEmployee = async (req, res) => {
-  const emp = await EmployeeMaster.findOne({
-    employeeId: req.params.id
-  });
+  const emp = await EmployeeMaster.findById(req.params.id);
   res.json(emp);
 };
 
 // UPDATE
 export const updateEmployee = async (req, res) => {
-  const emp = await EmployeeMaster.findOneAndUpdate(
-    { employeeId: req.params.id },
+  const emp = await EmployeeMaster.findByIdAndUpdate(
+    req.params.id,
     req.body,
     { new: true }
   );
@@ -27,18 +24,24 @@ export const updateEmployee = async (req, res) => {
 
 // DELETE
 export const deleteEmployee = async (req, res) => {
-  await EmployeeMaster.deleteOne({
-    employeeId: req.params.id
-  });
+  await EmployeeMaster.findByIdAndDelete(req.params.id);
   res.json({ msg: "Deleted" });
 };
 
-// 🚀 BULK UPLOAD
+// CREATE SINGLE EMPLOYEE
+export const createEmployee = async (req, res) => {
+  try {
+    const emp = await EmployeeMaster.create(req.body);
+    res.json(emp);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
-
+// BULK UPLOAD
 export const bulkUploadEmployees = async (req, res) => {
   try {
-    const employees = req.body.employees || req.body;
+    const employees = req.body.employees || [];
 
     if (!Array.isArray(employees)) {
       return res.status(400).json({ message: "Invalid data format" });
@@ -50,27 +53,18 @@ export const bulkUploadEmployees = async (req, res) => {
     let skipped = 0;
     let failedRows = [];
 
-    console.log("📦 RECEIVED:", employees.length);
-
     for (const e of employees) {
       try {
         const staffCode = clean(
-          e.staffCode || e.employeeId || e["Staff Code"] || e["Employee ID"]
+          e.staffCode || e.employeeId || e["Staff Code"]
         );
 
         const name = clean(
           e.name || e.employeeName || e["Full Name"]
         );
 
-        const department = clean(e.department);
-        const designation = clean(e.designation || e.position);
-
-        console.log("➡️ ROW:", e);
-        console.log("➡️ PARSED:", { staffCode, name });
-
         if (!staffCode || !name) {
           skipped++;
-          failedRows.push({ e, reason: "Missing staffCode or name" });
           continue;
         }
 
@@ -84,12 +78,14 @@ export const bulkUploadEmployees = async (req, res) => {
         await EmployeeMaster.create({
           staffCode,
           name,
-          department,
-          designation,
-          division: clean(e.division),
-          placeOfWork: clean(e.placeOfWork),
-          visaNo: clean(e.visaNo),
-          dateOfJoining: e.dateOfJoining ? new Date(e.dateOfJoining) : null,
+          department: e.department || "",
+          designation: e.designation || "",
+          division: e.division || "",
+          placeOfWork: e.placeOfWork || "",
+          visaNo: e.visaNo || "",
+          dateOfJoining: e.dateOfJoining
+            ? new Date(e.dateOfJoining)
+            : null,
           status: "active",
         });
 
@@ -107,9 +103,7 @@ export const bulkUploadEmployees = async (req, res) => {
       total: employees.length,
       failedRows,
     });
-
   } catch (err) {
-    console.error("BULK ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };

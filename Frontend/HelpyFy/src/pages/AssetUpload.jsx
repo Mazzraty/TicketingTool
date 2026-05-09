@@ -9,7 +9,7 @@ export default function EmployeeExcelUpload() {
   const [loading, setLoading] = useState(false);
 
   // ----------------------------
-  // FILE UPLOAD
+  // FILE HANDLER (FIXED)
   // ----------------------------
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -18,35 +18,56 @@ export default function EmployeeExcelUpload() {
     const reader = new FileReader();
 
     reader.onload = (event) => {
-      const workbook = XLSX.read(event.target.result, { type: "binary" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const workbook = XLSX.read(event.target.result, {
+        type: "binary",
+      });
+
+      const sheet =
+        workbook.Sheets[workbook.SheetNames[0]];
+
       const json = XLSX.utils.sheet_to_json(sheet, {
         defval: "",
         raw: false,
       });
 
-      console.log("📄 RAW EXCEL:", json);
+      console.log("RAW EXCEL:", json);
 
-      const formatted = json.map((r) => ({
-        employeeId:
-          r.employeeId ||
-          r["Employee ID"] ||
-          r["Staff Code"] ||
-          "",
+      const formatted = json.map((r) => {
+        // normalize keys (remove spaces + lowercase)
+        const normalize = (obj) => {
+          const cleaned = {};
+          Object.keys(obj).forEach((k) => {
+            cleaned[k.trim().toLowerCase()] = obj[k];
+          });
+          return cleaned;
+        };
 
-        name:
-          r.name ||
-          r["Full Name"] ||
-          r["Employee Name"] ||
-          "",
+        const row = normalize(r);
 
-        department: r.department || "",
-        designation: r.designation || r.position || "",
-        division: r.division || "",
-        placeOfWork: r.placeOfWork || "",
-        visaNo: r.visaNo || "",
-        dateOfJoining: r.dateOfJoining || "",
-      }));
+        return {
+          staffCode:
+            row["staff code"] ||
+            row["employee id"] ||
+            row["staffcode"] ||
+            row["code"] ||
+            "",
+
+          name:
+            row["full name"] ||
+            row["employee name"] ||
+            row["name"] ||
+            "",
+
+          department: row["department"] || "",
+          designation: row["designation"] || "",
+          division: row["division"] || "",
+          placeOfWork: row["place"] || "",
+          visaNo: row["visa"] || "",
+          dateOfJoining: row["date"] || "",
+        };
+      });
+
+      console.log("FORMATTED:", formatted);
 
       setRows(formatted);
     };
@@ -54,7 +75,12 @@ export default function EmployeeExcelUpload() {
     reader.readAsBinaryString(file);
   };
 
-  const isValid = (r) => r.employeeId && r.name;
+  // ----------------------------
+  // VALIDATION
+  // ----------------------------
+  const isValid = (r) =>
+    r.staffCode?.toString().trim() &&
+    r.name?.toString().trim();
 
   // ----------------------------
   // UPLOAD
@@ -65,27 +91,23 @@ export default function EmployeeExcelUpload() {
 
       const valid = rows.filter(isValid);
 
+      console.log("VALID ROWS:", valid);
+
       if (!valid.length) {
         toast.error("No valid rows found");
         return;
       }
 
       const payload = {
-        employees: valid.map((r) => ({
-          staffCode: r.employeeId,
-          name: r.name,
-          department: r.department,
-          designation: r.designation,
-          division: r.division,
-          placeOfWork: r.placeOfWork,
-          visaNo: r.visaNo,
-          dateOfJoining: r.dateOfJoining,
-        })),
+        employees: valid,
       };
 
-      console.log("📦 FINAL PAYLOAD:", payload);
+      console.log("FINAL PAYLOAD:", payload);
 
-      const res = await api.post("/employees/bulk-upload", payload);
+      const res = await api.post(
+        "/employees/bulk-upload",
+        payload
+      );
 
       toast.success(
         `Inserted: ${res.data.inserted} | Skipped: ${res.data.skipped}`
@@ -93,10 +115,12 @@ export default function EmployeeExcelUpload() {
 
       setRows([]);
       setFile(null);
-
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Upload failed");
+      toast.error(
+        err.response?.data?.message ||
+          "Upload failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -107,22 +131,23 @@ export default function EmployeeExcelUpload() {
   // ----------------------------
   return (
     <div className="p-6">
-
       <h2 className="text-lg font-bold mb-4">
         Employee Excel Upload
       </h2>
 
       <input type="file" onChange={handleFile} />
 
-      {file && <p>📄 {file.name}</p>}
+      {file && (
+        <p className="mt-2">📄 {file.name}</p>
+      )}
 
       {rows.length > 0 && (
         <table className="w-full mt-4 border">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Staff Code</th>
               <th>Name</th>
-              <th>Dept</th>
+              <th>Department</th>
               <th>Designation</th>
             </tr>
           </thead>
@@ -132,10 +157,12 @@ export default function EmployeeExcelUpload() {
               <tr
                 key={i}
                 style={{
-                  background: isValid(r) ? "white" : "#ffe5e5",
+                  background: isValid(r)
+                    ? "white"
+                    : "#ffe5e5",
                 }}
               >
-                <td>{r.employeeId}</td>
+                <td>{r.staffCode}</td>
                 <td>{r.name}</td>
                 <td>{r.department}</td>
                 <td>{r.designation}</td>
@@ -150,7 +177,7 @@ export default function EmployeeExcelUpload() {
         disabled={loading}
         className="bg-blue-600 text-white px-4 py-2 mt-4"
       >
-        {loading ? "Uploading..." : "Upload"}
+        {loading ? "Uploading..." : "Upload Employees"}
       </button>
     </div>
   );

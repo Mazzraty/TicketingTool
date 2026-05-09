@@ -1,22 +1,40 @@
 import express from "express";
 import {
-  bulkUploadEmployees,
   getEmployees,
   getEmployee,
   updateEmployee,
-  deleteEmployee
+  deleteEmployee,
+  createEmployee,
+  bulkUploadEmployees,
 } from "../controllers/emplyeeController.js";
 
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/bulk-upload", protect, adminOnly, bulkUploadEmployees);
+// ========================
+// CRUD ROUTES
+// ========================
 
 router.get("/", protect, adminOnly, getEmployees);
-router.get("/:id", protect, getEmployee);
+
+router.get("/:id", protect, adminOnly, getEmployee);
+
+router.post("/", protect, adminOnly, createEmployee);
 
 router.put("/:id", protect, adminOnly, updateEmployee);
+
 router.delete("/:id", protect, adminOnly, deleteEmployee);
+
+// ========================
+// BULK UPLOAD ROUTE
+// ========================
+
+router.post(
+  "/bulk-upload",
+  protect,
+  adminOnly,
+  bulkUploadEmployees
+);
 
 export default router;
