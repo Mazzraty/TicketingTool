@@ -44,25 +44,40 @@ export const bulkUploadEmployees = async (req, res) => {
       });
     }
 
-    // 🔥 Map Excel → DB Schema
+    // 🔥 PUT IT HERE (REPLACE YOUR OLD formatted BLOCK)
     const formatted = employees.map((emp) => ({
-      staffCode: emp.staffCode,
-      name: emp.name,
-      dateOfJoining: emp.dateOfJoining,
-      division: emp.division,
-      department: emp.department,
-      designation: emp.designation,
-      placeOfWork: emp.placeOfWork,
-      visaNo: emp.visaNo,
+      staffCode: emp.staffCode || emp["Staff Code"] || emp.employeeId,
+      name: emp.name || emp["Full Name"] || emp.employeeName,
+      dateOfJoining: emp.dateOfJoining || emp["Date of Joining"],
+      division: emp.division || "",
+      department: emp.department || "",
+      designation: emp.designation || "",
+      placeOfWork: emp.placeOfWork || "",
+      visaNo: emp.visaNo || "",
       status: emp.status || "active",
     }));
 
-    await EmployeeMaster.insertMany(formatted);
+    // 🔍 DEBUG (VERY IMPORTANT)
+    console.log("RAW EMPLOYEES:", employees);
+    console.log("FORMATTED:", formatted);
+
+    // ❌ filter invalid rows (prevents crash)
+    const clean = formatted.filter(
+      (e) => e.staffCode && e.name
+    );
+
+    if (!clean.length) {
+      return res.status(400).json({
+        message: "No valid employee rows found",
+      });
+    }
+
+    await EmployeeMaster.insertMany(clean);
 
     res.json({
       success: true,
       message: "Employees uploaded successfully",
-      count: formatted.length,
+      count: clean.length,
     });
 
   } catch (err) {
