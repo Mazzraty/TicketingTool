@@ -5,51 +5,110 @@ import toast from "react-hot-toast";
 
 export default function EmployeeExcelUpload() {
   const [file, setFile] = useState(null);
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [failedRows, setFailedRows] = useState([]);
 
-  const handleFile = (e) => {
-    setFile(e.target.files[0]);
+  // ----------------------------
+  // AUTO DETECT COLUMN VALUE
+  // ----------------------------
+  const detect = (obj, keys) => {
+    for (let k of Object.keys(obj)) {
+      for (let match of keys) {
+        if (k.toLowerCase().includes(match.toLowerCase())) {
+          return obj[k];
+        }
+      }
+    }
+    return "";
   };
 
-  const uploadExcel = async () => {
-    if (!file) return toast.error("Please select an Excel file");
-
-    setLoading(true);
+  // ----------------------------
+  // FILE HANDLER (PREVIEW MODE)
+  // ----------------------------
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    setFile(file);
 
     const reader = new FileReader();
 
-    reader.onload = async (e) => {
-      try {
-        const data = e.target.result;
+    reader.onload = (event) => {
+      const data = event.target.result;
+      const workbook = XLSX.read(data, { type: "binary" });
 
-        const workbook = XLSX.read(data, { type: "binary" });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
+      const json = XLSX.utils.sheet_to_json(sheet, {
+        defval: "",
+        raw: false,
+      });
 
-        if (!jsonData.length) {
-          toast.error("Excel file is empty");
-          setLoading(false);
-          return;
-        }
+      const formatted = json.map((r) => ({
+        employeeId: detect(r, ["id", "code", "employee", "staff"]),
+        name: detect(r, ["name", "employee"]),
+        department: detect(r, ["department"]),
+        position: detect(r, ["position", "designation"]),
+        raw: r,
+      }));
 
-        // 🔥 SEND TO EMPLOYEE API
-        await api.post("/employees/bulk-upload", {
-          employees: jsonData,
-        });
-
-        toast.success("Employees uploaded successfully");
-        setFile(null);
-      } catch (err) {
-        console.error(err);
-        toast.error(err.response?.data?.message || "Upload failed");
-      } finally {
-        setLoading(false);
-      }
+      setRows(formatted);
     };
 
     reader.readAsBinaryString(file);
+  };
+
+  // ----------------------------
+  // VALIDATION
+  // ----------------------------
+  const isValid = (r) => r.employeeId && r.name;
+
+  // ----------------------------
+  // UPLOAD ONLY VALID ROWS
+  // ----------------------------
+  const uploadExcel = async () => {
+    if (!rows.length) return toast.error("No data found");
+
+    setLoading(true);
+
+    try {
+      const valid = rows.filter(isValid);
+      const failed = rows.filter((r) => !isValid(r));
+
+      setFailedRows(failed);
+
+      if (!valid.length) {
+        toast.error("No valid employee rows found");
+        setLoading(false);
+        return;
+      }
+
+      await api.post("/employees/bulk-upload", {
+        employees: valid,
+      });
+
+      toast.success(`Uploaded ${valid.length} employees`);
+      setRows([]);
+      setFile(null);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Upload failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ----------------------------
+  // DOWNLOAD FAILED ROWS
+  // ----------------------------
+  const downloadFailed = () => {
+    const ws = XLSX.utils.json_to_sheet(
+      failedRows.map((r) => r.raw)
+    );
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "FailedRows");
+
+    XLSX.writeFile(wb, "failed_employees.xlsx");
   };
 
   return (
@@ -57,57 +116,85 @@ export default function EmployeeExcelUpload() {
 
       {/* HEADER */}
       <div className="bg-white border rounded-xl p-5 shadow-sm mb-6">
-        <h1 className="text-xl font-bold text-gray-800">
-          Employee Excel Upload
+        <h1 className="text-xl font-bold">
+          Employee Excel Upload (SAP Mode)
         </h1>
-        <p className="text-sm text-gray-500">
-          Upload employee master data using Excel file
+        <p className="text-gray-500 text-sm">
+          Auto-detect + preview + validation system
         </p>
       </div>
 
-      {/* CARD */}
-      <div className="bg-white border rounded-xl shadow-sm p-6 max-w-3xl">
+      {/* UPLOAD BOX */}
+      <div className="bg-white border rounded-xl p-6">
 
-        {/* FILE INPUT */}
-        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50">
+        <input
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={handleFile}
+        />
 
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleFile}
-            className="w-full cursor-pointer"
-          />
-
-          <p className="text-sm text-gray-500 mt-2">
-            Select Excel file (.xlsx / .xls)
+        {file && (
+          <p className="mt-2 text-sm text-blue-600">
+            📄 {file.name}
           </p>
+        )}
 
-          {file && (
-            <div className="mt-4 inline-block px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-              📄 {file.name}
-            </div>
-          )}
+        {/* TABLE PREVIEW */}
+        {rows.length > 0 && (
+          <div className="mt-6 overflow-x-auto">
 
-        </div>
+            <table className="w-full border">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-2 border">Employee ID</th>
+                  <th className="p-2 border">Name</th>
+                  <th className="p-2 border">Department</th>
+                  <th className="p-2 border">Position</th>
+                </tr>
+              </thead>
 
-        {/* INFO */}
-        <div className="mt-4 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700">
-          ✔ Columns required: employeeId, name, department, position
-        </div>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr
+                    key={i}
+                    style={{
+                      backgroundColor: isValid(r)
+                        ? "white"
+                        : "#ffe5e5",
+                    }}
+                  >
+                    <td className="p-2 border">{r.employeeId}</td>
+                    <td className="p-2 border">{r.name}</td>
+                    <td className="p-2 border">{r.department}</td>
+                    <td className="p-2 border">{r.position}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-        {/* BUTTON */}
-        <div className="mt-5 flex justify-end">
+          </div>
+        )}
+
+        {/* BUTTONS */}
+        <div className="mt-5 flex gap-3">
+
           <button
             onClick={uploadExcel}
             disabled={loading}
-            className={`px-6 py-2 rounded-lg font-semibold transition ${
-              loading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-            }`}
+            className="bg-blue-600 text-white px-4 py-2 rounded"
           >
-            {loading ? "Uploading..." : "Upload Employees"}
+            {loading ? "Uploading..." : "Upload Valid Rows"}
           </button>
+
+          {failedRows.length > 0 && (
+            <button
+              onClick={downloadFailed}
+              className="bg-red-500 text-white px-4 py-2 rounded"
+            >
+              Download Failed Rows
+            </button>
+          )}
+
         </div>
 
       </div>

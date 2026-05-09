@@ -38,112 +38,36 @@ export const bulkUploadEmployees = async (req, res) => {
   try {
     const { employees } = req.body;
 
-    console.log("📦 RAW INPUT:", employees);
-
-    if (!Array.isArray(employees) || employees.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No employee data found",
-      });
+    if (!Array.isArray(employees)) {
+      return res.status(400).json({ message: "Invalid data" });
     }
 
-    // 🔧 safe value extractor
-    const get = (obj, keys) => {
-      for (let key of keys) {
-        if (obj?.[key] !== undefined && obj?.[key] !== null && obj?.[key] !== "") {
-          return obj[key];
-        }
-      }
-      return "";
-    };
+    const clean = (v) => v?.toString().trim();
 
-    const clean = (val) =>
-      val?.toString().trim().replace(/\s+/g, " ") || "";
-
-    // 🔥 normalize data
-    const formatted = employees.map((emp) => ({
-      staffCode: clean(
-        get(emp, [
-          "Staff Code",
-          "StaffCode",
-          "staffCode",
-          "employeeId",
-          "EMP ID",
-          "Emp ID",
-        ])
-      ),
-
-      name: clean(
-        get(emp, [
-          "Name of Staff",
-          "Full Name",
-          "Employee Name",
-          "Name",
-          "employeeName",
-        ])
-      ),
-
-      dateOfJoining:
-        get(emp, ["Date of Joining", "DOJ", "dateOfJoining"]) || null,
-
-      division: clean(get(emp, ["Division", "division"])),
-
-      department: clean(get(emp, ["Department", "department"])),
-
-      designation: clean(get(emp, ["Designation", "designation"])),
-
-      placeOfWork: clean(get(emp, ["Place of Work", "placeOfWork"])),
-
-      visaNo: clean(
-        get(emp, ["Visa No / ID", "Visa No", "visaNo", "ID No"])
-      ),
-
-      status: clean(emp.status) || "active",
+    const formatted = employees.map((e) => ({
+      staffCode: clean(e.staffCode),
+      name: clean(e.name),
+      department: clean(e.department),
+      designation: clean(e.designation),
+      division: clean(e.division),
+      status: "active",
     }));
 
-    console.log("📊 FORMATTED:", formatted);
+    const valid = formatted.filter((e) => e.staffCode && e.name);
+    const failed = formatted.filter((e) => !(e.staffCode && e.name));
 
-    // 🔥 filter valid rows only
-    const cleanRows = formatted.filter(
-      (e) => e.staffCode && e.name
-    );
-
-    console.log("✅ VALID ROWS:", cleanRows.length);
-
-    if (cleanRows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "No valid employee rows found. Check Excel column names (Staff Code, Name).",
-        debugSample: formatted.slice(0, 3),
-      });
-    }
-
-    // 🚀 insert safely (skip duplicates)
-    const result = await EmployeeMaster.insertMany(cleanRows, {
-      ordered: false, // continues even if duplicates exist
+    const inserted = await EmployeeMaster.insertMany(valid, {
+      ordered: false,
     });
 
-    return res.status(200).json({
+    res.json({
       success: true,
-      message: "Employees uploaded successfully",
-      inserted: result.length,
-      total: cleanRows.length,
+      inserted: inserted.length,
+      failedCount: failed.length,
+      failed,
     });
   } catch (err) {
-    console.error("❌ BULK UPLOAD ERROR:", err);
-
-    // handle duplicate errors cleanly
-    if (err.code === 11000) {
-      return res.status(200).json({
-        success: true,
-        message: "Uploaded with some duplicates skipped",
-      });
-    }
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    console.error(err);
+    res.status(500).json({ message: err.message });
   }
 };
