@@ -121,12 +121,17 @@ export const returnAsset = async (req, res) => {
 ========================= */
 export const getEmployeeHistory = async (req, res) => {
   try {
+
+    // FIND USING STAFF CODE
     const employee = await EmployeeMaster.findOne({
-      employeeId: req.params.id,
+      staffCode: req.params.id,
     });
 
-    if (!employee)
-      return res.status(404).json({ msg: "Employee not found" });
+    if (!employee) {
+      return res.status(404).json({
+        msg: "Employee not found",
+      });
+    }
 
     const history = await AssetAssignment.find({
       employee: employee._id,
@@ -135,8 +140,12 @@ export const getEmployeeHistory = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(history);
+
   } catch (err) {
-    res.status(500).json({ msg: err.message });
+    console.error(err);
+    res.status(500).json({
+      msg: err.message,
+    });
   }
 };
 
