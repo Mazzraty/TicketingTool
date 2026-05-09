@@ -161,6 +161,9 @@ export const getUserTickets = async (req, res) => {
 // ==========================
 // ✅ ADMIN - ALL TICKETS
 // ==========================
+// ==========================
+// ✅ ADMIN - ALL TICKETS
+// ==========================
 export const getAllTickets = async (req, res) => {
   try {
     const page = Number(req.query.page) || 1;
@@ -183,46 +186,91 @@ export const getAllTickets = async (req, res) => {
     if (priority) query.priority = priority;
     if (department) query.department = department;
 
+    // 📅 Date filter
     if (startDate || endDate) {
       query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
+
+      if (startDate) {
+        query.createdAt.$gte = new Date(startDate);
+      }
+
+      if (endDate) {
+        query.createdAt.$lte = new Date(endDate);
+      }
     }
 
-    // 🔎 Search (title + description)
+    // 🔎 Search
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
+        {
+          title: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          description: {
+            $regex: search,
+            $options: "i",
+          },
+        },
       ];
     }
 
     // 📊 Sorting
     let sortOption = { createdAt: -1 };
-    if (sort === "oldest") sortOption = { createdAt: 1 };
-    if (sort === "priority") sortOption = { priority: -1 };
 
-    // 🚀 Query execution
+    if (sort === "oldest") {
+      sortOption = { createdAt: 1 };
+    }
+
+    if (sort === "priority") {
+      sortOption = { priority: -1 };
+    }
+
+    // 📌 Total count
+    const total = await Ticket.countDocuments(query);
+
+    // 📌 Total pages
+    const totalPages = Math.ceil(total / limit);
+
+    // 🚀 Fetch tickets
     const tickets = await Ticket.find(query)
       .populate("userId", "name email")
       .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(limit);
 
-    const total = await Ticket.countDocuments(query);
-
+    // ✅ RESPONSE
     res.json({
       success: true,
+
+      // OLD FORMAT
       total,
       page,
-      pages: Math.ceil(total / limit),
+      pages: totalPages,
+
+      // NEW FORMAT
+      pagination: {
+        totalTickets: total,
+        totalPages,
+        currentPage: page,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+
       count: tickets.length,
       data: tickets,
     });
 
   } catch (err) {
     console.error("ADMIN ERROR:", err);
-    res.status(500).json({ message: "Server error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 
