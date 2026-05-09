@@ -1,24 +1,18 @@
 import express from "express";
 import {
+  bulkUploadEmployees,
   getEmployees,
   getEmployee,
   updateEmployee,
-  deleteEmployee,
-  bulkUploadEmployees
+  deleteEmployee
 } from "../controllers/emplyeeController.js";
 
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ----------------------
-// BULK UPLOAD (PUT FIRST)
-// ----------------------
 router.post("/bulk-upload", protect, adminOnly, bulkUploadEmployees);
 
-// ----------------------
-// NORMAL ROUTES
-// ----------------------
 router.get("/", protect, adminOnly, getEmployees);
 router.get("/:id", protect, getEmployee);
 

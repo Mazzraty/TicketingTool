@@ -9,19 +9,8 @@ export default function EmployeeExcelUpload() {
   const [loading, setLoading] = useState(false);
 
   // ----------------------------
-  // FILE PARSER
+  // FILE UPLOAD
   // ----------------------------
-  const detect = (obj, keys) => {
-    for (let k of Object.keys(obj)) {
-      for (let match of keys) {
-        if (k.toLowerCase().includes(match.toLowerCase())) {
-          return obj[k];
-        }
-      }
-    }
-    return "";
-  };
-
   const handleFile = (e) => {
     const file = e.target.files[0];
     setFile(file);
@@ -36,11 +25,27 @@ export default function EmployeeExcelUpload() {
         raw: false,
       });
 
+      console.log("📄 RAW EXCEL:", json);
+
       const formatted = json.map((r) => ({
-        employeeId: detect(r, ["id", "code", "staff", "employee"]),
-        name: detect(r, ["name"]),
-        department: detect(r, ["department"]),
-        position: detect(r, ["position", "designation"]),
+        employeeId:
+          r.employeeId ||
+          r["Employee ID"] ||
+          r["Staff Code"] ||
+          "",
+
+        name:
+          r.name ||
+          r["Full Name"] ||
+          r["Employee Name"] ||
+          "",
+
+        department: r.department || "",
+        designation: r.designation || r.position || "",
+        division: r.division || "",
+        placeOfWork: r.placeOfWork || "",
+        visaNo: r.visaNo || "",
+        dateOfJoining: r.dateOfJoining || "",
       }));
 
       setRows(formatted);
@@ -52,7 +57,7 @@ export default function EmployeeExcelUpload() {
   const isValid = (r) => r.employeeId && r.name;
 
   // ----------------------------
-  // UPLOAD FUNCTION (FIXED)
+  // UPLOAD
   // ----------------------------
   const uploadExcel = async () => {
     try {
@@ -65,40 +70,33 @@ export default function EmployeeExcelUpload() {
         return;
       }
 
-      // 🔥 FINAL FIXED PAYLOAD
       const payload = {
         employees: valid.map((r) => ({
           staffCode: r.employeeId,
           name: r.name,
           department: r.department,
-          designation: r.position,
+          designation: r.designation,
+          division: r.division,
+          placeOfWork: r.placeOfWork,
+          visaNo: r.visaNo,
+          dateOfJoining: r.dateOfJoining,
         })),
       };
 
-      console.log("📦 PAYLOAD SENT:", payload);
+      console.log("📦 FINAL PAYLOAD:", payload);
 
       const res = await api.post("/employees/bulk-upload", payload);
 
-      console.log("📥 RESPONSE:", res);
-
       toast.success(
-        `Uploaded: ${res.data.inserted || valid.length} employees`
+        `Inserted: ${res.data.inserted} | Skipped: ${res.data.skipped}`
       );
 
       setRows([]);
       setFile(null);
 
     } catch (err) {
-      console.error("❌ UPLOAD ERROR:", err);
-
-      const msg =
-        err.response?.data?.message ||
-        err.response?.status === 401
-          ? "Unauthorized (Check login/token)"
-          : "Upload failed";
-
-      toast.error(msg);
-
+      console.error(err);
+      toast.error(err.response?.data?.message || "Upload failed");
     } finally {
       setLoading(false);
     }
@@ -108,7 +106,7 @@ export default function EmployeeExcelUpload() {
   // UI
   // ----------------------------
   return (
-    <div className="p-6 bg-white">
+    <div className="p-6">
 
       <h2 className="text-lg font-bold mb-4">
         Employee Excel Upload
@@ -116,21 +114,16 @@ export default function EmployeeExcelUpload() {
 
       <input type="file" onChange={handleFile} />
 
-      {file && (
-        <p className="mt-2 text-blue-600">
-          📄 {file.name}
-        </p>
-      )}
+      {file && <p>📄 {file.name}</p>}
 
-      {/* PREVIEW TABLE */}
       {rows.length > 0 && (
         <table className="w-full mt-4 border">
           <thead>
             <tr>
-              <th>Employee ID</th>
+              <th>ID</th>
               <th>Name</th>
-              <th>Department</th>
-              <th>Position</th>
+              <th>Dept</th>
+              <th>Designation</th>
             </tr>
           </thead>
 
@@ -139,15 +132,13 @@ export default function EmployeeExcelUpload() {
               <tr
                 key={i}
                 style={{
-                  backgroundColor: isValid(r)
-                    ? "white"
-                    : "#ffe5e5",
+                  background: isValid(r) ? "white" : "#ffe5e5",
                 }}
               >
                 <td>{r.employeeId}</td>
                 <td>{r.name}</td>
                 <td>{r.department}</td>
-                <td>{r.position}</td>
+                <td>{r.designation}</td>
               </tr>
             ))}
           </tbody>
@@ -159,7 +150,7 @@ export default function EmployeeExcelUpload() {
         disabled={loading}
         className="bg-blue-600 text-white px-4 py-2 mt-4"
       >
-        {loading ? "Uploading..." : "Upload Employees"}
+        {loading ? "Uploading..." : "Upload"}
       </button>
     </div>
   );
