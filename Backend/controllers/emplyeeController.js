@@ -38,6 +38,8 @@ export const bulkUploadEmployees = async (req, res) => {
   try {
     const { employees } = req.body;
 
+    console.log("🔥 BULK UPLOAD HIT");
+
     if (!Array.isArray(employees)) {
       return res.status(400).json({ message: "Invalid data format" });
     }
@@ -49,39 +51,28 @@ export const bulkUploadEmployees = async (req, res) => {
       name: clean(e.name),
       department: clean(e.department),
       designation: clean(e.designation),
-      division: clean(e.division),
-      placeOfWork: clean(e.placeOfWork),
-      visaNo: clean(e.visaNo),
-      dateOfJoining: e.dateOfJoining ? new Date(e.dateOfJoining) : null,
+      division: "",
+      placeOfWork: "",
+      visaNo: "",
       status: "active",
     }));
 
-    // strict validation
     const valid = formatted.filter(
       (e) => e.staffCode.length > 0 && e.name.length > 0
     );
 
-    const failed = formatted.filter(
-      (e) => !(e.staffCode.length > 0 && e.name.length > 0)
-    );
-
-    // optional: prevent duplicates inside DB
     const inserted = await EmployeeMaster.insertMany(valid, {
       ordered: false,
     });
 
     res.json({
       success: true,
-      insertedCount: inserted.length,
-      failedCount: failed.length,
-      failedRows: failed,
+      inserted: inserted.length,
+      total: employees.length,
     });
 
   } catch (err) {
-    console.error("BULK UPLOAD ERROR:", err);
-
-    res.status(500).json({
-      message: err.message,
-    });
+    console.error("BULK ERROR:", err);
+    res.status(500).json({ message: err.message });
   }
 };
