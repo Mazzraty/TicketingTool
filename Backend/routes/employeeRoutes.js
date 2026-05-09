@@ -11,15 +11,18 @@ import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// GET
+// ----------------------
+// BULK UPLOAD (PUT FIRST)
+// ----------------------
+router.post("/bulk-upload", protect, adminOnly, bulkUploadEmployees);
+
+// ----------------------
+// NORMAL ROUTES
+// ----------------------
 router.get("/", protect, adminOnly, getEmployees);
 router.get("/:id", protect, getEmployee);
 
-// UPDATE / DELETE
 router.put("/:id", protect, adminOnly, updateEmployee);
 router.delete("/:id", protect, adminOnly, deleteEmployee);
-
-// 🔥 BULK UPLOAD (FIXED)
-router.post("/bulk-upload", protect, adminOnly, bulkUploadEmployees);
 
 export default router;
