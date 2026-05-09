@@ -34,9 +34,11 @@ export const deleteEmployee = async (req, res) => {
 };
 
 // 🚀 BULK UPLOAD
+
+
 export const bulkUploadEmployees = async (req, res) => {
   try {
-    const { employees } = req.body;
+    const employees = req.body.employees || req.body;
 
     if (!Array.isArray(employees)) {
       return res.status(400).json({ message: "Invalid data format" });
@@ -48,18 +50,23 @@ export const bulkUploadEmployees = async (req, res) => {
     let skipped = 0;
     let failedRows = [];
 
+    console.log("📦 RECEIVED:", employees.length);
+
     for (const e of employees) {
       try {
         const staffCode = clean(
-          e.staffCode || e["Staff Code"] || e.employeeId
+          e.staffCode || e.employeeId || e["Staff Code"] || e["Employee ID"]
         );
 
         const name = clean(
-          e.name || e["Full Name"] || e.employeeName
+          e.name || e.employeeName || e["Full Name"]
         );
 
-        console.log("ROW:", e);
-        console.log("PARSED:", { staffCode, name });
+        const department = clean(e.department);
+        const designation = clean(e.designation || e.position);
+
+        console.log("➡️ ROW:", e);
+        console.log("➡️ PARSED:", { staffCode, name });
 
         if (!staffCode || !name) {
           skipped++;
@@ -77,12 +84,12 @@ export const bulkUploadEmployees = async (req, res) => {
         await EmployeeMaster.create({
           staffCode,
           name,
-          dateOfJoining: e.dateOfJoining ? new Date(e.dateOfJoining) : null,
+          department,
+          designation,
           division: clean(e.division),
-          department: clean(e.department),
-          designation: clean(e.designation),
           placeOfWork: clean(e.placeOfWork),
           visaNo: clean(e.visaNo),
+          dateOfJoining: e.dateOfJoining ? new Date(e.dateOfJoining) : null,
           status: "active",
         });
 
@@ -93,13 +100,14 @@ export const bulkUploadEmployees = async (req, res) => {
       }
     }
 
-    return res.json({
+    res.json({
       success: true,
       inserted,
       skipped,
       total: employees.length,
       failedRows,
     });
+
   } catch (err) {
     console.error("BULK ERROR:", err);
     res.status(500).json({ message: err.message });
