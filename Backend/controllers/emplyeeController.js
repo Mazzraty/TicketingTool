@@ -38,75 +38,110 @@ export const bulkUploadEmployees = async (req, res) => {
   try {
     const { employees } = req.body;
 
-    if (!employees || !employees.length) {
+    console.log("📦 RAW INPUT:", employees);
+
+    if (!Array.isArray(employees) || employees.length === 0) {
       return res.status(400).json({
+        success: false,
         message: "No employee data found",
       });
     }
 
-    const clean = (str) =>
-      str?.toString().trim();
+    // 🔧 safe value extractor
+    const get = (obj, keys) => {
+      for (let key of keys) {
+        if (obj?.[key] !== undefined && obj?.[key] !== null && obj?.[key] !== "") {
+          return obj[key];
+        }
+      }
+      return "";
+    };
 
+    const clean = (val) =>
+      val?.toString().trim().replace(/\s+/g, " ") || "";
+
+    // 🔥 normalize data
     const formatted = employees.map((emp) => ({
       staffCode: clean(
-        emp["Staff Code"] ||
-        emp["staff code"] ||
-        emp["StaffCode"] ||
-        emp.employeeId
+        get(emp, [
+          "Staff Code",
+          "StaffCode",
+          "staffCode",
+          "employeeId",
+          "EMP ID",
+          "Emp ID",
+        ])
       ),
 
       name: clean(
-        emp["Name of Staff"] ||
-        emp["Full Name"] ||
-        emp["name of staff"] ||
-        emp.employeeName ||
-        emp.name
+        get(emp, [
+          "Name of Staff",
+          "Full Name",
+          "Employee Name",
+          "Name",
+          "employeeName",
+        ])
       ),
 
-      dateOfJoining: emp["Date of Joining"] || emp.dateOfJoining || null,
+      dateOfJoining:
+        get(emp, ["Date of Joining", "DOJ", "dateOfJoining"]) || null,
 
-      division: emp["Division"] || emp.division || "",
+      division: clean(get(emp, ["Division", "division"])),
 
-      department: emp["Department"] || emp.department || "",
+      department: clean(get(emp, ["Department", "department"])),
 
-      designation: emp["Designation"] || emp.designation || "",
+      designation: clean(get(emp, ["Designation", "designation"])),
 
-      placeOfWork: emp["Place of Work"] || emp.placeOfWork || "",
+      placeOfWork: clean(get(emp, ["Place of Work", "placeOfWork"])),
 
-      visaNo: emp["Visa No / ID"] || emp["Visa No"] || emp.visaNo || "",
+      visaNo: clean(
+        get(emp, ["Visa No / ID", "Visa No", "visaNo", "ID No"])
+      ),
 
-      status: emp.status || "active",
+      status: clean(emp.status) || "active",
     }));
 
-    console.log("RAW EMPLOYEES:", employees);
-    console.log("FORMATTED:", formatted);
+    console.log("📊 FORMATTED:", formatted);
 
-    // 🚨 remove invalid rows properly
+    // 🔥 filter valid rows only
     const cleanRows = formatted.filter(
       (e) => e.staffCode && e.name
     );
 
-    if (!cleanRows.length) {
+    console.log("✅ VALID ROWS:", cleanRows.length);
+
+    if (cleanRows.length === 0) {
       return res.status(400).json({
-        message: "No valid employee rows found",
+        success: false,
+        message:
+          "No valid employee rows found. Check Excel column names (Staff Code, Name).",
+        debugSample: formatted.slice(0, 3),
       });
     }
 
-    // 🚀 safer insert (skip duplicates instead of crash)
-    await EmployeeMaster.insertMany(cleanRows, {
-      ordered: false,
+    // 🚀 insert safely (skip duplicates)
+    const result = await EmployeeMaster.insertMany(cleanRows, {
+      ordered: false, // continues even if duplicates exist
     });
 
-    res.json({
+    return res.status(200).json({
       success: true,
       message: "Employees uploaded successfully",
-      count: cleanRows.length,
+      inserted: result.length,
+      total: cleanRows.length,
     });
-
   } catch (err) {
-    console.error("BULK UPLOAD ERROR:", err);
+    console.error("❌ BULK UPLOAD ERROR:", err);
 
-    res.status(500).json({
+    // handle duplicate errors cleanly
+    if (err.code === 11000) {
+      return res.status(200).json({
+        success: true,
+        message: "Uploaded with some duplicates skipped",
+      });
+    }
+
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
