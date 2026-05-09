@@ -50,8 +50,16 @@ export const bulkUploadEmployees = async (req, res) => {
 
     for (const e of employees) {
       try {
-        const staffCode = clean(e.staffCode);
-        const name = clean(e.name);
+        const staffCode = clean(
+          e.staffCode || e["Staff Code"] || e.employeeId
+        );
+
+        const name = clean(
+          e.name || e["Full Name"] || e.employeeName
+        );
+
+        console.log("ROW:", e);
+        console.log("PARSED:", { staffCode, name });
 
         if (!staffCode || !name) {
           skipped++;
@@ -59,7 +67,6 @@ export const bulkUploadEmployees = async (req, res) => {
           continue;
         }
 
-        // 🔍 check duplicate
         const exists = await EmployeeMaster.findOne({ staffCode });
 
         if (exists) {
@@ -70,28 +77,29 @@ export const bulkUploadEmployees = async (req, res) => {
         await EmployeeMaster.create({
           staffCode,
           name,
+          dateOfJoining: e.dateOfJoining ? new Date(e.dateOfJoining) : null,
+          division: clean(e.division),
           department: clean(e.department),
           designation: clean(e.designation),
-          division: clean(e.division),
+          placeOfWork: clean(e.placeOfWork),
+          visaNo: clean(e.visaNo),
           status: "active",
         });
 
         inserted++;
-
       } catch (err) {
         skipped++;
         failedRows.push({ e, reason: err.message });
       }
     }
 
-    res.json({
+    return res.json({
       success: true,
       inserted,
       skipped,
       total: employees.length,
       failedRows,
     });
-
   } catch (err) {
     console.error("BULK ERROR:", err);
     res.status(500).json({ message: err.message });
