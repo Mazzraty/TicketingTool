@@ -16,14 +16,12 @@ export const register = async (req, res) => {
       department
     } = req.body;
 
-    // 🔍 check duplicate user
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ msg: "Email already exists" });
 
     const hash = await bcrypt.hash(password, 10);
 
-    // 🔥 CREATE USER
     const user = await User.create({
       name,
       email,
@@ -32,18 +30,6 @@ export const register = async (req, res) => {
       position,
       department
     });
-
-    // 🔥 CREATE EMPLOYEE MASTER (avoid crash if duplicate)
-    const existingEmp = await EmployeeMaster.findOne({ employeeId });
-
-    if (!existingEmp) {
-      await EmployeeMaster.create({
-        employeeId,
-        name,
-        position,
-        department
-      });
-    }
 
     res.status(201).json(user);
 
@@ -54,7 +40,6 @@ export const register = async (req, res) => {
     });
   }
 };
-
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
