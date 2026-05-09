@@ -44,40 +44,63 @@ export const bulkUploadEmployees = async (req, res) => {
       });
     }
 
-    // 🔥 PUT IT HERE (REPLACE YOUR OLD formatted BLOCK)
+    const clean = (str) =>
+      str?.toString().trim();
+
     const formatted = employees.map((emp) => ({
-      staffCode: emp.staffCode || emp["Staff Code"] || emp.employeeId,
-      name: emp.name || emp["Full Name"] || emp.employeeName,
-      dateOfJoining: emp.dateOfJoining || emp["Date of Joining"],
-      division: emp.division || "",
-      department: emp.department || "",
-      designation: emp.designation || "",
-      placeOfWork: emp.placeOfWork || "",
-      visaNo: emp.visaNo || "",
+      staffCode: clean(
+        emp["Staff Code"] ||
+        emp["staff code"] ||
+        emp["StaffCode"] ||
+        emp.employeeId
+      ),
+
+      name: clean(
+        emp["Name of Staff"] ||
+        emp["Full Name"] ||
+        emp["name of staff"] ||
+        emp.employeeName ||
+        emp.name
+      ),
+
+      dateOfJoining: emp["Date of Joining"] || emp.dateOfJoining || null,
+
+      division: emp["Division"] || emp.division || "",
+
+      department: emp["Department"] || emp.department || "",
+
+      designation: emp["Designation"] || emp.designation || "",
+
+      placeOfWork: emp["Place of Work"] || emp.placeOfWork || "",
+
+      visaNo: emp["Visa No / ID"] || emp["Visa No"] || emp.visaNo || "",
+
       status: emp.status || "active",
     }));
 
-    // 🔍 DEBUG (VERY IMPORTANT)
     console.log("RAW EMPLOYEES:", employees);
     console.log("FORMATTED:", formatted);
 
-    // ❌ filter invalid rows (prevents crash)
-    const clean = formatted.filter(
+    // 🚨 remove invalid rows properly
+    const cleanRows = formatted.filter(
       (e) => e.staffCode && e.name
     );
 
-    if (!clean.length) {
+    if (!cleanRows.length) {
       return res.status(400).json({
         message: "No valid employee rows found",
       });
     }
 
-    await EmployeeMaster.insertMany(clean);
+    // 🚀 safer insert (skip duplicates instead of crash)
+    await EmployeeMaster.insertMany(cleanRows, {
+      ordered: false,
+    });
 
     res.json({
       success: true,
       message: "Employees uploaded successfully",
-      count: clean.length,
+      count: cleanRows.length,
     });
 
   } catch (err) {
