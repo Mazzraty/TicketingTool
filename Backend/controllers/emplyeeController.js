@@ -38,37 +38,58 @@ export const bulkUploadEmployees = async (req, res) => {
   try {
     const { employees } = req.body;
 
-    console.log("🔥 BULK UPLOAD HIT");
-
     if (!Array.isArray(employees)) {
       return res.status(400).json({ message: "Invalid data format" });
     }
 
     const clean = (v) => (v ? v.toString().trim() : "");
 
-    const formatted = employees.map((e) => ({
-      staffCode: clean(e.staffCode),
-      name: clean(e.name),
-      department: clean(e.department),
-      designation: clean(e.designation),
-      division: "",
-      placeOfWork: "",
-      visaNo: "",
-      status: "active",
-    }));
+    let inserted = 0;
+    let skipped = 0;
+    let failedRows = [];
 
-    const valid = formatted.filter(
-      (e) => e.staffCode.length > 0 && e.name.length > 0
-    );
+    for (const e of employees) {
+      try {
+        const staffCode = clean(e.staffCode);
+        const name = clean(e.name);
 
-    const inserted = await EmployeeMaster.insertMany(valid, {
-      ordered: false,
-    });
+        if (!staffCode || !name) {
+          skipped++;
+          failedRows.push({ e, reason: "Missing staffCode or name" });
+          continue;
+        }
+
+        // 🔍 check duplicate
+        const exists = await EmployeeMaster.findOne({ staffCode });
+
+        if (exists) {
+          skipped++;
+          continue;
+        }
+
+        await EmployeeMaster.create({
+          staffCode,
+          name,
+          department: clean(e.department),
+          designation: clean(e.designation),
+          division: clean(e.division),
+          status: "active",
+        });
+
+        inserted++;
+
+      } catch (err) {
+        skipped++;
+        failedRows.push({ e, reason: err.message });
+      }
+    }
 
     res.json({
       success: true,
-      inserted: inserted.length,
+      inserted,
+      skipped,
       total: employees.length,
+      failedRows,
     });
 
   } catch (err) {
