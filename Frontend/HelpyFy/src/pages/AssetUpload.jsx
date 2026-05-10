@@ -33,11 +33,15 @@ export default function EmployeeExcelUpload() {
       console.log("RAW EXCEL:", json);
 
       const formatted = json.map((r) => {
-        // normalize keys (remove spaces + lowercase)
+        // normalize keys (remove spaces, hyphens, underscores, lowercase)
         const normalize = (obj) => {
           const cleaned = {};
           Object.keys(obj).forEach((k) => {
-            cleaned[k.trim().toLowerCase()] = obj[k];
+            const key = k
+              .trim()
+              .toLowerCase()
+              .replace(/[-_\s]+/g, "");
+            cleaned[key] = obj[k];
           });
           return cleaned;
         };
@@ -46,24 +50,46 @@ export default function EmployeeExcelUpload() {
 
         return {
           staffCode:
-            row["staff code"] ||
-            row["employee id"] ||
             row["staffcode"] ||
+            row["employeeid"] ||
             row["code"] ||
+            row["id"] ||
+            row["empid"] ||
             "",
 
           name:
-            row["full name"] ||
-            row["employee name"] ||
+            row["fullname"] ||
+            row["employeename"] ||
             row["name"] ||
+            row["firstlast"] ||
             "",
 
-          department: row["department"] || "",
-          designation: row["designation"] || "",
-          division: row["division"] || "",
-          placeOfWork: row["place"] || "",
-          visaNo: row["visa"] || "",
-          dateOfJoining: row["date"] || "",
+          department:
+            row["department"] ||
+            row["dept"] ||
+            "",
+          designation:
+            row["designation"] ||
+            row["position"] ||
+            "",
+          division:
+            row["division"] ||
+            row["businessunit"] ||
+            "",
+          placeOfWork:
+            row["placeofwork"] ||
+            row["place"] ||
+            row["workplace"] ||
+            "",
+          visaNo:
+            row["visa"] ||
+            row["visano"] ||
+            "",
+          dateOfJoining:
+            row["dateofjoining"] ||
+            row["joiningdate"] ||
+            row["date"] ||
+            "",
         };
       });
 
