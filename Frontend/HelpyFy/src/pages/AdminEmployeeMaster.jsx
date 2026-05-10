@@ -12,14 +12,10 @@ export default function AdminEmployeeMaster() {
   const [sortOrder, setSortOrder] = useState("asc");
   const [departmentFilter, setDepartmentFilter] = useState("all");
 
-  // pagination
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [jumpPage, setJumpPage] = useState("");
 
-  // ----------------------------
-  // MANUAL EMPLOYEE STATE
-  // ----------------------------
   const [newEmployee, setNewEmployee] = useState({
     staffCode: "",
     name: "",
@@ -28,7 +24,6 @@ export default function AdminEmployeeMaster() {
     visaNo: "",
   });
 
-  // ================= LOAD =================
   const loadEmployees = async () => {
     try {
       const res = await api.get("/employees");
@@ -42,7 +37,6 @@ export default function AdminEmployeeMaster() {
     loadEmployees();
   }, []);
 
-  // ================= SAVE EDIT =================
   const saveEdit = async (id) => {
     try {
       await api.put(`/employees/${id}`, editForm);
@@ -54,7 +48,6 @@ export default function AdminEmployeeMaster() {
     }
   };
 
-  // ================= ADD EMPLOYEE =================
   const addEmployee = async () => {
     try {
       if (!newEmployee.staffCode || !newEmployee.name) {
@@ -79,7 +72,6 @@ export default function AdminEmployeeMaster() {
     }
   };
 
-  // ================= VISA STATUS =================
   const getVisaStatus = (date) => {
     if (!date) return "NA";
 
@@ -98,7 +90,6 @@ export default function AdminEmployeeMaster() {
     return "text-green-600";
   };
 
-  // ================= FILTER + SORT =================
   const processed = useMemo(() => {
     let data = [...employees];
 
@@ -124,7 +115,6 @@ export default function AdminEmployeeMaster() {
     return data;
   }, [employees, search, sortKey, sortOrder, departmentFilter]);
 
-  // ================= PAGINATION =================
   const totalPages = Math.ceil(processed.length / pageSize);
 
   const paginated = processed.slice(
@@ -132,7 +122,6 @@ export default function AdminEmployeeMaster() {
     page * pageSize
   );
 
-  // ================= EXPORT =================
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet(processed);
     const wb = XLSX.utils.book_new();
@@ -150,11 +139,9 @@ export default function AdminEmployeeMaster() {
 
       {/* HEADER */}
       <div className="bg-white border rounded-xl p-4 mb-4 shadow-sm">
-
         <h1 className="text-xl font-bold">Employee Master</h1>
 
-        {/* SEARCH */}
-        <div className="flex gap-2 mt-3">
+        <div className="flex flex-wrap gap-3 mt-3 items-center">
 
           <input
             className="border px-3 py-2 rounded w-64"
@@ -189,9 +176,8 @@ export default function AdminEmployeeMaster() {
         </div>
       </div>
 
-      {/* ================= MANUAL ADD EMPLOYEE ================= */}
+      {/* ADD EMPLOYEE */}
       <div className="bg-white border rounded-xl p-4 mb-4 shadow-sm">
-
         <h2 className="font-bold mb-3">➕ Add Employee</h2>
 
         <div className="grid md:grid-cols-5 gap-3">
@@ -201,10 +187,7 @@ export default function AdminEmployeeMaster() {
             placeholder="Staff Code"
             value={newEmployee.staffCode}
             onChange={(e) =>
-              setNewEmployee({
-                ...newEmployee,
-                staffCode: e.target.value,
-              })
+              setNewEmployee({ ...newEmployee, staffCode: e.target.value })
             }
           />
 
@@ -213,10 +196,7 @@ export default function AdminEmployeeMaster() {
             placeholder="Name"
             value={newEmployee.name}
             onChange={(e) =>
-              setNewEmployee({
-                ...newEmployee,
-                name: e.target.value,
-              })
+              setNewEmployee({ ...newEmployee, name: e.target.value })
             }
           />
 
@@ -225,10 +205,7 @@ export default function AdminEmployeeMaster() {
             placeholder="Department"
             value={newEmployee.department}
             onChange={(e) =>
-              setNewEmployee({
-                ...newEmployee,
-                department: e.target.value,
-              })
+              setNewEmployee({ ...newEmployee, department: e.target.value })
             }
           />
 
@@ -237,10 +214,7 @@ export default function AdminEmployeeMaster() {
             placeholder="Designation"
             value={newEmployee.designation}
             onChange={(e) =>
-              setNewEmployee({
-                ...newEmployee,
-                designation: e.target.value,
-              })
+              setNewEmployee({ ...newEmployee, designation: e.target.value })
             }
           />
 
@@ -249,10 +223,7 @@ export default function AdminEmployeeMaster() {
             placeholder="Visa No"
             value={newEmployee.visaNo}
             onChange={(e) =>
-              setNewEmployee({
-                ...newEmployee,
-                visaNo: e.target.value,
-              })
+              setNewEmployee({ ...newEmployee, visaNo: e.target.value })
             }
           />
 
@@ -264,22 +235,21 @@ export default function AdminEmployeeMaster() {
         >
           Save Employee
         </button>
-
       </div>
 
-      {/* ================= TABLE ================= */}
-      <div className="bg-white border rounded-xl shadow-sm">
+      {/* TABLE */}
+      <div className="bg-white border rounded-xl shadow-sm overflow-x-auto">
 
         <table className="w-full text-sm">
 
           <thead className="bg-gray-100">
             <tr>
-              <th>Staff</th>
-              <th>Name</th>
-              <th>Dept</th>
-              <th>Designation</th>
-              <th>Visa</th>
-              <th>Status</th>
+              <th className="p-2 text-left">Staff</th>
+              <th className="p-2 text-left">Name</th>
+              <th className="p-2 text-left">Dept</th>
+              <th className="p-2 text-left">Designation</th>
+              <th className="p-2 text-left">Visa</th>
+              <th className="p-2 text-left">Status</th>
             </tr>
           </thead>
 
@@ -287,15 +257,13 @@ export default function AdminEmployeeMaster() {
             {paginated.map((emp) => (
               <tr key={emp._id} className="border-t">
 
-                <td>{emp.staffCode}</td>
-                <td>{emp.name}</td>
-                <td>{emp.department}</td>
-                <td>{emp.designation}</td>
-                <td>{emp.visaNo}</td>
+                <td className="p-2">{emp.staffCode}</td>
+                <td className="p-2">{emp.name}</td>
+                <td className="p-2">{emp.department}</td>
+                <td className="p-2">{emp.designation}</td>
+                <td className="p-2">{emp.visaNo}</td>
 
-                <td className={statusColor(
-                  getVisaStatus(emp.visaExpiryDate)
-                )}>
+                <td className={`p-2 ${statusColor(getVisaStatus(emp.visaExpiryDate))}`}>
                   {getVisaStatus(emp.visaExpiryDate)}
                 </td>
 
