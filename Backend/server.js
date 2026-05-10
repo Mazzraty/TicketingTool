@@ -2,9 +2,11 @@ import dotenv from "dotenv";
 
 // ✅ Load env safely (works local + Render)
 dotenv.config();
+
 console.log("🔥 ENV LOADED CHECK");
 console.log("EMAIL_USER:", process.env.EMAIL_USER);
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "OK" : "MISSING");
+
 import express from "express";
 import cors from "cors";
 import connectDB from "./config/db.js";
@@ -13,16 +15,17 @@ import authRoutes from "./routes/authRoutes.js";
 import ticketRoutes from "./routes/ticketRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
 import assetRoutes from "./routes/assetRoutes.js";
+
 // 🔗 Connect DB
 connectDB();
 
 const app = express();
 
-// 🌐 Allowed Origins
+// 🌐 Allowed Origins (UPDATED - removed helpyfy)
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://helpy-fy.vercel.app"
+  "https://ticketing-tool-nine.vercel.app"
 ];
 
 // ✅ CORS CONFIG
@@ -58,6 +61,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/assets", assetRoutes);
+
 // ❌ 404 handler
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
