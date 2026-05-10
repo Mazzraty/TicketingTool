@@ -30,7 +30,6 @@ export default function AssetHistoryPage() {
         setAssets(assetRes.data);
 
       } catch (err) {
-        console.error(err);
         toast.error("Failed to load employees/assets");
       }
     };
@@ -59,7 +58,6 @@ export default function AssetHistoryPage() {
         setEmpHistory(res.data);
 
       } catch (err) {
-        console.error(err);
         toast.error("Employee history not found");
       }
     }, 300);
@@ -92,8 +90,6 @@ export default function AssetHistoryPage() {
         toast.error("Asset history not found");
       }
     }, 300);
-
-    return () => clearTimeout(timer);
 
   }, [assetCode]);
 

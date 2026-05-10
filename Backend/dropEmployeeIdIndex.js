@@ -14,7 +14,10 @@ const dbName = uri.includes("/") ? uri.split("/").pop().split("?")[0] : "";
 
 async function run() {
   try {
-    await mongoose.connect(uri);
+    await mongoose.connect(uri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
 
     const db = mongoose.connection.db;
     const collectionName = "employeemasters";

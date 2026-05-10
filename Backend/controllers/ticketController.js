@@ -122,6 +122,45 @@ export const createTicket = async (req, res) => {
     });
   }
 };
+
+// ==========================
+// ✅ SEND TEST EMAIL
+// ==========================
+export const sendTestEmail = async (req, res) => {
+  try {
+    if (!process.env.ADMIN_EMAIL) {
+      return res.status(500).json({
+        success: false,
+        message: "ADMIN_EMAIL missing in environment",
+      });
+    }
+
+    await sendEmail(
+      process.env.ADMIN_EMAIL,
+      "HelpyFy Test Email",
+      {
+        title: "Deployment email test",
+        description: "This is a live deployment email test.",
+        department: "Support",
+        priority: "Medium",
+        status: "Test",
+        userEmail: req.user?.email || "test@helpyfy.local",
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Test email sent successfully",
+    });
+  } catch (error) {
+    console.error("SEND TEST EMAIL ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to send test email",
+    });
+  }
+};
+
 // ==========================
 // ✅ USER TICKETS
 // ==========================

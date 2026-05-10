@@ -3,6 +3,7 @@ import {
   createTicket,
   getAllTickets,
   getUserTickets,
+  sendTestEmail,
   updateStatus,
   deleteTicket,
   getTicketStats,
@@ -28,6 +29,9 @@ router.post(
 
 // Get logged-in user tickets
 router.get("/my", protect, getUserTickets);
+
+// Send a protected deployment test email
+router.get("/test-email", protect, sendTestEmail);
 
 // Get single ticket (for view page)
 // router.get("/:id", protect, getTicketById); // ✅ COMMENTED OUT - function doesn't exist
