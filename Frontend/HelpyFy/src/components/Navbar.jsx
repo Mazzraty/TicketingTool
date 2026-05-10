@@ -47,7 +47,7 @@ export default function Navbar() {
 
   const isActive = (path) =>
     location.pathname === path
-      ? "bg-white text-green-700 font-semibold shadow-sm"
+      ? "bg-white text-green-700 font-semibold shadow-md"
       : "text-white/90 hover:bg-white/10 hover:text-white";
 
   // NAV ITEMS (ROLE BASED)
@@ -71,46 +71,51 @@ export default function Navbar() {
   }, [role]);
 
   return (
-    <header className="sticky top-0 z-50 bg-gradient-to-r from-green-700 via-green-600 to-green-700 shadow-lg border-b border-green-500">
+    <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-green-700 via-green-600 to-green-700 shadow-xl border-b border-green-500">
 
-      <div className="max-w-[1700px] mx-auto px-6 lg:px-10 h-18 flex items-center justify-between">
+      {/* FULL WIDTH CONTAINER */}
+      <div className="w-full px-6 lg:px-10 h-16 flex items-center justify-between">
 
-        {/* LOGO */}
-        <div className="flex items-center gap-4">
+        {/* LEFT SIDE */}
+        <div className="flex items-center gap-10">
 
-          <div className="bg-white rounded-xl p-2 shadow-md">
-            <img
-              src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
-              alt="logo"
-              className="h-9"
-            />
+          {/* LOGO */}
+          <div className="flex items-center gap-4">
+
+            <div className="bg-white rounded-2xl p-2 shadow-md">
+              <img
+                src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+                alt="logo"
+                className="h-9"
+              />
+            </div>
+
+            <div className="leading-tight">
+              <p className="text-lg font-bold text-white tracking-wide">
+                HelpyFy
+              </p>
+
+              <p className="text-[11px] text-green-100">
+                IT Helpdesk System
+              </p>
+            </div>
           </div>
 
-          <div className="leading-tight">
-            <p className="text-lg font-bold text-white tracking-wide">
-              HelpyFy
-            </p>
-
-            <p className="text-[11px] text-green-100">
-              IT Helpdesk System
-            </p>
-          </div>
+          {/* DESKTOP MENU */}
+          <nav className="hidden md:flex items-center gap-3 text-sm">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`px-4 py-2 rounded-xl transition-all duration-200 ${isActive(
+                  item.path
+                )}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </div>
-
-        {/* DESKTOP MENU */}
-        <nav className="hidden md:flex items-center gap-3 text-sm">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`px-4 py-2 rounded-xl transition-all duration-200 ${isActive(
-                item.path
-              )}`}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
 
         {/* RIGHT SIDE */}
         <div
@@ -119,7 +124,7 @@ export default function Navbar() {
         >
 
           {/* NOTIFICATION */}
-          <button className="relative p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition">
+          <button className="relative p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-200">
             🔔
 
             {notifications > 0 && (
@@ -130,7 +135,7 @@ export default function Navbar() {
           </button>
 
           {/* ROLE BADGE */}
-          <span className="hidden sm:inline-flex text-xs px-3 py-1.5 bg-white/15 text-white rounded-full capitalize border border-white/20">
+          <span className="hidden sm:inline-flex text-xs px-3 py-1.5 bg-white/15 text-white rounded-full capitalize border border-white/20 backdrop-blur-sm">
             {role}
           </span>
 
