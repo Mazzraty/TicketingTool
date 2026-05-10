@@ -135,9 +135,18 @@ export default function EmployeeExcelUpload() {
         payload
       );
 
+      console.log("BULK UPLOAD RESULT:", res.data);
+
       toast.success(
         `Inserted: ${res.data.inserted} | Skipped: ${res.data.skipped}`
       );
+
+      if (res.data.failedRows?.length) {
+        console.warn("Failed rows:", res.data.failedRows);
+        toast.error(
+          `${res.data.failedRows.length} rows failed. See console for details.`
+        );
+      }
 
       setRows([]);
       setFile(null);
