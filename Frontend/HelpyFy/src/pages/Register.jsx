@@ -10,6 +10,7 @@ export default function Register() {
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
     employeeId: "",
   });
 
@@ -21,6 +22,12 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // simple frontend validation
+    if (form.password !== form.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
 
     try {
       await api.post("/auth/register", form);
@@ -145,6 +152,17 @@ export default function Register() {
               value={form.password}
               onChange={handleChange}
               placeholder="Password"
+              className="input"
+              required
+            />
+
+            {/* ✅ CONFIRM PASSWORD ADDED */}
+            <input
+              type="password"
+              name="confirmPassword"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              placeholder="Confirm Password"
               className="input"
               required
             />
