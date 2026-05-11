@@ -90,7 +90,7 @@ export default function AppRoutes() {
 
           {/* SOFTWARE DASHBOARD */}
           <Route
-            path="/admin/software"
+            path="/admin/software-dashboard"
             element={<AdminSoftwareDashboard />}
           />
 
