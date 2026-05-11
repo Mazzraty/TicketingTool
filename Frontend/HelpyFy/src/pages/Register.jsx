@@ -11,8 +11,6 @@ export default function Register() {
     email: "",
     password: "",
     employeeId: "",
-    position: "",
-    department: "",
   });
 
   const navigate = useNavigate();
@@ -39,10 +37,9 @@ export default function Register() {
       {/* MAIN WRAPPER */}
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6">
 
-        {/* ================= LEFT INFO SECTION ================= */}
+        {/* LEFT SECTION */}
         <div className="space-y-6">
 
-          {/* HERO CARD */}
           <div className="relative rounded-3xl overflow-hidden shadow-xl">
             <img
               src={milkImage}
@@ -59,7 +56,6 @@ export default function Register() {
             </div>
           </div>
 
-          {/* FEATURE CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
             <div className="bg-white rounded-2xl shadow p-5 border border-green-100">
@@ -85,7 +81,6 @@ export default function Register() {
 
           </div>
 
-          {/* INFO CARD */}
           <div className="bg-white rounded-3xl shadow p-6 border border-green-100">
             <h4 className="text-lg font-bold mb-2">
               Enterprise Access
@@ -99,10 +94,9 @@ export default function Register() {
 
         </div>
 
-        {/* ================= RIGHT FORM CARD ================= */}
+        {/* RIGHT FORM */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 border border-green-100">
 
-          {/* HEADER */}
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900">
               Create Account
@@ -112,7 +106,6 @@ export default function Register() {
             </p>
           </div>
 
-          {/* FORM */}
           <form onSubmit={handleSubmit} className="space-y-4">
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -146,26 +139,6 @@ export default function Register() {
               required
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-              <input
-                name="position"
-                value={form.position}
-                onChange={handleChange}
-                placeholder="Position"
-                className="input"
-              />
-
-              <input
-                name="department"
-                value={form.department}
-                onChange={handleChange}
-                placeholder="Department"
-                className="input"
-              />
-
-            </div>
-
             <input
               type="password"
               name="password"
@@ -176,7 +149,6 @@ export default function Register() {
               required
             />
 
-            {/* BUTTON */}
             <button
               type="submit"
               className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-semibold hover:scale-[1.01] transition"
@@ -185,7 +157,6 @@ export default function Register() {
             </button>
           </form>
 
-          {/* LOGIN */}
           <button
             onClick={() => navigate("/login")}
             className="w-full mt-4 border py-3 rounded-2xl hover:bg-gray-50"
@@ -193,7 +164,6 @@ export default function Register() {
             Already have account? Login
           </button>
 
-          {/* FOOTER */}
           <p className="text-xs text-center mt-6 text-gray-400">
             © 2026 Mazzraty Enterprise System
           </p>
