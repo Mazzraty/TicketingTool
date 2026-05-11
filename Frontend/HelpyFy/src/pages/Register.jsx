@@ -21,10 +21,14 @@ export default function Register() {
 
   // ================= VALIDATION =================
   const validateEmployeeId = (id) => {
-    return /^\d{4}$/.test(id); // exactly 4 digits
+    return /^\d{4}$/.test(id);
   };
 
-  // ================= LIVE DUPLICATE CHECK (DEBOUNCE) =================
+  const isEmployeeValid =
+    validateEmployeeId(form.employeeId) &&
+    employeeStatus === "available";
+
+  // ================= LIVE CHECK =================
   useEffect(() => {
 
     if (!form.employeeId || form.employeeId.length < 4) {
@@ -41,11 +45,9 @@ export default function Register() {
           `/auth/check-employee/${form.employeeId}`
         );
 
-        if (res.data.exists) {
-          setEmployeeStatus("exists");
-        } else {
-          setEmployeeStatus("available");
-        }
+        setEmployeeStatus(
+          res.data.exists ? "exists" : "available"
+        );
 
       } catch (err) {
         setEmployeeStatus(null);
@@ -57,24 +59,13 @@ export default function Register() {
 
   }, [form.employeeId]);
 
-  // ================= INPUT HANDLER =================
-  const handleChange = (e) => {
-
-    const { name, value } = e.target;
-
-    setForm({
-      ...form,
-      [name]: value,
-    });
-  };
-
-  // ================= SUBMIT =================
+  // ================= HANDLER =================
   const handleSubmit = async (e) => {
 
     e.preventDefault();
 
     if (!validateEmployeeId(form.employeeId)) {
-      toast.error("Employee ID must be exactly 4 digits (0001 - 9999)");
+      toast.error("Employee ID must be exactly 4 digits");
       return;
     }
 
@@ -84,19 +75,11 @@ export default function Register() {
     }
 
     try {
-
       await api.post("/auth/register", form);
-
       toast.success("Account created successfully");
-
       navigate("/login");
-
     } catch (err) {
-
-      toast.error(
-        err.response?.data?.message || "Registration failed"
-      );
-
+      toast.error(err.response?.data?.message || "Registration failed");
     }
   };
 
@@ -105,7 +88,7 @@ export default function Register() {
 
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6">
 
-        {/* ================= LEFT ================= */}
+        {/* LEFT */}
         <div className="space-y-6">
 
           <div className="relative rounded-3xl overflow-hidden shadow-xl">
@@ -124,136 +107,134 @@ export default function Register() {
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl shadow p-6 border border-green-100">
-            <h4 className="text-lg font-bold mb-2">
-              Enterprise Access
-            </h4>
-
-            <p className="text-sm text-gray-500">
-              Employee registration system with real-time validation and secure onboarding.
-            </p>
-          </div>
-
         </div>
 
-        {/* ================= RIGHT FORM ================= */}
+        {/* RIGHT */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 border border-green-100">
 
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Create Account
-            </h1>
-          </div>
+          <h1 className="text-3xl font-bold mb-6">
+            Create Account
+          </h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
 
-            {/* NAME + EMPLOYEE ID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <input
+              name="name"
+              value={form.name}
+              onChange={(e) =>
+                setForm({ ...form, name: e.target.value })
+              }
+              placeholder="Full Name"
+              className="input"
+              required
+            />
+
+            {/* ================= EMPLOYEE ID ================= */}
+            <div className="relative">
 
               <input
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="Full Name"
-                className="input"
+                value={form.employeeId}
+                onChange={(e) => {
+                  const val = e.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 4);
+
+                  setForm({
+                    ...form,
+                    employeeId: val,
+                  });
+                }}
+                onFocus={() => setShowTooltip(true)}
+                onBlur={() =>
+                  setTimeout(() => setShowTooltip(false), 150)
+                }
+                placeholder="Employee ID (4 digits)"
+                className={`input pr-10 transition ${
+                  employeeStatus === "exists"
+                    ? "border-red-500"
+                    : employeeStatus === "available"
+                    ? "border-green-500"
+                    : ""
+                }`}
                 required
               />
 
-              {/* ================= EMPLOYEE ID (SAP STYLE) ================= */}
-              <div className="relative">
+              {/* ICON */}
+              <div className="absolute right-3 top-3 text-sm">
 
-                <input
-                  name="employeeId"
-                  value={form.employeeId}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                {employeeStatus === "checking" && (
+                  <span className="text-gray-400 animate-pulse">
+                    ⏳
+                  </span>
+                )}
 
-                    setForm({
-                      ...form,
-                      employeeId: val,
-                    });
-                  }}
-                  onFocus={() => setShowTooltip(true)}
-                  onBlur={() => setShowTooltip(false)}
-                  placeholder="Employee ID (4 digits)"
-                  className={`input pr-10 ${
-                    employeeStatus === "exists"
-                      ? "border-red-500"
-                      : employeeStatus === "available"
-                      ? "border-green-500"
-                      : ""
-                  }`}
-                  required
-                />
+                {employeeStatus === "available" && (
+                  <span className="text-green-600">✔</span>
+                )}
 
-                {/* ICON */}
-                <div className="absolute right-3 top-3 text-sm">
-                  {employeeStatus === "checking" && (
-                    <span className="text-gray-400 animate-pulse">⏳</span>
-                  )}
-                  {employeeStatus === "available" && (
-                    <span className="text-green-600">✔</span>
-                  )}
-                  {employeeStatus === "exists" && (
-                    <span className="text-red-600">✖</span>
-                  )}
-                </div>
+                {employeeStatus === "exists" && (
+                  <span className="text-red-600">✖</span>
+                )}
 
-                {/* ================= FIORI TOOLTIP ================= */}
-                {showTooltip && (
-                  <div className="absolute z-50 left-0 mt-2 w-full">
+              </div>
 
-                    <div className="bg-white border shadow-xl rounded-lg p-3 text-xs">
+              {/* ================= TOOLTIP (FIXED SAP STYLE) ================= */}
+              {showTooltip && (
+                <div className="absolute z-50 left-0 mt-2 w-full">
 
-                      <p className="font-semibold text-gray-700 mb-1">
-                        Employee ID Rules
-                      </p>
+                  <div className="bg-white border shadow-xl rounded-lg p-3 text-xs">
 
-                      <ul className="text-gray-500 space-y-1">
-                        <li>✔ Must be exactly 4 digits</li>
-                        <li>✔ No letters allowed</li>
-                        <li>✔ Must be unique</li>
-                      </ul>
+                    <p className="font-semibold text-gray-700 mb-1">
+                      Employee ID Rules
+                    </p>
 
-                      <div className="mt-2 border-t pt-2">
+                    <ul className="text-gray-500 space-y-1">
+                      <li>✔ Must be exactly 4 digits</li>
+                      <li>✔ Only numbers allowed</li>
+                      <li>✔ Must be unique</li>
+                    </ul>
 
-                        {employeeStatus === "checking" && (
-                          <p className="text-gray-500">Checking...</p>
-                        )}
+                    <div className="mt-2 border-t pt-2">
 
-                        {employeeStatus === "available" && (
-                          <p className="text-green-600 font-semibold">
-                            ✔ Available
-                          </p>
-                        )}
+                      {employeeStatus === "checking" && (
+                        <p className="text-gray-500">
+                          Checking availability...
+                        </p>
+                      )}
 
-                        {employeeStatus === "exists" && (
-                          <p className="text-red-600 font-semibold">
-                            ✖ Already Exists
-                          </p>
-                        )}
+                      {employeeStatus === "available" && (
+                        <p className="text-green-600 font-semibold">
+                          ✔ Available
+                        </p>
+                      )}
 
-                        {!employeeStatus && (
-                          <p className="text-gray-400">
-                            Enter 4 digit ID
-                          </p>
-                        )}
+                      {employeeStatus === "exists" && (
+                        <p className="text-red-600 font-semibold">
+                          ✖ Already Exists
+                        </p>
+                      )}
 
-                      </div>
+                      {!employeeStatus && (
+                        <p className="text-gray-400">
+                          Enter 4-digit Employee ID
+                        </p>
+                      )}
 
                     </div>
 
                   </div>
-                )}
 
-              </div>
+                </div>
+              )}
 
             </div>
 
             <input
               name="email"
               value={form.email}
-              onChange={handleChange}
+              onChange={(e) =>
+                setForm({ ...form, email: e.target.value })
+              }
               placeholder="Email Address"
               className="input"
               required
@@ -263,15 +244,23 @@ export default function Register() {
               type="password"
               name="password"
               value={form.password}
-              onChange={handleChange}
+              onChange={(e) =>
+                setForm({ ...form, password: e.target.value })
+              }
               placeholder="Password"
               className="input"
               required
             />
 
+            {/* BUTTON (SAP STYLE LOCK) */}
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-semibold"
+              disabled={!isEmployeeValid}
+              className={`w-full py-3 rounded-2xl font-semibold transition ${
+                isEmployeeValid
+                  ? "bg-gradient-to-r from-green-600 to-green-500 text-white"
+                  : "bg-gray-300 text-gray-600 cursor-not-allowed"
+              }`}
             >
               Create Account
             </button>
