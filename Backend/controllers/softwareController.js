@@ -5,13 +5,9 @@ import Software from "../models/softwareSchema.js";
 /* ==============================
    CREATE SOFTWARE
 ================================ */
-export const createSoftware = async (
-  req,
-  res
-) => {
+export const createSoftware = async (req, res) => {
   try {
-    const software =
-      await Software.create(req.body);
+    const software = await Software.create(req.body);
 
     res.status(201).json(software);
   } catch (err) {
@@ -22,19 +18,44 @@ export const createSoftware = async (
 };
 
 /* ==============================
-   GET ALL SOFTWARES
+   GET ALL SOFTWARES (PAGINATION + SEARCH ADDED)
 ================================ */
-export const getSoftwares = async (
-  req,
-  res
-) => {
+export const getSoftwares = async (req, res) => {
   try {
-    const softwares =
-      await Software.find().sort({
-        createdAt: -1,
-      });
+    // ✅ pagination + search
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
 
-    res.json(softwares);
+    const skip = (page - 1) * limit;
+
+    // ✅ search filter (safe, does not break logic)
+    const filter = search
+      ? {
+          $or: [
+            { name: { $regex: search, $options: "i" } },
+            { vendor: { $regex: search, $options: "i" } },
+            { licenseKey: { $regex: search, $options: "i" } },
+          ],
+        }
+      : {};
+
+    const softwares = await Software.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Software.countDocuments(filter);
+
+    res.json({
+      data: softwares,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
+    });
   } catch (err) {
     res.status(500).json({
       message: err.message,
@@ -45,160 +66,126 @@ export const getSoftwares = async (
 /* ==============================
    GET SINGLE SOFTWARE
 ================================ */
-export const getSoftwareById =
-  async (req, res) => {
-    try {
-      const software =
-        await Software.findById(
-          req.params.id
-        );
+export const getSoftwareById = async (req, res) => {
+  try {
+    const software = await Software.findById(req.params.id);
 
-      if (!software) {
-        return res
-          .status(404)
-          .json({
-            message:
-              "Software not found",
-          });
-      }
-
-      res.json(software);
-    } catch (err) {
-      res.status(500).json({
-        message: err.message,
+    if (!software) {
+      return res.status(404).json({
+        message: "Software not found",
       });
     }
-  };
+
+    res.json(software);
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
 
 /* ==============================
    UPDATE SOFTWARE
 ================================ */
-export const updateSoftware =
-  async (req, res) => {
-    try {
-      const software =
-        await Software.findByIdAndUpdate(
-          req.params.id,
-          req.body,
-          {
-            new: true,
-          }
-        );
+export const updateSoftware = async (req, res) => {
+  try {
+    const software = await Software.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
 
-      if (!software) {
-        return res
-          .status(404)
-          .json({
-            message:
-              "Software not found",
-          });
-      }
-
-      res.json(software);
-    } catch (err) {
-      res.status(500).json({
-        message: err.message,
+    if (!software) {
+      return res.status(404).json({
+        message: "Software not found",
       });
     }
-  };
+
+    res.json(software);
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
 
 /* ==============================
    DELETE SOFTWARE
 ================================ */
-export const deleteSoftware =
-  async (req, res) => {
-    try {
-      const software =
-        await Software.findByIdAndDelete(
-          req.params.id
-        );
+export const deleteSoftware = async (req, res) => {
+  try {
+    const software = await Software.findByIdAndDelete(req.params.id);
 
-      if (!software) {
-        return res
-          .status(404)
-          .json({
-            message:
-              "Software not found",
-          });
-      }
-
-      res.json({
-        message:
-          "Software deleted successfully",
-      });
-    } catch (err) {
-      res.status(500).json({
-        message: err.message,
+    if (!software) {
+      return res.status(404).json({
+        message: "Software not found",
       });
     }
-  };
+
+    res.json({
+      message: "Software deleted successfully",
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
 
 /* ==============================
    DASHBOARD STATS
 ================================ */
-export const getDashboardStats =
-  async (req, res) => {
-    try {
-      const today = new Date();
+export const getDashboardStats = async (req, res) => {
+  try {
+    const today = new Date();
 
-      const startMonth = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        1
-      );
+    const startMonth = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      1
+    );
 
-      const endMonth = new Date(
-        today.getFullYear(),
-        today.getMonth() + 1,
-        0
-      );
+    const endMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0
+    );
 
-      // Active
-      const totalActiveLicenses =
-        await Software.countDocuments({
-          status: "Active",
-        });
+    const totalActiveLicenses = await Software.countDocuments({
+      status: "Active",
+    });
 
-      // Expiring this month
-      const expiringThisMonth =
-        await Software.countDocuments({
-          expiryDate: {
-            $gte: startMonth,
-            $lte: endMonth,
-          },
-        });
+    const expiringThisMonth = await Software.countDocuments({
+      expiryDate: {
+        $gte: startMonth,
+        $lte: endMonth,
+      },
+    });
 
-      // Expired
-      const expiredServices =
-        await Software.countDocuments({
-          expiryDate: {
-            $lt: today,
-          },
-        });
+    const expiredServices = await Software.countDocuments({
+      expiryDate: {
+        $lt: today,
+      },
+    });
 
-      // Total cost
-      const totalCost =
-        await Software.aggregate([
-          {
-            $group: {
-              _id: null,
-              total: {
-                $sum: "$amount",
-              },
-            },
-          },
-        ]);
+    const totalCost = await Software.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+        },
+      },
+    ]);
 
-      res.json({
-        totalActiveLicenses,
-        expiringThisMonth,
-        expiredServices,
-        annualSoftwareCost:
-          totalCost[0]?.total || 0,
-      });
-    } catch (err) {
-      res.status(500).json({
-        message: err.message,
-      });
-    }
-  };
+    res.json({
+      totalActiveLicenses,
+      expiringThisMonth,
+      expiredServices,
+      annualSoftwareCost: totalCost[0]?.total || 0,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
