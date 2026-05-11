@@ -191,7 +191,7 @@ export default function AdminSoftwareDashboard() {
         <div className="bg-green-600 text-white p-4 rounded-xl">Cost: QAR {dashboard.annualSoftwareCost}</div>
       </div>
 
-      {/* ================= ADD SOFTWARE (RESTORED + SAP STYLE) ================= */}
+      {/* ADD SOFTWARE */}
       <div className="bg-white p-6 rounded-2xl shadow mb-6">
         <h2 className="text-xl font-semibold mb-4">Add Software</h2>
 
@@ -268,23 +268,29 @@ export default function AdminSoftwareDashboard() {
                 <td className="p-4">{new Date(s.expiryDate).toLocaleDateString()}</td>
                 <td className="p-4">{s.status}</td>
 
-                {/* SAP STYLE BUTTON ALIGNMENT */}
-                <td className="p-4 flex gap-2">
+                {/* ================= SAP STYLE ACTION BUTTONS ================= */}
+                <td className="p-4">
+                  <div className="flex items-center gap-2">
 
-                  <button
-                    onClick={() => openEdit(s)}
-                    className="bg-blue-600 text-white px-3 py-1 rounded"
-                  >
-                    Edit
-                  </button>
+                    <button
+                      onClick={() => openEdit(s)}
+                      className="px-3 py-1 text-xs font-semibold rounded-md 
+                                 bg-blue-50 text-blue-700 border border-blue-200
+                                 hover:bg-blue-100 transition"
+                    >
+                      ✏ Edit
+                    </button>
 
-                  <button
-                    onClick={() => deleteSoftware(s._id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded"
-                  >
-                    Delete
-                  </button>
+                    <button
+                      onClick={() => deleteSoftware(s._id)}
+                      className="px-3 py-1 text-xs font-semibold rounded-md 
+                                 bg-red-50 text-red-700 border border-red-200
+                                 hover:bg-red-100 transition"
+                    >
+                      🗑 Delete
+                    </button>
 
+                  </div>
                 </td>
 
               </tr>
