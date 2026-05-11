@@ -3,19 +3,16 @@ import dotenv from "dotenv";
 // ✅ Load env safely (works local + Render)
 dotenv.config();
 
-console.log("🔥 ENV LOADED CHECK");
-console.log("EMAIL_USER:", process.env.EMAIL_USER);
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "OK" : "MISSING");
 
 import express from "express";
 import cors from "cors";
 import connectDB from "./config/db.js";
-
+import "./crons/softwareCronesExpiry.js";
 import authRoutes from "./routes/authRoutes.js";
 import ticketRoutes from "./routes/ticketRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
 import assetRoutes from "./routes/assetRoutes.js";
-
+import softwareRoutes from "./routes/softwareRoutes.js";
 // 🔗 Connect DB
 connectDB();
 
@@ -67,6 +64,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/assets", assetRoutes);
+app.use("/api/software",softwareRoutes);
 
 // ❌ 404 handler
 app.use((req, res) => {

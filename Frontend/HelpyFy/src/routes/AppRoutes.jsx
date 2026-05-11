@@ -15,6 +15,7 @@ import AdminEmployeeMaster from "../pages/AdminEmployeeMaster.jsx";
 import AdminAssets from "../pages/AdminAsset.jsx";
 import AssetHistoryPage from "../pages/AssetHistory.jsx";
 import AssetExcelUpload from "../pages/AssetUpload.jsx";
+import AdminSoftwareDashboard from "../pages/AdminSoftwareDashboard.jsx";
 
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
@@ -22,38 +23,86 @@ import Layout from "../layouts/MainLayout.jsx";
 import AdminLayout from "../layouts/AdminLayout.jsx";
 
 export default function AppRoutes() {
+
   return (
     <Routes>
 
       {/* ================= PUBLIC ================= */}
       <Route path="/login" element={<Login />} />
+
       <Route path="/register" element={<Register />} />
 
       {/* ================= USER ROUTES ================= */}
       <Route element={<ProtectedRoute role="user" />}>
+
         <Route element={<Layout />}>
+
           <Route path="/" element={<Dashboard />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/create" element={<CreateTicket />} />
-          <Route path="/tickets" element={<MyTickets />} />
+
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
+
+          <Route
+            path="/create"
+            element={<CreateTicket />}
+          />
+
+          <Route
+            path="/tickets"
+            element={<MyTickets />}
+          />
+
         </Route>
+
       </Route>
 
       {/* ================= ADMIN ROUTES ================= */}
       <Route element={<ProtectedRoute role="admin" />}>
+
         <Route element={<AdminLayout />}>
 
-          <Route path="/admin" element={<AdminTickets />} />
-          <Route path="/admin/employees" element={<AdminEmployeeMaster />} />
-          <Route path="/admin/assets" element={<AdminAssets />} />
-          <Route path="/admin/assets/history" element={<AssetHistoryPage />} />
-          <Route path="/admin/assets/upload-excel" element={<AssetExcelUpload />} />
+          <Route
+            path="/admin"
+            element={<AdminTickets />}
+          />
+
+          <Route
+            path="/admin/employees"
+            element={<AdminEmployeeMaster />}
+          />
+
+          <Route
+            path="/admin/assets"
+            element={<AdminAssets />}
+          />
+
+          <Route
+            path="/admin/assets/history"
+            element={<AssetHistoryPage />}
+          />
+
+          <Route
+            path="/admin/assets/upload-excel"
+            element={<AssetExcelUpload />}
+          />
+
+          {/* SOFTWARE DASHBOARD */}
+          <Route
+            path="/admin/software"
+            element={<AdminSoftwareDashboard />}
+          />
 
         </Route>
+
       </Route>
 
       {/* ================= FALLBACK ================= */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route
+        path="*"
+        element={<Navigate to="/" replace />}
+      />
 
     </Routes>
   );

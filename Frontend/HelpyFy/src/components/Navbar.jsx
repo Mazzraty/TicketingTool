@@ -10,7 +10,6 @@ export default function Navbar() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notifications] = useState(2);
 
-  // ✅ FIX: reactive user state (IMPORTANT)
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -20,8 +19,6 @@ export default function Navbar() {
     };
 
     loadUser();
-
-    // sync across tabs / updates
     window.addEventListener("storage", loadUser);
 
     return () => window.removeEventListener("storage", loadUser);
@@ -50,7 +47,6 @@ export default function Navbar() {
       ? "bg-white text-green-700 font-semibold shadow-md"
       : "text-white/90 hover:bg-white/10 hover:text-white";
 
-  // NAV ITEMS (ROLE BASED)
   const navItems = useMemo(() => {
     if (role === "admin") {
       return [
@@ -60,6 +56,7 @@ export default function Navbar() {
         { label: "Upload Excel", path: "/admin/assets/upload-excel" },
         { label: "Asset History", path: "/admin/assets/history" },
         { label: "Employees", path: "/admin/employees" },
+        { label: "Software Dashboard", path: "/admin/software-dashboard" },
       ];
     }
 
@@ -73,13 +70,10 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-green-700 via-green-600 to-green-700 shadow-xl border-b border-green-500">
 
-      {/* FULL WIDTH CONTAINER */}
       <div className="w-full px-6 lg:px-10 h-16 flex items-center justify-between">
 
-        {/* LEFT SIDE */}
         <div className="flex items-center gap-10">
 
-          {/* LOGO */}
           <div className="flex items-center gap-4">
 
             <div className="bg-white rounded-2xl p-2 shadow-md">
@@ -94,14 +88,12 @@ export default function Navbar() {
               <p className="text-lg font-bold text-white tracking-wide">
                 HelpyFy
               </p>
-
               <p className="text-[11px] text-green-100">
                 IT Helpdesk System
               </p>
             </div>
           </div>
 
-          {/* DESKTOP MENU */}
           <nav className="hidden md:flex items-center gap-3 text-sm">
             {navItems.map((item) => (
               <Link
@@ -117,16 +109,10 @@ export default function Navbar() {
           </nav>
         </div>
 
-        {/* RIGHT SIDE */}
-        <div
-          className="flex items-center gap-4 relative"
-          ref={dropdownRef}
-        >
+        <div className="flex items-center gap-4 relative" ref={dropdownRef}>
 
-          {/* NOTIFICATION */}
           <button className="relative p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-200">
             🔔
-
             {notifications > 0 && (
               <span className="absolute -top-1 -right-1 bg-white text-green-700 text-[10px] font-bold px-1.5 rounded-full">
                 {notifications}
@@ -134,12 +120,10 @@ export default function Navbar() {
             )}
           </button>
 
-          {/* ROLE BADGE */}
           <span className="hidden sm:inline-flex text-xs px-3 py-1.5 bg-white/15 text-white rounded-full capitalize border border-white/20 backdrop-blur-sm">
             {role}
           </span>
 
-          {/* USER AVATAR */}
           <button
             onClick={() => setOpen(!open)}
             className="w-10 h-10 rounded-full bg-white text-green-700 flex items-center justify-center font-bold shadow-md border-2 border-white"
@@ -147,15 +131,11 @@ export default function Navbar() {
             {user?.name?.charAt(0).toUpperCase() || "U"}
           </button>
 
-          {/* DROPDOWN */}
           {open && (
             <div className="absolute right-0 top-14 w-60 bg-white border rounded-2xl shadow-2xl overflow-hidden">
 
               <div className="px-4 py-4 border-b bg-green-50">
-                <p className="text-xs text-gray-500">
-                  Signed in as
-                </p>
-
+                <p className="text-xs text-gray-500">Signed in as</p>
                 <p className="text-sm font-semibold truncate text-gray-800">
                   {user?.email || "Guest"}
                 </p>
@@ -177,7 +157,6 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* MOBILE MENU BUTTON */}
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
             className="md:hidden text-2xl text-white px-2"
@@ -187,7 +166,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* MOBILE MENU */}
       {mobileMenu && (
         <div className="md:hidden bg-green-700 border-t border-green-500 px-4 py-4 space-y-2 text-sm">
 
