@@ -11,7 +11,6 @@ export default function AdminSoftwareDashboard() {
 
   const [softwares, setSoftwares] = useState([]);
 
-  // ================= NEW UI STATES (ADDED ONLY) =================
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const limit = 8;
@@ -29,7 +28,7 @@ export default function AdminSoftwareDashboard() {
     status: "Active",
   });
 
-  // ================= LOAD SOFTWARES (NO CHANGE) =================
+  // LOAD
   useEffect(() => {
     fetchSoftwares();
   }, []);
@@ -39,15 +38,13 @@ export default function AdminSoftwareDashboard() {
       const res = await api.get("/software");
       setSoftwares(res.data.data || res.data);
     } catch (err) {
-      console.log(err);
       toast.error("Failed to load softwares");
     }
   };
 
-  // ================= ADD SOFTWARE (NO CHANGE) =================
+  // ADD
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       await api.post("/software", form);
 
@@ -65,12 +62,11 @@ export default function AdminSoftwareDashboard() {
 
       fetchSoftwares();
     } catch (err) {
-      console.log(err);
-      toast.error(err.response?.data?.message || "Failed to add software");
+      toast.error("Failed to add software");
     }
   };
 
-  // ================= DELETE SOFTWARE (NO CHANGE) =================
+  // DELETE
   const deleteSoftware = async (id) => {
     try {
       if (!window.confirm("Delete this software?")) return;
@@ -78,15 +74,13 @@ export default function AdminSoftwareDashboard() {
       await api.delete(`/software/${id}`);
 
       toast.success("Software Deleted");
-
       fetchSoftwares();
     } catch (err) {
-      console.log(err);
       toast.error("Delete Failed");
     }
   };
 
-  // ================= EDIT (ADDED ONLY - NO CHANGE TO EXISTING LOGIC) =================
+  // EDIT
   const openEdit = (item) => {
     setEditData(item);
     setEditModal(true);
@@ -103,12 +97,11 @@ export default function AdminSoftwareDashboard() {
 
       fetchSoftwares();
     } catch (err) {
-      console.log(err);
       toast.error("Update Failed");
     }
   };
 
-  // ================= SEARCH (ADDED ONLY) =================
+  // SEARCH
   const filteredSoftwares = useMemo(() => {
     return softwares.filter((s) =>
       `${s.serviceName} ${s.vendor} ${s.status}`
@@ -117,7 +110,7 @@ export default function AdminSoftwareDashboard() {
     );
   }, [softwares, search]);
 
-  // ================= PAGINATION (ADDED ONLY) =================
+  // PAGINATION
   const totalPages = Math.ceil(filteredSoftwares.length / limit);
 
   const paginatedSoftwares = useMemo(() => {
@@ -125,53 +118,30 @@ export default function AdminSoftwareDashboard() {
     return filteredSoftwares.slice(start, start + limit);
   }, [filteredSoftwares, page]);
 
-  // ================= DASHBOARD (NO CHANGE) =================
+  // DASHBOARD
   const dashboard = useMemo(() => {
     const today = new Date();
 
-    const totalActiveLicenses =
-      softwares.filter((s) => s.status === "Active").length;
-
-    const expiringThisMonth =
-      softwares.filter((s) => {
-        const expiry = new Date(s.expiryDate);
-        return (
-          expiry.getMonth() === today.getMonth() &&
-          expiry.getFullYear() === today.getFullYear()
-        );
-      }).length;
-
-    const expiredServices =
-      softwares.filter((s) => new Date(s.expiryDate) < today).length;
-
-    const annualSoftwareCost =
-      softwares.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-
     return {
-      totalActiveLicenses,
-      expiringThisMonth,
-      expiredServices,
-      annualSoftwareCost,
+      totalActiveLicenses: softwares.filter((s) => s.status === "Active").length,
+      expiringThisMonth: softwares.filter((s) => {
+        const d = new Date(s.expiryDate);
+        return d.getMonth() === today.getMonth();
+      }).length,
+      expiredServices: softwares.filter((s) => new Date(s.expiryDate) < today).length,
+      annualSoftwareCost: softwares.reduce((a, b) => a + Number(b.amount || 0), 0),
     };
   }, [softwares]);
 
-  // ================= PDF (NO CHANGE) =================
+  // PDF
   const downloadPDF = () => {
     const doc = new jsPDF();
 
-    doc.setFontSize(18);
-    doc.text("Software License Report", 14, 18);
-
-    doc.setFontSize(10);
-    doc.text(
-      `Generated: ${new Date().toLocaleString()}`,
-      14,
-      26
-    );
+    doc.text("Software Report", 14, 15);
 
     autoTable(doc, {
-      startY: 35,
-      head: [["Service", "Vendor", "Duration", "Expiry Date", "Amount", "Status"]],
+      startY: 25,
+      head: [["Service", "Vendor", "Duration", "Expiry", "Amount", "Status"]],
       body: softwares.map((s) => [
         s.serviceName,
         s.vendor,
@@ -182,13 +152,7 @@ export default function AdminSoftwareDashboard() {
       ]),
     });
 
-    doc.text(
-      `Total Annual Cost: QAR ${dashboard.annualSoftwareCost}`,
-      14,
-      doc.lastAutoTable.finalY + 15
-    );
-
-    doc.save("software-report.pdf");
+    doc.save("software.pdf");
   };
 
   return (
@@ -196,11 +160,7 @@ export default function AdminSoftwareDashboard() {
 
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Software License Dashboard
-          </h1>
-        </div>
+        <h1 className="text-3xl font-bold">Software Dashboard</h1>
 
         <button
           onClick={downloadPDF}
@@ -210,39 +170,77 @@ export default function AdminSoftwareDashboard() {
         </button>
       </div>
 
-      {/* ================= SEARCH (ADDED ONLY) ================= */}
+      {/* SEARCH */}
       <div className="mb-4">
         <input
-          type="text"
-          placeholder="Search software..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setPage(1);
           }}
-          className="w-full md:w-1/3 border p-3 rounded-xl"
+          className="border p-3 rounded-xl w-full md:w-1/3"
+          placeholder="Search software..."
         />
       </div>
 
-      {/* DASHBOARD CARDS (NO CHANGE) */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+      {/* DASHBOARD CARDS */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="bg-blue-600 text-white p-4 rounded-xl">Active: {dashboard.totalActiveLicenses}</div>
+        <div className="bg-yellow-500 text-white p-4 rounded-xl">Expiring: {dashboard.expiringThisMonth}</div>
+        <div className="bg-red-600 text-white p-4 rounded-xl">Expired: {dashboard.expiredServices}</div>
+        <div className="bg-green-600 text-white p-4 rounded-xl">Cost: QAR {dashboard.annualSoftwareCost}</div>
+      </div>
 
-        <div className="bg-blue-600 text-white p-6 rounded-xl">
-          Active: {dashboard.totalActiveLicenses}
-        </div>
+      {/* ================= ADD SOFTWARE (RESTORED + SAP STYLE) ================= */}
+      <div className="bg-white p-6 rounded-2xl shadow mb-6">
+        <h2 className="text-xl font-semibold mb-4">Add Software</h2>
 
-        <div className="bg-yellow-500 text-white p-6 rounded-xl">
-          Expiring: {dashboard.expiringThisMonth}
-        </div>
+        <form onSubmit={handleSubmit} className="grid grid-cols-3 gap-4">
 
-        <div className="bg-red-600 text-white p-6 rounded-xl">
-          Expired: {dashboard.expiredServices}
-        </div>
+          <input className="border p-2 rounded" placeholder="Service Name"
+            value={form.serviceName}
+            onChange={(e) => setForm({ ...form, serviceName: e.target.value })}
+          />
 
-        <div className="bg-green-600 text-white p-6 rounded-xl">
-          Cost: QAR {dashboard.annualSoftwareCost}
-        </div>
+          <input className="border p-2 rounded" placeholder="Vendor"
+            value={form.vendor}
+            onChange={(e) => setForm({ ...form, vendor: e.target.value })}
+          />
 
+          <input className="border p-2 rounded" placeholder="Months"
+            value={form.durationMonths}
+            onChange={(e) => setForm({ ...form, durationMonths: e.target.value })}
+          />
+
+          <input className="border p-2 rounded" placeholder="Amount"
+            value={form.amount}
+            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+          />
+
+          <input type="date" className="border p-2 rounded"
+            value={form.purchaseDate}
+            onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
+          />
+
+          <input type="date" className="border p-2 rounded"
+            value={form.expiryDate}
+            onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+          />
+
+          <select className="border p-2 rounded"
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+          >
+            <option>Active</option>
+            <option>Expired</option>
+            <option>Renewed</option>
+          </select>
+
+          <button className="bg-black text-white rounded p-2 col-span-3">
+            Save Software
+          </button>
+
+        </form>
       </div>
 
       {/* TABLE */}
@@ -252,28 +250,27 @@ export default function AdminSoftwareDashboard() {
 
           <thead className="bg-gray-200">
             <tr>
-              <th className="p-4">Service</th>
-              <th className="p-4">Vendor</th>
-              <th className="p-4">Expiry</th>
-              <th className="p-4">Status</th>
-              <th className="p-4">Action</th>
+              <th className="p-4 text-left">Service</th>
+              <th className="p-4 text-left">Vendor</th>
+              <th className="p-4 text-left">Expiry</th>
+              <th className="p-4 text-left">Status</th>
+              <th className="p-4 text-left">Action</th>
             </tr>
           </thead>
 
           <tbody>
+
             {paginatedSoftwares.map((s) => (
               <tr key={s._id} className="border-b">
 
                 <td className="p-4">{s.serviceName}</td>
                 <td className="p-4">{s.vendor}</td>
-                <td className="p-4">
-                  {new Date(s.expiryDate).toLocaleDateString()}
-                </td>
+                <td className="p-4">{new Date(s.expiryDate).toLocaleDateString()}</td>
                 <td className="p-4">{s.status}</td>
 
+                {/* SAP STYLE BUTTON ALIGNMENT */}
                 <td className="p-4 flex gap-2">
 
-                  {/* ================= EDIT BUTTON (ADDED ONLY) ================= */}
                   <button
                     onClick={() => openEdit(s)}
                     className="bg-blue-600 text-white px-3 py-1 rounded"
@@ -292,66 +289,49 @@ export default function AdminSoftwareDashboard() {
 
               </tr>
             ))}
+
           </tbody>
 
         </table>
 
       </div>
 
-      {/* ================= PAGINATION (ADDED ONLY) ================= */}
-      <div className="flex justify-center gap-2 mt-5">
+      {/* PAGINATION */}
+      <div className="flex justify-center mt-5 gap-3">
 
-        <button
-          disabled={page === 1}
-          onClick={() => setPage(page - 1)}
-          className="px-4 py-2 bg-gray-300 rounded"
-        >
+        <button disabled={page === 1} onClick={() => setPage(page - 1)}>
           Prev
         </button>
 
-        <span className="px-4 py-2">
-          {page} / {totalPages || 1}
-        </span>
+        <span>{page} / {totalPages || 1}</span>
 
-        <button
-          disabled={page === totalPages}
-          onClick={() => setPage(page + 1)}
-          className="px-4 py-2 bg-gray-300 rounded"
-        >
+        <button disabled={page === totalPages} onClick={() => setPage(page + 1)}>
           Next
         </button>
 
       </div>
 
-      {/* ================= EDIT MODAL (ADDED ONLY, SAP STYLE SIMPLE) ================= */}
+      {/* EDIT MODAL */}
       {editModal && editData && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
 
           <div className="bg-white p-6 rounded-xl w-[400px]">
 
-            <h2 className="text-xl font-bold mb-4">
-              Edit Software
-            </h2>
+            <h2 className="text-xl font-bold mb-4">Edit Software</h2>
 
             <input
-              className="border w-full p-2 mb-2"
+              className="border p-2 w-full mb-2"
               value={editData.serviceName}
               onChange={(e) =>
-                setEditData({
-                  ...editData,
-                  serviceName: e.target.value,
-                })
+                setEditData({ ...editData, serviceName: e.target.value })
               }
             />
 
             <input
-              className="border w-full p-2 mb-2"
+              className="border p-2 w-full mb-2"
               value={editData.vendor}
               onChange={(e) =>
-                setEditData({
-                  ...editData,
-                  vendor: e.target.value,
-                })
+                setEditData({ ...editData, vendor: e.target.value })
               }
             />
 
