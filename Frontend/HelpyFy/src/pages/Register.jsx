@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -6,45 +6,106 @@ import toast from "react-hot-toast";
 import milkImage from "../assets/milk.png";
 
 export default function Register() {
+
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
-    confirmPassword: "",
     employeeId: "",
   });
 
+  const [employeeStatus, setEmployeeStatus] = useState(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // ================= VALIDATION =================
+  const validateEmployeeId = (id) => {
+    return /^\d{4}$/.test(id); // exactly 4 digits
   };
 
+  // ================= LIVE DUPLICATE CHECK (DEBOUNCE) =================
+  useEffect(() => {
+
+    if (!form.employeeId || form.employeeId.length < 4) {
+      setEmployeeStatus(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+
+      try {
+        setEmployeeStatus("checking");
+
+        const res = await api.get(
+          `/auth/check-employee/${form.employeeId}`
+        );
+
+        if (res.data.exists) {
+          setEmployeeStatus("exists");
+        } else {
+          setEmployeeStatus("available");
+        }
+
+      } catch (err) {
+        setEmployeeStatus(null);
+      }
+
+    }, 600);
+
+    return () => clearTimeout(timer);
+
+  }, [form.employeeId]);
+
+  // ================= INPUT HANDLER =================
+  const handleChange = (e) => {
+
+    const { name, value } = e.target;
+
+    setForm({
+      ...form,
+      [name]: value,
+    });
+  };
+
+  // ================= SUBMIT =================
   const handleSubmit = async (e) => {
+
     e.preventDefault();
 
-    // simple frontend validation
-    if (form.password !== form.confirmPassword) {
-      toast.error("Passwords do not match");
+    if (!validateEmployeeId(form.employeeId)) {
+      toast.error("Employee ID must be exactly 4 digits (0001 - 9999)");
+      return;
+    }
+
+    if (employeeStatus === "exists") {
+      toast.error("Employee ID already exists");
       return;
     }
 
     try {
+
       await api.post("/auth/register", form);
+
       toast.success("Account created successfully");
+
       navigate("/login");
+
     } catch (err) {
-      toast.error(err.response?.data?.message || "Registration failed");
+
+      toast.error(
+        err.response?.data?.message || "Registration failed"
+      );
+
     }
   };
 
   return (
     <div className="min-h-screen bg-[#eef5e8] flex items-center justify-center p-4">
 
-      {/* MAIN WRAPPER */}
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6">
 
-        {/* LEFT SECTION */}
+        {/* ================= LEFT ================= */}
         <div className="space-y-6">
 
           <div className="relative rounded-3xl overflow-hidden shadow-xl">
@@ -63,58 +124,30 @@ export default function Register() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-            <div className="bg-white rounded-2xl shadow p-5 border border-green-100">
-              <h3 className="text-xl font-bold text-green-700">Secure</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Role-based authentication system
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow p-5 border border-green-100">
-              <h3 className="text-xl font-bold text-green-700">Smart</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Automated ticket handling
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow p-5 border border-green-100">
-              <h3 className="text-xl font-bold text-green-700">Fast</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Real-time IT support system
-              </p>
-            </div>
-
-          </div>
-
           <div className="bg-white rounded-3xl shadow p-6 border border-green-100">
             <h4 className="text-lg font-bold mb-2">
               Enterprise Access
             </h4>
 
-            <p className="text-sm text-gray-500 leading-relaxed">
-              This system is designed for Mazzraty employees to manage IT tickets,
-              assets, and internal support efficiently with full tracking and security.
+            <p className="text-sm text-gray-500">
+              Employee registration system with real-time validation and secure onboarding.
             </p>
           </div>
 
         </div>
 
-        {/* RIGHT FORM */}
+        {/* ================= RIGHT FORM ================= */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 border border-green-100">
 
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900">
               Create Account
             </h1>
-            <p className="text-gray-500">
-              Register your enterprise profile
-            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
 
+            {/* NAME + EMPLOYEE ID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
               <input
@@ -126,14 +159,94 @@ export default function Register() {
                 required
               />
 
-              <input
-                name="employeeId"
-                value={form.employeeId}
-                onChange={handleChange}
-                placeholder="Employee ID"
-                className="input"
-                required
-              />
+              {/* ================= EMPLOYEE ID (SAP STYLE) ================= */}
+              <div className="relative">
+
+                <input
+                  name="employeeId"
+                  value={form.employeeId}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+
+                    setForm({
+                      ...form,
+                      employeeId: val,
+                    });
+                  }}
+                  onFocus={() => setShowTooltip(true)}
+                  onBlur={() => setShowTooltip(false)}
+                  placeholder="Employee ID (4 digits)"
+                  className={`input pr-10 ${
+                    employeeStatus === "exists"
+                      ? "border-red-500"
+                      : employeeStatus === "available"
+                      ? "border-green-500"
+                      : ""
+                  }`}
+                  required
+                />
+
+                {/* ICON */}
+                <div className="absolute right-3 top-3 text-sm">
+                  {employeeStatus === "checking" && (
+                    <span className="text-gray-400 animate-pulse">⏳</span>
+                  )}
+                  {employeeStatus === "available" && (
+                    <span className="text-green-600">✔</span>
+                  )}
+                  {employeeStatus === "exists" && (
+                    <span className="text-red-600">✖</span>
+                  )}
+                </div>
+
+                {/* ================= FIORI TOOLTIP ================= */}
+                {showTooltip && (
+                  <div className="absolute z-50 left-0 mt-2 w-full">
+
+                    <div className="bg-white border shadow-xl rounded-lg p-3 text-xs">
+
+                      <p className="font-semibold text-gray-700 mb-1">
+                        Employee ID Rules
+                      </p>
+
+                      <ul className="text-gray-500 space-y-1">
+                        <li>✔ Must be exactly 4 digits</li>
+                        <li>✔ No letters allowed</li>
+                        <li>✔ Must be unique</li>
+                      </ul>
+
+                      <div className="mt-2 border-t pt-2">
+
+                        {employeeStatus === "checking" && (
+                          <p className="text-gray-500">Checking...</p>
+                        )}
+
+                        {employeeStatus === "available" && (
+                          <p className="text-green-600 font-semibold">
+                            ✔ Available
+                          </p>
+                        )}
+
+                        {employeeStatus === "exists" && (
+                          <p className="text-red-600 font-semibold">
+                            ✖ Already Exists
+                          </p>
+                        )}
+
+                        {!employeeStatus && (
+                          <p className="text-gray-400">
+                            Enter 4 digit ID
+                          </p>
+                        )}
+
+                      </div>
+
+                    </div>
+
+                  </div>
+                )}
+
+              </div>
 
             </div>
 
@@ -156,35 +269,14 @@ export default function Register() {
               required
             />
 
-            {/* ✅ CONFIRM PASSWORD ADDED */}
-            <input
-              type="password"
-              name="confirmPassword"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              placeholder="Confirm Password"
-              className="input"
-              required
-            />
-
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-semibold hover:scale-[1.01] transition"
+              className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-semibold"
             >
               Create Account
             </button>
+
           </form>
-
-          <button
-            onClick={() => navigate("/login")}
-            className="w-full mt-4 border py-3 rounded-2xl hover:bg-gray-50"
-          >
-            Already have account? Login
-          </button>
-
-          <p className="text-xs text-center mt-6 text-gray-400">
-            © 2026 Mazzraty Enterprise System
-          </p>
 
         </div>
       </div>
