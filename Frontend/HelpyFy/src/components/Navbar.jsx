@@ -61,9 +61,6 @@ export default function Navbar() {
 
         // ================= NEW SAP FIORI ASSET MODULE =================
         { label: "Asset Dashboard", path: "/admin/assets/fiori" },
-        { label: "Asset Management", path: "/admin/assets/manage" },
-        { label: "Printers", path: "/admin/assets/printers" },
-        { label: "HHT Devices", path: "/admin/assets/hht" },
 
         // OTHER MODULES
         { label: "Employees", path: "/admin/employees" },
