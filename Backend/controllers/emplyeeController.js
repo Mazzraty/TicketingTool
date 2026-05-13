@@ -1,4 +1,5 @@
 import EmployeeMaster from "../models/employeeMasterSchema.js";
+import Asset from "../models/assetSchema.js";
 
 /* =========================
    GET ALL EMPLOYEES
@@ -101,65 +102,172 @@ export const createEmployee = async (req, res) => {
 ========================= */
 export const bulkUploadEmployees = async (req, res) => {
   try {
+
     const employees = req.body.employees || [];
+    const assets = req.body.assets || [];
 
-    if (!Array.isArray(employees)) {
-      return res.status(400).json({
-        message: "Invalid data format",
-      });
-    }
-
-    const clean = (v) => (v ? v.toString().trim() : "");
+    const clean = (v) =>
+      v ? v.toString().trim() : "";
 
     let inserted = 0;
     let skipped = 0;
     let failedRows = [];
 
-    for (const e of employees) {
-      try {
-        const staffCode = clean(
-          e.staffCode || e.employeeId || e["Staff Code"]
-        );
+    /* =========================================
+       EMPLOYEE UPLOAD
+    ========================================= */
+    if (employees.length > 0) {
 
-        const name = clean(
-          e.name || e.employeeName || e["Full Name"]
-        );
+      for (const e of employees) {
+        try {
 
-        if (!staffCode || !name) {
+          const staffCode = clean(
+            e.staffCode ||
+            e.employeeId ||
+            e["Staff Code"]
+          );
+
+          const name = clean(
+            e.name ||
+            e.employeeName ||
+            e["Full Name"]
+          );
+
+          if (!staffCode || !name) {
+            skipped++;
+            continue;
+          }
+
+          const exists =
+            await EmployeeMaster.findOne({
+              staffCode,
+            });
+
+          if (exists) {
+            skipped++;
+            continue;
+          }
+
+          await EmployeeMaster.create({
+            staffCode,
+            name,
+
+            department:
+              e.department || "",
+
+            designation:
+              e.designation || "",
+
+            division:
+              e.division || "",
+
+            placeOfWork:
+              e.placeOfWork || "",
+
+            visaNo:
+              e.visaNo || "",
+
+            dateOfJoining:
+              e.dateOfJoining
+                ? new Date(e.dateOfJoining)
+                : null,
+
+            status: "active",
+          });
+
+          inserted++;
+
+        } catch (err) {
+
           skipped++;
-          continue;
+
+          failedRows.push({
+            row: e,
+            reason: err.message,
+          });
         }
+      }
+    }
 
-        const exists = await EmployeeMaster.findOne({
-          staffCode,
-        });
+    /* =========================================
+       ASSET UPLOAD (PRINTER / HHT)
+    ========================================= */
+    if (assets.length > 0) {
 
-        if (exists) {
+      for (const a of assets) {
+        try {
+
+          const assetCode = clean(
+            a.assetCode
+          );
+
+          if (!assetCode) {
+            skipped++;
+            continue;
+          }
+
+          const exists =
+            await Asset.findOne({
+              assetCode,
+            });
+
+          if (exists) {
+            skipped++;
+            continue;
+          }
+
+          await Asset.create({
+
+            assetCode,
+
+            type:
+              a.type || "Laptop",
+
+            model:
+              a.model || "",
+
+            serialNumber:
+              a.serialNumber || "",
+
+            status: "available",
+
+            // PRINTER / HHT
+            route:
+              a.route || "",
+
+            salesmanCode:
+              a.salesmanCode || "",
+
+            salesmanName:
+              a.salesmanName || "",
+
+            supervisor:
+              a.supervisor || "",
+
+            soti:
+              a.soti || "",
+
+            imei:
+              a.imei || "",
+
+            simNumber:
+              a.simNumber || "",
+
+            notes:
+              a.notes || "",
+          });
+
+          inserted++;
+
+        } catch (err) {
+
           skipped++;
-          continue;
+
+          failedRows.push({
+            row: a,
+            reason: err.message,
+          });
         }
-
-        await EmployeeMaster.create({
-          staffCode,
-          name,
-          department: e.department || "",
-          designation: e.designation || "",
-          division: e.division || "",
-          placeOfWork: e.placeOfWork || "",
-          visaNo: e.visaNo || "",
-          dateOfJoining: e.dateOfJoining
-            ? new Date(e.dateOfJoining)
-            : null,
-          status: "active",
-        });
-
-        inserted++;
-      } catch (err) {
-        skipped++;
-        failedRows.push({
-          row: e,
-          reason: err.message,
-        });
       }
     }
 
@@ -167,10 +275,18 @@ export const bulkUploadEmployees = async (req, res) => {
       success: true,
       inserted,
       skipped,
-      total: employees.length,
+
+      total:
+        employees.length +
+        assets.length,
+
       failedRows,
     });
+
   } catch (err) {
+
+    console.error(err);
+
     res.status(500).json({
       message: err.message,
     });
