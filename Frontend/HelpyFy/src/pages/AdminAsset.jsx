@@ -3,301 +3,295 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 
 export default function AdminAssets() {
-
   const [assetCode, setAssetCode] = useState("");
-  const [name, setName] = useState("");
   const [type, setType] = useState("");
+
+  const [model, setModel] = useState("");
+  const [serialNumber, setSerialNumber] = useState("");
+
+  const [route, setRoute] = useState("");
+  const [salesmanCode, setSalesmanCode] = useState("");
+  const [salesmanName, setSalesmanName] = useState("");
+  const [supervisor, setSupervisor] = useState("");
+  const [soti, setSoti] = useState("");
+
+  const [imei, setImei] = useState("");
+  const [simNumber, setSimNumber] = useState("");
+  const [notes, setNotes] = useState("");
 
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState("");
 
   const [open, setOpen] = useState(null);
 
-  // ================= LOAD EMPLOYEES =================
+  /* ================= LOAD EMPLOYEES ================= */
   useEffect(() => {
-
     const fetchEmployees = async () => {
       try {
-
         const res = await api.get("/employees");
         setEmployees(res.data);
-
       } catch (err) {
-        console.error(err);
         toast.error("Failed to load employees");
       }
     };
 
     fetchEmployees();
-
   }, []);
 
-  // ================= ADD ASSET =================
+  /* ================= RESET ================= */
+  const resetForm = () => {
+    setAssetCode("");
+    setType("");
+
+    setModel("");
+    setSerialNumber("");
+
+    setRoute("");
+    setSalesmanCode("");
+    setSalesmanName("");
+    setSupervisor("");
+    setSoti("");
+
+    setImei("");
+    setSimNumber("");
+    setNotes("");
+  };
+
+  /* ================= ADD ASSET ================= */
   const addAsset = async () => {
     try {
-
-      if (!assetCode || !name) {
-        return toast.error("Asset code and name required");
+      if (!assetCode || !type) {
+        return toast.error("Asset Code & Type required");
       }
 
       await api.post("/assets", {
         assetCode,
-        name,
         type,
+        model,
+        serialNumber,
+        route,
+        salesmanCode,
+        salesmanName,
+        supervisor,
+        soti,
+        imei,
+        simNumber,
+        notes,
       });
 
       toast.success("Asset Added");
-
-      setAssetCode("");
-      setName("");
-      setType("");
-
+      resetForm();
     } catch (err) {
-      console.error(err);
-
-      toast.error(
-        err.response?.data?.msg || "Error adding asset"
-      );
+      toast.error(err.response?.data?.msg || "Error adding asset");
     }
   };
 
-  // ================= ASSIGN ASSET =================
+  /* ================= ASSIGN ================= */
   const assign = async () => {
     try {
-
       if (!selectedEmployee || !assetCode) {
-        return toast.error(
-          "Select employee and asset code"
-        );
+        return toast.error("Select employee & asset code");
       }
-
-      console.log("ASSIGN PAYLOAD:", {
-        employeeId: selectedEmployee,
-        assetCode,
-      });
 
       await api.post("/assets/assign", {
         employeeId: selectedEmployee,
         assetCode,
       });
 
-      toast.success("Asset Assigned Successfully");
-
+      toast.success("Asset Assigned");
       setAssetCode("");
       setSelectedEmployee("");
-
     } catch (err) {
-      console.error(err);
-
-      toast.error(
-        err.response?.data?.msg || "Assignment Failed"
-      );
+      toast.error(err.response?.data?.msg || "Assignment Failed");
     }
   };
 
-  // ================= RETURN ASSET =================
+  /* ================= RETURN ================= */
   const returnAsset = async () => {
     try {
-
-      if (!assetCode) {
-        return toast.error("Enter asset code");
-      }
+      if (!assetCode) return toast.error("Enter asset code");
 
       await api.post("/assets/return", {
         assetCode,
       });
 
       toast.success("Asset Returned");
-
       setAssetCode("");
-
     } catch (err) {
-      console.error(err);
-
-      toast.error(
-        err.response?.data?.msg || "Return Failed"
-      );
+      toast.error(err.response?.data?.msg || "Return Failed");
     }
   };
 
   return (
     <div className="p-6 bg-[#f4f6f9] min-h-screen">
 
-      {/* HEADER */}
-      <div className="mb-6">
-
-        <h1 className="text-2xl font-bold text-gray-800">
-          Asset Management
-        </h1>
-
-        <p className="text-sm text-gray-500">
-          Manage assets, assign & return in real-time
-        </p>
-
-      </div>
+      <h1 className="text-2xl font-bold mb-1">Asset Management</h1>
+      <p className="text-sm text-gray-500 mb-6">
+        Laptop / Printer / HHT Management System
+      </p>
 
       {/* ================= ADD ASSET ================= */}
-      <div className="bg-white border rounded-xl shadow-sm mb-4 overflow-hidden">
-
+      <div className="bg-white border rounded-xl mb-4">
         <button
-          onClick={() =>
-            setOpen(open === "add" ? null : "add")
-          }
-          className="w-full flex justify-between items-center px-5 py-4 font-semibold bg-white hover:bg-gray-50"
+          onClick={() => setOpen(open === "add" ? null : "add")}
+          className="w-full flex justify-between px-5 py-4 font-semibold"
         >
-          <span>➕ Add Asset</span>
-
-          <span className="text-xl">
-            {open === "add" ? "−" : "+"}
-          </span>
+          Add Asset <span>{open === "add" ? "−" : "+"}</span>
         </button>
 
         {open === "add" && (
-          <div className="p-5 grid md:grid-cols-4 gap-3 border-t bg-gray-50">
+          <div className="p-5 grid md:grid-cols-3 gap-3 bg-gray-50">
 
             <input
-              className="border rounded-lg p-2"
+              className="border p-2 rounded"
               placeholder="Asset Code"
               value={assetCode}
-              onChange={(e) =>
-                setAssetCode(e.target.value)
-              }
+              onChange={(e) => setAssetCode(e.target.value)}
             />
 
-            <input
-              className="border rounded-lg p-2"
-              placeholder="Asset Name"
-              value={name}
-              onChange={(e) =>
-                setName(e.target.value)
-              }
-            />
-
-            <input
-              className="border rounded-lg p-2"
-              placeholder="Type"
+            <select
+              className="border p-2 rounded"
               value={type}
-              onChange={(e) =>
-                setType(e.target.value)
-              }
+              onChange={(e) => setType(e.target.value)}
+            >
+              <option value="">Select Type</option>
+              <option value="Laptop">Laptop</option>
+              <option value="Printer">Printer</option>
+              <option value="HHT">HHT</option>
+            </select>
+
+            <input
+              className="border p-2 rounded"
+              placeholder="Model"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+            />
+
+            <input
+              className="border p-2 rounded"
+              placeholder="Serial Number"
+              value={serialNumber}
+              onChange={(e) => setSerialNumber(e.target.value)}
+            />
+
+            {(type === "Printer" || type === "HHT") && (
+              <>
+                <input className="border p-2 rounded" placeholder="Route"
+                  value={route} onChange={(e) => setRoute(e.target.value)} />
+
+                <input className="border p-2 rounded" placeholder="Salesman Code"
+                  value={salesmanCode} onChange={(e) => setSalesmanCode(e.target.value)} />
+
+                <input className="border p-2 rounded" placeholder="Salesman Name"
+                  value={salesmanName} onChange={(e) => setSalesmanName(e.target.value)} />
+
+                <input className="border p-2 rounded" placeholder="Supervisor"
+                  value={supervisor} onChange={(e) => setSupervisor(e.target.value)} />
+              </>
+            )}
+
+            {type === "Printer" && (
+              <input className="border p-2 rounded" placeholder="SOTI"
+                value={soti} onChange={(e) => setSoti(e.target.value)} />
+            )}
+
+            {type === "HHT" && (
+              <>
+                <input className="border p-2 rounded" placeholder="IMEI"
+                  value={imei} onChange={(e) => setImei(e.target.value)} />
+
+                <input className="border p-2 rounded" placeholder="SIM Number"
+                  value={simNumber} onChange={(e) => setSimNumber(e.target.value)} />
+              </>
+            )}
+
+            <input
+              className="border p-2 rounded md:col-span-3"
+              placeholder="Notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
             />
 
             <button
               onClick={addAsset}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              className="bg-blue-600 text-white rounded p-2 md:col-span-3"
             >
               Create Asset
             </button>
-
           </div>
         )}
-
       </div>
 
-      {/* ================= ASSIGN ASSET ================= */}
-      <div className="bg-white border rounded-xl shadow-sm mb-4 overflow-hidden">
-
+      {/* ================= ASSIGN ================= */}
+      <div className="bg-white border rounded-xl mb-4">
         <button
-          onClick={() =>
-            setOpen(open === "assign" ? null : "assign")
-          }
-          className="w-full flex justify-between items-center px-5 py-4 font-semibold bg-white hover:bg-gray-50"
+          onClick={() => setOpen(open === "assign" ? null : "assign")}
+          className="w-full flex justify-between px-5 py-4 font-semibold"
         >
-          <span>👤 Assign Asset</span>
-
-          <span className="text-xl">
-            {open === "assign" ? "−" : "+"}
-          </span>
+          Assign Asset <span>{open === "assign" ? "−" : "+"}</span>
         </button>
 
         {open === "assign" && (
-          <div className="p-5 grid md:grid-cols-3 gap-3 border-t bg-gray-50">
+          <div className="p-5 grid md:grid-cols-3 gap-3 bg-gray-50">
 
-            {/* EMPLOYEE */}
             <select
-              className="border rounded-lg p-2"
+              className="border p-2 rounded"
               value={selectedEmployee}
-              onChange={(e) =>
-                setSelectedEmployee(e.target.value)
-              }
+              onChange={(e) => setSelectedEmployee(e.target.value)}
             >
-              <option value="">
-                Select Employee
-              </option>
-
-              {employees.map((emp) => (
-                <option
-                  key={emp._id}
-                  value={emp.staffCode}
-                >
-                  {emp.name} ({emp.staffCode})
+              <option value="">Select Employee</option>
+              {employees.map((e) => (
+                <option key={e._id} value={e.staffCode}>
+                  {e.name} ({e.staffCode})
                 </option>
               ))}
             </select>
 
-            {/* ASSET CODE */}
             <input
-              className="border rounded-lg p-2"
+              className="border p-2 rounded"
               placeholder="Asset Code"
               value={assetCode}
-              onChange={(e) =>
-                setAssetCode(e.target.value)
-              }
+              onChange={(e) => setAssetCode(e.target.value)}
             />
 
-            {/* BUTTON */}
             <button
               onClick={assign}
-              className="bg-green-600 hover:bg-green-700 text-white rounded-lg"
+              className="bg-green-600 text-white rounded p-2"
             >
-              Assign Asset
+              Assign
             </button>
-
           </div>
         )}
-
       </div>
 
-      {/* ================= RETURN ASSET ================= */}
-      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-
+      {/* ================= RETURN ================= */}
+      <div className="bg-white border rounded-xl">
         <button
-          onClick={() =>
-            setOpen(open === "return" ? null : "return")
-          }
-          className="w-full flex justify-between items-center px-5 py-4 font-semibold bg-white hover:bg-gray-50"
+          onClick={() => setOpen(open === "return" ? null : "return")}
+          className="w-full flex justify-between px-5 py-4 font-semibold"
         >
-          <span>🔄 Return Asset</span>
-
-          <span className="text-xl">
-            {open === "return" ? "−" : "+"}
-          </span>
+          Return Asset <span>{open === "return" ? "−" : "+"}</span>
         </button>
 
         {open === "return" && (
-          <div className="p-5 flex gap-3 border-t bg-gray-50">
+          <div className="p-5 flex gap-3 bg-gray-50">
 
             <input
-              className="flex-1 border rounded-lg p-2"
+              className="flex-1 border p-2 rounded"
               placeholder="Asset Code"
               value={assetCode}
-              onChange={(e) =>
-                setAssetCode(e.target.value)
-              }
+              onChange={(e) => setAssetCode(e.target.value)}
             />
 
             <button
               onClick={returnAsset}
-              className="bg-red-600 hover:bg-red-700 text-white px-5 rounded-lg"
+              className="bg-red-600 text-white px-5 rounded"
             >
               Return
             </button>
-
           </div>
         )}
-
       </div>
-
     </div>
   );
 }

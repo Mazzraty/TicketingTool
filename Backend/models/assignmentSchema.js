@@ -5,18 +5,18 @@ const assignmentSchema = new mongoose.Schema(
     employee: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "EmployeeMaster",
-      required: true
+      required: true,
     },
 
     asset: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Asset",
-      required: true
+      required: true,
     },
 
     assignedDate: {
       type: Date,
-      default: Date.now
+      default: Date.now,
     },
 
     returnedDate: Date,
@@ -24,10 +24,36 @@ const assignmentSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["active", "closed"],
-      default: "active"
-    }
+      default: "active",
+    },
+
+    // HISTORY SNAPSHOT
+    assetType: String,
+
+    assetCode: String,
+
+    model: String,
+
+    salesmanCode: String,
+
+    salesmanName: String,
+
+    route: String,
+
+    supervisor: String,
+
+    assignedBy: String,
+
+    returnedBy: String,
+
+    remarks: String,
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-export default mongoose.model("AssetAssignment", assignmentSchema);
+export default mongoose.model(
+  "AssetAssignment",
+  assignmentSchema
+);
