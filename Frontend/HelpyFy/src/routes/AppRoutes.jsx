@@ -17,6 +17,12 @@ import AssetHistoryPage from "../pages/AssetHistory.jsx";
 import AssetExcelUpload from "../pages/AssetUpload.jsx";
 import AdminSoftwareDashboard from "../pages/AdminSoftwareDashboard.jsx";
 
+// 🆕 SAP FIORI ASSET MODULE (NEW)
+import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";
+import AssetManagement from "../pages/AssetManagement.jsx";
+import PrinterAssets from "../pages/PrinterAssets.jsx";
+import HHTAssets from "../pages/HHTAssets.jsx";
+
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
@@ -29,80 +35,65 @@ export default function AppRoutes() {
 
       {/* ================= PUBLIC ================= */}
       <Route path="/login" element={<Login />} />
-
       <Route path="/register" element={<Register />} />
 
       {/* ================= USER ROUTES ================= */}
       <Route element={<ProtectedRoute role="user" />}>
-
         <Route element={<Layout />}>
-
           <Route path="/" element={<Dashboard />} />
-
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
-
-          <Route
-            path="/create"
-            element={<CreateTicket />}
-          />
-
-          <Route
-            path="/tickets"
-            element={<MyTickets />}
-          />
-
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/create" element={<CreateTicket />} />
+          <Route path="/tickets" element={<MyTickets />} />
         </Route>
-
       </Route>
 
       {/* ================= ADMIN ROUTES ================= */}
       <Route element={<ProtectedRoute role="admin" />}>
-
         <Route element={<AdminLayout />}>
 
+          <Route path="/admin" element={<AdminTickets />} />
+
+          <Route path="/admin/employees" element={<AdminEmployeeMaster />} />
+
+          <Route path="/admin/assets" element={<AdminAssets />} />
+
+          <Route path="/admin/assets/history" element={<AssetHistoryPage />} />
+
+          <Route path="/admin/assets/upload-excel" element={<AssetExcelUpload />} />
+
+          <Route path="/admin/software-dashboard" element={<AdminSoftwareDashboard />} />
+
+          {/* ================= 🆕 SAP ASSET MODULE ================= */}
+
+          {/* FIORI DASHBOARD */}
           <Route
-            path="/admin"
-            element={<AdminTickets />}
+            path="/admin/assets/fiori"
+            element={<AssetStoreFiori />}
           />
 
+          {/* FULL ASSET MANAGEMENT (assign/return/edit) */}
           <Route
-            path="/admin/employees"
-            element={<AdminEmployeeMaster />}
+            path="/admin/assets/manage"
+            element={<AssetManagement />}
           />
 
+          {/* PRINTER ONLY VIEW */}
           <Route
-            path="/admin/assets"
-            element={<AdminAssets />}
+            path="/admin/assets/printers"
+            element={<PrinterAssets />}
           />
 
+          {/* HHT ONLY VIEW */}
           <Route
-            path="/admin/assets/history"
-            element={<AssetHistoryPage />}
-          />
-
-          <Route
-            path="/admin/assets/upload-excel"
-            element={<AssetExcelUpload />}
-          />
-
-          {/* SOFTWARE DASHBOARD */}
-          <Route
-            path="/admin/software-dashboard"
-            element={<AdminSoftwareDashboard />}
+            path="/admin/assets/hht"
+            element={<HHTAssets />}
           />
 
         </Route>
-
       </Route>
 
       {/* ================= FALLBACK ================= */}
-      <Route
-        path="*"
-        element={<Navigate to="/" replace />}
-      />
+      <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>
   );

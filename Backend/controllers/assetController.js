@@ -7,69 +7,67 @@ import AssetAssignment from "../models/assignmentSchema.js";
 ========================= */
 export const createAsset = async (req, res) => {
   try {
-
     const {
       assetCode,
       type,
       model,
       serialNumber,
 
-      // Printer / HHT
+      // Printer fields
       route,
       salesmanCode,
       salesmanName,
       supervisor,
       soti,
+
+      // HHT fields
       imei,
       simNumber,
+
       notes,
     } = req.body;
 
     if (!assetCode) {
-      return res.status(400).json({
-        msg: "Asset Code required",
-      });
+      return res.status(400).json({ msg: "Asset Code required" });
     }
 
-    const exists = await Asset.findOne({
-      assetCode,
-    });
+    const exists = await Asset.findOne({ assetCode });
 
     if (exists) {
-      return res.status(400).json({
-        msg: "Asset already exists",
-      });
+      return res.status(400).json({ msg: "Asset already exists" });
+    }
+
+    // BASIC VALIDATION (ERP RULES)
+    if (type === "Printer" && !route) {
+      return res.status(400).json({ msg: "Printer requires route" });
+    }
+
+    if (type === "HHT" && !imei) {
+      return res.status(400).json({ msg: "HHT requires IMEI" });
     }
 
     const asset = await Asset.create({
       assetCode,
-
       type: type || "Laptop",
-
       model,
       serialNumber,
-
       status: "available",
 
-      // Printer / HHT Fields
       route,
       salesmanCode,
       salesmanName,
       supervisor,
       soti,
+
       imei,
       simNumber,
       notes,
     });
 
     res.status(201).json(asset);
-
   } catch (err) {
     console.error(err);
-
-    res.status(500).json({
-      msg: err.message,
-    });
+    res.status(500).json({ msg: err.message });
   }
 };
 
@@ -78,31 +76,17 @@ export const createAsset = async (req, res) => {
 ========================= */
 export const getAssets = async (req, res) => {
   try {
-
     const filter = {};
 
-    // FILTER BY TYPE
-    if (req.query.type) {
-      filter.type = req.query.type;
-    }
+    if (req.query.type) filter.type = req.query.type;
+    if (req.query.status) filter.status = req.query.status;
 
-    // FILTER BY STATUS
-    if (req.query.status) {
-      filter.status = req.query.status;
-    }
-
-    const assets = await Asset.find(filter)
-      .sort({ createdAt: -1 });
+    const assets = await Asset.find(filter).sort({ createdAt: -1 });
 
     res.json(assets);
-
   } catch (err) {
-
     console.error(err);
-
-    res.status(500).json({
-      msg: err.message,
-    });
+    res.status(500).json({ msg: err.message });
   }
 };
 
@@ -111,90 +95,59 @@ export const getAssets = async (req, res) => {
 ========================= */
 export const assignAsset = async (req, res) => {
   try {
+    const { employeeId, assetCode, remarks } = req.body;
 
-    const {
-      employeeId,
-      assetCode,
-      remarks,
-    } = req.body;
-
-    console.log("ASSIGN PAYLOAD:", req.body);
-
-    // FIND EMPLOYEE
     const employee = await EmployeeMaster.findOne({
       staffCode: employeeId,
     });
 
-    // FIND ASSET
-    const asset = await Asset.findOne({
-      assetCode,
-    });
+    const asset = await Asset.findOne({ assetCode });
 
     if (!employee) {
-      return res.status(404).json({
-        msg: "Employee not found",
-      });
+      return res.status(404).json({ msg: "Employee not found" });
     }
 
     if (!asset) {
-      return res.status(404).json({
-        msg: "Asset not found",
-      });
+      return res.status(404).json({ msg: "Asset not found" });
     }
 
     if (asset.status !== "available") {
-      return res.status(400).json({
-        msg: "Asset already assigned",
-      });
+      return res.status(400).json({ msg: "Asset already assigned" });
     }
 
-    // CREATE HISTORY ASSIGNMENT
     const assignment = await AssetAssignment.create({
       employee: employee._id,
-
       asset: asset._id,
-
       assignedDate: new Date(),
-
       status: "active",
 
-      // SNAPSHOT
+      // snapshot
       assetType: asset.type,
-
       assetCode: asset.assetCode,
-
       model: asset.model,
 
-      salesmanCode: asset.salesmanCode,
-
-      salesmanName: asset.salesmanName,
-
       route: asset.route,
-
+      salesmanCode: asset.salesmanCode,
+      salesmanName: asset.salesmanName,
       supervisor: asset.supervisor,
 
-      assignedBy: req.user?.name || "Admin",
+      imei: asset.imei,
+      simNumber: asset.simNumber,
 
+      assignedBy: req.user?.name || "Admin",
       remarks,
     });
 
-    // UPDATE STATUS
     asset.status = "assigned";
-
     await asset.save();
 
     res.status(201).json({
       msg: "Asset assigned successfully",
       assignment,
     });
-
   } catch (err) {
-
     console.error(err);
-
-    res.status(500).json({
-      msg: err.message,
-    });
+    res.status(500).json({ msg: err.message });
   }
 };
 
@@ -203,20 +156,12 @@ export const assignAsset = async (req, res) => {
 ========================= */
 export const returnAsset = async (req, res) => {
   try {
+    const { assetCode, remarks } = req.body;
 
-    const {
-      assetCode,
-      remarks,
-    } = req.body;
-
-    const asset = await Asset.findOne({
-      assetCode,
-    });
+    const asset = await Asset.findOne({ assetCode });
 
     if (!asset) {
-      return res.status(404).json({
-        msg: "Asset not found",
-      });
+      return res.status(404).json({ msg: "Asset not found" });
     }
 
     const assignment = await AssetAssignment.findOne({
@@ -225,59 +170,57 @@ export const returnAsset = async (req, res) => {
     });
 
     if (!assignment) {
-      return res.status(404).json({
-        msg: "No active assignment",
-      });
+      return res.status(404).json({ msg: "No active assignment" });
     }
 
-    // CLOSE ASSIGNMENT
     assignment.status = "closed";
-
     assignment.returnedDate = new Date();
-
-    assignment.returnedBy =
-      req.user?.name || "Admin";
-
+    assignment.returnedBy = req.user?.name || "Admin";
     assignment.remarks = remarks;
 
     await assignment.save();
 
-    // UPDATE ASSET STATUS
     asset.status = "available";
-
     await asset.save();
 
-    res.json({
-      msg: "Asset returned successfully",
-    });
-
+    res.json({ msg: "Asset returned successfully" });
   } catch (err) {
-
     console.error(err);
-
-    res.status(500).json({
-      msg: err.message,
-    });
+    res.status(500).json({ msg: err.message });
   }
 };
 
 /* =========================
-   ✏️ UPDATE ASSET
+   ✏️ UPDATE ASSET (SAFE)
 ========================= */
 export const updateAsset = async (req, res) => {
   try {
-
-    const asset = await Asset.findById(
-      req.params.id
-    );
+    const asset = await Asset.findById(req.params.id);
 
     if (!asset) {
-      return res.status(404).json({
-        msg: "Asset not found",
-      });
+      return res.status(404).json({ msg: "Asset not found" });
     }
 
-    Object.assign(asset, req.body);
+    const allowedFields = [
+      "assetCode",
+      "type",
+      "model",
+      "serialNumber",
+      "route",
+      "salesmanCode",
+      "salesmanName",
+      "supervisor",
+      "soti",
+      "imei",
+      "simNumber",
+      "notes",
+    ];
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        asset[field] = req.body[field];
+      }
+    });
 
     await asset.save();
 
@@ -285,14 +228,9 @@ export const updateAsset = async (req, res) => {
       msg: "Asset updated successfully",
       asset,
     });
-
   } catch (err) {
-
     console.error(err);
-
-    res.status(500).json({
-      msg: err.message,
-    });
+    res.status(500).json({ msg: err.message });
   }
 };
 
@@ -301,30 +239,18 @@ export const updateAsset = async (req, res) => {
 ========================= */
 export const deleteAsset = async (req, res) => {
   try {
-
-    const asset = await Asset.findById(
-      req.params.id
-    );
+    const asset = await Asset.findById(req.params.id);
 
     if (!asset) {
-      return res.status(404).json({
-        msg: "Asset not found",
-      });
+      return res.status(404).json({ msg: "Asset not found" });
     }
 
     await asset.deleteOne();
 
-    res.json({
-      msg: "Asset deleted successfully",
-    });
-
+    res.json({ msg: "Asset deleted successfully" });
   } catch (err) {
-
     console.error(err);
-
-    res.status(500).json({
-      msg: err.message,
-    });
+    res.status(500).json({ msg: err.message });
   }
 };
 
@@ -333,15 +259,12 @@ export const deleteAsset = async (req, res) => {
 ========================= */
 export const getEmployeeHistory = async (req, res) => {
   try {
-
     const employee = await EmployeeMaster.findOne({
       staffCode: req.params.id,
     });
 
     if (!employee) {
-      return res.status(404).json({
-        msg: "Employee not found",
-      });
+      return res.status(404).json({ msg: "Employee not found" });
     }
 
     const history = await AssetAssignment.find({
@@ -351,14 +274,9 @@ export const getEmployeeHistory = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(history);
-
   } catch (err) {
-
     console.error(err);
-
-    res.status(500).json({
-      msg: err.message,
-    });
+    res.status(500).json({ msg: err.message });
   }
 };
 
@@ -367,15 +285,12 @@ export const getEmployeeHistory = async (req, res) => {
 ========================= */
 export const getAssetHistory = async (req, res) => {
   try {
-
     const asset = await Asset.findOne({
       assetCode: req.params.code,
     });
 
     if (!asset) {
-      return res.status(404).json({
-        msg: "Asset not found",
-      });
+      return res.status(404).json({ msg: "Asset not found" });
     }
 
     const history = await AssetAssignment.find({
@@ -385,57 +300,8 @@ export const getAssetHistory = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(history);
-
   } catch (err) {
-
     console.error(err);
-
-    res.status(500).json({
-      msg: err.message,
-    });
-  }
-};
-
-/* =========================
-   🖨 GET PRINTERS ONLY
-========================= */
-export const getPrinters = async (req, res) => {
-  try {
-
-    const printers = await Asset.find({
-      type: "Printer",
-    }).sort({ createdAt: -1 });
-
-    res.json(printers);
-
-  } catch (err) {
-
-    console.error(err);
-
-    res.status(500).json({
-      msg: err.message,
-    });
-  }
-};
-
-/* =========================
-   📱 GET HHT ONLY
-========================= */
-export const getHHT = async (req, res) => {
-  try {
-
-    const hht = await Asset.find({
-      type: "HHT",
-    }).sort({ createdAt: -1 });
-
-    res.json(hht);
-
-  } catch (err) {
-
-    console.error(err);
-
-    res.status(500).json({
-      msg: err.message,
-    });
+    res.status(500).json({ msg: err.message });
   }
 };
