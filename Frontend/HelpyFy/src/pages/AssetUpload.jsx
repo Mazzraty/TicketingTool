@@ -3,6 +3,41 @@ import * as XLSX from "xlsx";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
+/* =========================
+   ALLOWED SCHEMAS (SAP STYLE)
+========================= */
+const ALLOWED_EMPLOYEE_FIELDS = [
+  "staffCode",
+  "name",
+  "department",
+  "designation",
+  "division",
+  "placeOfWork",
+  "visaNo",
+  "dateOfJoining",
+];
+
+const ALLOWED_HHT_FIELDS = [
+  "assetCode",
+  "model",
+  "imei",
+  "simNumber",
+  "salesmanCode",
+  "salesmanName",
+  "supervisor",
+  "route",
+];
+
+const ALLOWED_PRINTER_FIELDS = [
+  "assetCode",
+  "model",
+  "serialNumber",
+  "salesmanCode",
+  "salesmanName",
+  "supervisor",
+  "route",
+];
+
 export default function EmployeeExcelUpload() {
   const [rows, setRows] = useState([]);
   const [fileType, setFileType] = useState("");
@@ -15,15 +50,42 @@ export default function EmployeeExcelUpload() {
   const clean = (v) => (v ? v.toString().trim() : "");
 
   /* =========================
-     DETECT FILE TYPE
+     NORMALIZE KEY
+  ========================= */
+  const normalizeKey = (key) =>
+    key
+      .trim()
+      .toLowerCase()
+      .replace(/[-_\s]+/g, "");
+
+  /* =========================
+     SMART MAPPER
+  ========================= */
+  const mapRow = (row, allowedFields) => {
+    const cleaned = {};
+
+    Object.keys(row).forEach((key) => {
+      const normKey = normalizeKey(key);
+
+      const match = allowedFields.find(
+        (f) => f.toLowerCase() === normKey
+      );
+
+      if (match) {
+        cleaned[match] = row[key];
+      }
+    });
+
+    return cleaned;
+  };
+
+  /* =========================
+     DETECT TYPE
   ========================= */
   const detectType = (row) => {
     const keys = Object.keys(row)
-      .map((k) =>
-        k.toLowerCase().replace(/[\s_-]/g, "")
-      );
+      .map((k) => normalizeKey(k));
 
-    // HHT
     if (
       keys.includes("imei") ||
       keys.includes("simnumber") ||
@@ -32,7 +94,6 @@ export default function EmployeeExcelUpload() {
       return "HHT";
     }
 
-    // Printer
     if (
       keys.includes("printerserial") ||
       keys.includes("printermodel")
@@ -40,7 +101,6 @@ export default function EmployeeExcelUpload() {
       return "Printer";
     }
 
-    // Employee
     return "Employee";
   };
 
@@ -49,7 +109,6 @@ export default function EmployeeExcelUpload() {
   ========================= */
   const handleFile = (e) => {
     const selectedFile = e.target.files[0];
-
     if (!selectedFile) return;
 
     setFile(selectedFile);
@@ -76,52 +135,23 @@ export default function EmployeeExcelUpload() {
         }
 
         const detected = detectType(json[0]);
-
         setFileType(detected);
 
         /* ================= EMPLOYEE ================= */
         if (detected === "Employee") {
           const formatted = json.map((r) => {
-            const normalize = (obj) => {
-              const cleaned = {};
-
-              Object.keys(obj).forEach((k) => {
-                const key = k
-                  .trim()
-                  .toLowerCase()
-                  .replace(/[-_\s]+/g, "");
-
-                cleaned[key] = obj[k];
-              });
-
-              return cleaned;
-            };
-
-            const row = normalize(r);
+            const row = mapRow(r, ALLOWED_EMPLOYEE_FIELDS);
 
             return {
               type: "Employee",
-
-              staffCode: clean(
-                row.staffcode ||
-                  row.employeeid ||
-                  row.code
-              ),
-
-              name: clean(
-                row.name ||
-                  row.fullname ||
-                  row.employeename
-              ),
-
+              staffCode: clean(row.staffCode),
+              name: clean(row.name),
               department: clean(row.department),
               designation: clean(row.designation),
               division: clean(row.division),
-              placeOfWork: clean(row.placeofwork),
-              visaNo: clean(row.visano),
-              dateOfJoining: clean(
-                row.dateofjoining
-              ),
+              placeOfWork: clean(row.placeOfWork),
+              visaNo: clean(row.visaNo),
+              dateOfJoining: clean(row.dateOfJoining),
             };
           });
 
@@ -131,50 +161,17 @@ export default function EmployeeExcelUpload() {
         /* ================= HHT ================= */
         if (detected === "HHT") {
           const formatted = json.map((r) => {
-            const normalize = (obj) => {
-              const cleaned = {};
-
-              Object.keys(obj).forEach((k) => {
-                const key = k
-                  .trim()
-                  .toLowerCase()
-                  .replace(/[-_\s]+/g, "");
-
-                cleaned[key] = obj[k];
-              });
-
-              return cleaned;
-            };
-
-            const row = normalize(r);
+            const row = mapRow(r, ALLOWED_HHT_FIELDS);
 
             return {
               type: "HHT",
-
-              assetCode: clean(
-                row.assetcode ||
-                  row.hhtcode ||
-                  row.devicecode
-              ),
-
+              assetCode: clean(row.assetCode),
               model: clean(row.model),
-
               imei: clean(row.imei),
-
-              simNumber: clean(
-                row.simnumber || row.sim
-              ),
-
-              salesmanCode: clean(
-                row.salesmancode
-              ),
-
-              salesmanName: clean(
-                row.salesmanname
-              ),
-
+              simNumber: clean(row.simNumber),
+              salesmanCode: clean(row.salesmanCode),
+              salesmanName: clean(row.salesmanName),
               supervisor: clean(row.supervisor),
-
               route: clean(row.route),
             };
           });
@@ -185,50 +182,16 @@ export default function EmployeeExcelUpload() {
         /* ================= PRINTER ================= */
         if (detected === "Printer") {
           const formatted = json.map((r) => {
-            const normalize = (obj) => {
-              const cleaned = {};
-
-              Object.keys(obj).forEach((k) => {
-                const key = k
-                  .trim()
-                  .toLowerCase()
-                  .replace(/[-_\s]+/g, "");
-
-                cleaned[key] = obj[k];
-              });
-
-              return cleaned;
-            };
-
-            const row = normalize(r);
+            const row = mapRow(r, ALLOWED_PRINTER_FIELDS);
 
             return {
               type: "Printer",
-
-              assetCode: clean(
-                row.assetcode ||
-                  row.printercode
-              ),
-
-              model: clean(
-                row.printermodel || row.model
-              ),
-
-              serialNumber: clean(
-                row.printerserial ||
-                  row.serialnumber
-              ),
-
-              salesmanCode: clean(
-                row.salesmancode
-              ),
-
-              salesmanName: clean(
-                row.salesmanname
-              ),
-
+              assetCode: clean(row.assetCode),
+              model: clean(row.model),
+              serialNumber: clean(row.serialNumber),
+              salesmanCode: clean(row.salesmanCode),
+              salesmanName: clean(row.salesmanName),
               supervisor: clean(row.supervisor),
-
               route: clean(row.route),
             };
           });
@@ -280,28 +243,18 @@ export default function EmployeeExcelUpload() {
         return;
       }
 
-      // EMPLOYEE
       if (fileType === "Employee") {
-        const res = await api.post(
-          "/employees/bulk-upload",
-          {
-            employees: valid,
-          }
-        );
+        const res = await api.post("/employees/bulk-upload", {
+          employees: valid,
+        });
 
         toast.success(
           `Employees Inserted: ${res.data.inserted}`
         );
-      }
-
-      // HHT / PRINTER
-      else {
-        const res = await api.post(
-          "/assets/bulk-upload",
-          {
-            assets: valid,
-          }
-        );
+      } else {
+        const res = await api.post("/assets/bulk-upload", {
+          assets: valid,
+        });
 
         toast.success(
           `Assets Inserted: ${res.data.inserted}`
@@ -310,19 +263,19 @@ export default function EmployeeExcelUpload() {
 
       setRows([]);
       setFile(null);
-
     } catch (err) {
       console.error(err);
-
       toast.error(
-        err.response?.data?.message ||
-          "Upload failed"
+        err.response?.data?.message || "Upload failed"
       );
     } finally {
       setLoading(false);
     }
   };
 
+  /* =========================
+     UI
+  ========================= */
   return (
     <div className="p-6 bg-[#f5f7fa] min-h-screen">
 
@@ -330,7 +283,6 @@ export default function EmployeeExcelUpload() {
         <h1 className="text-3xl font-bold text-[#0a2342]">
           SAP Fiori Upload Center
         </h1>
-
         <p className="text-gray-500">
           Upload Employees, Printers & HHT Devices
         </p>
@@ -346,9 +298,7 @@ export default function EmployeeExcelUpload() {
 
         {file && (
           <div className="mb-4">
-            <p className="text-sm">
-              📄 {file.name}
-            </p>
+            <p className="text-sm">📄 {file.name}</p>
 
             <p className="text-blue-600 font-semibold">
               Detected Type: {fileType}
@@ -368,6 +318,7 @@ export default function EmployeeExcelUpload() {
 
         {rows.length > 0 && (
           <div className="overflow-auto border rounded-xl">
+
             <table className="w-full text-sm">
 
               <thead className="bg-gray-100">
@@ -414,13 +365,10 @@ export default function EmployeeExcelUpload() {
           disabled={loading}
           className="mt-5 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl"
         >
-          {loading
-            ? "Uploading..."
-            : `Upload ${fileType}`}
+          {loading ? "Uploading..." : `Upload ${fileType}`}
         </button>
 
       </div>
-
     </div>
   );
 }
