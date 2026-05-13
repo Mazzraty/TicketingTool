@@ -4,77 +4,50 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 
 export default function EmployeeExcelUpload() {
-
   const [rows, setRows] = useState([]);
+  const [fileType, setFileType] = useState("");
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // DETECTED TYPE
-  const [uploadType, setUploadType] = useState("");
-
-  /* =====================================
+  /* =========================
      CLEAN VALUE
-  ===================================== */
-  const clean = (v) =>
-    v ? v.toString().trim() : "";
+  ========================= */
+  const clean = (v) => (v ? v.toString().trim() : "");
 
-  /* =====================================
+  /* =========================
      DETECT FILE TYPE
-  ===================================== */
+  ========================= */
   const detectType = (row) => {
-
-    const keys = Object.keys(row).map((k) =>
-      k
-        .trim()
-        .toLowerCase()
-        .replace(/[-_\s]+/g, "")
-    );
+    const keys = Object.keys(row)
+      .map((k) =>
+        k.toLowerCase().replace(/[\s_-]/g, "")
+      );
 
     // HHT
     if (
-      keys.includes("hhtserial") ||
-      keys.includes("imei")
+      keys.includes("imei") ||
+      keys.includes("simnumber") ||
+      keys.includes("salesmancode")
     ) {
       return "HHT";
     }
 
-    // PRINTER
+    // Printer
     if (
-      keys.includes("printerserials") ||
-      keys.includes("supervisor")
+      keys.includes("printerserial") ||
+      keys.includes("printermodel")
     ) {
       return "Printer";
     }
 
-    // EMPLOYEE
+    // Employee
     return "Employee";
   };
 
-  /* =====================================
-     NORMALIZE OBJECT
-  ===================================== */
-  const normalize = (obj) => {
-
-    const cleaned = {};
-
-    Object.keys(obj).forEach((k) => {
-
-      const key = k
-        .trim()
-        .toLowerCase()
-        .replace(/[-_\s]+/g, "");
-
-      cleaned[key] = obj[k];
-    });
-
-    return cleaned;
-  };
-
-  /* =====================================
-     HANDLE FILE
-  ===================================== */
+  /* =========================
+     FILE HANDLER
+  ========================= */
   const handleFile = (e) => {
-
     const selectedFile = e.target.files[0];
 
     if (!selectedFile) return;
@@ -84,85 +57,70 @@ export default function EmployeeExcelUpload() {
     const reader = new FileReader();
 
     reader.onload = (event) => {
-
       try {
-
-        const workbook = XLSX.read(
-          event.target.result,
-          {
-            type: "array",
-          }
-        );
+        const workbook = XLSX.read(event.target.result, {
+          type: "array",
+        });
 
         const sheet =
-          workbook.Sheets[
-            workbook.SheetNames[0]
-          ];
+          workbook.Sheets[workbook.SheetNames[0]];
 
-        const json =
-          XLSX.utils.sheet_to_json(sheet, {
-            defval: "",
-            raw: false,
-          });
+        const json = XLSX.utils.sheet_to_json(sheet, {
+          defval: "",
+          raw: false,
+        });
 
         if (!json.length) {
-          toast.error("Empty excel file");
+          toast.error("Excel is empty");
           return;
         }
 
-        // AUTO DETECT
-        const type = detectType(json[0]);
+        const detected = detectType(json[0]);
 
-        setUploadType(type);
+        setFileType(detected);
 
-        /* =====================================
-           EMPLOYEE FORMAT
-        ===================================== */
-        if (type === "Employee") {
-
+        /* ================= EMPLOYEE ================= */
+        if (detected === "Employee") {
           const formatted = json.map((r) => {
+            const normalize = (obj) => {
+              const cleaned = {};
+
+              Object.keys(obj).forEach((k) => {
+                const key = k
+                  .trim()
+                  .toLowerCase()
+                  .replace(/[-_\s]+/g, "");
+
+                cleaned[key] = obj[k];
+              });
+
+              return cleaned;
+            };
 
             const row = normalize(r);
 
             return {
+              type: "Employee",
 
               staffCode: clean(
-                row["staffcode"] ||
-                row["employeeid"] ||
-                row["code"] ||
-                row["empid"]
+                row.staffcode ||
+                  row.employeeid ||
+                  row.code
               ),
 
               name: clean(
-                row["fullname"] ||
-                row["employeename"] ||
-                row["name"]
+                row.name ||
+                  row.fullname ||
+                  row.employeename
               ),
 
-              department: clean(
-                row["department"] ||
-                row["dept"]
-              ),
-
-              designation: clean(
-                row["designation"] ||
-                row["position"]
-              ),
-
-              division: clean(
-                row["division"]
-              ),
-
-              placeOfWork: clean(
-                row["placeofwork"]
-              ),
-
-              visaNo: clean(
-                row["visano"]
-              ),
-
+              department: clean(row.department),
+              designation: clean(row.designation),
+              division: clean(row.division),
+              placeOfWork: clean(row.placeofwork),
+              visaNo: clean(row.visano),
               dateOfJoining: clean(
-                row["dateofjoining"]
+                row.dateofjoining
               ),
             };
           });
@@ -170,110 +128,115 @@ export default function EmployeeExcelUpload() {
           setRows(formatted);
         }
 
-        /* =====================================
-           PRINTER FORMAT
-        ===================================== */
-        else if (type === "Printer") {
-
+        /* ================= HHT ================= */
+        if (detected === "HHT") {
           const formatted = json.map((r) => {
+            const normalize = (obj) => {
+              const cleaned = {};
 
-            const row = normalize(r);
+              Object.keys(obj).forEach((k) => {
+                const key = k
+                  .trim()
+                  .toLowerCase()
+                  .replace(/[-_\s]+/g, "");
 
-            return {
+                cleaned[key] = obj[k];
+              });
 
-              assetCode: clean(
-                row["printerserials"]
-              ),
-
-              type: "Printer",
-
-              route: clean(
-                row["route"]
-              ),
-
-              salesmanCode: clean(
-                row["salesmancode"]
-              ),
-
-              salesmanName: clean(
-                row["salesmanname"]
-              ),
-
-              supervisor: clean(
-                row["supervisor"]
-              ),
-
-              model: clean(
-                row["model"]
-              ),
-
-              soti: clean(
-                row["soti"]
-              ),
-
-              serialNumber: clean(
-                row["printerserials"]
-              ),
+              return cleaned;
             };
-          });
-
-          setRows(formatted);
-        }
-
-        /* =====================================
-           HHT FORMAT
-        ===================================== */
-        else if (type === "HHT") {
-
-          const formatted = json.map((r) => {
 
             const row = normalize(r);
 
             return {
-
-              assetCode: clean(
-                row["hhtserial"]
-              ),
-
               type: "HHT",
 
-              route: clean(
-                row["route"]
+              assetCode: clean(
+                row.assetcode ||
+                  row.hhtcode ||
+                  row.devicecode
+              ),
+
+              model: clean(row.model),
+
+              imei: clean(row.imei),
+
+              simNumber: clean(
+                row.simnumber || row.sim
               ),
 
               salesmanCode: clean(
-                row["salesmancode"]
+                row.salesmancode
               ),
 
               salesmanName: clean(
-                row["salesmanname"]
+                row.salesmanname
               ),
 
-              model: clean(
-                row["model"]
-              ),
+              supervisor: clean(row.supervisor),
 
-              serialNumber: clean(
-                row["hhtserial"]
-              ),
-
-              imei: clean(
-                row["imei"]
-              ),
-
-              simNumber: clean(
-                row["simnumber"]
-              ),
+              route: clean(row.route),
             };
           });
 
           setRows(formatted);
         }
 
+        /* ================= PRINTER ================= */
+        if (detected === "Printer") {
+          const formatted = json.map((r) => {
+            const normalize = (obj) => {
+              const cleaned = {};
+
+              Object.keys(obj).forEach((k) => {
+                const key = k
+                  .trim()
+                  .toLowerCase()
+                  .replace(/[-_\s]+/g, "");
+
+                cleaned[key] = obj[k];
+              });
+
+              return cleaned;
+            };
+
+            const row = normalize(r);
+
+            return {
+              type: "Printer",
+
+              assetCode: clean(
+                row.assetcode ||
+                  row.printercode
+              ),
+
+              model: clean(
+                row.printermodel || row.model
+              ),
+
+              serialNumber: clean(
+                row.printerserial ||
+                  row.serialnumber
+              ),
+
+              salesmanCode: clean(
+                row.salesmancode
+              ),
+
+              salesmanName: clean(
+                row.salesmanname
+              ),
+
+              supervisor: clean(row.supervisor),
+
+              route: clean(row.route),
+            };
+          });
+
+          setRows(formatted);
+        }
       } catch (err) {
-
         console.error(err);
-
         toast.error("Invalid Excel file");
       }
     };
@@ -281,62 +244,44 @@ export default function EmployeeExcelUpload() {
     reader.readAsArrayBuffer(selectedFile);
   };
 
-  /* =====================================
+  /* =========================
      VALIDATION
-  ===================================== */
+  ========================= */
   const isValid = (r) => {
-
-    // EMPLOYEE
-    if (uploadType === "Employee") {
-
-      return (
-        r.staffCode?.toString().trim() &&
-        r.name?.toString().trim()
-      );
+    if (r.type === "Employee") {
+      return r.staffCode && r.name;
     }
 
-    // PRINTER / HHT
-    if (
-      uploadType === "Printer" ||
-      uploadType === "HHT"
-    ) {
+    if (r.type === "HHT") {
+      return r.assetCode && r.imei;
+    }
 
-      return (
-        r.assetCode?.toString().trim()
-      );
+    if (r.type === "Printer") {
+      return r.assetCode && r.serialNumber;
     }
 
     return false;
   };
 
-  const validCount =
-    rows.filter(isValid).length;
+  const validCount = rows.filter(isValid).length;
+  const invalidCount = rows.length - validCount;
 
-  const invalidCount =
-    rows.length - validCount;
-
-  /* =====================================
+  /* =========================
      UPLOAD
-  ===================================== */
+  ========================= */
   const uploadExcel = async () => {
-
     try {
-
       setLoading(true);
 
-      const valid =
-        rows.filter(isValid);
+      const valid = rows.filter(isValid);
 
       if (!valid.length) {
         toast.error("No valid rows found");
         return;
       }
 
-      /* =====================================
-         EMPLOYEE UPLOAD
-      ===================================== */
-      if (uploadType === "Employee") {
-
+      // EMPLOYEE
+      if (fileType === "Employee") {
         const res = await api.post(
           "/employees/bulk-upload",
           {
@@ -349,13 +294,10 @@ export default function EmployeeExcelUpload() {
         );
       }
 
-      /* =====================================
-         PRINTER / HHT UPLOAD
-      ===================================== */
+      // HHT / PRINTER
       else {
-
         const res = await api.post(
-          "/employees/bulk-upload",
+          "/assets/bulk-upload",
           {
             assets: valid,
           }
@@ -366,22 +308,17 @@ export default function EmployeeExcelUpload() {
         );
       }
 
-      // RESET
       setRows([]);
       setFile(null);
-      setUploadType("");
 
     } catch (err) {
-
       console.error(err);
 
       toast.error(
         err.response?.data?.message ||
-        "Upload failed"
+          "Upload failed"
       );
-
     } finally {
-
       setLoading(false);
     }
   };
@@ -389,20 +326,16 @@ export default function EmployeeExcelUpload() {
   return (
     <div className="p-6 bg-[#f5f7fa] min-h-screen">
 
-      {/* HEADER */}
-      <div className="mb-6">
-
-        <h1 className="text-2xl font-bold text-gray-800">
+      <div className="mb-5">
+        <h1 className="text-3xl font-bold text-[#0a2342]">
           SAP Fiori Upload Center
         </h1>
 
-        <p className="text-sm text-gray-500">
+        <p className="text-gray-500">
           Upload Employees, Printers & HHT Devices
         </p>
-
       </div>
 
-      {/* UPLOAD CARD */}
       <div className="bg-white rounded-2xl border shadow-sm p-5">
 
         <input
@@ -411,100 +344,71 @@ export default function EmployeeExcelUpload() {
           className="mb-4"
         />
 
-        {/* FILE DETAILS */}
         {file && (
-          <div className="mb-4 text-sm">
-
-            <p className="font-medium">
+          <div className="mb-4">
+            <p className="text-sm">
               📄 {file.name}
             </p>
 
             <p className="text-blue-600 font-semibold">
-              Detected Type:
-              {" "}
-              {uploadType}
+              Detected Type: {fileType}
             </p>
 
-            <div className="flex gap-5 mt-2">
+            <div className="flex gap-5 mt-2 text-sm">
+              <span className="text-green-600">
+                ✅ Valid: {validCount}
+              </span>
 
-              <p className="text-green-600">
-                ✅ Valid:
-                {" "}
-                {validCount}
-              </p>
-
-              <p className="text-red-600">
-                ❌ Invalid:
-                {" "}
-                {invalidCount}
-              </p>
-
+              <span className="text-red-500">
+                ❌ Invalid: {invalidCount}
+              </span>
             </div>
-
           </div>
         )}
 
-        {/* TABLE */}
         {rows.length > 0 && (
           <div className="overflow-auto border rounded-xl">
-
             <table className="w-full text-sm">
 
               <thead className="bg-gray-100">
-
                 <tr>
-
-                  {Object.keys(rows[0]).map((k) => (
-
+                  {Object.keys(rows[0]).map((h) => (
                     <th
-                      key={k}
-                      className="text-left px-4 py-3 border-b"
+                      key={h}
+                      className="px-4 py-3 text-left border-b"
                     >
-                      {k}
+                      {h}
                     </th>
-
                   ))}
-
                 </tr>
-
               </thead>
 
               <tbody>
-
                 {rows.map((r, i) => (
-
                   <tr
                     key={i}
                     className={
                       isValid(r)
-                        ? "bg-white hover:bg-gray-50"
+                        ? "bg-white"
                         : "bg-red-100"
                     }
                   >
-
                     {Object.values(r).map((v, idx) => (
-
                       <td
                         key={idx}
-                        className="px-4 py-3 border-b"
+                        className="px-4 py-2 border-b"
                       >
                         {v}
                       </td>
-
                     ))}
-
                   </tr>
-
                 ))}
-
               </tbody>
 
             </table>
-
           </div>
         )}
 
-        {/* BUTTON */}
         <button
           onClick={uploadExcel}
           disabled={loading}
@@ -512,7 +416,7 @@ export default function EmployeeExcelUpload() {
         >
           {loading
             ? "Uploading..."
-            : `Upload ${uploadType}`}
+            : `Upload ${fileType}`}
         </button>
 
       </div>
