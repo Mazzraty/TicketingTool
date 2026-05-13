@@ -19,9 +19,6 @@ import AdminSoftwareDashboard from "../pages/AdminSoftwareDashboard.jsx";
 
 // 🆕 SAP FIORI ASSET MODULE (NEW)
 import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";
-import AssetManagement from "../pages/AssetManagement.jsx";
-import PrinterAssets from "../pages/PrinterAssets.jsx";
-import HHTAssets from "../pages/HHTAssets.jsx";
 
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
@@ -69,24 +66,6 @@ export default function AppRoutes() {
           <Route
             path="/admin/assets/fiori"
             element={<AssetStoreFiori />}
-          />
-
-          {/* FULL ASSET MANAGEMENT (assign/return/edit) */}
-          <Route
-            path="/admin/assets/manage"
-            element={<AssetManagement />}
-          />
-
-          {/* PRINTER ONLY VIEW */}
-          <Route
-            path="/admin/assets/printers"
-            element={<PrinterAssets />}
-          />
-
-          {/* HHT ONLY VIEW */}
-          <Route
-            path="/admin/assets/hht"
-            element={<HHTAssets />}
           />
 
         </Route>
