@@ -4,7 +4,7 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 
 /* =========================
-   ALLOWED SCHEMAS (SAP STYLE)
+   SCHEMAS (SAP STYLE)
 ========================= */
 const ALLOWED_EMPLOYEE_FIELDS = [
   "staffCode",
@@ -50,29 +50,48 @@ export default function EmployeeExcelUpload() {
   const clean = (v) => (v ? v.toString().trim() : "");
 
   /* =========================
-     NORMALIZE KEY
+     FUZZY MATCH ENGINE (AI CORE)
   ========================= */
-  const normalizeKey = (key) =>
-    key
-      .trim()
-      .toLowerCase()
-      .replace(/[-_\s]+/g, "");
+  const similarity = (a, b) => {
+    const str1 = a.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const str2 = b.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    if (str1 === str2) return 1;
+
+    let matches = 0;
+    const len = Math.max(str1.length, str2.length);
+
+    for (let i = 0; i < Math.min(str1.length, str2.length); i++) {
+      if (str1[i] === str2[i]) matches++;
+    }
+
+    return matches / len;
+  };
 
   /* =========================
-     SMART MAPPER
+     AI SMART MAPPER
   ========================= */
-  const mapRow = (row, allowedFields) => {
+  const fuzzyMapRow = (row, allowedFields) => {
     const cleaned = {};
+    const rowKeys = Object.keys(row);
 
-    Object.keys(row).forEach((key) => {
-      const normKey = normalizeKey(key);
+    allowedFields.forEach((field) => {
+      let bestMatch = null;
+      let bestScore = 0;
 
-      const match = allowedFields.find(
-        (f) => f.toLowerCase() === normKey
-      );
+      rowKeys.forEach((key) => {
+        const score = similarity(field, key);
 
-      if (match) {
-        cleaned[match] = row[key];
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = key;
+        }
+      });
+
+      if (bestScore >= 0.6) {
+        cleaned[field] = row[bestMatch];
+      } else {
+        cleaned[field] = "";
       }
     });
 
@@ -83,8 +102,9 @@ export default function EmployeeExcelUpload() {
      DETECT TYPE
   ========================= */
   const detectType = (row) => {
-    const keys = Object.keys(row)
-      .map((k) => normalizeKey(k));
+    const keys = Object.keys(row).map((k) =>
+      k.toLowerCase().replace(/[-_\s]/g, "")
+    );
 
     if (
       keys.includes("imei") ||
@@ -140,7 +160,7 @@ export default function EmployeeExcelUpload() {
         /* ================= EMPLOYEE ================= */
         if (detected === "Employee") {
           const formatted = json.map((r) => {
-            const row = mapRow(r, ALLOWED_EMPLOYEE_FIELDS);
+            const row = fuzzyMapRow(r, ALLOWED_EMPLOYEE_FIELDS);
 
             return {
               type: "Employee",
@@ -161,7 +181,7 @@ export default function EmployeeExcelUpload() {
         /* ================= HHT ================= */
         if (detected === "HHT") {
           const formatted = json.map((r) => {
-            const row = mapRow(r, ALLOWED_HHT_FIELDS);
+            const row = fuzzyMapRow(r, ALLOWED_HHT_FIELDS);
 
             return {
               type: "HHT",
@@ -182,7 +202,7 @@ export default function EmployeeExcelUpload() {
         /* ================= PRINTER ================= */
         if (detected === "Printer") {
           const formatted = json.map((r) => {
-            const row = mapRow(r, ALLOWED_PRINTER_FIELDS);
+            const row = fuzzyMapRow(r, ALLOWED_PRINTER_FIELDS);
 
             return {
               type: "Printer",
@@ -211,18 +231,9 @@ export default function EmployeeExcelUpload() {
      VALIDATION
   ========================= */
   const isValid = (r) => {
-    if (r.type === "Employee") {
-      return r.staffCode && r.name;
-    }
-
-    if (r.type === "HHT") {
-      return r.assetCode && r.imei;
-    }
-
-    if (r.type === "Printer") {
-      return r.assetCode && r.serialNumber;
-    }
-
+    if (r.type === "Employee") return r.staffCode && r.name;
+    if (r.type === "HHT") return r.assetCode && r.imei;
+    if (r.type === "Printer") return r.assetCode && r.serialNumber;
     return false;
   };
 
@@ -248,26 +259,20 @@ export default function EmployeeExcelUpload() {
           employees: valid,
         });
 
-        toast.success(
-          `Employees Inserted: ${res.data.inserted}`
-        );
+        toast.success(`Employees Inserted: ${res.data.inserted}`);
       } else {
         const res = await api.post("/assets/bulk-upload", {
           assets: valid,
         });
 
-        toast.success(
-          `Assets Inserted: ${res.data.inserted}`
-        );
+        toast.success(`Assets Inserted: ${res.data.inserted}`);
       }
 
       setRows([]);
       setFile(null);
     } catch (err) {
       console.error(err);
-      toast.error(
-        err.response?.data?.message || "Upload failed"
-      );
+      toast.error(err.response?.data?.message || "Upload failed");
     } finally {
       setLoading(false);
     }
@@ -279,16 +284,15 @@ export default function EmployeeExcelUpload() {
   return (
     <div className="p-6 bg-[#f5f7fa] min-h-screen">
 
-      <div className="mb-5">
-        <h1 className="text-3xl font-bold text-[#0a2342]">
-          SAP Fiori Upload Center
-        </h1>
-        <p className="text-gray-500">
-          Upload Employees, Printers & HHT Devices
-        </p>
-      </div>
+      <h1 className="text-3xl font-bold text-[#0a2342] mb-2">
+        SAP Fiori Upload Center (AI Powered)
+      </h1>
 
-      <div className="bg-white rounded-2xl border shadow-sm p-5">
+      <p className="text-gray-500 mb-5">
+        Smart Excel upload with AI fuzzy mapping
+      </p>
+
+      <div className="bg-white p-5 rounded-2xl border shadow-sm">
 
         <input
           type="file"
@@ -298,21 +302,14 @@ export default function EmployeeExcelUpload() {
 
         {file && (
           <div className="mb-4">
-            <p className="text-sm">📄 {file.name}</p>
-
+            <p>📄 {file.name}</p>
             <p className="text-blue-600 font-semibold">
-              Detected Type: {fileType}
+              Detected: {fileType}
             </p>
 
-            <div className="flex gap-5 mt-2 text-sm">
-              <span className="text-green-600">
-                ✅ Valid: {validCount}
-              </span>
-
-              <span className="text-red-500">
-                ❌ Invalid: {invalidCount}
-              </span>
-            </div>
+            <p className="text-green-600">
+              Valid: {validCount} | Invalid: {invalidCount}
+            </p>
           </div>
         )}
 
@@ -320,14 +317,10 @@ export default function EmployeeExcelUpload() {
           <div className="overflow-auto border rounded-xl">
 
             <table className="w-full text-sm">
-
               <thead className="bg-gray-100">
                 <tr>
                   {Object.keys(rows[0]).map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left border-b"
-                    >
+                    <th key={h} className="p-2 border">
                       {h}
                     </th>
                   ))}
@@ -339,16 +332,11 @@ export default function EmployeeExcelUpload() {
                   <tr
                     key={i}
                     className={
-                      isValid(r)
-                        ? "bg-white"
-                        : "bg-red-100"
+                      isValid(r) ? "" : "bg-red-100"
                     }
                   >
-                    {Object.values(r).map((v, idx) => (
-                      <td
-                        key={idx}
-                        className="px-4 py-2 border-b"
-                      >
+                    {Object.values(r).map((v, j) => (
+                      <td key={j} className="p-2 border">
                         {v}
                       </td>
                     ))}
@@ -363,7 +351,7 @@ export default function EmployeeExcelUpload() {
         <button
           onClick={uploadExcel}
           disabled={loading}
-          className="mt-5 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl"
+          className="mt-5 bg-blue-600 text-white px-6 py-2 rounded-xl"
         >
           {loading ? "Uploading..." : `Upload ${fileType}`}
         </button>
