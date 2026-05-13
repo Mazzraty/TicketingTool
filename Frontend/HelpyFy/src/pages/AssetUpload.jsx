@@ -4,24 +4,30 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 
 export default function EmployeeExcelUpload() {
+
   const [rows, setRows] = useState([]);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // TYPE
+  // DETECTED TYPE
   const [uploadType, setUploadType] = useState("");
 
-  /* =========================
+  /* =====================================
      CLEAN VALUE
-  ========================= */
-  const clean = (v) => (v ? v.toString().trim() : "");
+  ===================================== */
+  const clean = (v) =>
+    v ? v.toString().trim() : "";
 
-  /* =========================
+  /* =====================================
      DETECT FILE TYPE
-  ========================= */
+  ===================================== */
   const detectType = (row) => {
+
     const keys = Object.keys(row).map((k) =>
-      k.toLowerCase().replace(/[-_\s]+/g, "")
+      k
+        .trim()
+        .toLowerCase()
+        .replace(/[-_\s]+/g, "")
     );
 
     // HHT
@@ -44,85 +50,103 @@ export default function EmployeeExcelUpload() {
     return "Employee";
   };
 
-  /* =========================
-     FILE HANDLER
-  ========================= */
+  /* =====================================
+     NORMALIZE OBJECT
+  ===================================== */
+  const normalize = (obj) => {
+
+    const cleaned = {};
+
+    Object.keys(obj).forEach((k) => {
+
+      const key = k
+        .trim()
+        .toLowerCase()
+        .replace(/[-_\s]+/g, "");
+
+      cleaned[key] = obj[k];
+    });
+
+    return cleaned;
+  };
+
+  /* =====================================
+     HANDLE FILE
+  ===================================== */
   const handleFile = (e) => {
-    const file = e.target.files[0];
 
-    if (!file) return;
+    const selectedFile = e.target.files[0];
 
-    setFile(file);
+    if (!selectedFile) return;
+
+    setFile(selectedFile);
 
     const reader = new FileReader();
 
-    reader.onload = async (event) => {
+    reader.onload = (event) => {
+
       try {
-        const workbook = XLSX.read(event.target.result, {
-          type: "array",
-        });
+
+        const workbook = XLSX.read(
+          event.target.result,
+          {
+            type: "array",
+          }
+        );
 
         const sheet =
-          workbook.Sheets[workbook.SheetNames[0]];
+          workbook.Sheets[
+            workbook.SheetNames[0]
+          ];
 
-        const json = XLSX.utils.sheet_to_json(sheet, {
-          defval: "",
-          raw: false,
-        });
+        const json =
+          XLSX.utils.sheet_to_json(sheet, {
+            defval: "",
+            raw: false,
+          });
 
         if (!json.length) {
           toast.error("Empty excel file");
           return;
         }
 
-        // DETECT TYPE
+        // AUTO DETECT
         const type = detectType(json[0]);
 
         setUploadType(type);
 
-        /* =========================
+        /* =====================================
            EMPLOYEE FORMAT
-        ========================= */
+        ===================================== */
         if (type === "Employee") {
+
           const formatted = json.map((r) => {
-            const normalize = (obj) => {
-              const cleaned = {};
-
-              Object.keys(obj).forEach((k) => {
-                const key = k
-                  .trim()
-                  .toLowerCase()
-                  .replace(/[-_\s]+/g, "");
-
-                cleaned[key] = obj[k];
-              });
-
-              return cleaned;
-            };
 
             const row = normalize(r);
 
             return {
+
               staffCode: clean(
                 row["staffcode"] ||
-                  row["employeeid"] ||
-                  row["code"]
+                row["employeeid"] ||
+                row["code"] ||
+                row["empid"]
               ),
 
               name: clean(
                 row["fullname"] ||
-                  row["employeename"] ||
-                  row["name"]
+                row["employeename"] ||
+                row["name"]
               ),
 
               department: clean(
                 row["department"] ||
-                  row["dept"]
+                row["dept"]
               ),
 
               designation: clean(
                 row["designation"] ||
-                  row["position"]
+                row["position"]
               ),
 
               division: clean(
@@ -146,36 +170,26 @@ export default function EmployeeExcelUpload() {
           setRows(formatted);
         }
 
-        /* =========================
+        /* =====================================
            PRINTER FORMAT
-        ========================= */
+        ===================================== */
         else if (type === "Printer") {
+
           const formatted = json.map((r) => {
-            const normalize = (obj) => {
-              const cleaned = {};
-
-              Object.keys(obj).forEach((k) => {
-                const key = k
-                  .trim()
-                  .toLowerCase()
-                  .replace(/[-_\s]+/g, "");
-
-                cleaned[key] = obj[k];
-              });
-
-              return cleaned;
-            };
 
             const row = normalize(r);
 
             return {
+
               assetCode: clean(
                 row["printerserials"]
               ),
 
               type: "Printer",
 
-              route: clean(row["route"]),
+              route: clean(
+                row["route"]
+              ),
 
               salesmanCode: clean(
                 row["salesmancode"]
@@ -189,9 +203,13 @@ export default function EmployeeExcelUpload() {
                 row["supervisor"]
               ),
 
-              model: clean(row["model"]),
+              model: clean(
+                row["model"]
+              ),
 
-              soti: clean(row["soti"]),
+              soti: clean(
+                row["soti"]
+              ),
 
               serialNumber: clean(
                 row["printerserials"]
@@ -202,36 +220,26 @@ export default function EmployeeExcelUpload() {
           setRows(formatted);
         }
 
-        /* =========================
+        /* =====================================
            HHT FORMAT
-        ========================= */
+        ===================================== */
         else if (type === "HHT") {
+
           const formatted = json.map((r) => {
-            const normalize = (obj) => {
-              const cleaned = {};
-
-              Object.keys(obj).forEach((k) => {
-                const key = k
-                  .trim()
-                  .toLowerCase()
-                  .replace(/[-_\s]+/g, "");
-
-                cleaned[key] = obj[k];
-              });
-
-              return cleaned;
-            };
 
             const row = normalize(r);
 
             return {
+
               assetCode: clean(
                 row["hhtserial"]
               ),
 
               type: "HHT",
 
-              route: clean(row["route"]),
+              route: clean(
+                row["route"]
+              ),
 
               salesmanCode: clean(
                 row["salesmancode"]
@@ -241,13 +249,21 @@ export default function EmployeeExcelUpload() {
                 row["salesmanname"]
               ),
 
-              model: clean(row["model"]),
+              model: clean(
+                row["model"]
+              ),
 
               serialNumber: clean(
                 row["hhtserial"]
               ),
 
-              imei: clean(row["imei"]),
+              imei: clean(
+                row["imei"]
+              ),
+
+              simNumber: clean(
+                row["simnumber"]
+              ),
             };
           });
 
@@ -255,41 +271,72 @@ export default function EmployeeExcelUpload() {
         }
 
       } catch (err) {
+
         console.error(err);
+
         toast.error("Invalid Excel file");
       }
     };
 
-    reader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(selectedFile);
   };
 
-  /* =========================
+  /* =====================================
      VALIDATION
-  ========================= */
+  ===================================== */
   const isValid = (r) => {
+
+    // EMPLOYEE
     if (uploadType === "Employee") {
-      return r.staffCode && r.name;
+
+      return (
+        r.staffCode?.toString().trim() &&
+        r.name?.toString().trim()
+      );
     }
 
-    return r.assetCode;
+    // PRINTER / HHT
+    if (
+      uploadType === "Printer" ||
+      uploadType === "HHT"
+    ) {
+
+      return (
+        r.assetCode?.toString().trim()
+      );
+    }
+
+    return false;
   };
 
-  /* =========================
+  const validCount =
+    rows.filter(isValid).length;
+
+  const invalidCount =
+    rows.length - validCount;
+
+  /* =====================================
      UPLOAD
-  ========================= */
+  ===================================== */
   const uploadExcel = async () => {
+
     try {
+
       setLoading(true);
 
-      const valid = rows.filter(isValid);
+      const valid =
+        rows.filter(isValid);
 
       if (!valid.length) {
-        toast.error("No valid rows");
+        toast.error("No valid rows found");
         return;
       }
 
-      // EMPLOYEE
+      /* =====================================
+         EMPLOYEE UPLOAD
+      ===================================== */
       if (uploadType === "Employee") {
+
         const res = await api.post(
           "/employees/bulk-upload",
           {
@@ -302,10 +349,13 @@ export default function EmployeeExcelUpload() {
         );
       }
 
-      // HHT / PRINTER
+      /* =====================================
+         PRINTER / HHT UPLOAD
+      ===================================== */
       else {
+
         const res = await api.post(
-          "/assets/bulk-upload",
+          "/employees/bulk-upload",
           {
             assets: valid,
           }
@@ -316,100 +366,156 @@ export default function EmployeeExcelUpload() {
         );
       }
 
+      // RESET
       setRows([]);
       setFile(null);
+      setUploadType("");
 
     } catch (err) {
+
       console.error(err);
 
       toast.error(
-        err.response?.data?.msg ||
-          "Upload failed"
+        err.response?.data?.message ||
+        "Upload failed"
       );
+
     } finally {
+
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-sm">
+    <div className="p-6 bg-[#f5f7fa] min-h-screen">
 
-      <h2 className="text-xl font-bold mb-4">
-        Excel Upload Center
-      </h2>
+      {/* HEADER */}
+      <div className="mb-6">
 
-      <input
-        type="file"
-        onChange={handleFile}
-      />
+        <h1 className="text-2xl font-bold text-gray-800">
+          SAP Fiori Upload Center
+        </h1>
 
-      {file && (
-        <div className="mt-3">
-          <p className="text-sm">
-            📄 {file.name}
-          </p>
+        <p className="text-sm text-gray-500">
+          Upload Employees, Printers & HHT Devices
+        </p>
 
-          <p className="text-sm text-blue-600 font-medium">
-            Detected Type: {uploadType}
-          </p>
-        </div>
-      )}
+      </div>
 
-      {/* PREVIEW */}
-      {rows.length > 0 && (
-        <div className="overflow-auto mt-5 border rounded-lg">
+      {/* UPLOAD CARD */}
+      <div className="bg-white rounded-2xl border shadow-sm p-5">
 
-          <table className="w-full text-sm">
+        <input
+          type="file"
+          onChange={handleFile}
+          className="mb-4"
+        />
 
-            <thead className="bg-gray-100">
-              <tr>
-                {Object.keys(rows[0]).map((k) => (
-                  <th
-                    key={k}
-                    className="text-left px-3 py-2 border-b"
-                  >
-                    {k}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+        {/* FILE DETAILS */}
+        {file && (
+          <div className="mb-4 text-sm">
 
-            <tbody>
-              {rows.map((r, i) => (
-                <tr
-                  key={i}
-                  className={
-                    isValid(r)
-                      ? "bg-white"
-                      : "bg-red-100"
-                  }
-                >
-                  {Object.values(r).map((v, idx) => (
-                    <td
-                      key={idx}
-                      className="px-3 py-2 border-b"
+            <p className="font-medium">
+              📄 {file.name}
+            </p>
+
+            <p className="text-blue-600 font-semibold">
+              Detected Type:
+              {" "}
+              {uploadType}
+            </p>
+
+            <div className="flex gap-5 mt-2">
+
+              <p className="text-green-600">
+                ✅ Valid:
+                {" "}
+                {validCount}
+              </p>
+
+              <p className="text-red-600">
+                ❌ Invalid:
+                {" "}
+                {invalidCount}
+              </p>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* TABLE */}
+        {rows.length > 0 && (
+          <div className="overflow-auto border rounded-xl">
+
+            <table className="w-full text-sm">
+
+              <thead className="bg-gray-100">
+
+                <tr>
+
+                  {Object.keys(rows[0]).map((k) => (
+
+                    <th
+                      key={k}
+                      className="text-left px-4 py-3 border-b"
                     >
-                      {v}
-                    </td>
+                      {k}
+                    </th>
+
                   ))}
+
                 </tr>
-              ))}
-            </tbody>
 
-          </table>
+              </thead>
 
-        </div>
-      )}
+              <tbody>
 
-      <button
-        onClick={uploadExcel}
-        disabled={loading}
-        className="mt-5 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg"
-      >
-        {loading
-          ? "Uploading..."
-          : `Upload ${uploadType}`}
-      </button>
+                {rows.map((r, i) => (
+
+                  <tr
+                    key={i}
+                    className={
+                      isValid(r)
+                        ? "bg-white hover:bg-gray-50"
+                        : "bg-red-100"
+                    }
+                  >
+
+                    {Object.values(r).map((v, idx) => (
+
+                      <td
+                        key={idx}
+                        className="px-4 py-3 border-b"
+                      >
+                        {v}
+                      </td>
+
+                    ))}
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+        )}
+
+        {/* BUTTON */}
+        <button
+          onClick={uploadExcel}
+          disabled={loading}
+          className="mt-5 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl"
+        >
+          {loading
+            ? "Uploading..."
+            : `Upload ${uploadType}`}
+        </button>
+
+      </div>
 
     </div>
   );
