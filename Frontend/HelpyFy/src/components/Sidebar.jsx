@@ -26,8 +26,7 @@ export default function Sidebar() {
   );
 
   return (
-    <aside className="sticky top-16 h-[calc(100vh-64px)] w-[280px] bg-white border-r shadow-sm flex flex-col">
-      LOGO SECTION
+    <aside className="sticky top-16 h-[calc(100vh-64px)] w-[280px] bg-gradient-to-b from-green-800 via-green-700 to-green-800 border-r border-green-600 shadow-2xl flex flex-col">
       {/* <div className="h-16 flex items-center gap-3 px-5 border-b bg-green-700">
 
         <div className="bg-white p-2 rounded-xl shadow-sm border">
