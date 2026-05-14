@@ -27,8 +27,8 @@ export default function Sidebar() {
 
   return (
     <aside className="sticky top-16 h-[calc(100vh-64px)] w-[280px] bg-white border-r shadow-sm flex flex-col">
-      {/* LOGO SECTION */}
-      <div className="h-16 flex items-center gap-3 px-5 border-b bg-green-700">
+      LOGO SECTION
+      {/* <div className="h-16 flex items-center gap-3 px-5 border-b bg-green-700">
 
         <div className="bg-white p-2 rounded-xl shadow-sm border">
           <img
@@ -37,6 +37,8 @@ export default function Sidebar() {
             alt="logo"
           />
         </div>
+
+
 
         <div>
           <p className="text-lg font-bold text-white">
@@ -47,7 +49,7 @@ export default function Sidebar() {
             IT Helpdesk
           </p>
         </div>
-      </div>
+      </div> */}
 
       {/* MENU */}
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
