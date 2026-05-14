@@ -285,11 +285,11 @@ export default function EmployeeExcelUpload() {
     <div className="p-6 bg-[#f5f7fa] min-h-screen">
 
       <h1 className="text-3xl font-bold text-[#0a2342] mb-2">
-        SAP Fiori Upload Center (AI Powered)
+      Upload 
       </h1>
 
       <p className="text-gray-500 mb-5">
-        Smart Excel upload with AI fuzzy mapping
+        Smart Excel upload 
       </p>
 
       <div className="bg-white p-5 rounded-2xl border shadow-sm">

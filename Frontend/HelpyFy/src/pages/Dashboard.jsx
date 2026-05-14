@@ -40,7 +40,7 @@ export default function Dashboard() {
           IT Service Dashboard
         </h1>
         <p className="text-sm text-gray-500">
-          SAP-style ITSM overview panel
+         ITSM overview panel
         </p>
       </div>
 
