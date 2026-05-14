@@ -115,7 +115,7 @@ export default function Navbar() {
               </h1>
 
               <p className="text-[11px] text-green-100 tracking-wider uppercase">
-                SAP IT Helpdesk System
+                 IT Helpdesk System
               </p>
 
             </div>
