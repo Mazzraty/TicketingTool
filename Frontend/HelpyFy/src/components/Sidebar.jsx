@@ -27,24 +27,23 @@ export default function Sidebar() {
 
   return (
     <aside className="sticky top-16 h-[calc(100vh-64px)] w-[280px] bg-white border-r shadow-sm flex flex-col">
-
       {/* LOGO SECTION */}
-      <div className="h-20 flex items-center gap-3 px-5 border-b bg-green-700">
+      <div className="h-16 flex items-center gap-3 px-5 border-b bg-green-700">
 
         <div className="bg-white p-2 rounded-xl shadow-sm border">
           <img
             src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
-            className="h-9 object-contain"
+            className="h-8 object-contain"
             alt="logo"
           />
         </div>
 
         <div>
-          <p className="text-lg font-bold text-green-700">
+          <p className="text-lg font-bold text-white">
             HelpyFy
           </p>
 
-          <p className="text-[11px] text-gray-500">
+          <p className="text-[11px] text-green-100">
             IT Helpdesk
           </p>
         </div>
