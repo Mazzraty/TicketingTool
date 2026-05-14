@@ -51,7 +51,7 @@ export default function Sidebar() {
       </div> */}
 
       {/* MENU */}
-      <div className="sticky top-16 h-[calc(100vh-64px)] w-[280px] bg-gradient-to-b from-green-800 via-green-700 to-green-800 border-r border-green-600 shadow-2xl flex flex-col">
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
 
         {/* USER SECTION */}
         {role === "user" && (
