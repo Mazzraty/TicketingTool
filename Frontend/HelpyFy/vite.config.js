@@ -7,32 +7,46 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Enable code splitting
-        manualChunks: {
+        // Enable code splitting with dynamic imports
+        manualChunks: (id) => {
           // Vendor chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['react-hot-toast'],
-          // Feature chunks
-          'admin-pages': [
-            './src/pages/AdminTickets.jsx',
-            './src/pages/AdminEmployeeMaster.jsx',
-            './src/pages/AdminAsset.jsx',
-            './src/pages/AdminSoftwareDashboard.jsx',
-            './src/pages/AssetStoreFiori.jsx',
-          ],
-          'user-pages': [
-            './src/pages/Dashboard.jsx',
-            './src/pages/CreateTicket.jsx',
-            './src/pages/MyTickets.jsx',
-          ],
-          'asset-pages': [
-            './src/pages/AssetHistory.jsx',
-            './src/pages/AssetUpload.jsx',
-          ],
-          'auth-pages': [
-            './src/pages/Login.jsx',
-            './src/pages/Register.jsx',
-          ],
+          if (id.includes('node_modules/react')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/react-router-dom')) {
+            return 'react-router-vendor';
+          }
+          if (id.includes('node_modules/react-hot-toast')) {
+            return 'ui-vendor';
+          }
+          
+          // Feature chunks - Admin pages
+          if (id.includes('/pages/AdminTickets') || 
+              id.includes('/pages/AdminEmployeeMaster') || 
+              id.includes('/pages/AdminAsset') ||
+              id.includes('/pages/AdminSoftwareDashboard') ||
+              id.includes('/pages/AssetStoreFiori')) {
+            return 'admin-pages';
+          }
+          
+          // Feature chunks - User pages
+          if (id.includes('/pages/Dashboard') || 
+              id.includes('/pages/CreateTicket') || 
+              id.includes('/pages/MyTickets')) {
+            return 'user-pages';
+          }
+          
+          // Feature chunks - Asset pages
+          if (id.includes('/pages/AssetHistory') || 
+              id.includes('/pages/AssetUpload')) {
+            return 'asset-pages';
+          }
+          
+          // Feature chunks - Auth pages
+          if (id.includes('/pages/Login') || 
+              id.includes('/pages/Register')) {
+            return 'auth-pages';
+          }
         },
       },
     },
