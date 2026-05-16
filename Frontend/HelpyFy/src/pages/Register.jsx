@@ -42,188 +42,193 @@ export default function Register() {
 
   const fieldWrapper = (fieldName, children) => (
     <div className="relative">
-      {/* SAP UI5 ACTIVE BAR */}
       <div
         className={`absolute left-0 top-0 h-full w-1 rounded-full transition-all duration-300
-        ${activeField === fieldName ? "bg-green-500" : "bg-transparent"}
+        ${activeField === fieldName ? "bg-blue-500" : "bg-transparent"}
       `}
       />
-
       {children}
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#eef5e8] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center p-6">
 
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6 items-stretch">
+      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-stretch">
 
-        {/* LEFT SECTION */}
-        <div className="space-y-6 h-full flex flex-col">
+        {/* LEFT SAP HERO PANEL */}
+        <div className="h-full flex flex-col">
+          <div className="relative rounded-2xl overflow-hidden h-full shadow-sm border border-gray-200">
 
-          <div className="relative rounded-3xl overflow-hidden shadow-xl">
             <img
               src={milkImage}
-              className="h-72 w-full object-cover"
-              alt="milk"
+              className="h-full w-full object-cover"
+              alt="hero"
             />
-            <div className="absolute inset-0 bg-black/50"></div>
 
-            <div className="absolute bottom-6 left-6 text-white">
-              <h2 className="text-3xl font-bold">Join Mazzraty</h2>
-              <p className="text-white/80">
-                Enterprise IT & Asset Platform
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+
+            <div className="absolute bottom-10 left-10 text-white">
+              <h2 className="text-4xl font-semibold tracking-tight">
+                Mazzraty Platform
+              </h2>
+              <p className="text-white/80 mt-2 text-sm">
+                Enterprise IT & Asset Management System
               </p>
             </div>
-          </div>
 
+          </div>
         </div>
 
-        {/* RIGHT FORM CARD */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-green-100 h-full flex flex-col transition-all duration-300 hover:shadow-green-200/40 hover:-translate-y-1 focus-within:shadow-green-300/60 focus-within:-translate-y-1">
+        {/* RIGHT SAP FORM CARD */}
+        <div className="h-full flex flex-col">
 
-          {/* HEADER */}
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Create Account
-            </h1>
-            <p className="text-gray-500">
-              Register your enterprise profile
-            </p>
-          </div>
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-10 h-full flex flex-col">
 
-          {/* FORM */}
-          <div className="flex-1 space-y-4">
+            {/* HEADER */}
+            <div className="mb-8">
+              <h1 className="text-2xl font-semibold text-gray-800">
+                Create Account
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Enter your enterprise credentials
+              </p>
+            </div>
 
-            {/* NAME + EMPLOYEE ID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* FORM */}
+            <div className="flex-1 space-y-5">
+
+              {/* NAME + EMPLOYEE ID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+                {fieldWrapper(
+                  "name",
+                  <input
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    onFocus={() => setActiveField("name")}
+                    onBlur={() => setActiveField("")}
+                    placeholder="Full Name"
+                    className="sap-input"
+                  />
+                )}
+
+                {fieldWrapper(
+                  "employeeId",
+                  <input
+                    name="employeeId"
+                    value={form.employeeId}
+                    onChange={handleChange}
+                    onFocus={() => setActiveField("employeeId")}
+                    onBlur={() => setActiveField("")}
+                    placeholder="Employee ID"
+                    className="sap-input"
+                  />
+                )}
+
+              </div>
 
               {fieldWrapper(
-                "name",
+                "email",
                 <input
-                  name="name"
-                  value={form.name}
+                  name="email"
+                  value={form.email}
                   onChange={handleChange}
-                  onFocus={() => setActiveField("name")}
+                  onFocus={() => setActiveField("email")}
                   onBlur={() => setActiveField("")}
-                  placeholder="Full Name"
-                  className="input pl-4"
-                  required
+                  placeholder="Email Address"
+                  className="sap-input"
                 />
               )}
 
+              {/* PASSWORD */}
               {fieldWrapper(
-                "employeeId",
+                "password",
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    onFocus={() => setActiveField("password")}
+                    onBlur={() => setActiveField("")}
+                    placeholder="Password"
+                    className="sap-input pr-20"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-600 font-medium"
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              )}
+
+              {fieldWrapper(
+                "confirmPassword",
                 <input
-                  name="employeeId"
-                  value={form.employeeId}
-                  onChange={handleChange}
-                  onFocus={() => setActiveField("employeeId")}
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onFocus={() => setActiveField("confirmPassword")}
                   onBlur={() => setActiveField("")}
-                  placeholder="Employee ID"
-                  className="input pl-4"
-                  required
+                  placeholder="Confirm Password"
+                  className="sap-input"
                 />
               )}
 
             </div>
 
-            {/* EMAIL */}
-            {fieldWrapper(
-              "email",
-              <input
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                onFocus={() => setActiveField("email")}
-                onBlur={() => setActiveField("")}
-                placeholder="Email Address"
-                className="input pl-4"
-                required
-              />
-            )}
+            {/* BUTTONS */}
+            <div className="mt-8 space-y-3">
 
-            {/* PASSWORD */}
-            {fieldWrapper(
-              "password",
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  onFocus={() => setActiveField("password")}
-                  onBlur={() => setActiveField("")}
-                  placeholder="Password"
-                  className="input pl-4 pr-20"
-                  required
-                />
+              <button
+                onClick={handleSubmit}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-sm font-medium transition"
+              >
+                Create Account
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-green-600 font-semibold"
-                >
-                  {showPassword ? "Hide" : "View"}
-                </button>
-              </div>
-            )}
+              <button
+                onClick={() => navigate("/login")}
+                className="w-full border border-gray-300 py-3 rounded-lg text-sm hover:bg-gray-50 transition"
+              >
+                Already have account? Login
+              </button>
 
-            {/* CONFIRM PASSWORD */}
-            {fieldWrapper(
-              "confirmPassword",
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                onFocus={() => setActiveField("confirmPassword")}
-                onBlur={() => setActiveField("")}
-                placeholder="Confirm Password"
-                className="input pl-4"
-                required
-              />
-            )}
+              <p className="text-xs text-center text-gray-400 mt-4">
+                © 2026 Mazzraty Enterprise System
+              </p>
 
-          </div>
+            </div>
 
-          {/* BUTTONS */}
-          <div className="mt-6">
-            <button
-              onClick={handleSubmit}
-              className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-semibold hover:scale-[1.01] transition"
-            >
-              Create Account
-            </button>
-
-            <button
-              onClick={() => navigate("/login")}
-              className="w-full mt-4 border py-3 rounded-2xl hover:bg-gray-50"
-            >
-              Already have account? Login
-            </button>
-
-            <p className="text-xs text-center mt-6 text-gray-400">
-              © 2026 Mazzraty Enterprise System
-            </p>
           </div>
         </div>
       </div>
 
-      {/* INPUT STYLE */}
+      {/* SAP STYLE INPUT */}
       <style>
         {`
-          .input {
+          .sap-input {
             width: 100%;
-            padding: 12px 16px;
-            border-radius: 14px;
-            border: 1px solid #e5e7eb;
-            background: #f9fafb;
+            padding: 12px 14px;
+            border: none;
+            border-bottom: 1px solid #d1d5db;
+            background: transparent;
             outline: none;
+            font-size: 14px;
+            transition: all 0.2s ease;
           }
 
-          .input:focus {
-            border-color: #22c55e;
-            box-shadow: 0 0 0 2px rgba(34,197,94,0.2);
+          .sap-input:focus {
+            border-bottom: 2px solid #2563eb;
+          }
+
+          .sap-input::placeholder {
+            color: #9ca3af;
           }
         `}
       </style>
