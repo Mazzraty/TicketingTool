@@ -15,12 +15,5 @@ export default defineConfig({
     },
     // Increase chunk size warning threshold
     chunkSizeWarningLimit: 1000,
-    // Enable minification
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-      },
-    },
   },
 });
