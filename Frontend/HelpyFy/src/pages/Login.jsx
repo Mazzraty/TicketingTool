@@ -2,16 +2,20 @@ import { useState } from "react";
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { jwtDecode } from "jwt-decode";
 
 import milkImage from "../assets/milk2.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       const res = await api.post("/auth/login", {
@@ -19,24 +23,36 @@ export default function Login() {
         password,
       });
 
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      localStorage.setItem("role", res.data.user.role);
+      // 🔐 store ONLY token
+      const token = res.data.token;
+      localStorage.setItem("token", token);
+
+      // 🧠 decode role from JWT
+      const decoded = jwtDecode(token);
+      const role = decoded?.role || "user";
 
       toast.success("Login successful");
-      navigate("/");
+
+      // 🚀 role-based redirect
+      if (role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+
     } catch (err) {
       toast.error(err.response?.data?.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#eef5e8] flex items-center justify-center p-4">
 
-      {/* MAIN WRAPPER */}
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6">
 
-        {/* ================= LEFT SIDE CARD ================= */}
+        {/* ================= LEFT SIDE ================= */}
         <div className="relative rounded-[32px] overflow-hidden shadow-2xl hidden lg:block">
 
           <img
@@ -49,7 +65,7 @@ export default function Login() {
 
           <div className="relative z-10 p-10 h-full flex flex-col justify-between text-white">
 
-            {/* TOP CARD */}
+            {/* LOGO */}
             <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-2xl w-fit">
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
@@ -58,7 +74,7 @@ export default function Login() {
               />
             </div>
 
-            {/* CENTER CONTENT */}
+            {/* TEXT */}
             <div className="space-y-5">
 
               <p className="text-green-200 tracking-[6px] text-sm">
@@ -76,7 +92,7 @@ export default function Login() {
                 in a single unified enterprise system.
               </p>
 
-              {/* MINI STATS CARDS */}
+              {/* STATS */}
               <div className="grid grid-cols-3 gap-4 mt-6">
 
                 <div className="bg-white/10 border border-white/10 backdrop-blur-lg p-4 rounded-xl text-center">
@@ -97,7 +113,6 @@ export default function Login() {
               </div>
             </div>
 
-            {/* BOTTOM */}
             <div className="text-xs text-white/60 border-t border-white/10 pt-5">
               © 2026 Mazzraty Enterprise System
             </div>
@@ -105,13 +120,12 @@ export default function Login() {
           </div>
         </div>
 
-        {/* ================= RIGHT SIDE CARD ================= */}
+        {/* ================= RIGHT SIDE ================= */}
         <div className="flex items-center justify-center">
 
-          {/* LOGIN CARD */}
           <div className="w-full max-w-md bg-white rounded-[28px] shadow-2xl border border-green-100 p-8">
 
-            {/* HEADER CARD */}
+            {/* HEADER */}
             <div className="text-center mb-8">
 
               <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-xs font-semibold mb-4">
@@ -127,7 +141,7 @@ export default function Login() {
               </p>
             </div>
 
-            {/* FORM CARD */}
+            {/* FORM */}
             <form onSubmit={handleLogin} className="space-y-5">
 
               <div className="bg-gray-50 p-4 rounded-2xl border">
@@ -152,16 +166,17 @@ export default function Login() {
                 />
               </div>
 
-              {/* ACTION CARD */}
+              {/* BUTTON */}
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-semibold shadow-lg hover:scale-[1.02] transition"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-semibold shadow-lg hover:scale-[1.02] transition disabled:opacity-60"
               >
-                Sign In
+                {loading ? "Signing in..." : "Sign In"}
               </button>
             </form>
 
-            {/* SECONDARY CARD */}
+            {/* FOOTER */}
             <div className="mt-5 space-y-3">
 
               <button
