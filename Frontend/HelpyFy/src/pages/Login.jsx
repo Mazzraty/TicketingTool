@@ -2,7 +2,6 @@ import { useState } from "react";
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../auth/AuthContext.jsx";
 
 import milkImage from "../assets/milk2.png";
@@ -25,11 +24,11 @@ export default function Login() {
         password,
       });
 
-      // 🔐 store ONLY token
+      // 🔐 store token and full user profile
       const token = res.data.token;
-      const decoded = jwtDecode(token);
-      const role = decoded?.role || "user";
-      login(token, decoded);
+      const user = res.data.user;
+      const role = user?.role || "user";
+      login(token, user);
 
       toast.success("Login successful");
 
