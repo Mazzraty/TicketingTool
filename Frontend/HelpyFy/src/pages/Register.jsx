@@ -52,42 +52,30 @@ export default function Register() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f4f6f9] flex items-center justify-center p-6">
+    <div className="relative min-h-screen flex items-center justify-center p-6">
 
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-10">
+      {/* BACKGROUND IMAGE */}
+      <div className="absolute inset-0">
+        <img
+          src={milkImage}
+          className="w-full h-full object-cover"
+          alt="background"
+        />
+        <div className="absolute inset-0 bg-black/60"></div>
+      </div>
 
-        {/* LEFT IMAGE (SIMPLE SAP STYLE) */}
-        <div className="hidden lg:block">
-          <div className="h-full rounded-xl overflow-hidden border border-gray-200 bg-white">
+      {/* FORM CONTAINER */}
+      <div className="relative z-10 w-full max-w-md">
 
-            <img
-              src={milkImage}
-              className="h-full w-full object-cover"
-              alt="hero"
-            />
-
-            <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-800">
-                Mazzraty Enterprise
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                IT Asset & Support System
-              </p>
-            </div>
-
-          </div>
-        </div>
-
-        {/* RIGHT FORM */}
-        <div className="bg-white border border-gray-200 rounded-xl p-10 shadow-sm">
+        <div className="bg-white/95 backdrop-blur-md border border-white/30 rounded-2xl shadow-2xl p-8">
 
           {/* HEADER */}
-          <div className="mb-8">
+          <div className="mb-6 text-center">
             <h1 className="text-2xl font-semibold text-gray-800">
               Create Account
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Enter your enterprise credentials
+              Enterprise Registration Portal
             </p>
           </div>
 
@@ -95,7 +83,7 @@ export default function Register() {
           <div className="space-y-5">
 
             {/* NAME + EMPLOYEE ID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
               {fieldWrapper(
                 "name",
@@ -197,21 +185,22 @@ export default function Register() {
               Already have account? Login
             </button>
 
-            <p className="text-xs text-center text-gray-400 mt-4">
+            <p className="text-xs text-center text-gray-300 mt-4">
               © 2026 Mazzraty Enterprise System
             </p>
 
           </div>
+
         </div>
       </div>
 
-      {/* SAP STYLE INPUT */}
+      {/* SAP INPUT STYLE */}
       <style>
         {`
           .sap-input {
             width: 100%;
             padding: 12px 14px;
-            border: 1px solid #d1d5db;
+            border: 1px solid #e5e7eb;
             border-radius: 6px;
             background: #fff;
             outline: none;
