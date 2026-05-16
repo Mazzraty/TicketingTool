@@ -43,8 +43,8 @@ export default function Register() {
   const fieldWrapper = (fieldName, children) => (
     <div className="relative">
       <div
-        className={`absolute left-0 top-0 h-full w-1 rounded-full transition-all duration-300
-        ${activeField === fieldName ? "bg-blue-500" : "bg-transparent"}
+        className={`absolute left-0 top-0 h-full w-[3px] rounded transition-all duration-200
+        ${activeField === fieldName ? "bg-blue-600" : "bg-transparent"}
       `}
       />
       {children}
@@ -52,67 +52,34 @@ export default function Register() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center p-6">
+    <div className="min-h-screen bg-[#f4f6f9] flex items-center justify-center p-6">
 
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-stretch">
+      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-10">
 
-        {/* ================= LEFT HERO ================= */}
-        <div className="h-full flex flex-col">
+        {/* LEFT IMAGE (SIMPLE SAP STYLE) */}
+        <div className="hidden lg:block">
+          <div className="h-full rounded-xl overflow-hidden border border-gray-200 bg-white">
 
-          <div className="relative rounded-2xl overflow-hidden h-full shadow-sm border border-gray-200">
+            <img
+              src={milkImage}
+              className="h-full w-full object-cover"
+              alt="hero"
+            />
 
-            {/* PARALLAX IMAGE */}
-            <div className="absolute inset-0 parallax-layer">
-              <img
-                src={milkImage}
-                className="w-[110%] h-[110%] object-cover"
-                alt="hero"
-              />
-            </div>
-
-            {/* OVERLAY */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-
-            {/* TITLE */}
-            <div className="absolute bottom-10 left-10 text-white z-10">
-              <h2 className="text-4xl font-semibold tracking-tight">
-                Mazzraty Platform
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-800">
+                Mazzraty Enterprise
               </h2>
-              <p className="text-white/80 mt-2 text-sm">
-                Enterprise IT & Asset Management System
+              <p className="text-sm text-gray-500 mt-1">
+                IT Asset & Support System
               </p>
-            </div>
-
-            {/* KPI CARDS */}
-            <div className="absolute top-8 left-8 right-8 grid grid-cols-2 gap-3 z-10">
-
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-3 text-white">
-                <p className="text-xs opacity-80">Users</p>
-                <p className="text-lg font-semibold">1,240+</p>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-3 text-white">
-                <p className="text-xs opacity-80">Tickets</p>
-                <p className="text-lg font-semibold">320+</p>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-3 text-white">
-                <p className="text-xs opacity-80">Assets</p>
-                <p className="text-lg font-semibold">860+</p>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-3 text-white">
-                <p className="text-xs opacity-80">Uptime</p>
-                <p className="text-lg font-semibold">99.9%</p>
-              </div>
-
             </div>
 
           </div>
         </div>
 
-        {/* ================= RIGHT FORM ================= */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-10 h-full flex flex-col transition-all duration-300 hover:shadow-lg focus-within:shadow-md">
+        {/* RIGHT FORM */}
+        <div className="bg-white border border-gray-200 rounded-xl p-10 shadow-sm">
 
           {/* HEADER */}
           <div className="mb-8">
@@ -125,8 +92,9 @@ export default function Register() {
           </div>
 
           {/* FORM */}
-          <div className="flex-1 space-y-5">
+          <div className="space-y-5">
 
+            {/* NAME + EMPLOYEE ID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
               {fieldWrapper(
@@ -157,6 +125,7 @@ export default function Register() {
 
             </div>
 
+            {/* EMAIL */}
             {fieldWrapper(
               "email",
               <input
@@ -170,6 +139,7 @@ export default function Register() {
               />
             )}
 
+            {/* PASSWORD */}
             {fieldWrapper(
               "password",
               <div className="relative">
@@ -187,13 +157,14 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-600 font-medium"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-blue-600"
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
             )}
 
+            {/* CONFIRM PASSWORD */}
             {fieldWrapper(
               "confirmPassword",
               <input
@@ -214,14 +185,14 @@ export default function Register() {
 
             <button
               onClick={handleSubmit}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-sm font-medium transition"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-md text-sm font-medium transition"
             >
               Create Account
             </button>
 
             <button
               onClick={() => navigate("/login")}
-              className="w-full border border-gray-300 py-3 rounded-lg text-sm hover:bg-gray-50 transition"
+              className="w-full border border-gray-300 py-3 rounded-md text-sm hover:bg-gray-50 transition"
             >
               Already have account? Login
             </button>
@@ -234,43 +205,27 @@ export default function Register() {
         </div>
       </div>
 
-      {/* SAP INPUT + PARALLAX STYLE */}
+      {/* SAP STYLE INPUT */}
       <style>
         {`
           .sap-input {
             width: 100%;
             padding: 12px 14px;
-            border: none;
-            border-bottom: 1px solid #d1d5db;
-            background: transparent;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: #fff;
             outline: none;
             font-size: 14px;
             transition: all 0.2s ease;
           }
 
           .sap-input:focus {
-            border-bottom: 2px solid #2563eb;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 1px #2563eb;
           }
 
           .sap-input::placeholder {
             color: #9ca3af;
-          }
-
-          .parallax-layer {
-            animation: slowParallax 18s ease-in-out infinite alternate;
-            transform: scale(1.08);
-          }
-
-          @keyframes slowParallax {
-            0% {
-              transform: translate3d(0px, 0px, 0) scale(1.08);
-            }
-            50% {
-              transform: translate3d(-10px, -8px, 0) scale(1.08);
-            }
-            100% {
-              transform: translate3d(10px, 8px, 0) scale(1.08);
-            }
           }
         `}
       </style>
