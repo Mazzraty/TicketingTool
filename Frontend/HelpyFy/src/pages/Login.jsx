@@ -3,6 +3,7 @@ import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import jwtDecode from "jwt-decode";
+import { useAuth } from "../auth/AuthContext.jsx";
 
 import milkImage from "../assets/milk2.png";
 
@@ -12,6 +13,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -25,14 +27,9 @@ export default function Login() {
 
       // 🔐 store ONLY token
       const token = res.data.token;
-      localStorage.setItem("token", token);
-
       const decoded = jwtDecode(token);
       const role = decoded?.role || "user";
-      const user = { ...decoded };
-
-      localStorage.setItem("role", role);
-      localStorage.setItem("user", JSON.stringify(user));
+      login(token, decoded);
 
       toast.success("Login successful");
 

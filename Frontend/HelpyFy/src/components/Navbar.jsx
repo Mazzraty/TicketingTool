@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "../auth/AuthContext.jsx";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -9,24 +10,12 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notifications] = useState(2);
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const loadUser = () => {
-      const stored = localStorage.getItem("user");
-      setUser(stored ? JSON.parse(stored) : null);
-    };
-
-    loadUser();
-    window.addEventListener("storage", loadUser);
-
-    return () => window.removeEventListener("storage", loadUser);
-  }, []);
+  const { user, logout } = useAuth();
 
   const role = (user?.role || "guest").toLowerCase();
 
-  const logout = () => {
-    localStorage.clear();
+  const handleLogout = () => {
+    logout();
     navigate("/login");
   };
 

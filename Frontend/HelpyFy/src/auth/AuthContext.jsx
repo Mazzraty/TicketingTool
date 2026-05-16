@@ -1,31 +1,48 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext();
 
+const getStoredUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    return null;
+  }
+};
+
+const getStoredToken = () => localStorage.getItem("token");
+const getStoredRole = () =>
+  localStorage.getItem("role") || getStoredUser()?.role || null;
+
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(null);
-  const [role, setRole] = useState(null);
+  const [token, setToken] = useState(getStoredToken());
+  const [role, setRole] = useState(getStoredRole());
+  const [user, setUser] = useState(getStoredUser());
 
-  useEffect(() => {
-    setToken(localStorage.getItem("token"));
-    setRole(localStorage.getItem("role"));
-  }, []);
+  const login = (token, decodedUser) => {
+    const normalizedUser = { ...decodedUser };
+    const normalizedRole = normalizedUser.role || "user";
 
-  const login = (token, role) => {
     localStorage.setItem("token", token);
-    localStorage.setItem("role", role);
+    localStorage.setItem("role", normalizedRole);
+    localStorage.setItem("user", JSON.stringify(normalizedUser));
+
     setToken(token);
-    setRole(role);
+    setRole(normalizedRole);
+    setUser(normalizedUser);
   };
 
   const logout = () => {
-    localStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("user");
     setToken(null);
     setRole(null);
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ token, role, login, logout }}>
+    <AuthContext.Provider value={{ token, role, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

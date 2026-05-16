@@ -1,10 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext.jsx";
 
 export default function Sidebar({ collapsed, setCollapsed }) {
   const location = useLocation();
-
-  const user = JSON.parse(localStorage.getItem("user") || "null");
-  const role = user?.role || "guest";
+  const { user } = useAuth();
+  const role = (user?.role || "guest").toLowerCase();
 
   const isActive = (path) =>
     location.pathname === path

@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
-import jwtDecode from "jwt-decode";
+import { useAuth } from "../auth/AuthContext.jsx";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  // JWT decode
-  const token = localStorage.getItem("token");
-  const user = token ? jwtDecode(token) : null;
 
   useEffect(() => {
     load();
