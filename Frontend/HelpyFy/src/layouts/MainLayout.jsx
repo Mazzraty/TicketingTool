@@ -4,28 +4,27 @@ import { Outlet } from "react-router-dom";
 
 export default function MainLayout() {
   return (
-    <div className="min-h-screen bg-[#f5faf5] flex">
+    <div className="min-h-screen bg-[#f5f6f7]">
 
-      {/* SIDEBAR (FIXED LEFT) */}
-      <aside className="w-[270px] fixed left-0 top-0 h-screen bg-white border-r z-50">
-        <Sidebar />
-      </aside>
+      {/* TOP NAVBAR */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b">
+        <Navbar />
+      </header>
 
-      {/* RIGHT CONTENT AREA */}
-      <div className="flex-1 ml-[270px] flex flex-col min-h-screen">
+      {/* BODY */}
+      <div className="flex pt-16">
 
-        {/* TOP NAVBAR */}
-        <header className="sticky top-0 z-40 bg-white border-b">
-          <Navbar />
-        </header>
+        {/* SIDEBAR */}
+        <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] z-40">
+          <Sidebar />
+        </aside>
 
         {/* PAGE CONTENT */}
-        <main className="flex-1 p-6 bg-[#f5faf5]">
+        <main className="flex-1 ml-[280px] p-6 overflow-auto">
           <Outlet />
         </main>
 
       </div>
-
     </div>
   );
 }
