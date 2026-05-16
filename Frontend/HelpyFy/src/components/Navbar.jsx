@@ -9,7 +9,6 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notifications] = useState(2);
-
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -52,16 +51,10 @@ export default function Navbar() {
       return [
         { label: "Dashboard", path: "/" },
         { label: "Admin Tickets", path: "/admin" },
-
-        // OLD MODULE
         { label: "Assets", path: "/admin/assets" },
         { label: "Upload Excel", path: "/admin/assets/upload-excel" },
         { label: "Asset History", path: "/admin/assets/history" },
-
-        // NEW SAP FIORI ASSET MODULE
         { label: "Asset Dashboard", path: "/admin/assets/fiori" },
-
-        // OTHER MODULES
         { label: "Employees", path: "/admin/employees" },
         {
           label: "Software Dashboard",
@@ -79,56 +72,51 @@ export default function Navbar() {
 
   const isActive = (path) =>
     location.pathname === path
-      ? "bg-white text-green-700 shadow-lg font-semibold"
-      : "text-white/90 hover:bg-white/10 hover:text-white";
+      ? "bg-[#0a6ed1] text-white shadow-sm"
+      : "text-gray-600 hover:bg-gray-100 hover:text-[#0a6ed1]";
 
   return (
-    <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-gradient-to-r from-green-800 via-green-700 to-green-800 border-b border-green-500/40 shadow-2xl">
+    <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
 
-      <div className="w-full h-16 px-4 lg:px-8 flex items-center justify-between">
+      <div className="h-16 px-4 lg:px-8 flex items-center justify-between">
 
-        {/* LEFT SIDE */}
+        {/* LEFT */}
         <div className="flex items-center gap-8">
 
           {/* LOGO */}
-          <div className="flex items-center gap-4">
+          <Link to="/" className="flex items-center gap-3">
 
-            <div className="relative">
+            <div className="w-11 h-11 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center p-2">
 
-              <div className="absolute inset-0 bg-white/20 blur-xl rounded-full"></div>
+              <img
+                src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+                alt="logo"
+                className="object-contain"
+              />
 
-              <div className="relative bg-white rounded-2xl p-2.5 shadow-lg border border-white/30">
-
-                <img
-                  src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
-                  alt="logo"
-                  className="h-8 object-contain"
-                />
-
-              </div>
             </div>
 
             <div className="leading-tight">
 
-              <h1 className="text-white text-lg font-bold tracking-wide">
+              <h1 className="text-[17px] font-bold text-gray-800">
                 HelpyFy
               </h1>
 
-              <p className="text-[11px] text-green-100 tracking-wider uppercase">
-                 IT Helpdesk System
+              <p className="text-[11px] text-gray-500 uppercase tracking-wide">
+                IT Service Management
               </p>
 
             </div>
-          </div>
+          </Link>
 
           {/* DESKTOP NAV */}
-          <nav className="hidden lg:flex items-center gap-2">
+          <nav className="hidden lg:flex items-center gap-1">
 
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`relative px-4 py-2.5 rounded-2xl text-sm transition-all duration-300 ${isActive(
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(
                   item.path
                 )}`}
               >
@@ -139,52 +127,52 @@ export default function Navbar() {
           </nav>
         </div>
 
-        {/* RIGHT SIDE */}
+        {/* RIGHT */}
         <div
           className="flex items-center gap-3 relative"
           ref={dropdownRef}
         >
 
           {/* SEARCH */}
-          <button className="hidden md:flex items-center justify-center w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-all">
+          <button className="hidden md:flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 transition">
             🔍
           </button>
 
-          {/* NOTIFICATION */}
-          <button className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-all">
+          {/* NOTIFICATIONS */}
+          <button className="relative flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 transition">
 
             🔔
 
             {notifications > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-white text-green-700 text-[10px] font-bold rounded-full shadow-md px-1">
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
                 {notifications}
               </span>
             )}
           </button>
 
           {/* ROLE */}
-          <div className="hidden md:flex items-center px-3 py-2 rounded-2xl bg-white/10 border border-white/10 text-white text-xs font-medium capitalize backdrop-blur-md">
+          <div className="hidden md:flex items-center px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold capitalize border border-gray-200">
             {role}
           </div>
 
           {/* USER */}
           <button
             onClick={() => setOpen(!open)}
-            className="relative w-11 h-11 rounded-2xl bg-white text-green-700 flex items-center justify-center font-bold shadow-xl border-2 border-white/40 hover:scale-105 transition-all"
+            className="w-10 h-10 rounded-full bg-[#0a6ed1] text-white flex items-center justify-center font-semibold shadow-sm hover:opacity-90 transition"
           >
             {user?.name?.charAt(0).toUpperCase() || "U"}
           </button>
 
           {/* DROPDOWN */}
           {open && (
-            <div className="absolute right-0 top-14 w-72 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
+            <div className="absolute right-0 top-14 w-72 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
 
               {/* HEADER */}
-              <div className="bg-gradient-to-r from-green-50 to-white px-5 py-5 border-b">
+              <div className="px-5 py-5 border-b bg-gray-50">
 
                 <div className="flex items-center gap-3">
 
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-green-600 to-green-700 text-white flex items-center justify-center font-bold shadow-md">
+                  <div className="w-12 h-12 rounded-full bg-[#0a6ed1] text-white flex items-center justify-center font-bold">
                     {user?.name?.charAt(0).toUpperCase() || "U"}
                   </div>
 
@@ -211,19 +199,19 @@ export default function Navbar() {
                     Access Role
                   </span>
 
-                  <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold capitalize">
+                  <span className="px-3 py-1 rounded-full bg-blue-100 text-[#0a6ed1] text-xs font-semibold capitalize">
                     {role}
                   </span>
 
                 </div>
               </div>
 
-              {/* LOGOUT */}
+              {/* MENU */}
               <div className="p-2">
 
                 <button
                   onClick={logout}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 hover:bg-red-50 transition-all text-sm font-medium"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition text-sm font-medium"
                 >
                   🚪 Logout
                 </button>
@@ -232,10 +220,10 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* MOBILE MENU BUTTON */}
+          {/* MOBILE MENU */}
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
-            className="lg:hidden w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-xl transition-all"
+            className="lg:hidden w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-700 text-xl transition"
           >
             ☰
           </button>
@@ -243,9 +231,9 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* MOBILE MENU */}
+      {/* MOBILE NAV */}
       {mobileMenu && (
-        <div className="lg:hidden border-t border-white/10 bg-green-800/95 backdrop-blur-xl px-4 py-4">
+        <div className="lg:hidden border-t border-gray-200 bg-white px-4 py-4">
 
           <div className="space-y-2">
 
@@ -254,10 +242,10 @@ export default function Navbar() {
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileMenu(false)}
-                className={`block px-4 py-3 rounded-2xl text-sm transition-all ${
+                className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                   location.pathname === item.path
-                    ? "bg-white text-green-700 font-semibold"
-                    : "text-white hover:bg-white/10"
+                    ? "bg-[#0a6ed1] text-white"
+                    : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
                 {item.label}
