@@ -2,7 +2,7 @@ import { useState } from "react";
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../auth/AuthContext.jsx";
 
 import milkImage from "../assets/milk2.png";
