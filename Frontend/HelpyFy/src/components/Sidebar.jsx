@@ -1,13 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { useState } from "react";
 
-export default function Sidebar() {
+export default function Sidebar({ collapsed, setCollapsed }) {
   const location = useLocation();
 
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const role = user?.role || "guest";
-
-  const [collapsed, setCollapsed] = useState(false);
 
   const isActive = (path) =>
     location.pathname === path
@@ -33,7 +30,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`sticky top-16 h-[calc(100vh-64px)] bg-white border-r border-gray-200 shadow-sm flex flex-col transition-all duration-300 ${
+      className={`h-[calc(100vh-64px)] bg-white border-r border-gray-200 shadow-sm flex flex-col transition-all duration-300 ${
         collapsed ? "w-[90px]" : "w-[280px]"
       }`}
     >
