@@ -13,6 +13,8 @@ export default function Register() {
     employeeId: "",
   });
 
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -21,6 +23,11 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (form.password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
 
     try {
       await api.post("/auth/register", form);
@@ -34,104 +41,47 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-[#eef5e8] flex items-center justify-center p-4">
 
-      {/* MAIN WRAPPER */}
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6">
 
-        {/* ================= LEFT INFO SECTION ================= */}
+        {/* LEFT SECTION */}
         <div className="space-y-6">
 
-          {/* HERO CARD */}
           <div className="relative rounded-3xl overflow-hidden shadow-xl">
             <img
               src={milkImage}
               className="h-72 w-full object-cover"
               alt="milk"
             />
-
             <div className="absolute inset-0 bg-black/50"></div>
 
             <div className="absolute bottom-6 left-6 text-white">
-              <h2 className="text-3xl font-bold">
-                Join Mazzraty
-              </h2>
-
-              <p className="text-white/80">
-                Enterprise IT & Asset Platform
-              </p>
+              <h2 className="text-3xl font-bold">Join Mazzraty</h2>
+              <p className="text-white/80">Enterprise IT & Asset Platform</p>
             </div>
           </div>
 
-          {/* FEATURE CARDS */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-            <div className="bg-white rounded-2xl shadow p-5 border border-green-100">
-              <h3 className="text-xl font-bold text-green-700">
-                Secure
-              </h3>
-
-              <p className="text-sm text-gray-500 mt-1">
-                Role-based authentication system
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow p-5 border border-green-100">
-              <h3 className="text-xl font-bold text-green-700">
-                Smart
-              </h3>
-
-              <p className="text-sm text-gray-500 mt-1">
-                Automated ticket handling
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow p-5 border border-green-100">
-              <h3 className="text-xl font-bold text-green-700">
-                Fast
-              </h3>
-
-              <p className="text-sm text-gray-500 mt-1">
-                Real-time IT support system
-              </p>
-            </div>
-
-          </div>
-
-          {/* INFO CARD */}
-          <div className="bg-white rounded-3xl shadow p-6 border border-green-100">
-
-            <h4 className="text-lg font-bold mb-2">
-              Enterprise Access
-            </h4>
-
-            <p className="text-sm text-gray-500 leading-relaxed">
-              This system is designed for Mazzraty employees to manage IT tickets,
-              assets, and internal support efficiently with full tracking and security.
-            </p>
-
-          </div>
         </div>
 
-        {/* ================= RIGHT FORM CARD ================= */}
+        {/* RIGHT FORM */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 border border-green-100">
 
-          {/* HEADER */}
-          <div className="mb-6">
-
-            <h1 className="text-3xl font-bold text-gray-900">
-              Create Account
-            </h1>
-
-            <p className="text-gray-500">
-              Register your enterprise profile
-            </p>
-
+          {/* LOGO + HEADER */}
+          <div className="flex items-center gap-3 mb-6">
+            <img src={milkImage} className="w-12 h-12 rounded-xl object-cover" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Create Account
+              </h1>
+              <p className="text-gray-500">
+                Register your enterprise profile
+              </p>
+            </div>
           </div>
 
           {/* FORM */}
           <form onSubmit={handleSubmit} className="space-y-4">
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
               <input
                 name="name"
                 value={form.name}
@@ -149,7 +99,6 @@ export default function Register() {
                 className="input"
                 required
               />
-
             </div>
 
             <input
@@ -171,7 +120,16 @@ export default function Register() {
               required
             />
 
-            {/* BUTTON */}
+            {/* CONFIRM PASSWORD */}
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm Password"
+              className="input"
+              required
+            />
+
             <button
               type="submit"
               className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-semibold hover:scale-[1.01] transition"
@@ -180,7 +138,6 @@ export default function Register() {
             </button>
           </form>
 
-          {/* LOGIN */}
           <button
             onClick={() => navigate("/login")}
             className="w-full mt-4 border py-3 rounded-2xl hover:bg-gray-50"
@@ -188,11 +145,9 @@ export default function Register() {
             Already have account? Login
           </button>
 
-          {/* FOOTER */}
           <p className="text-xs text-center mt-6 text-gray-400">
             © 2026 Mazzraty Enterprise System
           </p>
-
         </div>
       </div>
 
@@ -214,7 +169,6 @@ export default function Register() {
           }
         `}
       </style>
-
     </div>
   );
 }
