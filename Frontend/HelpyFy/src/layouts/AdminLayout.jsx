@@ -1,8 +1,11 @@
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { Outlet } from "react-router-dom";
+import { useState } from "react";
 
 export default function AdminLayout() {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
     <div className="min-h-screen bg-[#f5f6f7]">
 
@@ -15,12 +18,23 @@ export default function AdminLayout() {
       <div className="flex pt-16">
 
         {/* SIDEBAR */}
-        <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] z-40">
-          <Sidebar />
+        <aside
+          className={`fixed left-0 top-16 h-[calc(100vh-64px)] z-40 transition-all duration-300 ${
+            collapsed ? "w-[90px]" : "w-[280px]"
+          }`}
+        >
+          <Sidebar
+            collapsed={collapsed}
+            setCollapsed={setCollapsed}
+          />
         </aside>
 
         {/* PAGE CONTENT */}
-        <main className="flex-1 ml-[280px] p-6 overflow-auto min-h-[calc(100vh-64px)]">
+        <main
+          className={`flex-1 p-6 overflow-auto min-h-[calc(100vh-64px)] transition-all duration-300 ${
+            collapsed ? "ml-[90px]" : "ml-[280px]"
+          }`}
+        >
           <Outlet />
         </main>
 
