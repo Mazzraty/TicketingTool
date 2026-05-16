@@ -4,24 +4,27 @@ import { Outlet } from "react-router-dom";
 
 export default function AdminLayout() {
   return (
-    <div className="flex min-h-screen bg-[#f5faf5]">
+    <div className="min-h-screen bg-[#f5f6f7]">
 
-      {/* SIDEBAR */}
-      <Sidebar />
-
-      {/* RIGHT SIDE */}
-      <div className="flex-1 flex flex-col">
-
-        {/* TOP NAV */}
+      {/* NAVBAR */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
         <Navbar />
+      </header>
 
-        {/* CONTENT */}
-        <main className="flex-1 p-4 bg-[#f5faf5]">
+      {/* BODY */}
+      <div className="flex pt-16">
+
+        {/* SIDEBAR */}
+        <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] z-40">
+          <Sidebar />
+        </aside>
+
+        {/* PAGE CONTENT */}
+        <main className="flex-1 ml-[280px] p-6 overflow-auto min-h-[calc(100vh-64px)]">
           <Outlet />
         </main>
 
       </div>
-
     </div>
   );
 }
