@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -8,6 +9,10 @@ export default function Dashboard() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // JWT decode
+  const token = localStorage.getItem("token");
+  const user = token ? jwtDecode(token) : null;
 
   useEffect(() => {
     load();
@@ -38,9 +43,15 @@ export default function Dashboard() {
       <div className="bg-white border rounded-xl p-5 shadow-sm mb-6">
         <h1 className="text-xl font-bold text-gray-800">
           IT Service Dashboard
+          {user?.name && (
+            <span className="text-gray-500 font-normal ml-2">
+              - Welcome {user.name}
+            </span>
+          )}
         </h1>
+
         <p className="text-sm text-gray-500">
-         ITSM overview panel
+          ITSM overview panel
         </p>
       </div>
 
@@ -58,8 +69,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-
-          {/* KPI GRID (SAP STYLE) */}
+          {/* KPI GRID */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
             {/* OPEN */}
