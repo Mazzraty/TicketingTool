@@ -1,27 +1,6 @@
-// utils/emailUtility.js
+import sgMail from "@sendgrid/mail";
 
-import nodemailer from "nodemailer";
-
-// ===============================
-// 📧 CREATE GMAIL TRANSPORTER (FIXED FOR RENDER)
-// ===============================
-const createGmailTransporter = () => {
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // IMPORTANT (SSL)
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // Google App Password (NOT normal password)
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 15000,
-  });
-};
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // ===============================
 // 📨 EMAIL TEMPLATE
@@ -58,52 +37,30 @@ const buildEmailHtml = (ticketData = {}) => `
 `;
 
 // ===============================
-// 📧 SEND EMAIL FUNCTION
+// 📧 SEND EMAIL FUNCTION (SENDGRID)
 // ===============================
 export const sendEmail = async (to, subject, ticketData = {}) => {
   try {
-    console.log("📧 sendEmail triggered");
+    console.log("📧 SendGrid email triggered");
 
     const recipients = Array.isArray(to) ? to : [to];
-    console.log("Recipients:", recipients);
 
-    // ===============================
-    // ❌ ENV CHECK
-    // ===============================
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      throw new Error("Missing EMAIL_USER or EMAIL_PASS in environment variables");
-    }
-
-    // ===============================
-    // 📧 TRANSPORTER
-    // ===============================
-    const transporter = createGmailTransporter();
-
-    // (Optional but useful debug)
-    await transporter.verify();
-    console.log("✅ SMTP Server Ready");
-
-    // ===============================
-    // 📨 HTML BODY
-    // ===============================
-    const html = buildEmailHtml(ticketData);
-
-    // ===============================
-    // 📤 SEND EMAIL
-    // ===============================
-    const result = await transporter.sendMail({
-      from: `"IT Helpdesk System" <${process.env.EMAIL_USER}>`,
+    const msg = {
       to: recipients,
+      from: {
+        email: process.env.EMAIL_FROM, // your Gmail (verified in SendGrid)
+        name: "IT Helpdesk System",
+      },
       subject,
-      html,
-    });
+      html: buildEmailHtml(ticketData),
+    };
 
-    console.log("✅ Email sent successfully:", result.messageId);
+    const response = await sgMail.send(msg);
 
-    return result;
+    console.log("✅ Email sent via SendGrid");
+    return response;
   } catch (error) {
-    console.error("❌ EMAIL ERROR:", error.message);
-    console.error(error.stack);
+    console.error("❌ SendGrid Error:", error.message);
     throw error;
   }
 };
