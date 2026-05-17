@@ -77,14 +77,33 @@ export const createTicket = async (req, res) => {
     // ==========================
     // EMAIL (NON-BLOCKING SAFE)
     // ==========================
+    const getAdminRecipients = async () => {
+      const admins = await User.find({ role: "admin" }).select("email");
+      const emails = admins
+        .map((admin) => admin.email)
+        .filter(Boolean);
+
+      if (emails.length > 0) {
+        return emails;
+      }
+
+      if (process.env.ADMIN_EMAIL) {
+        return [process.env.ADMIN_EMAIL];
+      }
+
+      return [];
+    };
+
     const sendNotificationEmail = async () => {
       try {
-        if (!process.env.ADMIN_EMAIL) {
-          throw new Error("ADMIN_EMAIL missing in .env");
+        const recipients = await getAdminRecipients();
+
+        if (!recipients.length) {
+          throw new Error("No admin email recipients configured");
         }
 
         await sendEmail(
-          process.env.ADMIN_EMAIL,
+          recipients,
           "New Ticket Raised",
           {
             title,
@@ -96,7 +115,7 @@ export const createTicket = async (req, res) => {
           }
         );
 
-        console.log("📧 Email sent successfully");
+        console.log("📧 Email sent successfully to:", recipients.join(", "));
       } catch (err) {
         console.log("❌ EMAIL FAILED:", err.message);
       }
@@ -128,15 +147,20 @@ export const createTicket = async (req, res) => {
 // ==========================
 export const sendTestEmail = async (req, res) => {
   try {
-    if (!process.env.ADMIN_EMAIL) {
+    const admins = await User.find({ role: "admin" }).select("email");
+    const recipients = admins.map((admin) => admin.email).filter(Boolean);
+
+    if (!recipients.length && !process.env.ADMIN_EMAIL) {
       return res.status(500).json({
         success: false,
-        message: "ADMIN_EMAIL missing in environment",
+        message: "No admin recipient email configured",
       });
     }
 
+    const toSend = recipients.length ? recipients : [process.env.ADMIN_EMAIL];
+
     await sendEmail(
-      process.env.ADMIN_EMAIL,
+      toSend,
       "HelpyFy Test Email",
       {
         title: "Deployment email test",
@@ -150,7 +174,7 @@ export const sendTestEmail = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Test email sent successfully",
+      message: `Test email sent successfully to ${toSend.join(", ")}`,
     });
   } catch (error) {
     console.error("SEND TEST EMAIL ERROR:", error);
