@@ -88,7 +88,6 @@ app.listen(PORT, () => {
   console.log("EMAIL USER:", process.env.EMAIL_USER ? "SET" : "NOT SET");
   console.log("EMAIL PASS:", process.env.EMAIL_PASS ? "SET" : "NOT SET");
   console.log("ADMIN_EMAIL:", process.env.ADMIN_EMAIL ? "SET" : "NOT SET");
-  console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY ? "SET" : "NOT SET");
 });
 
 // ⚠️ Port error handling

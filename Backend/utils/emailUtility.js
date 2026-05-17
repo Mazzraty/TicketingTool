@@ -2,14 +2,20 @@
 
 import nodemailer from "nodemailer";
 
-const createGmailTransporter = () => {
+const createGmailTransporter = ({ port, secure }) => {
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    port,
+    secure,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+    tls: {
+      rejectUnauthorized: false,
     },
   });
 };
@@ -48,14 +54,19 @@ export const sendEmail = async (to, subject, ticketData = {}) => {
       throw new Error("Missing EMAIL_USER or EMAIL_PASS in .env");
     }
 
-    console.log("📨 Using Gmail SMTP provider");
-    const transporter = createGmailTransporter();
+    console.log("📨 Trying Gmail SMTP on port 465");
+    let transporter = createGmailTransporter({ port: 465, secure: true });
 
-    // ===============================
-    // 🔥 VERIFY SMTP BEFORE SENDING
-    // ===============================
-    await transporter.verify();
-    console.log("✅ SMTP verified successfully");
+    try {
+      await transporter.verify();
+      console.log("✅ SMTP verified successfully on port 465");
+    } catch (verifyError) {
+      console.error("⚠️ Gmail SMTP port 465 failed:", verifyError.message);
+      console.log("📨 Trying Gmail SMTP on port 587");
+      transporter = createGmailTransporter({ port: 587, secure: false });
+      await transporter.verify();
+      console.log("✅ SMTP verified successfully on port 587");
+    }
 
     // ===============================
     // 📤 SEND MAIL
