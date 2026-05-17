@@ -79,6 +79,7 @@ export const createTicket = async (req, res) => {
     // ==========================
     const getAdminRecipients = async () => {
       if (process.env.ADMIN_EMAIL) {
+        console.log("📌 Using ADMIN_EMAIL from environment:", process.env.ADMIN_EMAIL);
         return [process.env.ADMIN_EMAIL];
       }
 
@@ -87,6 +88,7 @@ export const createTicket = async (req, res) => {
         .map((admin) => admin.email)
         .filter(Boolean);
 
+      console.log("📌 ADMIN_EMAIL not set; using admin users from DB:", emails);
       return emails;
     };
 
