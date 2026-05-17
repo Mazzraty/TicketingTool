@@ -60,8 +60,13 @@ export const sendEmail = async (to, subject, ticketData = {}) => {
           html,
         });
 
-        console.log("✅ Resend email sent:", result.id || result);
-        return result;
+        if (result.error) {
+          console.error("⚠️ Resend validation error:", result.error.message);
+          console.error("Falling back to Gmail SMTP provider.");
+        } else {
+          console.log("✅ Resend email sent:", result.id || result);
+          return result;
+        }
       } catch (resendError) {
         console.error("⚠️ Resend provider failed:", resendError.message);
         if (resendError.response) {
