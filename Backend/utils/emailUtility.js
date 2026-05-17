@@ -3,15 +3,23 @@
 import nodemailer from "nodemailer";
 
 // ===============================
-// 📧 CREATE GMAIL TRANSPORTER
+// 📧 CREATE GMAIL TRANSPORTER (FIXED FOR RENDER)
 // ===============================
 const createGmailTransporter = () => {
   return nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // IMPORTANT (SSL)
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // Google App Password
+      pass: process.env.EMAIL_PASS, // Google App Password (NOT normal password)
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
   });
 };
 
@@ -26,43 +34,18 @@ const buildEmailHtml = (ticketData = {}) => `
         🚨 New Support Ticket
       </h2>
 
-      <p>
-        A new issue has been reported in your system.
-      </p>
+      <p>A new issue has been reported in your system.</p>
 
       <hr/>
 
       <h3>📌 Ticket Details</h3>
 
-      <p>
-        <b>User:</b>
-        ${ticketData.userEmail || "Unknown"}
-      </p>
-
-      <p>
-        <b>Title:</b>
-        ${ticketData.title || "-"}
-      </p>
-
-      <p>
-        <b>Description:</b>
-        ${ticketData.description || "-"}
-      </p>
-
-      <p>
-        <b>Department:</b>
-        ${ticketData.department || "-"}
-      </p>
-
-      <p>
-        <b>Priority:</b>
-        ${ticketData.priority || "Medium"}
-      </p>
-
-      <p>
-        <b>Status:</b>
-        ${ticketData.status || "Open"}
-      </p>
+      <p><b>User:</b> ${ticketData.userEmail || "Unknown"}</p>
+      <p><b>Title:</b> ${ticketData.title || "-"}</p>
+      <p><b>Description:</b> ${ticketData.description || "-"}</p>
+      <p><b>Department:</b> ${ticketData.department || "-"}</p>
+      <p><b>Priority:</b> ${ticketData.priority || "Medium"}</p>
+      <p><b>Status:</b> ${ticketData.status || "Open"}</p>
 
       <br/>
 
@@ -77,39 +60,31 @@ const buildEmailHtml = (ticketData = {}) => `
 // ===============================
 // 📧 SEND EMAIL FUNCTION
 // ===============================
-export const sendEmail = async (
-  to,
-  subject,
-  ticketData = {}
-) => {
+export const sendEmail = async (to, subject, ticketData = {}) => {
   try {
     console.log("📧 sendEmail triggered");
 
-    const recipients = Array.isArray(to)
-      ? to
-      : [to];
-
+    const recipients = Array.isArray(to) ? to : [to];
     console.log("Recipients:", recipients);
 
     // ===============================
-    // ✅ CHECK ENV VARIABLES
+    // ❌ ENV CHECK
     // ===============================
-    if (
-      !process.env.EMAIL_USER ||
-      !process.env.EMAIL_PASS
-    ) {
-      throw new Error(
-        "Missing EMAIL_USER or EMAIL_PASS in environment variables"
-      );
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      throw new Error("Missing EMAIL_USER or EMAIL_PASS in environment variables");
     }
 
     // ===============================
-    // 📧 CREATE TRANSPORTER
+    // 📧 TRANSPORTER
     // ===============================
     const transporter = createGmailTransporter();
 
+    // (Optional but useful debug)
+    await transporter.verify();
+    console.log("✅ SMTP Server Ready");
+
     // ===============================
-    // 📨 BUILD HTML
+    // 📨 HTML BODY
     // ===============================
     const html = buildEmailHtml(ticketData);
 
@@ -123,16 +98,12 @@ export const sendEmail = async (
       html,
     });
 
-    console.log(
-      "✅ Email sent successfully:",
-      result.messageId
-    );
+    console.log("✅ Email sent successfully:", result.messageId);
 
     return result;
   } catch (error) {
     console.error("❌ EMAIL ERROR:", error.message);
     console.error(error.stack);
-
     throw error;
   }
 };
