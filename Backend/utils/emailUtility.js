@@ -50,17 +50,25 @@ export const sendEmail = async (to, subject, ticketData = {}) => {
     const html = buildEmailHtml(ticketData);
 
     if (process.env.RESEND_API_KEY) {
-      console.log("📨 Using Resend provider");
-      const resend = createResendClient();
-      const result = await resend.emails.send({
-        from: process.env.EMAIL_USER || "no-reply@helpyfy.app",
-        to: recipients,
-        subject,
-        html,
-      });
+      try {
+        console.log("📨 Trying Resend provider");
+        const resend = createResendClient();
+        const result = await resend.emails.send({
+          from: process.env.EMAIL_USER || "no-reply@helpyfy.app",
+          to: recipients,
+          subject,
+          html,
+        });
 
-      console.log("✅ Resend email sent:", result.id || result);
-      return result;
+        console.log("✅ Resend email sent:", result.id || result);
+        return result;
+      } catch (resendError) {
+        console.error("⚠️ Resend provider failed:", resendError.message);
+        if (resendError.response) {
+          console.error("Resend response:", resendError.response);
+        }
+        console.error("Falling back to Gmail SMTP provider.");
+      }
     }
 
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {

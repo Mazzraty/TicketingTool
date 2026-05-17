@@ -78,20 +78,16 @@ export const createTicket = async (req, res) => {
     // EMAIL (NON-BLOCKING SAFE)
     // ==========================
     const getAdminRecipients = async () => {
+      if (process.env.ADMIN_EMAIL) {
+        return [process.env.ADMIN_EMAIL];
+      }
+
       const admins = await User.find({ role: "admin" }).select("email");
       const emails = admins
         .map((admin) => admin.email)
         .filter(Boolean);
 
-      if (emails.length > 0) {
-        return emails;
-      }
-
-      if (process.env.ADMIN_EMAIL) {
-        return [process.env.ADMIN_EMAIL];
-      }
-
-      return [];
+      return emails;
     };
 
     const sendNotificationEmail = async () => {
@@ -147,17 +143,16 @@ export const createTicket = async (req, res) => {
 // ==========================
 export const sendTestEmail = async (req, res) => {
   try {
-    const admins = await User.find({ role: "admin" }).select("email");
-    const recipients = admins.map((admin) => admin.email).filter(Boolean);
+    const toSend = process.env.ADMIN_EMAIL
+      ? [process.env.ADMIN_EMAIL]
+      : (await User.find({ role: "admin" }).select("email")).map((admin) => admin.email).filter(Boolean);
 
-    if (!recipients.length && !process.env.ADMIN_EMAIL) {
+    if (!toSend.length) {
       return res.status(500).json({
         success: false,
         message: "No admin recipient email configured",
       });
     }
-
-    const toSend = recipients.length ? recipients : [process.env.ADMIN_EMAIL];
 
     await sendEmail(
       toSend,
