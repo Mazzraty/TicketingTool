@@ -84,7 +84,7 @@ export default function Login() {
 
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6">
 
-        {/* LEFT SIDE (YOUR ORIGINAL DESIGN) */}
+        {/* LEFT SIDE */}
         <div className="relative rounded-[32px] overflow-hidden shadow-2xl hidden lg:block">
 
           <img
@@ -111,9 +111,7 @@ export default function Login() {
               </p>
 
               <h1 className="text-5xl font-bold leading-tight">
-                Smart IT Helpdesk
-                <br />
-                System
+                Smart IT Helpdesk System
               </h1>
 
               <p className="text-white/80 text-lg">
@@ -129,7 +127,7 @@ export default function Login() {
           </div>
         </div>
 
-        {/* RIGHT SIDE (LOGIN BOX SAME AS YOUR OLD UI STYLE) */}
+        {/* RIGHT SIDE */}
         <div className="flex items-center justify-center">
 
           <div className="w-full max-w-md bg-white rounded-[28px] shadow-2xl border border-green-100 p-8">
@@ -165,6 +163,7 @@ export default function Login() {
                 />
               </div>
 
+              {/* FORGOT PASSWORD */}
               <div className="text-right -mt-3">
                 <span
                   onClick={() => setShowModal(true)}
@@ -182,31 +181,44 @@ export default function Login() {
               </button>
 
             </form>
+
+            {/* SIGNUP LINK */}
+            <div className="mt-4 text-center">
+              <span
+                onClick={() => navigate("/register")}
+                className="text-xs text-green-600 cursor-pointer hover:underline"
+              >
+                Create new account
+              </span>
+            </div>
+
           </div>
         </div>
 
       </div>
 
-      {/* ================= MODAL ================= */}
+      {/* ================= TOAST STYLE FORGOT PASSWORD ================= */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div className="fixed top-6 right-6 z-50 w-80">
 
-          <div className="bg-white w-96 p-6 rounded-xl">
+          <div className="bg-white shadow-2xl border border-gray-200 rounded-2xl p-4">
 
             {step === 1 && (
               <>
-                <h2 className="font-bold mb-3">Enter Email</h2>
+                <h2 className="font-semibold text-sm mb-2">
+                  Forgot Password
+                </h2>
 
                 <input
-                  className="w-full border p-2 mb-3"
+                  className="w-full border p-2 text-sm rounded-lg mb-3"
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
-                  placeholder="Email"
+                  placeholder="Enter email"
                 />
 
                 <button
                   onClick={sendOtp}
-                  className="w-full bg-blue-600 text-white p-2"
+                  className="w-full bg-blue-600 text-white text-sm p-2 rounded-lg"
                 >
                   Send OTP
                 </button>
@@ -215,10 +227,12 @@ export default function Login() {
 
             {step === 2 && (
               <>
-                <h2 className="font-bold mb-3">Reset Password</h2>
+                <h2 className="font-semibold text-sm mb-2">
+                  Reset Password
+                </h2>
 
                 <input
-                  className="w-full border p-2 mb-2"
+                  className="w-full border p-2 text-sm rounded-lg mb-2"
                   placeholder="OTP"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
@@ -226,7 +240,7 @@ export default function Login() {
 
                 <input
                   type="password"
-                  className="w-full border p-2 mb-3"
+                  className="w-full border p-2 text-sm rounded-lg mb-3"
                   placeholder="New Password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -234,7 +248,7 @@ export default function Login() {
 
                 <button
                   onClick={resetPassword}
-                  className="w-full bg-green-600 text-white p-2"
+                  className="w-full bg-green-600 text-white text-sm p-2 rounded-lg"
                 >
                   Reset Password
                 </button>
@@ -242,7 +256,7 @@ export default function Login() {
             )}
 
             <button
-              className="mt-3 text-sm text-gray-500"
+              className="mt-2 text-xs text-gray-400 w-full text-center"
               onClick={() => {
                 setShowModal(false);
                 setStep(1);
