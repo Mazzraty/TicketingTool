@@ -2,7 +2,7 @@ import User from "../models/userShema.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js";
-import { otpEmail } from "../utils/otpEmail.js";
+import  {otpEmail} from "../utils/otpEmail.js";
 
 /* =========================
    REGISTER

@@ -1,8 +1,8 @@
 import Ticket from "../models/ticketSchema.js";
 import User from "../models/userShema.js";
-import { sendEmail } from "../utils/sendEmail.js";
-import { ticketAdminEmail } from "../utils/ticketAdminEmail.js";
-import { ticketUserEmail } from "../utils/ticketUserEmail.js";
+import sendEmail  from "../utils/sendEmail.js";
+import  {ticketAdminEmail}  from "../utils/ticketAdminEmail.js";
+import  {ticketUserEmail}  from "../utils/ticketUserEmail.js";
 
 
 
