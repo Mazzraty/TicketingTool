@@ -1,12 +1,14 @@
 import Ticket from "../models/ticketSchema.js";
 import User from "../models/userShema.js";
-import { sendEmail } from "../utils/emailUtility.js";
+import { sendEmail } from "../utils/sendEmail.js";
+import { ticketAdminEmail } from "../utils/ticketAdminEmail.js";
+import { ticketUserEmail } from "../utils/ticketUserEmail.js";
+
+
 
 
 // ==========================
-
-// ==========================
-// ✅ CREATE TICKET (PRO FIXED)
+// ✅ CREATE TICKET
 // ==========================
 export const createTicket = async (req, res) => {
   try {
@@ -48,12 +50,10 @@ export const createTicket = async (req, res) => {
     });
 
     // GET USER
-    const user = await User.findById(req.user.id).select(
-      "email name"
-    );
+    const user = await User.findById(req.user.id).select("email name");
 
     // ==========================
-    // SOCKET NOTIFICATION (FAST)
+    // SOCKET NOTIFICATION
     // ==========================
     if (global.io) {
       try {
@@ -75,55 +75,61 @@ export const createTicket = async (req, res) => {
     }
 
     // ==========================
-    // EMAIL (NON-BLOCKING SAFE)
+    // EMAIL SYSTEM (ADMIN + USER)
     // ==========================
-    const getAdminRecipients = async () => {
-      if (process.env.ADMIN_EMAIL) {
-        console.log("📌 Using ADMIN_EMAIL from environment:", process.env.ADMIN_EMAIL);
-        return [process.env.ADMIN_EMAIL];
-      }
-
-      const admins = await User.find({ role: "admin" }).select("email");
-      const emails = admins
-        .map((admin) => admin.email)
-        .filter(Boolean);
-
-      console.log("📌 ADMIN_EMAIL not set; using admin users from DB:", emails);
-      return emails;
-    };
-
     const sendNotificationEmail = async () => {
       try {
-        const recipients = await getAdminRecipients();
+        const admins = await User.find({ role: "admin" }).select("email");
 
-        if (!recipients.length) {
-          throw new Error("No admin email recipients configured");
+        const adminEmails = admins
+          .map((a) => a.email)
+          .filter(Boolean);
+
+        // ==========================
+        // 📩 ADMIN EMAIL
+        // ==========================
+        if (adminEmails.length) {
+          await sendEmail({
+            to: adminEmails,
+            subject: "🚨 New Support Ticket",
+            html: ticketAdminEmail({
+              userEmail: user.email,
+              title,
+              description,
+              department,
+              priority,
+              status: "Open",
+            }),
+          });
         }
 
-        await sendEmail(
-          recipients,
-          "New Ticket Raised",
-          {
+        // ==========================
+        // 📩 USER EMAIL
+        // ==========================
+        await sendEmail({
+          to: user.email,
+          subject: "✅ Ticket Created Successfully",
+          html: ticketUserEmail({
+            userEmail: user.email,
             title,
             description,
             department,
             priority,
             status: "Open",
-            userEmail: user?.email,
-          }
-        );
+          }),
+        });
 
-        console.log("📧 Email sent successfully to:", recipients.join(", "));
+        console.log("📧 Emails sent successfully");
       } catch (err) {
         console.log("❌ EMAIL FAILED:", err.message);
       }
     };
 
-    // FIRE & FORGET EMAIL
+    // FIRE AND FORGET (DO NOT BLOCK API)
     sendNotificationEmail();
 
     // ==========================
-    // RESPONSE (IMMEDIATE)
+    // RESPONSE
     // ==========================
     return res.status(201).json({
       success: true,
@@ -139,7 +145,6 @@ export const createTicket = async (req, res) => {
     });
   }
 };
-
 // ==========================
 // ✅ SEND TEST EMAIL
 // ==========================
