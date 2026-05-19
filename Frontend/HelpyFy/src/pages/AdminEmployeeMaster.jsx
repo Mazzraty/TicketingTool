@@ -244,8 +244,8 @@ export default function AdminEmployeeMaster() {
 
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-2 text-left">Staff</th>
-              <th className="p-2 text-left">Name</th>
+              <th className="p-2 text-left">Staff Code</th>
+              <th className="p-2 text-left">Employee Name</th>
               <th className="p-2 text-left">Dept</th>
               <th className="p-2 text-left">Designation</th>
               <th className="p-2 text-left">Visa</th>
