@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+import Select from "react-select";
 
 export default function AdminAssets() {
   const [assetCode, setAssetCode] = useState("");
@@ -29,8 +30,16 @@ export default function AdminAssets() {
     const fetchEmployees = async () => {
       try {
         const res = await api.get("/employees");
-        setEmployees(res.data);
+
+        console.log("Employees Loaded:", res.data.length);
+
+        setEmployees(
+          Array.isArray(res.data)
+            ? res.data
+            : res.data.employees || []
+        );
       } catch (err) {
+        console.error(err);
         toast.error("Failed to load employees");
       }
     };
@@ -82,7 +91,11 @@ export default function AdminAssets() {
       toast.success("Asset Added");
       resetForm();
     } catch (err) {
-      toast.error(err.response?.data?.msg || "Error adding asset");
+      console.error(err);
+
+      toast.error(
+        err.response?.data?.msg || "Error adding asset"
+      );
     }
   };
 
@@ -90,7 +103,9 @@ export default function AdminAssets() {
   const assign = async () => {
     try {
       if (!selectedEmployee || !assetCode) {
-        return toast.error("Select employee & asset code");
+        return toast.error(
+          "Select employee & asset code"
+        );
       }
 
       await api.post("/assets/assign", {
@@ -99,33 +114,49 @@ export default function AdminAssets() {
       });
 
       toast.success("Asset Assigned");
+
       setAssetCode("");
       setSelectedEmployee("");
     } catch (err) {
-      toast.error(err.response?.data?.msg || "Assignment Failed");
+      console.error(err);
+
+      toast.error(
+        err.response?.data?.msg ||
+          "Assignment Failed"
+      );
     }
   };
 
   /* ================= RETURN ================= */
   const returnAsset = async () => {
     try {
-      if (!assetCode) return toast.error("Enter asset code");
+      if (!assetCode) {
+        return toast.error("Enter asset code");
+      }
 
       await api.post("/assets/return", {
         assetCode,
       });
 
       toast.success("Asset Returned");
+
       setAssetCode("");
     } catch (err) {
-      toast.error(err.response?.data?.msg || "Return Failed");
+      console.error(err);
+
+      toast.error(
+        err.response?.data?.msg || "Return Failed"
+      );
     }
   };
 
   return (
     <div className="p-6 bg-[#f4f6f9] min-h-screen">
 
-      <h1 className="text-2xl font-bold mb-1">Asset Management</h1>
+      <h1 className="text-2xl font-bold mb-1">
+        Asset Management
+      </h1>
+
       <p className="text-sm text-gray-500 mb-6">
         Laptop / Printer / HHT Management System
       </p>
@@ -133,10 +164,13 @@ export default function AdminAssets() {
       {/* ================= ADD ASSET ================= */}
       <div className="bg-white border rounded-xl mb-4">
         <button
-          onClick={() => setOpen(open === "add" ? null : "add")}
+          onClick={() =>
+            setOpen(open === "add" ? null : "add")
+          }
           className="w-full flex justify-between px-5 py-4 font-semibold"
         >
-          Add Asset <span>{open === "add" ? "−" : "+"}</span>
+          Add Asset
+          <span>{open === "add" ? "−" : "+"}</span>
         </button>
 
         {open === "add" && (
@@ -146,13 +180,17 @@ export default function AdminAssets() {
               className="border p-2 rounded"
               placeholder="Asset Code"
               value={assetCode}
-              onChange={(e) => setAssetCode(e.target.value)}
+              onChange={(e) =>
+                setAssetCode(e.target.value)
+              }
             />
 
             <select
               className="border p-2 rounded"
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) =>
+                setType(e.target.value)
+              }
             >
               <option value="">Select Type</option>
               <option value="Laptop">Laptop</option>
@@ -164,44 +202,91 @@ export default function AdminAssets() {
               className="border p-2 rounded"
               placeholder="Model"
               value={model}
-              onChange={(e) => setModel(e.target.value)}
+              onChange={(e) =>
+                setModel(e.target.value)
+              }
             />
 
             <input
               className="border p-2 rounded"
               placeholder="Serial Number"
               value={serialNumber}
-              onChange={(e) => setSerialNumber(e.target.value)}
+              onChange={(e) =>
+                setSerialNumber(e.target.value)
+              }
             />
 
-            {(type === "Printer" || type === "HHT") && (
+            {(type === "Printer" ||
+              type === "HHT") && (
               <>
-                <input className="border p-2 rounded" placeholder="Route"
-                  value={route} onChange={(e) => setRoute(e.target.value)} />
+                <input
+                  className="border p-2 rounded"
+                  placeholder="Route"
+                  value={route}
+                  onChange={(e) =>
+                    setRoute(e.target.value)
+                  }
+                />
 
-                <input className="border p-2 rounded" placeholder="Salesman Code"
-                  value={salesmanCode} onChange={(e) => setSalesmanCode(e.target.value)} />
+                <input
+                  className="border p-2 rounded"
+                  placeholder="Salesman Code"
+                  value={salesmanCode}
+                  onChange={(e) =>
+                    setSalesmanCode(e.target.value)
+                  }
+                />
 
-                <input className="border p-2 rounded" placeholder="Salesman Name"
-                  value={salesmanName} onChange={(e) => setSalesmanName(e.target.value)} />
+                <input
+                  className="border p-2 rounded"
+                  placeholder="Salesman Name"
+                  value={salesmanName}
+                  onChange={(e) =>
+                    setSalesmanName(e.target.value)
+                  }
+                />
 
-                <input className="border p-2 rounded" placeholder="Supervisor"
-                  value={supervisor} onChange={(e) => setSupervisor(e.target.value)} />
+                <input
+                  className="border p-2 rounded"
+                  placeholder="Supervisor"
+                  value={supervisor}
+                  onChange={(e) =>
+                    setSupervisor(e.target.value)
+                  }
+                />
               </>
             )}
 
             {type === "Printer" && (
-              <input className="border p-2 rounded" placeholder="SOTI"
-                value={soti} onChange={(e) => setSoti(e.target.value)} />
+              <input
+                className="border p-2 rounded"
+                placeholder="SOTI"
+                value={soti}
+                onChange={(e) =>
+                  setSoti(e.target.value)
+                }
+              />
             )}
 
             {type === "HHT" && (
               <>
-                <input className="border p-2 rounded" placeholder="IMEI"
-                  value={imei} onChange={(e) => setImei(e.target.value)} />
+                <input
+                  className="border p-2 rounded"
+                  placeholder="IMEI"
+                  value={imei}
+                  onChange={(e) =>
+                    setImei(e.target.value)
+                  }
+                />
 
-                <input className="border p-2 rounded" placeholder="SIM Number"
-                  value={simNumber} onChange={(e) => setSimNumber(e.target.value)} />
+                <input
+                  className="border p-2 rounded"
+                  placeholder="SIM Number"
+                  value={simNumber}
+                  onChange={(e) =>
+                    setSimNumber(e.target.value)
+                  }
+                />
               </>
             )}
 
@@ -209,7 +294,9 @@ export default function AdminAssets() {
               className="border p-2 rounded md:col-span-3"
               placeholder="Notes"
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) =>
+                setNotes(e.target.value)
+              }
             />
 
             <button
@@ -225,38 +312,59 @@ export default function AdminAssets() {
       {/* ================= ASSIGN ================= */}
       <div className="bg-white border rounded-xl mb-4">
         <button
-          onClick={() => setOpen(open === "assign" ? null : "assign")}
+          onClick={() =>
+            setOpen(open === "assign" ? null : "assign")
+          }
           className="w-full flex justify-between px-5 py-4 font-semibold"
         >
-          Assign Asset <span>{open === "assign" ? "−" : "+"}</span>
+          Assign Asset
+          <span>{open === "assign" ? "−" : "+"}</span>
         </button>
 
         {open === "assign" && (
           <div className="p-5 grid md:grid-cols-3 gap-3 bg-gray-50">
 
-            <select
-              className="border p-2 rounded"
-              value={selectedEmployee}
-              onChange={(e) => setSelectedEmployee(e.target.value)}
-            >
-              <option value="">Select Employee</option>
-              {employees.map((e) => (
-                <option key={e._id} value={e.staffCode}>
-                  {e.name} ({e.staffCode})
-                </option>
-              ))}
-            </select>
+            {/* 🔥 SEARCHABLE EMPLOYEE DROPDOWN */}
+            <div className="md:col-span-2">
+              <Select
+                options={employees.map((e) => ({
+                  value: e.staffCode,
+                  label: `${e.name} (${e.staffCode})`,
+                }))}
+
+                value={
+                  selectedEmployee
+                    ? {
+                        value: selectedEmployee,
+                        label: selectedEmployee,
+                      }
+                    : null
+                }
+
+                onChange={(selected) =>
+                  setSelectedEmployee(
+                    selected?.value || ""
+                  )
+                }
+
+                placeholder="Search Employee..."
+                className="text-sm"
+                isSearchable
+              />
+            </div>
 
             <input
               className="border p-2 rounded"
               placeholder="Asset Code"
               value={assetCode}
-              onChange={(e) => setAssetCode(e.target.value)}
+              onChange={(e) =>
+                setAssetCode(e.target.value)
+              }
             />
 
             <button
               onClick={assign}
-              className="bg-green-600 text-white rounded p-2"
+              className="bg-green-600 text-white rounded p-2 md:col-span-3"
             >
               Assign
             </button>
@@ -267,10 +375,15 @@ export default function AdminAssets() {
       {/* ================= RETURN ================= */}
       <div className="bg-white border rounded-xl">
         <button
-          onClick={() => setOpen(open === "return" ? null : "return")}
+          onClick={() =>
+            setOpen(open === "return"
+              ? null
+              : "return")
+          }
           className="w-full flex justify-between px-5 py-4 font-semibold"
         >
-          Return Asset <span>{open === "return" ? "−" : "+"}</span>
+          Return Asset
+          <span>{open === "return" ? "−" : "+"}</span>
         </button>
 
         {open === "return" && (
@@ -280,7 +393,9 @@ export default function AdminAssets() {
               className="flex-1 border p-2 rounded"
               placeholder="Asset Code"
               value={assetCode}
-              onChange={(e) => setAssetCode(e.target.value)}
+              onChange={(e) =>
+                setAssetCode(e.target.value)
+              }
             />
 
             <button
