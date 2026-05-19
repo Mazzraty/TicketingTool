@@ -88,9 +88,9 @@ export default function Login() {
         <div className="relative rounded-[32px] overflow-hidden shadow-2xl hidden lg:block">
 
           <img
-            src={milkImage}
-            alt="Milk Farm"
-            className="absolute inset-0 w-full h-full object-cover scale-105"
+            src="https://logos-world.net/wp-content/uploads/2024/01/Mazzraty-Symbol.png"
+            alt="Mazzraty"
+            className="absolute inset-0 w-full h-full object-contain p-20 opacity-20"
           />
 
           <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/30 to-green-900/70"></div>
