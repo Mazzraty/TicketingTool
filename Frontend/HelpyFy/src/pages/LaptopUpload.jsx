@@ -43,18 +43,14 @@ export default function LaptopUpload() {
       setLoading(true);
 
       const valid = rows.filter(
-        (r) =>
-          r.assetCode && r.serialNumber
+        (r) => r.assetCode && r.serialNumber
       );
 
-      const res = await api.post(
-        "/assets/bulk-upload",
-        { assets: valid }
-      );
+      const res = await api.post("/assets/bulk-upload", {
+        assets: valid,
+      });
 
-      toast.success(
-        `Inserted: ${res.data.inserted}`
-      );
+      toast.success(`Inserted: ${res.data.inserted}`);
 
       setRows([]);
     } catch (err) {
@@ -66,43 +62,13 @@ export default function LaptopUpload() {
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-bold">
-        Laptop Upload
-      </h2>
+      <h2 className="text-xl font-bold">Laptop Upload</h2>
 
       <input type="file" onChange={handleFile} />
 
-      {rows.length > 0 && (
-        <>
-          <table className="w-full mt-4 border">
-            <thead>
-              <tr>
-                <th>Asset Code</th>
-                <th>Model</th>
-                <th>Serial</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={i}>
-                  <td>{r.assetCode}</td>
-                  <td>{r.model}</td>
-                  <td>{r.serialNumber}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <button
-            onClick={upload}
-            disabled={loading}
-            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            Upload Laptops
-          </button>
-        </>
-      )}
+      <button onClick={upload} disabled={loading}>
+        {loading ? "Uploading..." : "Upload"}
+      </button>
     </div>
   );
 }
