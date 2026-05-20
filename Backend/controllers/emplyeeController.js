@@ -100,9 +100,9 @@ export const createEmployee = async (req, res) => {
 /* =========================
    BULK UPLOAD EMPLOYEES
 ========================= */
+
 export const bulkUploadEmployees = async (req, res) => {
   try {
-
     const employees = req.body.employees || [];
     const assets = req.body.assets || [];
 
@@ -113,181 +113,117 @@ export const bulkUploadEmployees = async (req, res) => {
     let skipped = 0;
     let failedRows = [];
 
-    /* =========================================
-       EMPLOYEE UPLOAD
-    ========================================= */
-    if (employees.length > 0) {
+    /* =========================
+       EMPLOYEES
+    ========================= */
+    for (const e of employees) {
+      try {
+        const staffCode = clean(
+          e.staffCode || e.employeeId || e["Staff Code"]
+        );
 
-      for (const e of employees) {
-        try {
+        const name = clean(
+          e.name || e.employeeName || e["Full Name"]
+        );
 
-          const staffCode = clean(
-            e.staffCode ||
-            e.employeeId ||
-            e["Staff Code"]
-          );
-
-          const name = clean(
-            e.name ||
-            e.employeeName ||
-            e["Full Name"]
-          );
-
-          if (!staffCode || !name) {
-            skipped++;
-            continue;
-          }
-
-          const exists =
-            await EmployeeMaster.findOne({
-              staffCode,
-            });
-
-          if (exists) {
-            skipped++;
-            continue;
-          }
-
-          await EmployeeMaster.create({
-            staffCode,
-            name,
-
-            department:
-              e.department || "",
-
-            designation:
-              e.designation || "",
-
-            division:
-              e.division || "",
-
-            placeOfWork:
-              e.placeOfWork || "",
-
-            visaNo:
-              e.visaNo || "",
-
-            dateOfJoining:
-              e.dateOfJoining
-                ? new Date(e.dateOfJoining)
-                : null,
-
-            status: "active",
-          });
-
-          inserted++;
-
-        } catch (err) {
-
+        if (!staffCode || !name) {
           skipped++;
-
-          failedRows.push({
-            row: e,
-            reason: err.message,
-          });
+          continue;
         }
+
+        const exists = await EmployeeMaster.findOne({ staffCode });
+
+        if (exists) {
+          skipped++;
+          continue;
+        }
+
+        await EmployeeMaster.create({
+          staffCode,
+          name,
+          department: e.department || "",
+          designation: e.designation || "",
+          division: e.division || "",
+          placeOfWork: e.placeOfWork || "",
+          visaNo: e.visaNo || "",
+          dateOfJoining: e.dateOfJoining
+            ? new Date(e.dateOfJoining)
+            : null,
+          status: "active",
+        });
+
+        inserted++;
+      } catch (err) {
+        skipped++;
+        failedRows.push({ row: e, reason: err.message });
       }
     }
 
-    /* =========================================
-       ASSET UPLOAD (PRINTER / HHT)
-    ========================================= */
-    if (assets.length > 0) {
+    /* =========================
+       ASSETS (LAPTOP / PRINTER / HHT / PC)
+    ========================= */
 
-      for (const a of assets) {
-        try {
+    const allowedTypes = ["Laptop", "Printer", "HHT", "PC"];
 
-          const assetCode = clean(
-            a.assetCode
-          );
+    for (const a of assets) {
+      try {
+        const assetCode = clean(a.assetCode);
 
-          if (!assetCode) {
-            skipped++;
-            continue;
-          }
-
-          const exists =
-            await Asset.findOne({
-              assetCode,
-            });
-
-          if (exists) {
-            skipped++;
-            continue;
-          }
-
-          await Asset.create({
-
-            assetCode,
-
-            type:
-              a.type || "Laptop",
-
-            model:
-              a.model || "",
-
-            serialNumber:
-              a.serialNumber || "",
-
-            status: "available",
-
-            // PRINTER / HHT
-            route:
-              a.route || "",
-
-            salesmanCode:
-              a.salesmanCode || "",
-
-            salesmanName:
-              a.salesmanName || "",
-
-            supervisor:
-              a.supervisor || "",
-
-            soti:
-              a.soti || "",
-
-            imei:
-              a.imei || "",
-
-            simNumber:
-              a.simNumber || "",
-
-            notes:
-              a.notes || "",
-          });
-
-          inserted++;
-
-        } catch (err) {
-
+        if (!assetCode) {
           skipped++;
-
-          failedRows.push({
-            row: a,
-            reason: err.message,
-          });
+          continue;
         }
+
+        const exists = await Asset.findOne({ assetCode });
+
+        if (exists) {
+          skipped++;
+          continue;
+        }
+
+        if (!allowedTypes.includes(a.type)) {
+          skipped++;
+          continue;
+        }
+
+        await Asset.create({
+          assetCode,
+          type: a.type,
+
+          model: a.model || "",
+          serialNumber: a.serialNumber || "",
+
+          status: "available",
+
+          route: a.route || "",
+          salesmanCode: a.salesmanCode || "",
+          salesmanName: a.salesmanName || "",
+          supervisor: a.supervisor || "",
+
+          imei: a.imei || "",
+          simNumber: a.simNumber || "",
+
+          soti: a.soti || "",
+          notes: a.notes || "",
+        });
+
+        inserted++;
+      } catch (err) {
+        skipped++;
+        failedRows.push({ row: a, reason: err.message });
       }
     }
 
-    res.json({
+    return res.json({
       success: true,
       inserted,
       skipped,
-
-      total:
-        employees.length +
-        assets.length,
-
+      total: employees.length + assets.length,
       failedRows,
     });
-
   } catch (err) {
-
     console.error(err);
-
-    res.status(500).json({
+    return res.status(500).json({
       message: err.message,
     });
   }

@@ -14,9 +14,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const NavItem = ({ to, icon, label }) => (
     <Link
       to={to}
-      className={`flex items-center ${
-        collapsed ? "justify-center" : "gap-3"
-      } px-4 py-3 rounded-xl transition-all duration-200 ${isActive(to)}`}
+      className={`flex items-center ${collapsed ? "justify-center" : "gap-3"
+        } px-4 py-3 rounded-xl transition-all duration-200 ${isActive(to)}`}
     >
       <span className="text-lg">{icon}</span>
 
@@ -30,9 +29,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   return (
     <aside
-      className={`h-[calc(100vh-64px)] bg-white border-r border-gray-200 shadow-sm flex flex-col transition-all duration-300 ${
-        collapsed ? "w-[90px]" : "w-[280px]"
-      }`}
+      className={`h-[calc(100vh-64px)] bg-white border-r border-gray-200 shadow-sm flex flex-col transition-all duration-300 ${collapsed ? "w-[90px]" : "w-[280px]"
+        }`}
     >
       {/* TOP */}
       <div className="h-16 border-b border-gray-200 flex items-center justify-between px-4">
@@ -119,6 +117,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 icon="📈"
                 label="Asset History"
               />
+              <NavItem
+                to="/admin/assets/upload-laptop"
+                icon="💻"
+                label="Laptop Upload"
+              />
             </div>
           </div>
         )}
@@ -128,9 +131,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       <div className="border-t border-gray-200 bg-gray-50 px-3 py-4">
 
         <div
-          className={`flex items-center ${
-            collapsed ? "justify-center" : "gap-3"
-          }`}
+          className={`flex items-center ${collapsed ? "justify-center" : "gap-3"
+            }`}
         >
 
           <div className="w-10 h-10 rounded-full bg-[#0a6ed1] text-white flex items-center justify-center font-bold shadow-sm">

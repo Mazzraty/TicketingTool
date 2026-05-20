@@ -17,7 +17,7 @@ import AssetHistoryPage from "../pages/AssetHistory.jsx";
 import AssetExcelUpload from "../pages/AssetUpload.jsx";
 import AdminSoftwareDashboard from "../pages/AdminSoftwareDashboard.jsx";
 import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";
-
+import LaptopUpload from "../pages/LaptopUpload.jsx";
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
@@ -95,12 +95,16 @@ export default function AppRoutes() {
             path="/admin/software-dashboard"
             element={<AdminSoftwareDashboard />}
           />
-              <Route
-             path="/admin/assets/fiori"
-          element={<AssetStoreFiori />}
-           />
+          <Route
+            path="/admin/assets/fiori"
+            element={<AssetStoreFiori />}
+          />
+          <Route
+            path="/admin/assets/upload-laptop"
+            element={<LaptopUpload />}
+          />
         </Route>
-          
+
       </Route>
 
       {/* ================= FALLBACK ================= */}
