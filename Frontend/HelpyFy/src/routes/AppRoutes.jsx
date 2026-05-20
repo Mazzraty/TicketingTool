@@ -16,12 +16,12 @@ import AdminAssets from "../pages/AdminAsset.jsx";
 import AssetHistoryPage from "../pages/AssetHistory.jsx";
 import AssetExcelUpload from "../pages/AssetUpload.jsx";
 import AdminSoftwareDashboard from "../pages/AdminSoftwareDashboard.jsx";
-import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";
-import LaptopUpload from "../pages/LaptopUpload.jsx";
+import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";"
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
 import AdminLayout from "../layouts/AdminLayout.jsx";
+import LaptopUpload from "../pages/LaptopUpload.jsx";
 
 
 export default function AppRoutes() {
