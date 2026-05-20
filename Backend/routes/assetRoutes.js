@@ -12,7 +12,7 @@ import {
 } from "../controllers/assetController.js";
 
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
-
+import { bulkUploadEmployees } from "../controllers/emplyeeController.js";
 const router = express.Router();
 
 /* =========================
@@ -42,5 +42,5 @@ router.get("/employee/:id", protect, getEmployeeHistory);
    💻 ASSET HISTORY
 ========================= */
 router.get("/asset/:code", protect, getAssetHistory);
-
+router.post("/bulk-upload", protect, adminOnly, bulkUploadEmployees);
 export default router;
