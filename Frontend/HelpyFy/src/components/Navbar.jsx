@@ -40,7 +40,7 @@ export default function Navbar() {
       return [
         { label: "Dashboard", path: "/" },
         { label: "Admin Tickets", path: "/admin" },
-        { label: "Assets", path: "/admin/assets" },
+        { label: "Assets Assign", path: "/admin/assets" },
         { label: "Upload Excel", path: "/admin/assets/upload-excel" },
         { label: "Asset History", path: "/admin/assets/history" },
         { label: "Asset Dashboard", path: "/admin/assets/fiori" },
