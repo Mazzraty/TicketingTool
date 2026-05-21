@@ -30,15 +30,11 @@ export default function AdminTickets() {
     try {
       setLoading(true);
 
-      const res = await api.get(
-        `/tickets?page=${pageNumber}&limit=10`
-      );
+      const res = await api.get(`/tickets?page=${pageNumber}&limit=10`);
 
       setTickets(res.data.data || []);
       setTotalPages(res.data.pages || 1);
-
     } catch (err) {
-      console.error(err);
       toast.error("Failed to load tickets");
     } finally {
       setLoading(false);
@@ -67,7 +63,6 @@ export default function AdminTickets() {
       toast.success("Status updated");
       load(page);
       loadStats();
-
     } catch {
       toast.error("Update failed");
     }
@@ -95,6 +90,30 @@ export default function AdminTickets() {
     if (p === "Medium") return "bg-yellow-100 text-yellow-700";
     if (p === "Low") return "bg-blue-100 text-blue-700";
     return "bg-gray-100 text-gray-600";
+  };
+
+  // =========================
+  // SLA BREACH CALCULATION
+  // =========================
+  const getSlaBreach = (slaDue, closedAt) => {
+    if (!slaDue || !closedAt) return null;
+
+    const diff = new Date(closedAt) - new Date(slaDue);
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+
+    return hours;
+  };
+
+  // =========================
+  // STAR RENDER
+  // =========================
+  const renderStars = (rating) => {
+    return (
+      <span className="text-yellow-500">
+        {"★".repeat(rating || 0)}
+        {"☆".repeat(5 - (rating || 0))}
+      </span>
+    );
   };
 
   return (
@@ -147,62 +166,112 @@ export default function AdminTickets() {
                     <th className="p-3 text-left">User</th>
                     <th className="p-3 text-center">Priority</th>
                     <th className="p-3 text-center">Status</th>
-                    <th className="p-3 text-center">SLA</th>
+
+                    {/* NEW */}
+                    <th className="p-3 text-center">Opened</th>
+                    <th className="p-3 text-center">Closed</th>
+                    <th className="p-3 text-center">SLA Breach</th>
+
+                    <th className="p-3 text-center">Review</th>
                     <th className="p-3 text-center">Action</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filtered.map((t) => (
-                    <tr key={t._id} className="border-t hover:bg-gray-50">
+                  {filtered.map((t) => {
+                    const breach = getSlaBreach(t.slaDue, t.closedAt);
 
-                      <td className="p-3">
-                        <p className="font-semibold">{t.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {t.description}
-                        </p>
-                      </td>
+                    return (
+                      <tr key={t._id} className="border-t hover:bg-gray-50">
 
-                      <td className="p-3">
-                        {t.userId?.email || "N/A"}
-                      </td>
+                        <td className="p-3">
+                          <p className="font-semibold">{t.title}</p>
+                          <p className="text-xs text-gray-500">{t.description}</p>
+                        </td>
 
-                      <td className="p-3 text-center">
-                        <span className={`px-2 py-1 text-xs rounded ${priorityColor(t.priority)}`}>
-                          {t.priority}
-                        </span>
-                      </td>
+                        <td className="p-3">
+                          {t.userId?.email || "N/A"}
+                        </td>
 
-                      <td className="p-3 text-center">
-                        <select
-                          value={t.status}
-                          onChange={(e) => updateStatus(t._id, e.target.value)}
-                          className="border px-2 py-1 text-xs rounded"
-                        >
-                          <option>Open</option>
-                          <option>In Progress</option>
-                          <option>Resolved</option>
-                          <option>Closed</option>
-                        </select>
-                      </td>
+                        <td className="p-3 text-center">
+                          <span className={`px-2 py-1 text-xs rounded ${priorityColor(t.priority)}`}>
+                            {t.priority}
+                          </span>
+                        </td>
 
-                      <td className="p-3 text-center text-xs text-gray-500">
-                        {t.slaDue
-                          ? new Date(t.slaDue).toLocaleString()
-                          : "-"}
-                      </td>
+                        <td className="p-3 text-center">
+                          <select
+                            value={t.status}
+                            onChange={(e) => updateStatus(t._id, e.target.value)}
+                            className="border px-2 py-1 text-xs rounded"
+                          >
+                            <option>Open</option>
+                            <option>In Progress</option>
+                            <option>Resolved</option>
+                            <option>Closed</option>
+                          </select>
+                        </td>
 
-                      <td className="p-3 text-center">
-                        <button
-                          onClick={() => setSelected(t)}
-                          className="text-blue-600"
-                        >
-                          View
-                        </button>
-                      </td>
+                        {/* OPEN TIME */}
+                        <td className="p-3 text-center text-xs text-gray-500">
+                          {t.createdAt
+                            ? new Date(t.createdAt).toLocaleString()
+                            : "-"}
+                        </td>
 
-                    </tr>
-                  ))}
+                        {/* CLOSED TIME */}
+                        <td className="p-3 text-center text-xs text-gray-500">
+                          {t.closedAt
+                            ? new Date(t.closedAt).toLocaleString()
+                            : "-"}
+                        </td>
+
+                        {/* SLA BREACH */}
+                        <td className="p-3 text-center text-xs">
+                          {t.status === "Closed" ? (
+                            breach === null ? (
+                              "-"
+                            ) : breach > 0 ? (
+                              <span className="text-red-600 font-semibold">
+                                +{breach} hrs late
+                              </span>
+                            ) : (
+                              <span className="text-green-600 font-semibold">
+                                On time
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-gray-400">Open</span>
+                          )}
+                        </td>
+
+                        {/* REVIEW */}
+                        <td className="p-3 text-center">
+                          {t.rating ? (
+                            <div>
+                              {renderStars(t.rating)}
+                              <p className="text-xs text-gray-500 truncate max-w-[120px]">
+                                {t.review || "No comment"}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">No review</span>
+                          )}
+                        </td>
+
+                        {/* ACTION */}
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => setSelected(t)}
+                            className="text-blue-600"
+                          >
+                            View
+                          </button>
+                        </td>
+
+                      </tr>
+                    );
+                  })}
                 </tbody>
 
               </table>
@@ -235,72 +304,43 @@ export default function AdminTickets() {
         </div>
       </div>
 
-      {/* =========================
-          📌 MODAL (WITH IMAGES)
-      ========================= */}
+      {/* MODAL */}
       {selected && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
 
           <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl">
 
-            {/* HEADER */}
-            <div className="p-4 border-b flex justify-between items-center">
-              <h2 className="font-bold text-lg">
-                {selected.title}
-              </h2>
-
-              <button
-                onClick={() => setSelected(null)}
-                className="text-gray-500 hover:text-black"
-              >
-                ✕
-              </button>
+            <div className="p-4 border-b flex justify-between">
+              <h2 className="font-bold text-lg">{selected.title}</h2>
+              <button onClick={() => setSelected(null)}>✕</button>
             </div>
 
-            {/* BODY */}
             <div className="p-5 space-y-4 text-sm">
-
               <p>{selected.description}</p>
 
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded-lg">
-                <p><b>User:</b> {selected.userId?.email}</p>
-                <p><b>Priority:</b> {selected.priority}</p>
-                <p><b>Status:</b> {selected.status}</p>
-                <p><b>Department:</b> {selected.department}</p>
-              </div>
+              <div className="bg-gray-50 p-3 rounded">
+                <h3 className="font-semibold mb-2">User Feedback</h3>
 
-              {/* 📎 ATTACHMENTS */}
-              <div>
-                <h3 className="font-semibold mb-2">Attachments</h3>
+                {selected.rating ? (
+                  <>
+                    <div className="text-yellow-500">
+                      {"★".repeat(selected.rating)}
+                      {"☆".repeat(5 - selected.rating)}
+                    </div>
 
-                {selected.attachments?.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-3">
-
-                    {selected.attachments.map((file, i) => (
-                      <a
-                        key={i}
-                        href={file}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <img
-                          src={file}
-                          className="h-28 w-full object-cover rounded border hover:scale-105 transition"
-                        />
-                      </a>
-                    ))}
-
-                  </div>
+                    <p className="text-sm mt-1">
+                      {selected.review}
+                    </p>
+                  </>
                 ) : (
-                  <p className="text-xs text-gray-400">
-                    No attachments
+                  <p className="text-gray-400 text-xs">
+                    No review submitted
                   </p>
                 )}
               </div>
 
             </div>
 
-            {/* FOOTER */}
             <div className="p-4 border-t">
               <button
                 onClick={() => setSelected(null)}
