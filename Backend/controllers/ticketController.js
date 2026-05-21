@@ -268,22 +268,36 @@ export const updateStatus = async (req, res) => {
 
 export const getTicketStats = async (req, res) => {
   try {
-    const total = await Ticket.countDocuments();
-    const open = await Ticket.countDocuments({ status: "Open" });
-    const inProgress = await Ticket.countDocuments({ status: "In Progress" });
-    const resolved = await Ticket.countDocuments({ status: "Resolved" });
-    const closed = await Ticket.countDocuments({ status: "Closed" });
+    const stats = await Ticket.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
 
-    res.json({
-      success: true,
-      total,
-      open,
-      inProgress,
-      resolved,
-      closed,
+    const format = {
+      total: 0,
+      open: 0,
+      inProgress: 0,
+      resolved: 0,
+      closed: 0,
+    };
+
+    stats.forEach((s) => {
+      format.total += s.count;
+
+      if (s._id === "Open") format.open = s.count;
+      if (s._id === "In Progress") format.inProgress = s.count;
+      if (s._id === "Resolved") format.resolved = s.count;
+      if (s._id === "Closed") format.closed = s.count;
     });
 
+    res.json(format);
+
   } catch (err) {
+    console.error("STATS ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
