@@ -77,7 +77,12 @@ export default function AdminTickets() {
     return "bg-gray-100 text-gray-600";
   };
 
-  // ================= TIME =================
+  // ================= TIME HELPERS =================
+  const formatDateTime = (date) => {
+    if (!date) return null;
+    return new Date(date).toLocaleString();
+  };
+
   const getOpenTime = (createdAt) => {
     const diff = new Date() - new Date(createdAt);
     return `${Math.floor(diff / 3600000)}h ${Math.floor((diff % 3600000) / 60000)}m`;
@@ -100,7 +105,7 @@ export default function AdminTickets() {
   return (
     <div className="min-h-screen bg-[#f4f6f9] flex">
 
-      {/* ================= SIDE DRAWER (SAP STYLE) ================= */}
+      {/* ================= SIDE DRAWER ================= */}
       {selected && (
         <div className="w-[420px] bg-white border-l shadow-xl p-5">
 
@@ -120,6 +125,61 @@ export default function AdminTickets() {
           {/* COMPLAINT */}
           <div className="mt-3 bg-gray-50 p-3 rounded border text-sm">
             {selected.description}
+          </div>
+
+          {/* ================= TIMELINE (ADDED) ================= */}
+          <div className="mt-4">
+            <p className="text-xs font-semibold mb-2">Ticket Timeline</p>
+
+            <div className="border-l pl-4 space-y-3">
+
+              {/* OPENED */}
+              <div className="relative">
+                <div className="absolute -left-2 top-1 w-3 h-3 bg-green-500 rounded-full"></div>
+                <p className="text-xs font-semibold">Opened</p>
+                <p className="text-xs text-gray-500">
+                  {formatDateTime(selected.createdAt)}
+                </p>
+              </div>
+
+              {/* IN PROGRESS */}
+              <div className="relative">
+                <div className={`absolute -left-2 top-1 w-3 h-3 rounded-full ${
+                  selected.status === "In Progress"
+                    ? "bg-blue-500"
+                    : "bg-gray-300"
+                }`}></div>
+                <p className="text-xs font-semibold">In Progress</p>
+                <p className="text-xs text-gray-500">
+                  {selected.status !== "Open"
+                    ? "Updated during lifecycle"
+                    : "-"}
+                </p>
+              </div>
+
+              {/* RESOLVED */}
+              <div className="relative">
+                <div className={`absolute -left-2 top-1 w-3 h-3 rounded-full ${
+                  selected.resolvedAt ? "bg-yellow-500" : "bg-gray-300"
+                }`}></div>
+                <p className="text-xs font-semibold">Resolved</p>
+                <p className="text-xs text-gray-500">
+                  {formatDateTime(selected.resolvedAt) || "-"}
+                </p>
+              </div>
+
+              {/* CLOSED */}
+              <div className="relative">
+                <div className={`absolute -left-2 top-1 w-3 h-3 rounded-full ${
+                  selected.closedAt ? "bg-red-500" : "bg-gray-300"
+                }`}></div>
+                <p className="text-xs font-semibold">Closed</p>
+                <p className="text-xs text-gray-500">
+                  {formatDateTime(selected.closedAt) || "-"}
+                </p>
+              </div>
+
+            </div>
           </div>
 
           {/* ATTACHMENTS */}
@@ -156,6 +216,7 @@ export default function AdminTickets() {
               <p className="text-xs text-gray-400">No review</p>
             )}
           </div>
+
         </div>
       )}
 
@@ -207,16 +268,11 @@ export default function AdminTickets() {
 
               <tbody>
                 {filtered.map((t) => (
-                  <tr
-                    key={t._id}
-                    className="border-t hover:bg-gray-50 align-top"
-                  >
+                  <tr key={t._id} className="border-t hover:bg-gray-50 align-top">
 
                     <td className="p-3">
                       <p className="font-semibold">{t.title}</p>
-                      <p className="text-xs text-gray-500">
-                        {t.description}
-                      </p>
+                      <p className="text-xs text-gray-500">{t.description}</p>
                     </td>
 
                     <td className="p-3">
@@ -232,9 +288,7 @@ export default function AdminTickets() {
                     <td className="p-3 text-center">
                       <select
                         value={t.status}
-                        onChange={(e) =>
-                          updateStatus(t._id, e.target.value)
-                        }
+                        onChange={(e) => updateStatus(t._id, e.target.value)}
                         className="border text-xs p-1 rounded"
                       >
                         <option>Open</option>
@@ -283,9 +337,7 @@ export default function AdminTickets() {
             Prev
           </button>
 
-          <p className="text-sm">
-            {page} / {totalPages}
-          </p>
+          <p className="text-sm">{page} / {totalPages}</p>
 
           <button
             onClick={() => setPage(page + 1)}

@@ -2,51 +2,90 @@ import mongoose from "mongoose";
 
 const ticketSchema = new mongoose.Schema(
   {
-    title: String,
+    // =========================
+    // BASIC INFO
+    // =========================
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-    description: String,
+    description: {
+      type: String,
+      required: true,
+    },
 
-    department: String,
+    department: {
+      type: String,
+      default: "General",
+    },
 
+    // =========================
+    // PRIORITY
+    // =========================
     priority: {
       type: String,
       enum: ["Low", "Medium", "High", "Critical"],
       default: "Low",
     },
 
+    // =========================
+    // STATUS
+    // =========================
     status: {
       type: String,
-      enum: [
-        "Open",
-        "In Progress",
-        "Resolved",
-        "Closed",
-      ],
+      enum: ["Open", "In Progress", "Resolved", "Closed"],
       default: "Open",
     },
 
-    attachments: [String],
+    // =========================
+    // ATTACHMENTS
+    // =========================
+    attachments: {
+      type: [String],
+      default: [],
+    },
 
-    slaDue: Date,
+    // =========================
+    // SLA (optional but useful)
+    // =========================
+    slaDue: {
+      type: Date,
+    },
 
-    // ✅ review from user
+    // =========================
+    // USER FEEDBACK
+    // =========================
     review: {
       type: String,
       default: "",
     },
 
-    // ✅ rating
     rating: {
       type: Number,
+      min: 0,
+      max: 5,
       default: 0,
     },
 
-    // ✅ solved/resolved time
+    // =========================
+    // TIMESTAMPS (CUSTOM TRACKING)
+    // =========================
+
+    // when ticket is resolved
     resolvedAt: {
       type: Date,
+      default: null,
     },
 
-    // ✅ reopened info
+    // when ticket is fully closed
+    closedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // reopen tracking
     reopened: {
       type: Boolean,
       default: false,
@@ -54,15 +93,21 @@ const ticketSchema = new mongoose.Schema(
 
     reopenedAt: {
       type: Date,
+      default: null,
     },
 
-    // ✅ IMPORTANT
+    // =========================
+    // USER REFERENCE
+    // =========================
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true, // createdAt = OPEN time, updatedAt = last change
+  }
 );
 
 export default mongoose.model("Ticket", ticketSchema);
