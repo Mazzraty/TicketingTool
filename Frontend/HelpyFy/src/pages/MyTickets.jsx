@@ -32,7 +32,6 @@ export default function MyTickets() {
 
   const fileInputRef = useRef(null);
 
-  // ================= LOAD =================
   useEffect(() => {
     load(page);
   }, [page]);
@@ -50,7 +49,6 @@ export default function MyTickets() {
     }
   };
 
-  // ================= TIME =================
   const getOpenTime = (createdAt) => {
     const diff = new Date() - new Date(createdAt);
     return `${Math.floor(diff / 3600000)}h ${Math.floor((diff % 3600000) / 60000)}m`;
@@ -62,25 +60,16 @@ export default function MyTickets() {
     return `${Math.floor(diff / 3600000)}h ${Math.floor((diff % 3600000) / 60000)}m`;
   };
 
-  // ================= 🔥 FIXED REOPEN (NO LOGOUT ISSUE) =================
   const reopenTicket = async (id) => {
     try {
-      await api.put(`/tickets/${id}/reopen`); // ✅ CORRECT ENDPOINT
+      await api.put(`/tickets/${id}/reopen`);
       toast.success("Ticket reopened successfully");
       load(page);
-    } catch (err) {
-      console.log("Reopen error:", err);
-
-      if (err.response?.status === 401) {
-        toast.error("Session expired. Please login again.");
-        navigate("/login");
-      } else {
-        toast.error("Failed to reopen ticket");
-      }
+    } catch {
+      toast.error("Failed to reopen");
     }
   };
 
-  // ================= REVIEW =================
   const openReview = (ticket) => {
     setSelectedTicket(ticket);
     setReviewModal(true);
@@ -103,7 +92,6 @@ export default function MyTickets() {
     }
   };
 
-  // ================= EDIT =================
   const openEdit = (ticket) => {
     setSelectedTicket(ticket);
 
@@ -165,104 +153,118 @@ export default function MyTickets() {
     }
   };
 
-  const deleteAttachment = async (ticketId, fileUrl) => {
-    try {
-      await api.put(`/tickets/${ticketId}/delete-attachment`, {
-        fileUrl,
-      });
-
-      toast.success("Attachment deleted");
-      load(page);
-    } catch {
-      toast.error("Failed to delete file");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 p-6">
 
       {/* HEADER */}
-      <div className="flex justify-between mb-6">
+      <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-lg border">
         <h1 className="text-xl font-semibold">My Tickets</h1>
+
         <button
           onClick={() => navigate("/create")}
-          className="bg-black text-white px-4 py-2 rounded"
+          className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
         >
           + New Ticket
         </button>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      {/* TABLE CARD */}
+      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+
         {loading ? (
-          <div className="p-10 text-center">Loading...</div>
+          <div className="p-10 text-center text-gray-500">Loading...</div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs uppercase">
-              <tr>
-                <th className="px-6 py-3 text-left">Title</th>
-                <th>Status</th>
-                <th>Open</th>
-                <th>Solved</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
 
-            <tbody>
-              {tickets.map((t) => (
-                <tr key={t._id} className="border-t">
-                  <td className="px-6 py-3">
-                    <p className="font-medium">{t.title}</p>
-                    <p className="text-xs text-gray-500">{t.description}</p>
-                  </td>
-
-                  <td>{t.status}</td>
-                  <td>{getOpenTime(t.createdAt)}</td>
-                  <td>{getSolvedTime(t.createdAt, t.resolvedAt)}</td>
-
-                  <td className="text-right space-x-2 px-3">
-
-                    <button
-                      onClick={() => navigate(`/ticket/${t._id}`)}
-                      className="text-blue-600"
-                    >
-                      View
-                    </button>
-
-                    {(t.status === "Open" || t.status === "Reopened") && (
-                      <button
-                        onClick={() => openEdit(t)}
-                        className="text-indigo-600"
-                      >
-                        Edit
-                      </button>
-                    )}
-
-                    {t.status === "Resolved" && (
-                      <button
-                        onClick={() => reopenTicket(t._id)} // 🔥 FIXED HERE
-                        className="text-orange-600"
-                      >
-                        Reopen
-                      </button>
-                    )}
-
-                    {t.status === "Resolved" && (
-                      <button
-                        onClick={() => openReview(t)}
-                        className="text-green-600"
-                      >
-                        Review
-                      </button>
-                    )}
-
-                  </td>
+              <thead className="bg-gray-100 text-xs uppercase">
+                <tr>
+                  <th className="p-4 text-left w-[40%]">Ticket</th>
+                  <th className="p-4 text-center w-[10%]">Status</th>
+                  <th className="p-4 text-center w-[15%]">Open</th>
+                  <th className="p-4 text-center w-[15%]">Solved</th>
+                  <th className="p-4 text-right w-[20%]">Actions</th>
                 </tr>
-              ))}
-            </tbody>
+              </thead>
 
-          </table>
+              <tbody>
+                {tickets.map((t) => (
+                  <tr key={t._id} className="border-t hover:bg-gray-50">
+
+                    {/* TITLE */}
+                    <td className="p-4 align-top">
+                      <p className="font-semibold text-gray-800">
+                        {t.title}
+                      </p>
+                      <p className="text-xs text-gray-500 line-clamp-2 mt-1">
+                        {t.description}
+                      </p>
+                    </td>
+
+                    {/* STATUS */}
+                    <td className="p-4 text-center align-middle">
+                      <span className="px-2 py-1 text-xs rounded bg-gray-100">
+                        {t.status}
+                      </span>
+                    </td>
+
+                    {/* OPEN */}
+                    <td className="p-4 text-center text-xs text-gray-600 align-middle">
+                      {getOpenTime(t.createdAt)}
+                    </td>
+
+                    {/* SOLVED */}
+                    <td className="p-4 text-center text-xs text-gray-600 align-middle">
+                      {getSolvedTime(t.createdAt, t.resolvedAt)}
+                    </td>
+
+                    {/* ACTIONS */}
+                    <td className="p-4 text-right space-x-2 whitespace-nowrap align-middle">
+
+                      <button
+                        onClick={() => navigate(`/ticket/${t._id}`)}
+                        className="text-blue-600 text-sm hover:underline"
+                      >
+                        View
+                      </button>
+
+                      {(t.status === "Open" || t.status === "Reopened") && (
+                        <button
+                          onClick={() => openEdit(t)}
+                          className="text-indigo-600 text-sm hover:underline"
+                        >
+                          Edit
+                        </button>
+                      )}
+
+                      {t.status === "Resolved" && (
+                        <button
+                          onClick={() => reopenTicket(t._id)}
+                          className="text-orange-600 text-sm hover:underline"
+                        >
+                          Reopen
+                        </button>
+                      )}
+
+                      {t.status === "Resolved" && (
+                        <button
+                          onClick={() => openReview(t)}
+                          className="text-green-600 text-sm hover:underline"
+                        >
+                          Review
+                        </button>
+                      )}
+
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+
+            </table>
+          </div>
         )}
+
       </div>
 
       {/* REVIEW MODAL */}
@@ -285,11 +287,12 @@ export default function MyTickets() {
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               className="w-full border p-2 mb-2"
+              placeholder="Write feedback..."
             />
 
             <button
               onClick={submitReview}
-              className="bg-green-600 text-white px-3 py-1"
+              className="bg-green-600 text-white px-4 py-2 rounded w-full"
             >
               Submit
             </button>
