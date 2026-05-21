@@ -13,14 +13,28 @@ export default function MyTickets() {
   const [totalPages, setTotalPages] = useState(1);
 
   // ==========================
-  // REVIEW MODAL
+  // MODALS STATE
   // ==========================
   const [reviewModal, setReviewModal] = useState(false);
+  const [editModal, setEditModal] = useState(false);
+
   const [selectedTicket, setSelectedTicket] = useState(null);
 
+  // REVIEW
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
 
+  // EDIT
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    department: "",
+    priority: "Low",
+  });
+
+  // ==========================
+  // LOAD TICKETS
+  // ==========================
   useEffect(() => {
     load(page);
   }, [page]);
@@ -67,7 +81,7 @@ export default function MyTickets() {
   };
 
   // ==========================
-  // REOPEN TICKET (FIXED)
+  // REOPEN TICKET
   // ==========================
   const reopenTicket = async (id) => {
     try {
@@ -91,7 +105,7 @@ export default function MyTickets() {
   };
 
   // ==========================
-  // SUBMIT REVIEW (FIXED)
+  // SUBMIT REVIEW
   // ==========================
   const submitReview = async () => {
     try {
@@ -109,6 +123,48 @@ export default function MyTickets() {
       load(page);
     } catch (err) {
       toast.error("Failed to submit review");
+    }
+  };
+
+  // ==========================
+  // OPEN EDIT MODAL
+  // ==========================
+  const openEdit = (ticket) => {
+    setSelectedTicket(ticket);
+
+    setEditForm({
+      title: ticket.title,
+      description: ticket.description,
+      department: ticket.department,
+      priority: ticket.priority,
+    });
+
+    setEditModal(true);
+  };
+
+  // ==========================
+  // HANDLE EDIT CHANGE
+  // ==========================
+  const handleEditChange = (e) => {
+    setEditForm({
+      ...editForm,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  // ==========================
+  // SUBMIT EDIT
+  // ==========================
+  const submitEdit = async () => {
+    try {
+      await api.put(`/tickets/${selectedTicket._id}/edit`, editForm);
+
+      toast.success("Ticket updated");
+
+      setEditModal(false);
+      load(page);
+    } catch (err) {
+      toast.error("Failed to update ticket");
     }
   };
 
@@ -152,7 +208,7 @@ export default function MyTickets() {
 
             <tbody>
               {tickets.map((t) => (
-                <tr key={t._id} className="border-t">
+                <tr key={t._id} className="border-t hover:bg-gray-50">
 
                   <td className="px-6 py-4">
                     <p className="font-medium">{t.title}</p>
@@ -181,12 +237,10 @@ export default function MyTickets() {
                       View
                     </button>
 
-                    {/* EDIT (FIXED ROUTE) */}
+                    {/* EDIT */}
                     {(t.status === "Open" || t.status === "Reopened") && (
                       <button
-                        onClick={() =>
-                          navigate(`/ticket/edit/${t._id}`)
-                        }
+                        onClick={() => openEdit(t)}
                         className="text-indigo-600"
                       >
                         Edit
@@ -224,31 +278,24 @@ export default function MyTickets() {
       </div>
 
       {/* ==========================
-          REVIEW MODAL
+          ⭐ REVIEW MODAL
       ========================== */}
       {reviewModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-
           <div className="bg-white p-6 rounded-xl w-[400px]">
 
-            <h2 className="text-lg font-semibold mb-3">
-              Rate Ticket
-            </h2>
+            <h2 className="text-lg font-semibold mb-3">Rate Ticket</h2>
 
-            {/* RATING */}
             <select
               value={rating}
               onChange={(e) => setRating(e.target.value)}
               className="w-full border p-2 rounded mb-3"
             >
               {[5,4,3,2,1].map((n) => (
-                <option key={n} value={n}>
-                  {n} Star
-                </option>
+                <option key={n} value={n}>{n} Star</option>
               ))}
             </select>
 
-            {/* COMMENT */}
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
@@ -257,21 +304,71 @@ export default function MyTickets() {
             />
 
             <div className="flex justify-end gap-2">
+              <button onClick={() => setReviewModal(false)} className="px-3 py-1 border">
+                Cancel
+              </button>
+              <button onClick={submitReview} className="px-3 py-1 bg-green-600 text-white rounded">
+                Submit
+              </button>
+            </div>
 
-              <button
-                onClick={() => setReviewModal(false)}
-                className="px-3 py-1 border"
-              >
+          </div>
+        </div>
+      )}
+
+      {/* ==========================
+          ✏️ EDIT MODAL
+      ========================== */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl w-[450px]">
+
+            <h2 className="text-lg font-semibold mb-3">Edit Ticket</h2>
+
+            <input
+              name="title"
+              value={editForm.title}
+              onChange={handleEditChange}
+              className="w-full border p-2 rounded mb-2"
+              placeholder="Title"
+            />
+
+            <textarea
+              name="description"
+              value={editForm.description}
+              onChange={handleEditChange}
+              className="w-full border p-2 rounded mb-2"
+              placeholder="Description"
+            />
+
+            <input
+              name="department"
+              value={editForm.department}
+              onChange={handleEditChange}
+              className="w-full border p-2 rounded mb-2"
+              placeholder="Department"
+            />
+
+            <select
+              name="priority"
+              value={editForm.priority}
+              onChange={handleEditChange}
+              className="w-full border p-2 rounded mb-3"
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+              <option>Critical</option>
+            </select>
+
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setEditModal(false)} className="px-3 py-1 border">
                 Cancel
               </button>
 
-              <button
-                onClick={submitReview}
-                className="px-3 py-1 bg-green-600 text-white rounded"
-              >
-                Submit
+              <button onClick={submitEdit} className="px-3 py-1 bg-indigo-600 text-white rounded">
+                Save
               </button>
-
             </div>
 
           </div>
