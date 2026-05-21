@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function MyTickets() {
   const navigate = useNavigate();
@@ -8,7 +9,6 @@ export default function MyTickets() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ✅ pagination state
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -20,14 +20,65 @@ export default function MyTickets() {
     try {
       setLoading(true);
 
-      const res = await api.get(`/tickets/my?page=${pageNumber}`);
+      const res = await api.get(
+        `/tickets/my?page=${pageNumber}`
+      );
 
       setTickets(res.data.data || []);
-      setTotalPages(res.data.totalPages || 1); // IMPORTANT
+      setTotalPages(res.data.totalPages || 1);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ==========================
+  // OPEN TIME (LIVE)
+  // ==========================
+  const getOpenTime = (createdAt) => {
+    const start = new Date(createdAt);
+    const now = new Date();
+
+    const diff = now - start;
+
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+
+    return `${hours}h ${mins}m`;
+  };
+
+  // ==========================
+  // SOLVED TIME
+  // ==========================
+  const getSolvedTime = (createdAt, resolvedAt) => {
+    if (!resolvedAt) return "-";
+
+    const start = new Date(createdAt);
+    const end = new Date(resolvedAt);
+
+    const diff = end - start;
+
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+
+    return `${hours}h ${mins}m`;
+  };
+
+  // ==========================
+  // REOPEN TICKET
+  // ==========================
+  const reopenTicket = async (id) => {
+    try {
+      await api.put(`/tickets/${id}`, {
+        status: "Open",
+      });
+
+      toast.success("Ticket reopened");
+
+      load(page);
+    } catch (err) {
+      toast.error("Failed to reopen");
     }
   };
 
@@ -67,12 +118,14 @@ export default function MyTickets() {
         ) : (
           <table className="w-full text-sm">
 
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
               <tr>
-                <th className="text-left px-6 py-3">Title</th>
-                <th className="text-left px-6 py-3">Status</th>
-                <th className="text-left px-6 py-3">Created</th>
-                <th className="text-right px-6 py-3">Action</th>
+                <th className="px-6 py-3 text-left">Title</th>
+                <th className="px-6 py-3 text-left">Status</th>
+                <th className="px-6 py-3 text-left">Open Time</th>
+                <th className="px-6 py-3 text-left">Solved Time</th>
+                <th className="px-6 py-3 text-left">Created</th>
+                <th className="px-6 py-3 text-right">Action</th>
               </tr>
             </thead>
 
@@ -80,6 +133,7 @@ export default function MyTickets() {
               {tickets.map((t) => (
                 <tr key={t._id} className="border-t hover:bg-gray-50">
 
+                  {/* TITLE */}
                   <td className="px-6 py-4">
                     <p className="font-medium">{t.title}</p>
                     <p className="text-xs text-gray-500">
@@ -87,23 +141,62 @@ export default function MyTickets() {
                     </p>
                   </td>
 
+                  {/* STATUS */}
                   <td className="px-6 py-4">
                     <span className="text-xs px-2 py-1 bg-gray-100 rounded">
                       {t.status}
                     </span>
                   </td>
 
+                  {/* OPEN TIME */}
+                  <td className="px-6 py-4 text-gray-600">
+                    {t.status === "Resolved" || t.status === "Closed"
+                      ? "-"
+                      : getOpenTime(t.createdAt)}
+                  </td>
+
+                  {/* SOLVED TIME */}
+                  <td className="px-6 py-4 text-gray-600">
+                    {getSolvedTime(t.createdAt, t.resolvedAt)}
+                  </td>
+
+                  {/* CREATED */}
                   <td className="px-6 py-4 text-gray-500">
                     {new Date(t.createdAt).toLocaleDateString()}
                   </td>
 
-                  <td className="px-6 py-4 text-right">
+                  {/* ACTIONS */}
+                  <td className="px-6 py-4 text-right space-x-2">
+
                     <button
                       onClick={() => navigate(`/ticket/${t._id}`)}
                       className="text-blue-600 hover:underline"
                     >
                       View
                     </button>
+
+                    {/* REOPEN */}
+                    {t.status === "Resolved" && (
+                      <button
+                        onClick={() => reopenTicket(t._id)}
+                        className="text-orange-600 hover:underline"
+                      >
+                        Reopen
+                      </button>
+                    )}
+
+                    {/* REVIEW */}
+                    {t.status === "Resolved" && !t.review && (
+                      <button
+                        onClick={() =>
+                          navigate(`/ticket/${t._id}`)
+                        }
+                        className="text-green-600 hover:underline"
+                      >
+                        Add Review
+                      </button>
+                    )}
+
                   </td>
 
                 </tr>
@@ -123,7 +216,9 @@ export default function MyTickets() {
           <div className="flex gap-2">
 
             <button
-              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              onClick={() =>
+                setPage((p) => Math.max(p - 1, 1))
+              }
               disabled={page === 1}
               className="px-3 py-1 text-sm border rounded-lg disabled:opacity-40"
             >
@@ -132,7 +227,9 @@ export default function MyTickets() {
 
             <button
               onClick={() =>
-                setPage((p) => Math.min(p + 1, totalPages))
+                setPage((p) =>
+                  Math.min(p + 1, totalPages)
+                )
               }
               disabled={page === totalPages}
               className="px-3 py-1 text-sm border rounded-lg disabled:opacity-40"
