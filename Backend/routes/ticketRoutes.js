@@ -1,57 +1,74 @@
 import express from "express";
+
 import {
   createTicket,
   getAllTickets,
   getUserTickets,
-  sendTestEmail,
   updateStatus,
   deleteTicket,
   getTicketStats,
+
+  editTicket,
+  addReview,
+  getTicketById,   // ✅ ADD THIS
 } from "../controllers/ticketController.js";
 
-import { adminOnly, protect } from "../middleware/authMiddleware.js";
+import {
+  adminOnly,
+  protect,
+} from "../middleware/authMiddleware.js";
+
 import { upload } from "../middleware/upload.js";
 
 const router = express.Router();
 
 
-// ==========================
+// ======================================================
 // ✅ USER ROUTES
-// ==========================
+// ======================================================
 
-// Create ticket (with file upload limit)
+// CREATE
 router.post(
   "/",
   protect,
-  upload.array("files", 5), // ✅ limit 5 files
+  upload.array("files", 5),
   createTicket
 );
 
-// Get logged-in user tickets
+// MY TICKETS
 router.get("/my", protect, getUserTickets);
 
-// Send a protected deployment test email
-router.get("/test-email", protect, sendTestEmail);
 
-// Get single ticket (for view page)
-// router.get("/:id", protect, getTicketById); // ✅ COMMENTED OUT - function doesn't exist
+// VIEW SINGLE TICKET (🔥 IMPORTANT)
+router.get("/:id", protect, getTicketById);
+
+// REVIEW
+router.put("/:id/review", protect, addReview);
+
+// EDIT TICKET
+router.put(
+  "/:id/edit",
+  protect,
+  upload.array("files", 5),
+  editTicket
+);
 
 
-// ==========================
+
+// ======================================================
 // ✅ ADMIN ROUTES
-// ==========================
+// ======================================================
 
-// Stats (MUST come before /:id to avoid conflict)
+// STATS
 router.get("/stats", protect, adminOnly, getTicketStats);
 
-// Get all tickets (pagination)
+// ALL TICKETS
 router.get("/", protect, adminOnly, getAllTickets);
 
-// Update ticket status
+// UPDATE STATUS
 router.put("/:id", protect, adminOnly, updateStatus);
 
-// Delete ticket
+// DELETE
 router.delete("/:id", protect, adminOnly, deleteTicket);
-
 
 export default router;

@@ -1,20 +1,17 @@
 import Ticket from "../models/ticketSchema.js";
 import User from "../models/userShema.js";
-import sendEmail  from "../utils/sendEmail.js";
-import  {ticketAdminEmail}  from "../utils/ticketAdminEmail.js";
-import  {ticketUserEmail}  from "../utils/ticketUserEmail.js";
+import sendEmail from "../utils/sendEmail.js";
+import { ticketAdminEmail } from "../utils/ticketAdminEmail.js";
+import { ticketUserEmail } from "../utils/ticketUserEmail.js";
 
 
-
-
-// ==========================
+// ======================================================
 // ✅ CREATE TICKET
-// ==========================
+// ======================================================
 export const createTicket = async (req, res) => {
   try {
     const { title, description, department, priority } = req.body;
 
-    // VALIDATION
     if (!title || !description) {
       return res.status(400).json({
         success: false,
@@ -22,11 +19,9 @@ export const createTicket = async (req, res) => {
       });
     }
 
-    // FILES
     const attachments =
       req.files?.map((f) => f.path || f.filename) || [];
 
-    // SLA CALCULATION
     const slaHours = {
       Low: 72,
       Medium: 24,
@@ -35,10 +30,9 @@ export const createTicket = async (req, res) => {
     };
 
     const slaDue = new Date(
-      Date.now() + (slaHours[priority] || 72) * 60 * 60 * 1000
+      Date.now() + (slaHours[priority] || 72) * 3600000
     );
 
-    // CREATE TICKET
     const ticket = await Ticket.create({
       title,
       description,
@@ -47,303 +41,150 @@ export const createTicket = async (req, res) => {
       attachments,
       userId: req.user.id,
       slaDue,
+
+      // tracking fields
+      reopened: false,
+      review: "",
+      rating: 0,
+      resolvedAt: null,
+      reopenedAt: null,
     });
 
-    // GET USER
-    const user = await User.findById(req.user.id).select("email name");
+    const user = await User.findById(req.user.id);
 
-    // ==========================
-    // SOCKET NOTIFICATION
-    // ==========================
-    if (global.io) {
-      try {
-        const admins = await User.find({ role: "admin" });
+    const admins = await User.find({ role: "admin" });
 
-        admins.forEach((admin) => {
-          global.io.to(admin._id.toString()).emit("newTicket", {
-            message: "New ticket created",
-            ticket,
-            user: {
-              name: user?.name,
-              email: user?.email,
-            },
-          });
-        });
-      } catch (socketErr) {
-        console.log("❌ Socket error:", socketErr.message);
-      }
-    }
+    // EMAIL (non-blocking)
+    sendEmail({
+      to: admins.map((a) => a.email),
+      subject: "New Ticket Created",
+      html: ticketAdminEmail({ ...ticket._doc, userEmail: user.email }),
+    });
 
-    // ==========================
-    // EMAIL SYSTEM (ADMIN + USER)
-    // ==========================
-    const sendNotificationEmail = async () => {
-      try {
-        const admins = await User.find({ role: "admin" }).select("email");
+    sendEmail({
+      to: user.email,
+      subject: "Ticket Created",
+      html: ticketUserEmail(ticket),
+    });
 
-        const adminEmails = admins
-          .map((a) => a.email)
-          .filter(Boolean);
-
-        // ==========================
-        // 📩 ADMIN EMAIL
-        // ==========================
-        if (adminEmails.length) {
-          await sendEmail({
-            to: adminEmails,
-            subject: "🚨 New Support Ticket",
-            html: ticketAdminEmail({
-              userEmail: user.email,
-              title,
-              description,
-              department,
-              priority,
-              status: "Open",
-            }),
-          });
-        }
-
-        // ==========================
-        // 📩 USER EMAIL
-        // ==========================
-        await sendEmail({
-          to: user.email,
-          subject: "✅ Ticket Created Successfully",
-          html: ticketUserEmail({
-            userEmail: user.email,
-            title,
-            description,
-            department,
-            priority,
-            status: "Open",
-          }),
-        });
-
-        console.log("📧 Emails sent successfully");
-      } catch (err) {
-        console.log("❌ EMAIL FAILED:", err.message);
-      }
-    };
-
-    // FIRE AND FORGET (DO NOT BLOCK API)
-    sendNotificationEmail();
-
-    // ==========================
-    // RESPONSE
-    // ==========================
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       message: "Ticket created successfully",
       data: ticket,
     });
-
-  } catch (error) {
-    console.log("CREATE TICKET ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
-// ==========================
-// ✅ SEND TEST EMAIL
-// ==========================
-export const sendTestEmail = async (req, res) => {
-  try {
-    const toSend = process.env.ADMIN_EMAIL
-      ? [process.env.ADMIN_EMAIL]
-      : (await User.find({ role: "admin" }).select("email")).map((admin) => admin.email).filter(Boolean);
 
-    if (!toSend.length) {
-      return res.status(500).json({
+
+// ======================================================
+// ✅ GET SINGLE TICKET (IMPORTANT FOR EDIT)
+// ======================================================
+export const getTicketById = async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id).populate(
+      "userId",
+      "name email"
+    );
+
+    if (!ticket) {
+      return res.status(404).json({
         success: false,
-        message: "No admin recipient email configured",
+        message: "Ticket not found",
       });
     }
 
-    await sendEmail(
-      toSend,
-      "HelpyFy Test Email",
-      {
-        title: "Deployment email test",
-        description: "This is a live deployment email test.",
-        department: "Support",
-        priority: "Medium",
-        status: "Test",
-        userEmail: req.user?.email || "test@helpyfy.local",
-      }
-    );
-
-    return res.status(200).json({
+    res.json({
       success: true,
-      message: `Test email sent successfully to ${toSend.join(", ")}`,
+      data: ticket,
     });
-  } catch (error) {
-    console.error("SEND TEST EMAIL ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to send test email",
-    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ==========================
+
+// ======================================================
 // ✅ USER TICKETS
-// ==========================
+// ======================================================
 export const getUserTickets = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = 5;
 
-    const skip = (page - 1) * limit;
-
-    const totalTickets = await Ticket.countDocuments({
-      userId: req.user.id,
-    });
-
     const tickets = await Ticket.find({ userId: req.user.id })
       .sort({ createdAt: -1 })
-      .skip(skip)
+      .skip((page - 1) * limit)
       .limit(limit);
 
-    const totalPages = Math.ceil(totalTickets / limit);
+    const total = await Ticket.countDocuments({
+      userId: req.user.id,
+    });
 
     res.json({
       success: true,
       data: tickets,
-      totalPages,
-      currentPage: page,
-      totalTickets,
+      totalPages: Math.ceil(total / limit),
     });
-
-  } catch (error) {
-    console.log("USER TICKETS ERROR:", error);
-    res.status(500).json({ message: "Server error" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
 
-// ==========================
-// ✅ ADMIN - ALL TICKETS
-// ==========================
-// ==========================
-// ✅ ADMIN - ALL TICKETS
-// ==========================
+// ======================================================
+// ✅ ADMIN ALL TICKETS
+// ======================================================
 export const getAllTickets = async (req, res) => {
   try {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
 
-    const {
-      status,
-      priority,
-      department,
-      search,
-      sort = "latest",
-      startDate,
-      endDate,
-    } = req.query;
+    const query = {};
 
-    // 🔍 Build query
-    let query = {};
-
-    if (status) query.status = status;
-    if (priority) query.priority = priority;
-    if (department) query.department = department;
-
-    // 📅 Date filter
-    if (startDate || endDate) {
-      query.createdAt = {};
-
-      if (startDate) {
-        query.createdAt.$gte = new Date(startDate);
-      }
-
-      if (endDate) {
-        query.createdAt.$lte = new Date(endDate);
-      }
-    }
-
-    // 🔎 Search
-    if (search) {
-      query.$or = [
-        {
-          title: {
-            $regex: search,
-            $options: "i",
-          },
-        },
-        {
-          description: {
-            $regex: search,
-            $options: "i",
-          },
-        },
-      ];
-    }
-
-    // 📊 Sorting
-    let sortOption = { createdAt: -1 };
-
-    if (sort === "oldest") {
-      sortOption = { createdAt: 1 };
-    }
-
-    if (sort === "priority") {
-      sortOption = { priority: -1 };
-    }
-
-    // 📌 Total count
     const total = await Ticket.countDocuments(query);
 
-    // 📌 Total pages
-    const totalPages = Math.ceil(total / limit);
-
-    // 🚀 Fetch tickets
     const tickets = await Ticket.find(query)
       .populate("userId", "name email")
-      .sort(sortOption)
+      .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    // ✅ RESPONSE
     res.json({
       success: true,
-
-      // OLD FORMAT
+      data: tickets,
       total,
       page,
-      pages: totalPages,
-
-      // NEW FORMAT
-      pagination: {
-        totalTickets: total,
-        totalPages,
-        currentPage: page,
-        limit,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-      },
-
-      count: tickets.length,
-      data: tickets,
+      pages: Math.ceil(total / limit),
     });
-
   } catch (err) {
-    console.error("ADMIN ERROR:", err);
-
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    res.status(500).json({ message: err.message });
   }
 };
 
 
+// ======================================================
+// ✅ GET STATS
+// ======================================================
+export const getTicketStats = async (req, res) => {
+  try {
+    const total = await Ticket.countDocuments();
+    const open = await Ticket.countDocuments({ status: "Open" });
+    const inProgress = await Ticket.countDocuments({ status: "In Progress" });
+    const resolved = await Ticket.countDocuments({ status: "Resolved" });
+    const closed = await Ticket.countDocuments({ status: "Closed" });
 
-// ==========================
-// ✅ UPDATE STATUS
-// ==========================
+    res.json({ total, open, inProgress, resolved, closed });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+// ======================================================
+// ✅ UPDATE STATUS (ADMIN)
+// ======================================================
 export const updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -355,6 +196,23 @@ export const updateStatus = async (req, res) => {
     }
 
     ticket.status = status;
+
+    // RESOLVED
+    if (status === "Resolved") {
+      ticket.resolvedAt = new Date();
+    }
+
+    // REOPEN
+    if (status === "Open") {
+      ticket.reopened = true;
+      ticket.reopenedAt = new Date();
+      ticket.resolvedAt = null;
+
+      // reset feedback
+      ticket.review = "";
+      ticket.rating = 0;
+    }
+
     await ticket.save();
 
     res.json({
@@ -362,36 +220,109 @@ export const updateStatus = async (req, res) => {
       message: "Status updated",
       data: ticket,
     });
-
   } catch (err) {
-    console.log("UPDATE ERROR:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-export const getTicketStats = async (req, res) => {
+
+// ======================================================
+// ✅ EDIT TICKET (OPEN / REOPEN ONLY)
+// ======================================================
+export const editTicket = async (req, res) => {
   try {
-    const total = await Ticket.countDocuments();
-    const open = await Ticket.countDocuments({ status: "Open" });
-    const inProgress = await Ticket.countDocuments({ status: "In Progress" });
-    const resolved = await Ticket.countDocuments({ status: "Resolved" });
-    const closed = await Ticket.countDocuments({ status: "Closed" });
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    if (ticket.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    if (!["Open", "Reopened"].includes(ticket.status)) {
+      return res.status(400).json({
+        message: "Only open/reopened tickets can be edited",
+      });
+    }
+
+    const { title, description, department, priority } = req.body;
+
+    ticket.title = title || ticket.title;
+    ticket.description = description || ticket.description;
+    ticket.department = department || ticket.department;
+    ticket.priority = priority || ticket.priority;
+
+    if (priority) {
+      const slaHours = {
+        Low: 72,
+        Medium: 24,
+        High: 8,
+        Critical: 2,
+      };
+
+      ticket.slaDue = new Date(
+        Date.now() + slaHours[priority] * 3600000
+      );
+    }
+
+    await ticket.save();
 
     res.json({
-      total,
-      open,
-      inProgress,
-      resolved,
-      closed,
+      success: true,
+      message: "Ticket updated",
+      data: ticket,
     });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ==========================
-// ✅ DELETE TICKET (OPTIONAL)
-// ==========================
+
+// ======================================================
+// ✅ ADD REVIEW
+// ======================================================
+export const addReview = async (req, res) => {
+  try {
+    const { review, rating } = req.body;
+
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    if (ticket.status !== "Resolved") {
+      return res.status(400).json({
+        message: "Only resolved tickets can be reviewed",
+      });
+    }
+
+    if (ticket.review) {
+      return res.status(400).json({
+        message: "Review already submitted",
+      });
+    }
+
+    ticket.review = review;
+    ticket.rating = rating;
+
+    await ticket.save();
+
+    res.json({
+      success: true,
+      message: "Review added",
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+// ======================================================
+// ✅ DELETE TICKET
+// ======================================================
 export const deleteTicket = async (req, res) => {
   try {
     await Ticket.findByIdAndDelete(req.params.id);
@@ -400,8 +331,7 @@ export const deleteTicket = async (req, res) => {
       success: true,
       message: "Ticket deleted",
     });
-
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
   }
 };

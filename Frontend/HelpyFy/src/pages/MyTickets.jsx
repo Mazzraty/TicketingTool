@@ -13,7 +13,7 @@ export default function MyTickets() {
   const [totalPages, setTotalPages] = useState(1);
 
   // ==========================
-  // MODALS
+  // REVIEW MODAL
   // ==========================
   const [reviewModal, setReviewModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -29,9 +29,7 @@ export default function MyTickets() {
     try {
       setLoading(true);
 
-      const res = await api.get(
-        `/tickets/my?page=${pageNumber}`
-      );
+      const res = await api.get(`/tickets/my?page=${pageNumber}`);
 
       setTickets(res.data.data || []);
       setTotalPages(res.data.totalPages || 1);
@@ -60,8 +58,7 @@ export default function MyTickets() {
   const getSolvedTime = (createdAt, resolvedAt) => {
     if (!resolvedAt) return "-";
 
-    const diff =
-      new Date(resolvedAt) - new Date(createdAt);
+    const diff = new Date(resolvedAt) - new Date(createdAt);
 
     const hours = Math.floor(diff / 3600000);
     const mins = Math.floor((diff % 3600000) / 60000);
@@ -70,7 +67,7 @@ export default function MyTickets() {
   };
 
   // ==========================
-  // REOPEN
+  // REOPEN TICKET (FIXED)
   // ==========================
   const reopenTicket = async (id) => {
     try {
@@ -80,13 +77,13 @@ export default function MyTickets() {
 
       toast.success("Ticket reopened");
       load(page);
-    } catch {
-      toast.error("Failed to reopen");
+    } catch (err) {
+      toast.error("Failed to reopen ticket");
     }
   };
 
   // ==========================
-  // OPEN REVIEW MODAL
+  // OPEN REVIEW
   // ==========================
   const openReview = (ticket) => {
     setSelectedTicket(ticket);
@@ -94,23 +91,23 @@ export default function MyTickets() {
   };
 
   // ==========================
-  // SUBMIT REVIEW
+  // SUBMIT REVIEW (FIXED)
   // ==========================
   const submitReview = async () => {
     try {
       await api.put(`/tickets/${selectedTicket._id}/review`, {
-        rating,
         review: comment,
+        rating: Number(rating),
       });
 
       toast.success("Review submitted");
 
       setReviewModal(false);
-      setRating(5);
       setComment("");
+      setRating(5);
 
       load(page);
-    } catch {
+    } catch (err) {
       toast.error("Failed to submit review");
     }
   };
@@ -121,9 +118,7 @@ export default function MyTickets() {
       {/* HEADER */}
       <div className="flex justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold">
-            My Tickets
-          </h1>
+          <h1 className="text-xl font-semibold">My Tickets</h1>
           <p className="text-sm text-gray-500">
             Track & manage your requests
           </p>
@@ -166,9 +161,7 @@ export default function MyTickets() {
                     </p>
                   </td>
 
-                  <td className="px-6 py-4">
-                    {t.status}
-                  </td>
+                  <td className="px-6 py-4">{t.status}</td>
 
                   <td className="px-6 py-4">
                     {getOpenTime(t.createdAt)}
@@ -188,7 +181,7 @@ export default function MyTickets() {
                       View
                     </button>
 
-                    {/* EDIT */}
+                    {/* EDIT (FIXED ROUTE) */}
                     {(t.status === "Open" || t.status === "Reopened") && (
                       <button
                         onClick={() =>
@@ -228,11 +221,10 @@ export default function MyTickets() {
 
           </table>
         )}
-
       </div>
 
       {/* ==========================
-          ⭐ REVIEW MODAL
+          REVIEW MODAL
       ========================== */}
       {reviewModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
@@ -243,7 +235,7 @@ export default function MyTickets() {
               Rate Ticket
             </h2>
 
-            {/* STAR RATING */}
+            {/* RATING */}
             <select
               value={rating}
               onChange={(e) => setRating(e.target.value)}
@@ -264,7 +256,6 @@ export default function MyTickets() {
               className="w-full border p-2 rounded mb-3"
             />
 
-            {/* BUTTONS */}
             <div className="flex justify-end gap-2">
 
               <button
