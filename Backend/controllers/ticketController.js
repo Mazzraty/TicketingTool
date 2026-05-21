@@ -180,16 +180,60 @@ export const updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
+    // ==========================
+    // ✅ VALIDATE INPUT FIRST
+    // ==========================
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required",
+      });
+    }
+
+    // ==========================
+    // ✅ ALLOWED STATUSES (MUST MATCH FRONTEND)
+    // ==========================
+    const allowedStatus = [
+      "Open",
+      "In Progress",
+      "Resolved",
+      "Closed",
+    ];
+
+    if (!allowedStatus.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value",
+        allowedStatus,
+      });
+    }
+
+    // ==========================
+    // FIND TICKET
+    // ==========================
     const ticket = await Ticket.findById(req.params.id);
 
     if (!ticket) {
-      return res.status(404).json({ message: "Ticket not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
     }
 
+    // ==========================
+    // UPDATE STATUS
+    // ==========================
     ticket.status = status;
 
+    // ==========================
+    // AUTO TIMESTAMP HANDLING
+    // ==========================
     if (status === "Resolved") {
       ticket.resolvedAt = new Date();
+    }
+
+    if (status === "Closed") {
+      ticket.closedAt = new Date();
     }
 
     if (status === "Open") {
@@ -200,21 +244,26 @@ export const updateStatus = async (req, res) => {
       ticket.rating = 0;
     }
 
+    // ==========================
+    // SAVE
+    // ==========================
     await ticket.save();
 
-    // ❌ DO NOT trigger "newTicket" event here
-
-    res.json({
+    return res.json({
       success: true,
-      message: "Status updated",
+      message: "Status updated successfully",
       data: ticket,
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("❌ updateStatus error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
-
 //admin 
 
 export const getTicketStats = async (req, res) => {
