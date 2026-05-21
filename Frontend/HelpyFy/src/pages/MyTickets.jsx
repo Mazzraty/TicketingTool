@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -13,7 +13,7 @@ export default function MyTickets() {
   const [totalPages, setTotalPages] = useState(1);
 
   // ==========================
-  // MODALS STATE
+  // MODALS
   // ==========================
   const [reviewModal, setReviewModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -24,7 +24,7 @@ export default function MyTickets() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
 
-  // EDIT
+  // EDIT FORM
   const [editForm, setEditForm] = useState({
     title: "",
     description: "",
@@ -32,8 +32,15 @@ export default function MyTickets() {
     priority: "Low",
   });
 
+  const [editFiles, setEditFiles] = useState([]);
+
+  // drag state
+  const [dragActive, setDragActive] = useState(false);
+
+  const fileInputRef = useRef(null);
+
   // ==========================
-  // LOAD TICKETS
+  // LOAD
   // ==========================
   useEffect(() => {
     load(page);
@@ -55,58 +62,40 @@ export default function MyTickets() {
   };
 
   // ==========================
-  // OPEN TIME
+  // TIME HELPERS
   // ==========================
   const getOpenTime = (createdAt) => {
     const diff = new Date() - new Date(createdAt);
-
-    const hours = Math.floor(diff / 3600000);
-    const mins = Math.floor((diff % 3600000) / 60000);
-
-    return `${hours}h ${mins}m`;
+    return `${Math.floor(diff / 3600000)}h ${Math.floor((diff % 3600000) / 60000)}m`;
   };
 
-  // ==========================
-  // SOLVED TIME
-  // ==========================
   const getSolvedTime = (createdAt, resolvedAt) => {
     if (!resolvedAt) return "-";
-
     const diff = new Date(resolvedAt) - new Date(createdAt);
-
-    const hours = Math.floor(diff / 3600000);
-    const mins = Math.floor((diff % 3600000) / 60000);
-
-    return `${hours}h ${mins}m`;
+    return `${Math.floor(diff / 3600000)}h ${Math.floor((diff % 3600000) / 60000)}m`;
   };
 
   // ==========================
-  // REOPEN TICKET
+  // REOPEN
   // ==========================
   const reopenTicket = async (id) => {
     try {
-      await api.put(`/tickets/${id}`, {
-        status: "Open",
-      });
-
+      await api.put(`/tickets/${id}`, { status: "Open" });
       toast.success("Ticket reopened");
       load(page);
-    } catch (err) {
-      toast.error("Failed to reopen ticket");
+    } catch {
+      toast.error("Failed to reopen");
     }
   };
 
   // ==========================
-  // OPEN REVIEW
+  // REVIEW
   // ==========================
   const openReview = (ticket) => {
     setSelectedTicket(ticket);
     setReviewModal(true);
   };
 
-  // ==========================
-  // SUBMIT REVIEW
-  // ==========================
   const submitReview = async () => {
     try {
       await api.put(`/tickets/${selectedTicket._id}/review`, {
@@ -119,15 +108,14 @@ export default function MyTickets() {
       setReviewModal(false);
       setComment("");
       setRating(5);
-
       load(page);
-    } catch (err) {
+    } catch {
       toast.error("Failed to submit review");
     }
   };
 
   // ==========================
-  // OPEN EDIT MODAL
+  // EDIT OPEN
   // ==========================
   const openEdit = (ticket) => {
     setSelectedTicket(ticket);
@@ -139,17 +127,42 @@ export default function MyTickets() {
       priority: ticket.priority,
     });
 
+    setEditFiles([]);
     setEditModal(true);
   };
 
-  // ==========================
-  // HANDLE EDIT CHANGE
-  // ==========================
   const handleEditChange = (e) => {
-    setEditForm({
-      ...editForm,
-      [e.target.name]: e.target.value,
-    });
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
+  };
+
+  // ==========================
+  // FILE HANDLING
+  // ==========================
+  const handleFiles = (files) => {
+    const newFiles = Array.from(files);
+
+    const previewFiles = newFiles.map((file) =>
+      Object.assign(file, {
+        preview: URL.createObjectURL(file),
+      })
+    );
+
+    setEditFiles((prev) => [...prev, ...previewFiles]);
+  };
+
+  const removeNewFile = (index) => {
+    const updated = [...editFiles];
+    updated.splice(index, 1);
+    setEditFiles(updated);
+  };
+
+  // ==========================
+  // DRAG & DROP
+  // ==========================
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragActive(false);
+    handleFiles(e.dataTransfer.files);
   };
 
   // ==========================
@@ -157,32 +170,57 @@ export default function MyTickets() {
   // ==========================
   const submitEdit = async () => {
     try {
-      await api.put(`/tickets/${selectedTicket._id}/edit`, editForm);
+      const formData = new FormData();
+
+      formData.append("title", editForm.title);
+      formData.append("description", editForm.description);
+      formData.append("department", editForm.department);
+      formData.append("priority", editForm.priority);
+
+      editFiles.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      await api.put(`/tickets/${selectedTicket._id}/edit`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       toast.success("Ticket updated");
-
       setEditModal(false);
       load(page);
-    } catch (err) {
-      toast.error("Failed to update ticket");
+    } catch {
+      toast.error("Update failed");
     }
   };
 
+  // ==========================
+  // DELETE OLD ATTACHMENT (OPTIONAL API)
+  // ==========================
+  const deleteAttachment = async (ticketId, fileUrl) => {
+    try {
+      await api.put(`/tickets/${ticketId}/delete-attachment`, {
+        fileUrl,
+      });
+
+      toast.success("Attachment deleted");
+      load(page);
+    } catch {
+      toast.error("Failed to delete file");
+    }
+  };
+
+  // ==========================
+  // UI
+  // ==========================
   return (
     <div className="min-h-screen bg-slate-50 p-6">
 
       {/* HEADER */}
       <div className="flex justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold">My Tickets</h1>
-          <p className="text-sm text-gray-500">
-            Track & manage your requests
-          </p>
-        </div>
-
+        <h1 className="text-xl font-semibold">My Tickets</h1>
         <button
           onClick={() => navigate("/create")}
-          className="bg-black text-white px-4 py-2 rounded-lg"
+          className="bg-black text-white px-4 py-2 rounded"
         >
           + New Ticket
         </button>
@@ -190,138 +228,71 @@ export default function MyTickets() {
 
       {/* TABLE */}
       <div className="bg-white border rounded-xl overflow-hidden">
-
         {loading ? (
           <div className="p-10 text-center">Loading...</div>
         ) : (
           <table className="w-full text-sm">
-
             <thead className="bg-gray-50 text-xs uppercase">
               <tr>
                 <th className="px-6 py-3 text-left">Title</th>
-                <th className="px-6 py-3 text-left">Status</th>
-                <th className="px-6 py-3 text-left">Open Time</th>
-                <th className="px-6 py-3 text-left">Solved Time</th>
-                <th className="px-6 py-3 text-right">Actions</th>
+                <th>Status</th>
+                <th>Open</th>
+                <th>Solved</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
 
             <tbody>
               {tickets.map((t) => (
-                <tr key={t._id} className="border-t hover:bg-gray-50">
-
-                  <td className="px-6 py-4">
+                <tr key={t._id} className="border-t">
+                  <td className="px-6 py-3">
                     <p className="font-medium">{t.title}</p>
-                    <p className="text-xs text-gray-500">
-                      {t.description}
-                    </p>
+                    <p className="text-xs text-gray-500">{t.description}</p>
                   </td>
 
-                  <td className="px-6 py-4">{t.status}</td>
+                  <td>{t.status}</td>
+                  <td>{getOpenTime(t.createdAt)}</td>
+                  <td>{getSolvedTime(t.createdAt, t.resolvedAt)}</td>
 
-                  <td className="px-6 py-4">
-                    {getOpenTime(t.createdAt)}
-                  </td>
+                  <td className="text-right space-x-2 px-3">
 
-                  <td className="px-6 py-4">
-                    {getSolvedTime(t.createdAt, t.resolvedAt)}
-                  </td>
-
-                  <td className="px-6 py-4 text-right space-x-2">
-
-                    {/* VIEW */}
-                    <button
-                      onClick={() => navigate(`/ticket/${t._id}`)}
-                      className="text-blue-600"
-                    >
+                    <button onClick={() => navigate(`/ticket/${t._id}`)} className="text-blue-600">
                       View
                     </button>
 
-                    {/* EDIT */}
                     {(t.status === "Open" || t.status === "Reopened") && (
-                      <button
-                        onClick={() => openEdit(t)}
-                        className="text-indigo-600"
-                      >
+                      <button onClick={() => openEdit(t)} className="text-indigo-600">
                         Edit
                       </button>
                     )}
 
-                    {/* REOPEN */}
                     {t.status === "Resolved" && (
-                      <button
-                        onClick={() => reopenTicket(t._id)}
-                        className="text-orange-600"
-                      >
+                      <button onClick={() => reopenTicket(t._id)} className="text-orange-600">
                         Reopen
                       </button>
                     )}
 
-                    {/* REVIEW */}
                     {t.status === "Resolved" && (
-                      <button
-                        onClick={() => openReview(t)}
-                        className="text-green-600"
-                      >
+                      <button onClick={() => openReview(t)} className="text-green-600">
                         Review
                       </button>
                     )}
 
                   </td>
-
                 </tr>
               ))}
             </tbody>
-
           </table>
         )}
       </div>
 
       {/* ==========================
-          ⭐ REVIEW MODAL
-      ========================== */}
-      {reviewModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[400px]">
-
-            <h2 className="text-lg font-semibold mb-3">Rate Ticket</h2>
-
-            <select
-              value={rating}
-              onChange={(e) => setRating(e.target.value)}
-              className="w-full border p-2 rounded mb-3"
-            >
-              {[5,4,3,2,1].map((n) => (
-                <option key={n} value={n}>{n} Star</option>
-              ))}
-            </select>
-
-            <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Write feedback..."
-              className="w-full border p-2 rounded mb-3"
-            />
-
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setReviewModal(false)} className="px-3 py-1 border">
-                Cancel
-              </button>
-              <button onClick={submitReview} className="px-3 py-1 bg-green-600 text-white rounded">
-                Submit
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* ==========================
-          ✏️ EDIT MODAL
+          ⭐ EDIT MODAL (DRAG DROP + PREVIEW)
       ========================== */}
       {editModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[450px]">
+
+          <div className="bg-white p-6 rounded-xl w-[500px]">
 
             <h2 className="text-lg font-semibold mb-3">Edit Ticket</h2>
 
@@ -329,7 +300,7 @@ export default function MyTickets() {
               name="title"
               value={editForm.title}
               onChange={handleEditChange}
-              className="w-full border p-2 rounded mb-2"
+              className="w-full border p-2 mb-2"
               placeholder="Title"
             />
 
@@ -337,40 +308,107 @@ export default function MyTickets() {
               name="description"
               value={editForm.description}
               onChange={handleEditChange}
-              className="w-full border p-2 rounded mb-2"
+              className="w-full border p-2 mb-2"
               placeholder="Description"
             />
 
+            {/* DROP ZONE */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current.click()}
+              className={`border-2 border-dashed p-4 text-center mb-3 cursor-pointer ${
+                dragActive ? "border-blue-500 bg-blue-50" : ""
+              }`}
+            >
+              Drag & Drop files or click
+            </div>
+
             <input
-              name="department"
-              value={editForm.department}
-              onChange={handleEditChange}
-              className="w-full border p-2 rounded mb-2"
-              placeholder="Department"
+              type="file"
+              multiple
+              ref={fileInputRef}
+              hidden
+              onChange={(e) => handleFiles(e.target.files)}
             />
 
-            <select
-              name="priority"
-              value={editForm.priority}
-              onChange={handleEditChange}
-              className="w-full border p-2 rounded mb-3"
-            >
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
-              <option>Critical</option>
-            </select>
+            {/* PREVIEW NEW FILES */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {editFiles.map((file, i) => (
+                <div key={i} className="relative">
+                  <img src={file.preview} className="h-20 w-full object-cover rounded" />
+                  <button
+                    onClick={() => removeNewFile(i)}
+                    className="absolute top-0 right-0 bg-red-500 text-white px-1"
+                  >
+                    X
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* OLD ATTACHMENTS */}
+            {selectedTicket?.attachments?.length > 0 && (
+              <div className="mb-3">
+                <p className="text-sm font-semibold mb-1">Old Files</p>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {selectedTicket.attachments.map((file, i) => (
+                    <div key={i} className="relative">
+                      <img src={file} className="h-20 w-full object-cover rounded" />
+
+                      <button
+                        onClick={() => deleteAttachment(selectedTicket._id, file)}
+                        className="absolute top-0 right-0 bg-red-600 text-white px-1"
+                      >
+                        X
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2">
-              <button onClick={() => setEditModal(false)} className="px-3 py-1 border">
+              <button onClick={() => setEditModal(false)} className="border px-3 py-1">
                 Cancel
               </button>
 
-              <button onClick={submitEdit} className="px-3 py-1 bg-indigo-600 text-white rounded">
+              <button onClick={submitEdit} className="bg-indigo-600 text-white px-3 py-1">
                 Save
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* REVIEW MODAL */}
+      {reviewModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl w-[400px]">
+            <h2 className="font-semibold mb-3">Rate Ticket</h2>
+
+            <select
+              value={rating}
+              onChange={(e) => setRating(e.target.value)}
+              className="w-full border p-2 mb-2"
+            >
+              {[5,4,3,2,1].map((n) => (
+                <option key={n}>{n}</option>
+              ))}
+            </select>
+
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="w-full border p-2 mb-2"
+            />
+
+            <button onClick={submitReview} className="bg-green-600 text-white px-3 py-1">
+              Submit
+            </button>
           </div>
         </div>
       )}
