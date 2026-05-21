@@ -12,19 +12,14 @@ export default function MyTickets() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // ==========================
-  // MODALS
-  // ==========================
   const [reviewModal, setReviewModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
 
   const [selectedTicket, setSelectedTicket] = useState(null);
 
-  // REVIEW
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
 
-  // EDIT FORM
   const [editForm, setEditForm] = useState({
     title: "",
     description: "",
@@ -38,7 +33,7 @@ export default function MyTickets() {
   const fileInputRef = useRef(null);
 
   // ==========================
-  // LOAD TICKETS
+  // LOAD
   // ==========================
   useEffect(() => {
     load(page);
@@ -74,14 +69,14 @@ export default function MyTickets() {
   };
 
   // ==========================
-  // 🔥 FIXED REOPEN (NO LOGOUT ISSUE)
+  // REOPEN
   // ==========================
   const reopenTicket = async (id) => {
     try {
       await api.put(`/tickets/${id}/reopen`);
       toast.success("Ticket reopened");
       load(page);
-    } catch (err) {
+    } catch {
       toast.error("Failed to reopen");
     }
   };
@@ -113,7 +108,7 @@ export default function MyTickets() {
   };
 
   // ==========================
-  // EDIT OPEN
+  // EDIT
   // ==========================
   const openEdit = (ticket) => {
     setSelectedTicket(ticket);
@@ -133,9 +128,6 @@ export default function MyTickets() {
     setEditForm({ ...editForm, [e.target.name]: e.target.value });
   };
 
-  // ==========================
-  // FILE HANDLING
-  // ==========================
   const handleFiles = (files) => {
     const newFiles = Array.from(files).map((file) =>
       Object.assign(file, {
@@ -158,9 +150,6 @@ export default function MyTickets() {
     handleFiles(e.dataTransfer.files);
   };
 
-  // ==========================
-  // SUBMIT EDIT
-  // ==========================
   const submitEdit = async () => {
     try {
       const formData = new FormData();
@@ -188,81 +177,141 @@ export default function MyTickets() {
   };
 
   // ==========================
-  // UI
+  // UI STYLE HELPERS (SAP STYLE)
+  // ==========================
+  const statusColor = (status) => {
+    switch (status) {
+      case "Open":
+        return "bg-blue-100 text-blue-700";
+      case "In Progress":
+        return "bg-yellow-100 text-yellow-700";
+      case "Resolved":
+        return "bg-green-100 text-green-700";
+      case "Closed":
+        return "bg-gray-200 text-gray-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  // ==========================
+  // STAR UI
+  // ==========================
+  const Star = ({ value }) => {
+    return (
+      <span className="text-yellow-400 text-2xl">
+        {"★".repeat(value)}
+        {"☆".repeat(5 - value)}
+      </span>
+    );
+  };
+
+  // ==========================
+  // MAIN UI
   // ==========================
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="min-h-screen bg-[#f4f6f9] p-6">
 
       {/* HEADER */}
-      <div className="flex justify-between mb-6">
-        <h1 className="text-xl font-semibold">My Tickets</h1>
+      <div className="bg-white shadow-sm border rounded-lg px-6 py-4 flex justify-between items-center mb-6">
+        <h1 className="text-lg font-semibold text-gray-800">My Tickets</h1>
 
         <button
           onClick={() => navigate("/create")}
-          className="bg-black text-white px-4 py-2 rounded"
+          className="bg-[#0a6ed1] hover:bg-[#0854a0] text-white px-5 py-2 rounded-md text-sm"
         >
           + New Ticket
         </button>
       </div>
 
       {/* TABLE */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
 
         {loading ? (
-          <div className="p-10 text-center">Loading...</div>
+          <div className="p-10 text-center text-gray-500">Loading...</div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs uppercase">
+
+            <thead className="bg-gray-100 text-gray-600 text-xs uppercase">
               <tr>
-                <th className="px-6 py-3 text-left">Title</th>
+                <th className="px-6 py-4 text-left">Ticket</th>
                 <th>Status</th>
                 <th>Open</th>
                 <th>Solved</th>
-                <th className="text-right">Actions</th>
+                <th className="text-right px-6">Actions</th>
               </tr>
             </thead>
 
             <tbody>
               {tickets.map((t) => (
-                <tr key={t._id} className="border-t">
+                <tr key={t._id} className="border-t hover:bg-gray-50">
 
-                  <td className="px-6 py-3">
-                    <p className="font-medium">{t.title}</p>
+                  {/* TITLE */}
+                  <td className="px-6 py-4">
+                    <p className="font-semibold text-gray-800">{t.title}</p>
                     <p className="text-xs text-gray-500">{t.description}</p>
                   </td>
 
-                  <td>{t.status}</td>
-                  <td>{getOpenTime(t.createdAt)}</td>
-                  <td>{getSolvedTime(t.createdAt, t.resolvedAt)}</td>
+                  {/* STATUS */}
+                  <td>
+                    <span className={`px-3 py-1 text-xs rounded-full ${statusColor(t.status)}`}>
+                      {t.status}
+                    </span>
+                  </td>
 
-                  <td className="text-right space-x-2 px-3">
+                  {/* OPEN */}
+                  <td className="text-xs text-gray-600">
+                    {getOpenTime(t.createdAt)}
+                  </td>
 
-                    <button onClick={() => navigate(`/ticket/${t._id}`)} className="text-blue-600">
+                  {/* SOLVED */}
+                  <td className="text-xs text-gray-600">
+                    {getSolvedTime(t.createdAt, t.resolvedAt)}
+                  </td>
+
+                  {/* ACTIONS */}
+                  <td className="text-right px-6 space-x-3">
+
+                    <button
+                      onClick={() => navigate(`/ticket/${t._id}`)}
+                      className="text-[#0a6ed1] hover:underline"
+                    >
                       View
                     </button>
 
                     {(t.status === "Open" || t.status === "Reopened") && (
-                      <button onClick={() => openEdit(t)} className="text-indigo-600">
+                      <button
+                        onClick={() => openEdit(t)}
+                        className="text-indigo-600 hover:underline"
+                      >
                         Edit
                       </button>
                     )}
 
                     {t.status === "Resolved" && (
-                      <button onClick={() => reopenTicket(t._id)} className="text-orange-600">
+                      <button
+                        onClick={() => reopenTicket(t._id)}
+                        className="text-orange-600 hover:underline"
+                      >
                         Reopen
                       </button>
                     )}
 
                     {t.status === "Resolved" && (
-                      <button onClick={() => openReview(t)} className="text-green-600">
+                      <button
+                        onClick={() => openReview(t)}
+                        className="text-green-600 hover:underline"
+                      >
                         Review
                       </button>
                     )}
 
                   </td>
+
                 </tr>
               ))}
             </tbody>
+
           </table>
         )}
       </div>
@@ -270,15 +319,16 @@ export default function MyTickets() {
       {/* ================= EDIT MODAL ================= */}
       {editModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[500px]">
 
-            <h2 className="text-lg font-semibold mb-3">Edit Ticket</h2>
+          <div className="bg-white w-[520px] rounded-xl shadow-lg p-6">
+
+            <h2 className="text-lg font-semibold mb-4">Edit Ticket</h2>
 
             <input
               name="title"
               value={editForm.title}
               onChange={handleEditChange}
-              className="w-full border p-2 mb-2"
+              className="w-full border rounded-md p-2 mb-3"
               placeholder="Title"
             />
 
@@ -286,17 +336,19 @@ export default function MyTickets() {
               name="description"
               value={editForm.description}
               onChange={handleEditChange}
-              className="w-full border p-2 mb-2"
+              className="w-full border rounded-md p-2 mb-3"
               placeholder="Description"
             />
 
-            {/* DROP ZONE */}
             <div
-              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current.click()}
-              className={`border-2 border-dashed p-4 text-center mb-3 cursor-pointer ${
-                dragActive ? "border-blue-500 bg-blue-50" : ""
+              className={`border-2 border-dashed p-4 text-center mb-3 rounded-md cursor-pointer ${
+                dragActive ? "border-[#0a6ed1] bg-blue-50" : ""
               }`}
             >
               Drag & Drop files or click
@@ -314,7 +366,10 @@ export default function MyTickets() {
             <div className="grid grid-cols-3 gap-2 mb-3">
               {editFiles.map((file, i) => (
                 <div key={i} className="relative">
-                  <img src={file.preview} className="h-20 w-full object-cover rounded" />
+                  <img
+                    src={file.preview}
+                    className="h-20 w-full object-cover rounded"
+                  />
                   <button
                     onClick={() => removeFile(i)}
                     className="absolute top-0 right-0 bg-red-500 text-white px-1"
@@ -326,11 +381,17 @@ export default function MyTickets() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <button onClick={() => setEditModal(false)} className="border px-3 py-1">
+              <button
+                onClick={() => setEditModal(false)}
+                className="border px-4 py-2 rounded-md"
+              >
                 Cancel
               </button>
 
-              <button onClick={submitEdit} className="bg-indigo-600 text-white px-3 py-1">
+              <button
+                onClick={submitEdit}
+                className="bg-[#0a6ed1] text-white px-4 py-2 rounded-md"
+              >
                 Save
               </button>
             </div>
@@ -342,27 +403,37 @@ export default function MyTickets() {
       {/* ================= REVIEW MODAL ================= */}
       {reviewModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[400px]">
 
-            <h2 className="font-semibold mb-3">Rate Ticket</h2>
+          <div className="bg-white w-[420px] rounded-xl shadow-lg p-6">
 
-            <select
-              value={rating}
-              onChange={(e) => setRating(e.target.value)}
-              className="w-full border p-2 mb-2"
-            >
-              {[5,4,3,2,1].map((n) => (
-                <option key={n}>{n}</option>
+            <h2 className="font-semibold mb-4">Rate Ticket</h2>
+
+            {/* STAR UI */}
+            <div className="flex gap-1 text-3xl mb-4 cursor-pointer">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span
+                  key={n}
+                  onClick={() => setRating(n)}
+                  className={`${
+                    rating >= n ? "text-yellow-400" : "text-gray-300"
+                  }`}
+                >
+                  ★
+                </span>
               ))}
-            </select>
+            </div>
 
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              className="w-full border p-2 mb-2"
+              className="w-full border rounded-md p-2 mb-3"
+              placeholder="Write review..."
             />
 
-            <button onClick={submitReview} className="bg-green-600 text-white px-3 py-1">
+            <button
+              onClick={submitReview}
+              className="w-full bg-[#0a6ed1] text-white py-2 rounded-md"
+            >
               Submit
             </button>
 
