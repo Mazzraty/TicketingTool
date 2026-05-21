@@ -35,8 +35,6 @@ export default function AdminTickets() {
       );
 
       setTickets(res.data.data || []);
-
-      // FIX: backend uses "pages" not "totalPages"
       setTotalPages(res.data.pages || 1);
 
     } catch (err) {
@@ -67,16 +65,16 @@ export default function AdminTickets() {
       await api.put(`/tickets/${id}`, { status });
 
       toast.success("Status updated");
-
       load(page);
       loadStats();
+
     } catch {
       toast.error("Update failed");
     }
   };
 
   // =========================
-  // SEARCH
+  // SEARCH FILTER
   // =========================
   const filtered = tickets.filter((t) => {
     const s = search.toLowerCase();
@@ -109,12 +107,12 @@ export default function AdminTickets() {
         </h1>
       </div>
 
-      {/* KPI */}
+      {/* STATS */}
       <div className="p-6 grid grid-cols-5 gap-4">
         {Object.entries(stats).map(([k, v]) => (
           <div key={k} className="bg-white border rounded-lg p-4">
             <p className="text-xs text-gray-500 capitalize">{k}</p>
-            <h2 className="text-2xl font-bold">{v}</h2>
+            <h2 className="text-2xl font-bold mt-1">{v}</h2>
           </div>
         ))}
       </div>
@@ -237,36 +235,82 @@ export default function AdminTickets() {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* =========================
+          📌 MODAL (WITH IMAGES)
+      ========================= */}
       {selected && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
 
-          <div className="bg-white w-[600px] p-6 rounded-xl">
+          <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl">
 
-            <h2 className="font-bold text-lg mb-3">
-              {selected.title}
-            </h2>
+            {/* HEADER */}
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="font-bold text-lg">
+                {selected.title}
+              </h2>
 
-            <p className="mb-3">{selected.description}</p>
-
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <p><b>User:</b> {selected.userId?.email}</p>
-              <p><b>Status:</b> {selected.status}</p>
-              <p><b>Priority:</b> {selected.priority}</p>
-              <p><b>Department:</b> {selected.department}</p>
-            </div>
-
-            <div className="mt-4">
               <button
                 onClick={() => setSelected(null)}
-                className="w-full bg-black text-white py-2 rounded"
+                className="text-gray-500 hover:text-black"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* BODY */}
+            <div className="p-5 space-y-4 text-sm">
+
+              <p>{selected.description}</p>
+
+              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded-lg">
+                <p><b>User:</b> {selected.userId?.email}</p>
+                <p><b>Priority:</b> {selected.priority}</p>
+                <p><b>Status:</b> {selected.status}</p>
+                <p><b>Department:</b> {selected.department}</p>
+              </div>
+
+              {/* 📎 ATTACHMENTS */}
+              <div>
+                <h3 className="font-semibold mb-2">Attachments</h3>
+
+                {selected.attachments?.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-3">
+
+                    {selected.attachments.map((file, i) => (
+                      <a
+                        key={i}
+                        href={file}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <img
+                          src={file}
+                          className="h-28 w-full object-cover rounded border hover:scale-105 transition"
+                        />
+                      </a>
+                    ))}
+
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400">
+                    No attachments
+                  </p>
+                )}
+              </div>
+
+            </div>
+
+            {/* FOOTER */}
+            <div className="p-4 border-t">
+              <button
+                onClick={() => setSelected(null)}
+                className="w-full bg-black text-white py-2 rounded-lg"
               >
                 Close
               </button>
             </div>
 
           </div>
-
         </div>
       )}
 
