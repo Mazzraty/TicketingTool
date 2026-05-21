@@ -33,14 +33,12 @@ export default function MyTickets() {
   });
 
   const [editFiles, setEditFiles] = useState([]);
-
-  // drag state
   const [dragActive, setDragActive] = useState(false);
 
   const fileInputRef = useRef(null);
 
   // ==========================
-  // LOAD
+  // LOAD TICKETS
   // ==========================
   useEffect(() => {
     load(page);
@@ -76,14 +74,14 @@ export default function MyTickets() {
   };
 
   // ==========================
-  // REOPEN
+  // 🔥 FIXED REOPEN (NO LOGOUT ISSUE)
   // ==========================
   const reopenTicket = async (id) => {
     try {
-      await api.put(`/tickets/${id}`, { status: "Open" });
+      await api.put(`/tickets/${id}/reopen`);
       toast.success("Ticket reopened");
       load(page);
-    } catch {
+    } catch (err) {
       toast.error("Failed to reopen");
     }
   };
@@ -139,26 +137,21 @@ export default function MyTickets() {
   // FILE HANDLING
   // ==========================
   const handleFiles = (files) => {
-    const newFiles = Array.from(files);
-
-    const previewFiles = newFiles.map((file) =>
+    const newFiles = Array.from(files).map((file) =>
       Object.assign(file, {
         preview: URL.createObjectURL(file),
       })
     );
 
-    setEditFiles((prev) => [...prev, ...previewFiles]);
+    setEditFiles((prev) => [...prev, ...newFiles]);
   };
 
-  const removeNewFile = (index) => {
+  const removeFile = (index) => {
     const updated = [...editFiles];
     updated.splice(index, 1);
     setEditFiles(updated);
   };
 
-  // ==========================
-  // DRAG & DROP
-  // ==========================
   const handleDrop = (e) => {
     e.preventDefault();
     setDragActive(false);
@@ -186,26 +179,11 @@ export default function MyTickets() {
       });
 
       toast.success("Ticket updated");
+
       setEditModal(false);
       load(page);
     } catch {
       toast.error("Update failed");
-    }
-  };
-
-  // ==========================
-  // DELETE OLD ATTACHMENT (OPTIONAL API)
-  // ==========================
-  const deleteAttachment = async (ticketId, fileUrl) => {
-    try {
-      await api.put(`/tickets/${ticketId}/delete-attachment`, {
-        fileUrl,
-      });
-
-      toast.success("Attachment deleted");
-      load(page);
-    } catch {
-      toast.error("Failed to delete file");
     }
   };
 
@@ -218,6 +196,7 @@ export default function MyTickets() {
       {/* HEADER */}
       <div className="flex justify-between mb-6">
         <h1 className="text-xl font-semibold">My Tickets</h1>
+
         <button
           onClick={() => navigate("/create")}
           className="bg-black text-white px-4 py-2 rounded"
@@ -228,6 +207,7 @@ export default function MyTickets() {
 
       {/* TABLE */}
       <div className="bg-white border rounded-xl overflow-hidden">
+
         {loading ? (
           <div className="p-10 text-center">Loading...</div>
         ) : (
@@ -245,6 +225,7 @@ export default function MyTickets() {
             <tbody>
               {tickets.map((t) => (
                 <tr key={t._id} className="border-t">
+
                   <td className="px-6 py-3">
                     <p className="font-medium">{t.title}</p>
                     <p className="text-xs text-gray-500">{t.description}</p>
@@ -286,12 +267,9 @@ export default function MyTickets() {
         )}
       </div>
 
-      {/* ==========================
-          ⭐ EDIT MODAL (DRAG DROP + PREVIEW)
-      ========================== */}
+      {/* ================= EDIT MODAL ================= */}
       {editModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-
           <div className="bg-white p-6 rounded-xl w-[500px]">
 
             <h2 className="text-lg font-semibold mb-3">Edit Ticket</h2>
@@ -315,7 +293,6 @@ export default function MyTickets() {
             {/* DROP ZONE */}
             <div
               onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-              onDragLeave={() => setDragActive(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current.click()}
               className={`border-2 border-dashed p-4 text-center mb-3 cursor-pointer ${
@@ -328,18 +305,18 @@ export default function MyTickets() {
             <input
               type="file"
               multiple
-              ref={fileInputRef}
               hidden
+              ref={fileInputRef}
               onChange={(e) => handleFiles(e.target.files)}
             />
 
-            {/* PREVIEW NEW FILES */}
+            {/* PREVIEW */}
             <div className="grid grid-cols-3 gap-2 mb-3">
               {editFiles.map((file, i) => (
                 <div key={i} className="relative">
                   <img src={file.preview} className="h-20 w-full object-cover rounded" />
                   <button
-                    onClick={() => removeNewFile(i)}
+                    onClick={() => removeFile(i)}
                     className="absolute top-0 right-0 bg-red-500 text-white px-1"
                   >
                     X
@@ -347,28 +324,6 @@ export default function MyTickets() {
                 </div>
               ))}
             </div>
-
-            {/* OLD ATTACHMENTS */}
-            {selectedTicket?.attachments?.length > 0 && (
-              <div className="mb-3">
-                <p className="text-sm font-semibold mb-1">Old Files</p>
-
-                <div className="grid grid-cols-3 gap-2">
-                  {selectedTicket.attachments.map((file, i) => (
-                    <div key={i} className="relative">
-                      <img src={file} className="h-20 w-full object-cover rounded" />
-
-                      <button
-                        onClick={() => deleteAttachment(selectedTicket._id, file)}
-                        className="absolute top-0 right-0 bg-red-600 text-white px-1"
-                      >
-                        X
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div className="flex justify-end gap-2">
               <button onClick={() => setEditModal(false)} className="border px-3 py-1">
@@ -384,10 +339,11 @@ export default function MyTickets() {
         </div>
       )}
 
-      {/* REVIEW MODAL */}
+      {/* ================= REVIEW MODAL ================= */}
       {reviewModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
           <div className="bg-white p-6 rounded-xl w-[400px]">
+
             <h2 className="font-semibold mb-3">Rate Ticket</h2>
 
             <select
@@ -409,6 +365,7 @@ export default function MyTickets() {
             <button onClick={submitReview} className="bg-green-600 text-white px-3 py-1">
               Submit
             </button>
+
           </div>
         </div>
       )}

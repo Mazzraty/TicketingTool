@@ -8,6 +8,7 @@ export default function AdminTickets() {
   const [totalPages, setTotalPages] = useState(1);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [stats, setStats] = useState({
     total: 0,
@@ -18,7 +19,7 @@ export default function AdminTickets() {
   });
 
   // =========================
-  // LOAD DATA
+  // LOAD TICKETS
   // =========================
   useEffect(() => {
     load(page);
@@ -27,19 +28,22 @@ export default function AdminTickets() {
 
   const load = async (pageNumber = 1) => {
     try {
+      setLoading(true);
+
       const res = await api.get(
         `/tickets?page=${pageNumber}&limit=10`
       );
 
       setTickets(res.data.data || []);
 
-      setTotalPages(
-        res.data.pagination?.totalPages || 1
-      );
+      // FIX: backend uses "pages" not "totalPages"
+      setTotalPages(res.data.pages || 1);
 
     } catch (err) {
       console.error(err);
       toast.error("Failed to load tickets");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,14 +70,13 @@ export default function AdminTickets() {
 
       load(page);
       loadStats();
-
     } catch {
       toast.error("Update failed");
     }
   };
 
   // =========================
-  // SEARCH FILTER
+  // SEARCH
   // =========================
   const filtered = tickets.filter((t) => {
     const s = search.toLowerCase();
@@ -93,7 +96,6 @@ export default function AdminTickets() {
     if (p === "High") return "bg-red-100 text-red-700";
     if (p === "Medium") return "bg-yellow-100 text-yellow-700";
     if (p === "Low") return "bg-blue-100 text-blue-700";
-
     return "bg-gray-100 text-gray-600";
   };
 
@@ -107,378 +109,165 @@ export default function AdminTickets() {
         </h1>
       </div>
 
-      {/* KPI CARDS */}
+      {/* KPI */}
       <div className="p-6 grid grid-cols-5 gap-4">
-
         {Object.entries(stats).map(([k, v]) => (
-          <div
-            key={k}
-            className="bg-white border rounded-lg p-4 shadow-sm"
-          >
-            <p className="text-xs text-gray-500 capitalize">
-              {k}
-            </p>
-
-            <h2 className="text-2xl font-bold mt-1">
-              {v}
-            </h2>
+          <div key={k} className="bg-white border rounded-lg p-4">
+            <p className="text-xs text-gray-500 capitalize">{k}</p>
+            <h2 className="text-2xl font-bold">{v}</h2>
           </div>
         ))}
-
       </div>
 
-      {/* TABLE SECTION */}
+      {/* TABLE */}
       <div className="px-6 pb-6">
+        <div className="bg-white border rounded-xl overflow-hidden">
 
-        <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-
-          {/* TOP BAR */}
+          {/* SEARCH */}
           <div className="flex justify-between items-center px-5 py-4 border-b bg-gray-50">
-
-            <h2 className="font-semibold">
-              Tickets Overview
-            </h2>
+            <h2 className="font-semibold">Tickets</h2>
 
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search..."
-              className="border px-3 py-2 text-sm rounded-lg w-64 outline-none focus:ring-2 focus:ring-black"
+              className="border px-3 py-2 text-sm rounded-lg w-64"
             />
-
           </div>
 
           {/* TABLE */}
           <div className="overflow-x-auto">
 
-            <table className="w-full text-sm table-fixed">
+            {loading ? (
+              <div className="p-10 text-center">Loading...</div>
+            ) : (
+              <table className="w-full text-sm table-fixed">
 
-              {/* HEAD */}
-              <thead className="bg-gray-100 text-gray-600">
+                <thead className="bg-gray-100 text-gray-600">
+                  <tr>
+                    <th className="p-3 text-left">Title</th>
+                    <th className="p-3 text-left">User</th>
+                    <th className="p-3 text-center">Priority</th>
+                    <th className="p-3 text-center">Status</th>
+                    <th className="p-3 text-center">SLA</th>
+                    <th className="p-3 text-center">Action</th>
+                  </tr>
+                </thead>
 
-                <tr>
+                <tbody>
+                  {filtered.map((t) => (
+                    <tr key={t._id} className="border-t hover:bg-gray-50">
 
-                  <th className="p-3 w-[28%] text-left">
-                    Title
-                  </th>
-
-                  <th className="p-3 w-[18%] text-left">
-                    User
-                  </th>
-
-                  <th className="p-3 w-[12%] text-center">
-                    Priority
-                  </th>
-
-                  <th className="p-3 w-[15%] text-center">
-                    Status
-                  </th>
-
-                  <th className="p-3 w-[15%] text-center">
-                    SLA
-                  </th>
-
-                  <th className="p-3 w-[12%] text-center">
-                    Action
-                  </th>
-
-                </tr>
-
-              </thead>
-
-              {/* BODY */}
-              <tbody>
-
-                {filtered.length > 0 ? (
-                  filtered.map((t) => (
-
-                    <tr
-                      key={t._id}
-                      className="border-t hover:bg-gray-50"
-                    >
-
-                      {/* TITLE */}
-                      <td className="p-3 align-middle">
-
-                        <p className="font-semibold truncate">
-                          {t.title}
-                        </p>
-
-                        <p className="text-xs text-gray-500 truncate">
+                      <td className="p-3">
+                        <p className="font-semibold">{t.title}</p>
+                        <p className="text-xs text-gray-500">
                           {t.description}
                         </p>
-
                       </td>
 
-                      {/* USER */}
-                      <td className="p-3 align-middle">
-
-                        <p className="truncate">
-                          {t.userId?.email}
-                        </p>
-
+                      <td className="p-3">
+                        {t.userId?.email || "N/A"}
                       </td>
 
-                      {/* PRIORITY */}
-                      <td className="p-3 text-center align-middle">
-
-                        <span
-                          className={`px-2 py-1 text-xs rounded ${priorityColor(
-                            t.priority
-                          )}`}
-                        >
+                      <td className="p-3 text-center">
+                        <span className={`px-2 py-1 text-xs rounded ${priorityColor(t.priority)}`}>
                           {t.priority}
                         </span>
-
                       </td>
 
-                      {/* STATUS */}
-                      <td className="p-3 text-center align-middle">
-
+                      <td className="p-3 text-center">
                         <select
                           value={t.status}
-                          onChange={(e) =>
-                            updateStatus(
-                              t._id,
-                              e.target.value
-                            )
-                          }
-                          className="border px-2 py-1 text-xs rounded w-[120px]"
+                          onChange={(e) => updateStatus(t._id, e.target.value)}
+                          className="border px-2 py-1 text-xs rounded"
                         >
                           <option>Open</option>
                           <option>In Progress</option>
                           <option>Resolved</option>
                           <option>Closed</option>
                         </select>
-
                       </td>
 
-                      {/* SLA */}
-                      <td className="p-3 text-center text-xs text-gray-500 align-middle">
-
+                      <td className="p-3 text-center text-xs text-gray-500">
                         {t.slaDue
-                          ? new Date(
-                              t.slaDue
-                            ).toLocaleString()
-                          : "—"}
-
+                          ? new Date(t.slaDue).toLocaleString()
+                          : "-"}
                       </td>
 
-                      {/* ACTION */}
-                      <td className="p-3 text-center align-middle">
-
+                      <td className="p-3 text-center">
                         <button
                           onClick={() => setSelected(t)}
-                          className="text-blue-600 hover:underline"
+                          className="text-blue-600"
                         >
                           View
                         </button>
-
                       </td>
 
                     </tr>
+                  ))}
+                </tbody>
 
-                  ))
-                ) : (
-
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="text-center py-10 text-gray-400"
-                    >
-                      No tickets found
-                    </td>
-                  </tr>
-
-                )}
-
-              </tbody>
-
-            </table>
-
+              </table>
+            )}
           </div>
 
           {/* PAGINATION */}
-          <div className="flex items-center justify-between px-5 py-4 border-t bg-gray-50">
+          <div className="flex justify-between px-5 py-4 border-t bg-gray-50">
+            <p>Page {page} of {totalPages}</p>
 
-            <p className="text-sm text-gray-500">
-              Page {page} of {totalPages}
-            </p>
-
-            <div className="flex gap-2 flex-wrap">
-
-              {/* PREVIOUS */}
+            <div className="flex gap-2">
               <button
                 disabled={page === 1}
-                onClick={() =>
-                  setPage((prev) => prev - 1)
-                }
-                className={`px-4 py-2 rounded-lg text-sm border transition
-                  ${
-                    page === 1
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white hover:bg-gray-100"
-                  }`}
+                onClick={() => setPage(page - 1)}
+                className="px-3 py-1 border"
               >
-                Previous
+                Prev
               </button>
 
-              {/* PAGE NUMBERS */}
-              {[...Array(totalPages)].map((_, i) => (
-
-                <button
-                  key={i}
-                  onClick={() => setPage(i + 1)}
-                  className={`w-10 h-10 rounded-lg text-sm border transition
-                    ${
-                      page === i + 1
-                        ? "bg-black text-white"
-                        : "bg-white hover:bg-gray-100"
-                    }`}
-                >
-                  {i + 1}
-                </button>
-
-              ))}
-
-              {/* NEXT */}
               <button
                 disabled={page === totalPages}
-                onClick={() =>
-                  setPage((prev) => prev + 1)
-                }
-                className={`px-4 py-2 rounded-lg text-sm border transition
-                  ${
-                    page === totalPages
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white hover:bg-gray-100"
-                  }`}
+                onClick={() => setPage(page + 1)}
+                className="px-3 py-1 border"
               >
                 Next
               </button>
-
             </div>
-
           </div>
 
         </div>
-
       </div>
 
       {/* MODAL */}
       {selected && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
 
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white w-[600px] p-6 rounded-xl">
 
-          <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl">
+            <h2 className="font-bold text-lg mb-3">
+              {selected.title}
+            </h2>
 
-            {/* HEADER */}
-            <div className="p-4 border-b flex justify-between items-center">
+            <p className="mb-3">{selected.description}</p>
 
-              <h2 className="font-bold text-lg">
-                {selected.title}
-              </h2>
-
-              <button
-                onClick={() => setSelected(null)}
-                className="text-gray-500 hover:text-black"
-              >
-                ✕
-              </button>
-
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <p><b>User:</b> {selected.userId?.email}</p>
+              <p><b>Status:</b> {selected.status}</p>
+              <p><b>Priority:</b> {selected.priority}</p>
+              <p><b>Department:</b> {selected.department}</p>
             </div>
 
-            {/* BODY */}
-            <div className="p-5 space-y-4 text-sm">
-
-              <p>
-                {selected.description}
-              </p>
-
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded-lg">
-
-                <p>
-                  <b>User:</b>{" "}
-                  {selected.userId?.email}
-                </p>
-
-                <p>
-                  <b>Priority:</b>{" "}
-                  {selected.priority}
-                </p>
-
-                <p>
-                  <b>Status:</b>{" "}
-                  {selected.status}
-                </p>
-
-                <p>
-                  <b>Department:</b>{" "}
-                  {selected.department}
-                </p>
-
-              </div>
-
-              {/* ATTACHMENTS */}
-              <div>
-
-                <h3 className="font-semibold mb-2">
-                  Attachments
-                </h3>
-
-                {selected.attachments?.length ? (
-
-                  <div className="grid grid-cols-3 gap-3">
-
-                    {selected.attachments.map((img, i) => (
-
-                      <a
-                        key={i}
-                        href={img}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-
-                        <img
-                          src={img}
-                          alt=""
-                          className="h-28 w-full object-cover rounded border"
-                        />
-
-                      </a>
-
-                    ))}
-
-                  </div>
-
-                ) : (
-
-                  <p className="text-xs text-gray-400">
-                    No attachments
-                  </p>
-
-                )}
-
-              </div>
-
-            </div>
-
-            {/* FOOTER */}
-            <div className="p-4 border-t">
-
+            <div className="mt-4">
               <button
                 onClick={() => setSelected(null)}
-                className="w-full bg-black hover:bg-gray-900 text-white py-2 rounded-lg"
+                className="w-full bg-black text-white py-2 rounded"
               >
                 Close
               </button>
-
             </div>
 
           </div>
 
         </div>
-
       )}
 
     </div>

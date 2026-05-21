@@ -7,10 +7,10 @@ import {
   updateStatus,
   deleteTicket,
   getTicketStats,
-
   editTicket,
   addReview,
-  getTicketById,   // ✅ ADD THIS
+  getTicketById,
+  reopenTicket,   // ✅ REAL FIX
 } from "../controllers/ticketController.js";
 
 import {
@@ -27,7 +27,7 @@ const router = express.Router();
 // ✅ USER ROUTES
 // ======================================================
 
-// CREATE
+// CREATE TICKET
 router.post(
   "/",
   protect,
@@ -38,14 +38,10 @@ router.post(
 // MY TICKETS
 router.get("/my", protect, getUserTickets);
 
-
-// VIEW SINGLE TICKET (🔥 IMPORTANT)
+// GET SINGLE TICKET
 router.get("/:id", protect, getTicketById);
 
-// REVIEW
-router.put("/:id/review", protect, addReview);
-
-// EDIT TICKET
+// EDIT TICKET (OPEN / REOPEN ONLY)
 router.put(
   "/:id/edit",
   protect,
@@ -53,10 +49,15 @@ router.put(
   editTicket
 );
 
+// ADD REVIEW
+router.put("/:id/review", protect, addReview);
+
+// REOPEN TICKET (USER ONLY) ⭐ CLEAN & SAFE
+router.put("/:id/reopen", protect, reopenTicket);
 
 
 // ======================================================
-// ✅ ADMIN ROUTES
+// 🔥 ADMIN ROUTES
 // ======================================================
 
 // STATS
@@ -65,10 +66,11 @@ router.get("/stats", protect, adminOnly, getTicketStats);
 // ALL TICKETS
 router.get("/", protect, adminOnly, getAllTickets);
 
-// UPDATE STATUS
+// UPDATE STATUS (ADMIN ONLY)
 router.put("/:id", protect, adminOnly, updateStatus);
 
 // DELETE
 router.delete("/:id", protect, adminOnly, deleteTicket);
+
 
 export default router;
