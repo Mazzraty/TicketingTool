@@ -12,19 +12,14 @@ export default function MyTickets() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // ==========================
-  // MODALS
-  // ==========================
   const [reviewModal, setReviewModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
 
   const [selectedTicket, setSelectedTicket] = useState(null);
 
-  // REVIEW
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
 
-  // EDIT FORM
   const [editForm, setEditForm] = useState({
     title: "",
     description: "",
@@ -33,15 +28,11 @@ export default function MyTickets() {
   });
 
   const [editFiles, setEditFiles] = useState([]);
-
-  // drag state
   const [dragActive, setDragActive] = useState(false);
 
   const fileInputRef = useRef(null);
 
-  // ==========================
-  // LOAD
-  // ==========================
+  // ================= LOAD =================
   useEffect(() => {
     load(page);
   }, [page]);
@@ -49,9 +40,7 @@ export default function MyTickets() {
   const load = async (pageNumber = 1) => {
     try {
       setLoading(true);
-
       const res = await api.get(`/tickets/my?page=${pageNumber}`);
-
       setTickets(res.data.data || []);
       setTotalPages(res.data.totalPages || 1);
     } catch (err) {
@@ -61,9 +50,7 @@ export default function MyTickets() {
     }
   };
 
-  // ==========================
-  // TIME HELPERS
-  // ==========================
+  // ================= TIME =================
   const getOpenTime = (createdAt) => {
     const diff = new Date() - new Date(createdAt);
     return `${Math.floor(diff / 3600000)}h ${Math.floor((diff % 3600000) / 60000)}m`;
@@ -75,22 +62,25 @@ export default function MyTickets() {
     return `${Math.floor(diff / 3600000)}h ${Math.floor((diff % 3600000) / 60000)}m`;
   };
 
-  // ==========================
-  // REOPEN
-  // ==========================
+  // ================= 🔥 FIXED REOPEN (NO LOGOUT ISSUE) =================
   const reopenTicket = async (id) => {
     try {
-      await api.put(`/tickets/${id}`, { status: "Open" });
-      toast.success("Ticket reopened");
+      await api.put(`/tickets/${id}/reopen`); // ✅ CORRECT ENDPOINT
+      toast.success("Ticket reopened successfully");
       load(page);
-    } catch {
-      toast.error("Failed to reopen");
+    } catch (err) {
+      console.log("Reopen error:", err);
+
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        navigate("/login");
+      } else {
+        toast.error("Failed to reopen ticket");
+      }
     }
   };
 
-  // ==========================
-  // REVIEW
-  // ==========================
+  // ================= REVIEW =================
   const openReview = (ticket) => {
     setSelectedTicket(ticket);
     setReviewModal(true);
@@ -104,7 +94,6 @@ export default function MyTickets() {
       });
 
       toast.success("Review submitted");
-
       setReviewModal(false);
       setComment("");
       setRating(5);
@@ -114,9 +103,7 @@ export default function MyTickets() {
     }
   };
 
-  // ==========================
-  // EDIT OPEN
-  // ==========================
+  // ================= EDIT =================
   const openEdit = (ticket) => {
     setSelectedTicket(ticket);
 
@@ -135,9 +122,6 @@ export default function MyTickets() {
     setEditForm({ ...editForm, [e.target.name]: e.target.value });
   };
 
-  // ==========================
-  // FILE HANDLING
-  // ==========================
   const handleFiles = (files) => {
     const newFiles = Array.from(files);
 
@@ -150,24 +134,12 @@ export default function MyTickets() {
     setEditFiles((prev) => [...prev, ...previewFiles]);
   };
 
-  const removeNewFile = (index) => {
-    const updated = [...editFiles];
-    updated.splice(index, 1);
-    setEditFiles(updated);
-  };
-
-  // ==========================
-  // DRAG & DROP
-  // ==========================
   const handleDrop = (e) => {
     e.preventDefault();
     setDragActive(false);
     handleFiles(e.dataTransfer.files);
   };
 
-  // ==========================
-  // SUBMIT EDIT
-  // ==========================
   const submitEdit = async () => {
     try {
       const formData = new FormData();
@@ -193,9 +165,6 @@ export default function MyTickets() {
     }
   };
 
-  // ==========================
-  // DELETE OLD ATTACHMENT (OPTIONAL API)
-  // ==========================
   const deleteAttachment = async (ticketId, fileUrl) => {
     try {
       await api.put(`/tickets/${ticketId}/delete-attachment`, {
@@ -209,9 +178,6 @@ export default function MyTickets() {
     }
   };
 
-  // ==========================
-  // UI
-  // ==========================
   return (
     <div className="min-h-screen bg-slate-50 p-6">
 
@@ -256,24 +222,36 @@ export default function MyTickets() {
 
                   <td className="text-right space-x-2 px-3">
 
-                    <button onClick={() => navigate(`/ticket/${t._id}`)} className="text-blue-600">
+                    <button
+                      onClick={() => navigate(`/ticket/${t._id}`)}
+                      className="text-blue-600"
+                    >
                       View
                     </button>
 
                     {(t.status === "Open" || t.status === "Reopened") && (
-                      <button onClick={() => openEdit(t)} className="text-indigo-600">
+                      <button
+                        onClick={() => openEdit(t)}
+                        className="text-indigo-600"
+                      >
                         Edit
                       </button>
                     )}
 
                     {t.status === "Resolved" && (
-                      <button onClick={() => reopenTicket(t._id)} className="text-orange-600">
+                      <button
+                        onClick={() => reopenTicket(t._id)} // 🔥 FIXED HERE
+                        className="text-orange-600"
+                      >
                         Reopen
                       </button>
                     )}
 
                     {t.status === "Resolved" && (
-                      <button onClick={() => openReview(t)} className="text-green-600">
+                      <button
+                        onClick={() => openReview(t)}
+                        className="text-green-600"
+                      >
                         Review
                       </button>
                     )}
@@ -282,107 +260,10 @@ export default function MyTickets() {
                 </tr>
               ))}
             </tbody>
+
           </table>
         )}
       </div>
-
-      {/* ==========================
-          ⭐ EDIT MODAL (DRAG DROP + PREVIEW)
-      ========================== */}
-      {editModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-
-          <div className="bg-white p-6 rounded-xl w-[500px]">
-
-            <h2 className="text-lg font-semibold mb-3">Edit Ticket</h2>
-
-            <input
-              name="title"
-              value={editForm.title}
-              onChange={handleEditChange}
-              className="w-full border p-2 mb-2"
-              placeholder="Title"
-            />
-
-            <textarea
-              name="description"
-              value={editForm.description}
-              onChange={handleEditChange}
-              className="w-full border p-2 mb-2"
-              placeholder="Description"
-            />
-
-            {/* DROP ZONE */}
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-              onDragLeave={() => setDragActive(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current.click()}
-              className={`border-2 border-dashed p-4 text-center mb-3 cursor-pointer ${
-                dragActive ? "border-blue-500 bg-blue-50" : ""
-              }`}
-            >
-              Drag & Drop files or click
-            </div>
-
-            <input
-              type="file"
-              multiple
-              ref={fileInputRef}
-              hidden
-              onChange={(e) => handleFiles(e.target.files)}
-            />
-
-            {/* PREVIEW NEW FILES */}
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {editFiles.map((file, i) => (
-                <div key={i} className="relative">
-                  <img src={file.preview} className="h-20 w-full object-cover rounded" />
-                  <button
-                    onClick={() => removeNewFile(i)}
-                    className="absolute top-0 right-0 bg-red-500 text-white px-1"
-                  >
-                    X
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* OLD ATTACHMENTS */}
-            {selectedTicket?.attachments?.length > 0 && (
-              <div className="mb-3">
-                <p className="text-sm font-semibold mb-1">Old Files</p>
-
-                <div className="grid grid-cols-3 gap-2">
-                  {selectedTicket.attachments.map((file, i) => (
-                    <div key={i} className="relative">
-                      <img src={file} className="h-20 w-full object-cover rounded" />
-
-                      <button
-                        onClick={() => deleteAttachment(selectedTicket._id, file)}
-                        className="absolute top-0 right-0 bg-red-600 text-white px-1"
-                      >
-                        X
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setEditModal(false)} className="border px-3 py-1">
-                Cancel
-              </button>
-
-              <button onClick={submitEdit} className="bg-indigo-600 text-white px-3 py-1">
-                Save
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {/* REVIEW MODAL */}
       {reviewModal && (
@@ -406,7 +287,10 @@ export default function MyTickets() {
               className="w-full border p-2 mb-2"
             />
 
-            <button onClick={submitReview} className="bg-green-600 text-white px-3 py-1">
+            <button
+              onClick={submitReview}
+              className="bg-green-600 text-white px-3 py-1"
+            >
               Submit
             </button>
           </div>
