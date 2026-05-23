@@ -34,8 +34,9 @@ export const createTicket = async (req, res) => {
       priority,
       attachments,
       userId: req.user.id,
-      slaDue: new Date(Date.now() + (slaHours[priority] || 72) * 3600000),
-
+      slaDue: new Date(
+        Date.now() + (slaHours[priority] || 72) * 3600000
+      ),
       status: "Open",
       reopened: false,
       review: "",
@@ -48,7 +49,6 @@ export const createTicket = async (req, res) => {
     const user = await User.findById(req.user.id);
     const admins = await User.find({ role: "admin" });
 
-    /* EMAIL (non-blocking) */
     sendEmail({
       to: admins.map((a) => a.email),
       subject: "New Ticket Created",
@@ -61,19 +61,16 @@ export const createTicket = async (req, res) => {
       html: ticketUserEmail(ticket),
     });
 
-    /* SOCKET */
     if (global.io) {
       global.io.emit("newTicket", ticket);
     }
 
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       message: "Ticket created successfully",
       data: ticket,
     });
-
   } catch (err) {
-    console.error("CREATE TICKET ERROR:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -91,14 +88,15 @@ export const getUserTickets = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    const total = await Ticket.countDocuments({ userId: req.user.id });
+    const total = await Ticket.countDocuments({
+      userId: req.user.id,
+    });
 
     res.json({
       success: true,
       data: tickets,
       totalPages: Math.ceil(total / limit),
     });
-
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -127,7 +125,6 @@ export const getAllTickets = async (req, res) => {
       pages: Math.ceil(total / limit),
       total,
     });
-
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -150,18 +147,14 @@ export const getTicketById = async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
-      data: ticket,
-    });
-
+    res.json({ success: true, data: ticket });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 /* ======================================================
-   ✅ UPDATE STATUS (ADMIN ONLY)
+   ✅ UPDATE STATUS (ADMIN)
 ====================================================== */
 export const updateStatus = async (req, res) => {
   try {
@@ -187,18 +180,9 @@ export const updateStatus = async (req, res) => {
 
     ticket.status = status;
 
-    /* ================= TIMELINE ================= */
-    if (status === "In Progress") {
-      ticket.inProgressAt = new Date();
-    }
-
-    if (status === "Resolved") {
-      ticket.resolvedAt = new Date();
-    }
-
-    if (status === "Closed") {
-      ticket.closedAt = new Date();
-    }
+    if (status === "In Progress") ticket.inProgressAt = new Date();
+    if (status === "Resolved") ticket.resolvedAt = new Date();
+    if (status === "Closed") ticket.closedAt = new Date();
 
     if (status === "Open") {
       ticket.reopened = true;
@@ -209,19 +193,138 @@ export const updateStatus = async (req, res) => {
 
     await ticket.save();
 
-    return res.json({
+    res.json({
       success: true,
       message: "Status updated",
       data: ticket,
     });
-
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 /* ======================================================
-   ✅ USER REOPEN TICKET (IMPORTANT FIX)
+   ✅ EDIT TICKET (USER)
+====================================================== */
+export const editTicket = async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    if (ticket.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (ticket.status === "Resolved" || ticket.status === "Closed") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot edit resolved ticket",
+      });
+    }
+
+    const { title, description, department, priority } = req.body;
+
+    if (title) ticket.title = title;
+    if (description) ticket.description = description;
+    if (department) ticket.department = department;
+    if (priority) ticket.priority = priority;
+
+    if (req.files?.length > 0) {
+      const newFiles = req.files.map((f) => f.path);
+      ticket.attachments.push(...newFiles);
+    }
+
+    await ticket.save();
+
+    res.json({
+      success: true,
+      message: "Ticket updated successfully",
+      data: ticket,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
+   ✅ DELETE ATTACHMENT
+====================================================== */
+export const deleteAttachment = async (req, res) => {
+  try {
+    const { attachment } = req.body;
+
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    ticket.attachments = ticket.attachments.filter(
+      (a) => a !== attachment
+    );
+
+    await ticket.save();
+
+    res.json({
+      success: true,
+      message: "Attachment removed",
+      data: ticket,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
+   ✅ USER CONFIRM RESOLUTION
+====================================================== */
+export const confirmResolution = async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    if (ticket.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    ticket.status = "Closed";
+    ticket.closedAt = new Date();
+
+    await ticket.save();
+
+    res.json({
+      success: true,
+      message: "Ticket confirmed",
+      data: ticket,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
+   ✅ REOPEN TICKET
 ====================================================== */
 export const reopenTicket = async (req, res) => {
   try {
@@ -244,24 +347,17 @@ export const reopenTicket = async (req, res) => {
     ticket.status = "Open";
     ticket.reopened = true;
     ticket.reopenedAt = new Date();
+
     ticket.resolvedAt = null;
     ticket.closedAt = null;
 
     await ticket.save();
 
-    if (global.io) {
-      global.io.emit("ticketReopened", {
-        ticketId: ticket._id,
-        title: ticket.title,
-      });
-    }
-
-    return res.json({
+    res.json({
       success: true,
-      message: "Ticket reopened successfully",
+      message: "Ticket reopened",
       data: ticket,
     });
-
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -293,7 +389,7 @@ export const addReview = async (req, res) => {
     if (ticket.review) {
       return res.status(400).json({
         success: false,
-        message: "Review already submitted",
+        message: "Already reviewed",
       });
     }
 
@@ -302,11 +398,30 @@ export const addReview = async (req, res) => {
 
     await ticket.save();
 
-    return res.json({
+    res.json({
       success: true,
-      message: "Review added successfully",
+      message: "Review submitted",
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
+/* ======================================================
+   ✅ STATS
+====================================================== */
+export const getTicketStats = async (req, res) => {
+  try {
+    const total = await Ticket.countDocuments();
+    const open = await Ticket.countDocuments({ status: "Open" });
+    const inProgress = await Ticket.countDocuments({ status: "In Progress" });
+    const resolved = await Ticket.countDocuments({ status: "Resolved" });
+    const closed = await Ticket.countDocuments({ status: "Closed" });
+
+    res.json({
+      success: true,
+      data: { total, open, inProgress, resolved, closed },
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -321,9 +436,8 @@ export const deleteTicket = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Ticket deleted successfully",
+      message: "Ticket deleted",
     });
-
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
