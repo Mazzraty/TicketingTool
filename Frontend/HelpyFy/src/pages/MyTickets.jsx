@@ -21,6 +21,9 @@ export default function MyTickets() {
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
 
+  /* IMAGE */
+  const [image, setImage] = useState(null);
+
   useEffect(() => {
     load(page);
   }, [page]);
@@ -51,16 +54,25 @@ export default function MyTickets() {
   /* ================= EDIT ================= */
   const openEdit = (ticket) => {
     setEditData({ ...ticket });
+    setImage(null);
     setEditModal(true);
   };
 
   const updateTicket = async () => {
     try {
-      await api.put(`/tickets/${editData._id}`, {
-        title: editData.title,
-        description: editData.description,
-        priority: editData.priority,
-        department: editData.department,
+      const formData = new FormData();
+
+      formData.append("title", editData.title);
+      formData.append("description", editData.description);
+      formData.append("priority", editData.priority);
+      formData.append("department", editData.department);
+
+      if (image) {
+        formData.append("image", image);
+      }
+
+      await api.put(`/tickets/${editData._id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       toast.success("Ticket updated");
@@ -313,12 +325,38 @@ export default function MyTickets() {
               <option>High</option>
             </select>
 
-            <button
-              onClick={updateTicket}
-              className="bg-blue-600 text-white w-full py-2 rounded"
-            >
-              Update Ticket
-            </button>
+            {/* IMAGE UPLOAD */}
+            <input
+              type="file"
+              accept="image/*"
+              className="w-full border p-2 rounded mb-2"
+              onChange={(e) => setImage(e.target.files[0])}
+            />
+
+            {image && (
+              <p className="text-xs text-green-600 mb-2">
+                Selected: {image.name}
+              </p>
+            )}
+
+            {/* BUTTONS */}
+            <div className="flex gap-2">
+
+              <button
+                onClick={() => setEditModal(false)}
+                className="w-1/2 bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={updateTicket}
+                className="w-1/2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              >
+                Update
+              </button>
+
+            </div>
 
           </div>
         </div>
