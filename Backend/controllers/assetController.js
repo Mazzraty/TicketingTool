@@ -81,10 +81,26 @@ export const getAssets = async (req, res) => {
     if (req.query.type) filter.type = req.query.type;
     if (req.query.status) filter.status = req.query.status;
 
-    const assets = await Asset.find(filter).sort({ createdAt: -1 });
+    // 🔥 pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    const assignments = await AssetAssignment.find({ status: "active" })
-      .populate("employee", "name employeeName staffCode");
+    const total = await Asset.countDocuments(filter);
+
+    // 🔥 fetch only current page assets
+    const assets = await Asset.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // 🔥 only get assignments for THESE assets (important optimization)
+    const assetIds = assets.map((a) => a._id);
+
+    const assignments = await AssetAssignment.find({
+      asset: { $in: assetIds },
+      status: "active",
+    }).populate("employee", "name employeeName staffCode");
 
     const map = new Map();
 
@@ -97,7 +113,12 @@ export const getAssets = async (req, res) => {
       employee: map.get(asset._id.toString()) || null,
     }));
 
-    res.json(enriched);
+    res.json({
+      assets: enriched,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: err.message });
