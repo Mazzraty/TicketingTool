@@ -34,7 +34,7 @@ export default function MyTickets() {
     }
   };
 
-  /* ================= REOPEN (FIXED) ================= */
+  /* ================= REOPEN ================= */
   const reopenTicket = async (id) => {
     try {
       await api.put(`/tickets/${id}/reopen`);
@@ -45,7 +45,7 @@ export default function MyTickets() {
     }
   };
 
-  /* ================= REVIEW (FIXED) ================= */
+  /* ================= REVIEW ================= */
   const openReview = (ticket) => {
     setSelectedTicket(ticket);
     setRating(ticket.rating || 0);
@@ -70,49 +70,27 @@ export default function MyTickets() {
 
   /* ================= UI HELPERS ================= */
   const statusBadge = (status) => {
-    const base = "px-3 py-1 text-xs rounded-full font-medium";
+    const base = "px-2 py-1 text-[11px] rounded font-medium";
+
     switch (status) {
       case "Open":
-        return `${base} bg-blue-100 text-blue-700`;
+        return `${base} bg-blue-50 text-blue-700`;
       case "In Progress":
-        return `${base} bg-yellow-100 text-yellow-700`;
+        return `${base} bg-yellow-50 text-yellow-700`;
       case "Resolved":
-        return `${base} bg-green-100 text-green-700`;
+        return `${base} bg-green-50 text-green-700`;
       case "Reopened":
-        return `${base} bg-purple-100 text-purple-700`;
+        return `${base} bg-purple-50 text-purple-700`;
       default:
         return `${base} bg-gray-100 text-gray-600`;
     }
   };
 
   const priorityBadge = (p) => {
-    const base = "text-xs px-2 py-1 rounded";
-    if (p === "High") return `${base} bg-red-100 text-red-600`;
-    if (p === "Medium") return `${base} bg-yellow-100 text-yellow-700`;
-    return `${base} bg-blue-100 text-blue-700`;
-  };
-
-  const Stage = ({ status }) => {
-    const steps = ["Open", "In Progress", "Resolved"];
-    const index = steps.indexOf(status);
-
-    return (
-      <div className="flex items-center gap-2 mt-3">
-        {steps.map((s, i) => (
-          <div key={s} className="flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full ${
-                i <= index ? "bg-green-500" : "bg-gray-300"
-              }`}
-            />
-            <span className="text-[10px] text-gray-500">{s}</span>
-            {i !== steps.length - 1 && (
-              <div className="w-6 h-[2px] bg-gray-200" />
-            )}
-          </div>
-        ))}
-      </div>
-    );
+    const base = "px-2 py-1 text-[11px] rounded";
+    if (p === "High") return `${base} bg-red-50 text-red-600`;
+    if (p === "Medium") return `${base} bg-yellow-50 text-yellow-700`;
+    return `${base} bg-blue-50 text-blue-700`;
   };
 
   const Stars = () => (
@@ -139,114 +117,123 @@ export default function MyTickets() {
     <div className="min-h-screen bg-gray-100 p-6">
 
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6 bg-white p-5 rounded-xl shadow-sm border">
-        <h1 className="text-xl font-semibold">My Tickets</h1>
+      <div className="flex justify-between items-center mb-6 bg-white p-5 rounded-xl border shadow-sm">
+        <h1 className="text-lg font-semibold text-gray-800">
+          My Tickets
+        </h1>
 
         <button
           onClick={() => navigate("/create")}
-          className="bg-black text-white px-4 py-2 rounded-lg"
+          className="bg-black text-white px-4 py-2 rounded-lg text-sm"
         >
           + New Ticket
         </button>
       </div>
 
-      {/* GRID */}
-      {loading ? (
-        <div className="text-center p-10">Loading...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* LIST TABLE (MODERN STYLE) */}
+      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
 
-          {tickets.map((t) => (
-            <div
-              key={t._id}
-              className="bg-white rounded-xl border shadow-sm p-5 hover:shadow-md transition"
-            >
+        {loading ? (
+          <div className="p-10 text-center text-gray-500">
+            Loading tickets...
+          </div>
+        ) : (
+          <table className="w-full text-sm">
 
-              {/* TOP */}
-              <div className="flex justify-between">
-                <h2 className="font-semibold text-gray-800">
-                  {t.title}
-                </h2>
+            {/* HEADER */}
+            <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+              <tr>
+                <th className="p-4 text-left">Title</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Department</th>
+                <th className="text-right p-4">Actions</th>
+              </tr>
+            </thead>
 
-                <div className="flex gap-2">
-                  <span className={priorityBadge(t.priority)}>
-                    {t.priority}
-                  </span>
-
-                  <span className={statusBadge(t.status)}>
-                    {t.status}
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-xs text-gray-500 mt-1">
-                {t.description}
-              </p>
-
-              {/* TIMELINE */}
-              <Stage status={t.status} />
-
-              {/* ATTACHMENTS */}
-              {t.attachments?.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {t.attachments.map((a, i) => (
-                    <a
-                      key={i}
-                      href={a}
-                      target="_blank"
-                      className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded"
-                    >
-                      📎 Attachment {i + 1}
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              {/* ACTIONS */}
-              <div className="flex gap-4 mt-4 text-xs">
-
-                <button
-                  onClick={() => navigate(`/ticket/${t._id}`)}
-                  className="text-blue-600"
+            {/* BODY */}
+            <tbody>
+              {tickets.map((t) => (
+                <tr
+                  key={t._id}
+                  className="border-t hover:bg-gray-50 transition"
                 >
-                  View
-                </button>
 
-                {(t.status === "Open" || t.status === "Reopened") && (
-                  <button className="text-indigo-600">
-                    Edit
-                  </button>
-                )}
+                  {/* TITLE */}
+                  <td className="p-4">
+                    <div className="font-medium text-gray-800">
+                      {t.title}
+                    </div>
+                    <div className="text-[11px] text-gray-500 truncate max-w-[300px]">
+                      {t.description}
+                    </div>
+                  </td>
 
-                {t.status === "Resolved" && (
-                  <button
-                    onClick={() => reopenTicket(t._id)}
-                    className="text-orange-600"
-                  >
-                    Reopen
-                  </button>
-                )}
+                  {/* STATUS */}
+                  <td>
+                    <span className={statusBadge(t.status)}>
+                      {t.status}
+                    </span>
+                  </td>
 
-                {t.status === "Resolved" && (
-                  <button
-                    onClick={() => openReview(t)}
-                    className="text-green-600"
-                  >
-                    {t.review ? "Edit Review" : "Review"}
-                  </button>
-                )}
+                  {/* PRIORITY */}
+                  <td>
+                    <span className={priorityBadge(t.priority)}>
+                      {t.priority}
+                    </span>
+                  </td>
 
-              </div>
+                  {/* DEPARTMENT */}
+                  <td className="text-gray-600 text-xs">
+                    {t.department || "-"}
+                  </td>
 
-            </div>
-          ))}
-        </div>
-      )}
+                  {/* ACTIONS */}
+                  <td className="text-right p-4">
+
+                    <div className="flex justify-end gap-4 text-xs">
+
+                      {(t.status === "Open" || t.status === "Reopened") && (
+                        <button className="text-indigo-600 hover:underline">
+                          Edit
+                        </button>
+                      )}
+
+                      {t.status === "Resolved" && (
+                        <button
+                          onClick={() => reopenTicket(t._id)}
+                          className="text-orange-600 hover:underline"
+                        >
+                          Reopen
+                        </button>
+                      )}
+
+                      {t.status === "Resolved" && (
+                        <button
+                          onClick={() => openReview(t)}
+                          className="text-green-600 hover:underline"
+                        >
+                          {t.review ? "Edit Review" : "Review"}
+                        </button>
+                      )}
+
+                    </div>
+
+                  </td>
+
+                </tr>
+              ))}
+            </tbody>
+
+          </table>
+        )}
+      </div>
 
       {/* REVIEW MODAL */}
       {reviewModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[400px]">
+
+          <div className="bg-white p-6 rounded-xl w-[400px] shadow-lg">
 
             <h2 className="font-semibold mb-3">
               Rate Ticket
