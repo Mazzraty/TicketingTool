@@ -8,7 +8,6 @@ export default function MyTickets() {
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [page, setPage] = useState(1);
 
   const [reviewModal, setReviewModal] = useState(false);
@@ -68,10 +67,9 @@ export default function MyTickets() {
     }
   };
 
-  /* ================= UI HELPERS ================= */
+  /* ================= BADGES ================= */
   const statusBadge = (status) => {
     const base = "px-2 py-1 text-[11px] rounded font-medium";
-
     switch (status) {
       case "Open":
         return `${base} bg-blue-50 text-blue-700`;
@@ -87,21 +85,21 @@ export default function MyTickets() {
   };
 
   const priorityBadge = (p) => {
-    const base = "px-2 py-1 text-[11px] rounded";
+    const base = "px-2 py-1 text-[11px] rounded font-medium";
     if (p === "High") return `${base} bg-red-50 text-red-600`;
     if (p === "Medium") return `${base} bg-yellow-50 text-yellow-700`;
     return `${base} bg-blue-50 text-blue-700`;
   };
 
   const Stars = () => (
-    <div className="flex gap-1 text-2xl">
-      {[1,2,3,4,5].map((s) => (
+    <div className="flex gap-1 text-2xl justify-center">
+      {[1, 2, 3, 4, 5].map((s) => (
         <span
           key={s}
           onMouseEnter={() => setHoverRating(s)}
           onMouseLeave={() => setHoverRating(0)}
           onClick={() => setRating(s)}
-          className={`cursor-pointer ${
+          className={`cursor-pointer transition ${
             (hoverRating || rating) >= s
               ? "text-yellow-400"
               : "text-gray-300"
@@ -124,13 +122,13 @@ export default function MyTickets() {
 
         <button
           onClick={() => navigate("/create")}
-          className="bg-black text-white px-4 py-2 rounded-lg text-sm"
+          className="bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-800"
         >
           + New Ticket
         </button>
       </div>
 
-      {/* LIST TABLE (MODERN STYLE) */}
+      {/* TABLE */}
       <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
 
         {loading ? (
@@ -138,63 +136,62 @@ export default function MyTickets() {
             Loading tickets...
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm border-collapse">
 
             {/* HEADER */}
             <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
               <tr>
                 <th className="p-4 text-left">Title</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Department</th>
-                <th className="text-right p-4">Actions</th>
+                <th className="p-4 text-center">Status</th>
+                <th className="p-4 text-center">Priority</th>
+                <th className="p-4 text-center">Department</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
 
             {/* BODY */}
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {tickets.map((t) => (
                 <tr
                   key={t._id}
-                  className="border-t hover:bg-gray-50 transition"
+                  className="hover:bg-gray-50 transition align-middle"
                 >
 
                   {/* TITLE */}
-                  <td className="p-4">
+                  <td className="p-4 align-middle">
                     <div className="font-medium text-gray-800">
                       {t.title}
                     </div>
-                    <div className="text-[11px] text-gray-500 truncate max-w-[300px]">
+                    <div className="text-[11px] text-gray-500 truncate max-w-[320px]">
                       {t.description}
                     </div>
                   </td>
 
                   {/* STATUS */}
-                  <td>
+                  <td className="p-4 text-center align-middle">
                     <span className={statusBadge(t.status)}>
                       {t.status}
                     </span>
                   </td>
 
                   {/* PRIORITY */}
-                  <td>
+                  <td className="p-4 text-center align-middle">
                     <span className={priorityBadge(t.priority)}>
                       {t.priority}
                     </span>
                   </td>
 
                   {/* DEPARTMENT */}
-                  <td className="text-gray-600 text-xs">
+                  <td className="p-4 text-center text-gray-600 text-xs align-middle">
                     {t.department || "-"}
                   </td>
 
                   {/* ACTIONS */}
-                  <td className="text-right p-4">
-
-                    <div className="flex justify-end gap-4 text-xs">
+                  <td className="p-4 text-right align-middle">
+                    <div className="flex justify-end gap-2">
 
                       {(t.status === "Open" || t.status === "Reopened") && (
-                        <button className="text-indigo-600 hover:underline">
+                        <button className="px-3 py-1 text-xs rounded-md border border-gray-300 hover:bg-gray-100 transition">
                           Edit
                         </button>
                       )}
@@ -202,7 +199,7 @@ export default function MyTickets() {
                       {t.status === "Resolved" && (
                         <button
                           onClick={() => reopenTicket(t._id)}
-                          className="text-orange-600 hover:underline"
+                          className="px-3 py-1 text-xs rounded-md bg-orange-50 text-orange-700 hover:bg-orange-100 transition"
                         >
                           Reopen
                         </button>
@@ -211,14 +208,13 @@ export default function MyTickets() {
                       {t.status === "Resolved" && (
                         <button
                           onClick={() => openReview(t)}
-                          className="text-green-600 hover:underline"
+                          className="px-3 py-1 text-xs rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition"
                         >
                           {t.review ? "Edit Review" : "Review"}
                         </button>
                       )}
 
                     </div>
-
                   </td>
 
                 </tr>
@@ -232,10 +228,9 @@ export default function MyTickets() {
       {/* REVIEW MODAL */}
       {reviewModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-
           <div className="bg-white p-6 rounded-xl w-[400px] shadow-lg">
 
-            <h2 className="font-semibold mb-3">
+            <h2 className="font-semibold mb-3 text-center">
               Rate Ticket
             </h2>
 
@@ -250,7 +245,7 @@ export default function MyTickets() {
 
             <button
               onClick={submitReview}
-              className="bg-green-600 text-white w-full py-2 mt-3 rounded"
+              className="bg-green-600 text-white w-full py-2 mt-3 rounded hover:bg-green-700"
             >
               Submit
             </button>
