@@ -14,11 +14,6 @@ export default function AdminSoftwareDashboard() {
   const [editModal, setEditModal] = useState(false);
   const [editData, setEditData] = useState(null);
 
-  const [sortConfig, setSortConfig] = useState({
-    key: "serviceName",
-    direction: "asc",
-  });
-
   const [form, setForm] = useState({
     serviceName: "",
     vendor: "",
@@ -70,7 +65,7 @@ export default function AdminSoftwareDashboard() {
     fetchSoftwares();
   };
 
-  // OPEN EDIT
+  // EDIT
   const openEdit = (item) => {
     setEditData(item);
     setEditModal(true);
@@ -85,41 +80,30 @@ export default function AdminSoftwareDashboard() {
     fetchSoftwares();
   };
 
-  const requestSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const sortedData = useMemo(() => {
-    const data = [...softwares];
-
-    data.sort((a, b) => {
-      const aVal = a[sortConfig.key];
-      const bVal = b[sortConfig.key];
-
-      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return data;
-  }, [softwares, sortConfig]);
-
+  // FILTER
   const filtered = useMemo(() => {
-    return sortedData.filter((s) =>
+    return softwares.filter((s) =>
       `${s.serviceName} ${s.vendor} ${s.status}`
         .toLowerCase()
         .includes(search.toLowerCase())
     );
-  }, [sortedData, search]);
+  }, [softwares, search]);
 
+  // PAGINATION
   const paginated = useMemo(() => {
     const start = (page - 1) * limit;
     return filtered.slice(start, start + limit);
   }, [filtered, page]);
+
+  // KPI
+  const kpi = useMemo(() => {
+    return {
+      total: softwares.length,
+      active: softwares.filter((s) => s.status === "Active").length,
+      expired: softwares.filter((s) => s.status === "Expired").length,
+      renewed: softwares.filter((s) => s.status === "Renewed").length,
+    };
+  }, [softwares]);
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -136,30 +120,53 @@ export default function AdminSoftwareDashboard() {
         </button>
       </div>
 
+      {/* KPI CARDS */}
+      <div className="grid grid-cols-4 gap-4 p-6">
+
+        <div className="bg-white p-4 rounded shadow text-center">
+          <p>Total</p>
+          <p className="font-bold text-xl">{kpi.total}</p>
+        </div>
+
+        <div className="bg-green-100 p-4 rounded shadow text-center">
+          <p className="text-green-700">Active</p>
+          <p className="font-bold text-xl text-green-700">{kpi.active}</p>
+        </div>
+
+        <div className="bg-red-100 p-4 rounded shadow text-center">
+          <p className="text-red-700">Expired</p>
+          <p className="font-bold text-xl text-red-700">{kpi.expired}</p>
+        </div>
+
+        <div className="bg-blue-100 p-4 rounded shadow text-center">
+          <p className="text-blue-700">Renewed</p>
+          <p className="font-bold text-xl text-blue-700">{kpi.renewed}</p>
+        </div>
+
+      </div>
+
       {/* SEARCH */}
-      <div className="p-6">
+      <div className="px-6">
         <input
           className="border p-2 rounded w-1/3 mb-4"
-          placeholder="Search..."
+          placeholder="Search software..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         {/* TABLE */}
         <div className="bg-white rounded shadow overflow-hidden">
-          <table className="w-full">
 
-            <thead className="bg-gray-100">
+          <table className="w-full text-sm">
+
+            <thead className="bg-gray-100 text-left">
               <tr>
-                <th className="p-3 cursor-pointer" onClick={() => requestSort("serviceName")}>
-                  Service
-                </th>
-                <th className="p-3 cursor-pointer" onClick={() => requestSort("vendor")}>
-                  Vendor
-                </th>
-                <th className="p-3">Expiry</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Action</th>
+                <th className="p-4">Service</th>
+                <th className="p-4">Vendor</th>
+                <th className="p-4">Start Date</th>
+                <th className="p-4">End Date</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-center">Action</th>
               </tr>
             </thead>
 
@@ -167,25 +174,34 @@ export default function AdminSoftwareDashboard() {
               {paginated.map((s) => (
                 <tr key={s._id} className="border-t hover:bg-gray-50">
 
-                  <td className="p-3">{s.serviceName}</td>
-                  <td className="p-3">{s.vendor}</td>
-                  <td className="p-3">
+                  <td className="p-4">{s.serviceName}</td>
+                  <td className="p-4">{s.vendor}</td>
+
+                  <td className="p-4">
+                    {new Date(s.purchaseDate).toLocaleDateString()}
+                  </td>
+
+                  <td className="p-4">
                     {new Date(s.expiryDate).toLocaleDateString()}
                   </td>
 
-                  <td className="p-3">{s.status}</td>
+                  <td className="p-4">
+                    <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">
+                      {s.status}
+                    </span>
+                  </td>
 
-                  <td className="p-3 flex gap-2">
+                  <td className="p-4 text-center">
                     <button
                       onClick={() => openEdit(s)}
-                      className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded"
+                      className="px-3 py-1 text-xs bg-blue-50 text-blue-700 rounded mr-2"
                     >
                       Edit
                     </button>
 
                     <button
                       onClick={() => deleteSoftware(s._id)}
-                      className="text-xs px-2 py-1 bg-red-50 text-red-700 rounded"
+                      className="px-3 py-1 text-xs bg-red-50 text-red-700 rounded"
                     >
                       Delete
                     </button>
@@ -199,7 +215,7 @@ export default function AdminSoftwareDashboard() {
         </div>
       </div>
 
-      {/* ================= ADD MODAL (FIXED ALIGNMENT + CANCEL) ================= */}
+      {/* ================= ADD MODAL ================= */}
       {addModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
 
@@ -248,9 +264,7 @@ export default function AdminSoftwareDashboard() {
                 <option>Renewed</option>
               </select>
 
-              {/* BUTTONS */}
               <div className="col-span-2 flex justify-end gap-3 mt-2">
-
                 <button
                   type="button"
                   onClick={() => setAddModal(false)}
@@ -262,7 +276,6 @@ export default function AdminSoftwareDashboard() {
                 <button className="px-4 py-2 bg-black text-white rounded">
                   Save
                 </button>
-
               </div>
 
             </form>
@@ -270,7 +283,7 @@ export default function AdminSoftwareDashboard() {
         </div>
       )}
 
-      {/* ================= EDIT MODAL (FULL DETAILS + CANCEL) ================= */}
+      {/* ================= EDIT MODAL ================= */}
       {editModal && editData && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
 
@@ -335,7 +348,6 @@ export default function AdminSoftwareDashboard() {
 
             </div>
 
-            {/* ACTIONS */}
             <div className="flex justify-end gap-3 mt-4">
 
               <button
