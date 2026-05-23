@@ -111,6 +111,27 @@ export default function AdminTickets() {
     </span>
   );
 
+  // ✅ FILE RENDER FUNCTION
+  const renderAttachments = (files = []) => {
+    if (!files || files.length === 0) return "No files";
+
+    return (
+      <div className="flex flex-col gap-1">
+        {files.map((file, i) => (
+          <a
+            key={i}
+            href={file.url || file}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 text-xs underline"
+          >
+            📎 File {i + 1}
+          </a>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#f4f6f9] flex">
 
@@ -138,6 +159,29 @@ export default function AdminTickets() {
             <p><b>Opened:</b> {formatDateTime(selected.createdAt)}</p>
             <p><b>Resolved:</b> {formatDateTime(selected.resolvedAt)}</p>
             <p><b>Closed:</b> {formatDateTime(selected.closedAt)}</p>
+          </div>
+
+          {/* ✅ ATTACHMENTS SIDE PANEL */}
+          <div>
+            <p className="font-semibold text-xs mb-1">Attachments</p>
+
+            {selected.files?.length > 0 ? (
+              <div className="space-y-1">
+                {selected.files.map((file, i) => (
+                  <a
+                    key={i}
+                    href={file.url || file}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-blue-600 text-xs underline"
+                  >
+                    📎 Download File {i + 1}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">No attachments</p>
+            )}
           </div>
 
           <div>
@@ -175,10 +219,7 @@ export default function AdminTickets() {
         {/* STATS */}
         <div className="grid grid-cols-5 gap-3 mb-4">
           {Object.entries(stats).map(([k, v]) => (
-            <div
-              key={k}
-              className="bg-white border rounded p-3 text-center"
-            >
+            <div key={k} className="bg-white border rounded p-3 text-center">
               <p className="text-xs text-gray-500 capitalize">{k}</p>
               <p className="font-bold text-lg">{v}</p>
             </div>
@@ -203,6 +244,10 @@ export default function AdminTickets() {
                     <th className="p-3 text-center">Status</th>
                     <th className="p-3 text-center">Open</th>
                     <th className="p-3 text-center">Closed</th>
+
+                    {/* ✅ FILE COLUMN */}
+                    <th className="p-3 text-center">Files</th>
+
                     <th className="p-3 text-center">Review</th>
                     <th className="p-3 text-center">Action</th>
                   </tr>
@@ -212,13 +257,9 @@ export default function AdminTickets() {
                   {filtered.map((t) => (
                     <tr key={t._id} className="border-t hover:bg-gray-50">
 
-                      <td className="p-3">
-                        <p className="font-semibold">{t.title}</p>
-                      </td>
+                      <td className="p-3 font-semibold">{t.title}</td>
 
-                      <td className="p-3">
-                        {t.userId?.email}
-                      </td>
+                      <td className="p-3">{t.userId?.email}</td>
 
                       <td className="p-3 text-center">
                         <span className={`px-2 py-1 text-xs rounded ${priorityColor(t.priority)}`}>
@@ -245,6 +286,11 @@ export default function AdminTickets() {
 
                       <td className="p-3 text-center text-xs">
                         {getSolvedTime(t.createdAt, t.resolvedAt)}
+                      </td>
+
+                      {/* ✅ FILES IN TABLE */}
+                      <td className="p-3 text-center text-xs">
+                        {renderAttachments(t.files || t.attachments)}
                       </td>
 
                       <td className="p-3 text-center">
@@ -280,9 +326,7 @@ export default function AdminTickets() {
             Prev
           </button>
 
-          <span className="text-sm">
-            {page} / {totalPages}
-          </span>
+          <span className="text-sm">{page} / {totalPages}</span>
 
           <button
             disabled={page === totalPages}
