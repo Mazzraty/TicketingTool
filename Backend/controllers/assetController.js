@@ -83,13 +83,26 @@ export const getAssets = async (req, res) => {
 
     const assets = await Asset.find(filter).sort({ createdAt: -1 });
 
-    res.json(assets);
+    const assignments = await AssetAssignment.find({ status: "active" })
+      .populate("employee", "name employeeName staffCode");
+
+    const map = new Map();
+
+    assignments.forEach((a) => {
+      map.set(a.asset.toString(), a.employee);
+    });
+
+    const enriched = assets.map((asset) => ({
+      ...asset.toObject(),
+      employee: map.get(asset._id.toString()) || null,
+    }));
+
+    res.json(enriched);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: err.message });
   }
 };
-
 /* =========================
    🔥 ASSIGN ASSET
 ========================= */
