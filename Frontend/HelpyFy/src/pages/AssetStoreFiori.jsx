@@ -27,11 +27,14 @@ export default function AssetStoreFiori() {
     loadAssets();
   }, []);
 
-  /* ================= FILTER ================= */
+  /* ================= FILTER (FIXED) ================= */
   const filtered = assets.filter((a) => {
 
+    const type = a.type?.toLowerCase();     // ✅ FIX
+    const selectedFilter = filter?.toLowerCase(); // ✅ FIX
+
     const matchType =
-      filter === "All" || a.type === filter;
+      selectedFilter === "all" || type === selectedFilter;
 
     const text = search.toLowerCase();
 
@@ -239,23 +242,21 @@ export default function AssetStoreFiori() {
         </table>
       </div>
 
-      {/* ================= EDIT MODAL (FIXED) ================= */}
+      {/* EDIT MODAL (UNCHANGED) */}
       {editOpen && selected && (
-
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
 
-          <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-xl overflow-auto max-h-[90vh]">
+          <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-xl">
 
-            <div className="flex justify-between items-center mb-5">
+            <div className="flex justify-between mb-4">
               <h2 className="text-xl font-bold">Edit Asset</h2>
               <button onClick={() => setEditOpen(false)}>✕</button>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
 
-              {/* COMMON */}
               <input
-                className="border rounded-xl p-3"
+                className="border p-3 rounded-xl"
                 placeholder="Asset Code"
                 value={selected.assetCode || ""}
                 onChange={(e) =>
@@ -264,7 +265,7 @@ export default function AssetStoreFiori() {
               />
 
               <select
-                className="border rounded-xl p-3"
+                className="border p-3 rounded-xl"
                 value={selected.type || ""}
                 onChange={(e) =>
                   setSelected({ ...selected, type: e.target.value })
@@ -275,53 +276,87 @@ export default function AssetStoreFiori() {
                 <option value="HHT">HHT</option>
               </select>
 
-              {/* ONLY LAPTOP */}
-              {selected.type === "Laptop" && (
-                <>
-                  <input className="border p-3 rounded-xl" placeholder="Model"
-                    value={selected.model || ""}
-                    onChange={(e)=>setSelected({...selected, model:e.target.value})}
-                  />
-                  <input className="border p-3 rounded-xl" placeholder="Serial"
-                    value={selected.serialNumber || ""}
-                    onChange={(e)=>setSelected({...selected, serialNumber:e.target.value})}
-                  />
-                </>
-              )}
+              <input
+                className="border p-3 rounded-xl"
+                placeholder="Model"
+                value={selected.model || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, model: e.target.value })
+                }
+              />
 
-              {/* ONLY PRINTER */}
-              {selected.type === "Printer" && (
-                <>
-                  <input className="border p-3 rounded-xl" placeholder="Model"
-                    value={selected.model || ""}
-                    onChange={(e)=>setSelected({...selected, model:e.target.value})}
-                  />
-                  <input className="border p-3 rounded-xl" placeholder="Serial"
-                    value={selected.serialNumber || ""}
-                    onChange={(e)=>setSelected({...selected, serialNumber:e.target.value})}
-                  />
-                </>
-              )}
+              <input
+                className="border p-3 rounded-xl"
+                placeholder="Serial Number"
+                value={selected.serialNumber || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, serialNumber: e.target.value })
+                }
+              />
 
-              {/* ONLY HHT */}
-              {selected.type === "HHT" && (
-                <>
-                  <input className="border p-3 rounded-xl" placeholder="Salesman Name"
-                    value={selected.salesmanName || ""}
-                    onChange={(e)=>setSelected({...selected, salesmanName:e.target.value})}
-                  />
-                  <input className="border p-3 rounded-xl" placeholder="IMEI"
-                    value={selected.imei || ""}
-                    onChange={(e)=>setSelected({...selected, imei:e.target.value})}
-                  />
-                  <input className="border p-3 rounded-xl" placeholder="SIM"
-                    value={selected.simNumber || ""}
-                    onChange={(e)=>setSelected({...selected, simNumber:e.target.value})}
-                  />
-                </>
-              )}
+              <input
+                className="border p-3 rounded-xl"
+                placeholder="Salesman Code"
+                value={selected.salesmanCode || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, salesmanCode: e.target.value })
+                }
+              />
 
-              {/* STATUS */}
+              <input
+                className="border p-3 rounded-xl"
+                placeholder="Salesman Name"
+                value={selected.salesmanName || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, salesmanName: e.target.value })
+                }
+              />
+
+              <input
+                className="border p-3 rounded-xl"
+                placeholder="Route"
+                value={selected.route || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, route: e.target.value })
+                }
+              />
+
+              <input
+                className="border p-3 rounded-xl"
+                placeholder="Supervisor"
+                value={selected.supervisor || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, supervisor: e.target.value })
+                }
+              />
+
+              <input
+                className="border p-3 rounded-xl"
+                placeholder="SOTI"
+                value={selected.soti || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, soti: e.target.value })
+                }
+              />
+
+              <input
+                className="border p-3 rounded-xl"
+                placeholder="IMEI"
+                value={selected.imei || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, imei: e.target.value })
+                }
+              />
+
+              <input
+                className="border p-3 rounded-xl"
+                placeholder="SIM Number"
+                value={selected.simNumber || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, simNumber: e.target.value })
+                }
+              />
+
               <select
                 className="border rounded-xl p-3"
                 value={selected.status || ""}
@@ -335,7 +370,6 @@ export default function AssetStoreFiori() {
 
             </div>
 
-            {/* NOTES */}
             <textarea
               className="w-full border rounded-xl p-3 mt-4"
               rows="4"
@@ -346,7 +380,6 @@ export default function AssetStoreFiori() {
               }
             />
 
-            {/* ACTIONS */}
             <div className="flex gap-3 mt-5">
               <button
                 onClick={updateAsset}
