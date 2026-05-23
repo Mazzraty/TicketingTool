@@ -12,7 +12,7 @@ export default function AssetStoreFiori() {
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
-  /* ================= PAGINATION (ADDED) ================= */
+  /* ================= PAGINATION ================= */
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -20,10 +20,18 @@ export default function AssetStoreFiori() {
   const loadAssets = async () => {
     try {
       const res = await api.get("/assets");
-      setAssets(res.data);
+
+      // ✅ SAFE FIX: ensure array always
+      const data = Array.isArray(res.data)
+        ? res.data
+        : res.data?.assets || [];
+
+      setAssets(data);
+
     } catch (err) {
       console.error(err);
       toast.error("Failed to load assets");
+      setAssets([]); // safety fallback
     }
   };
 
@@ -32,7 +40,8 @@ export default function AssetStoreFiori() {
   }, []);
 
   /* ================= FILTER ================= */
-  const filtered = assets.filter((a) => {
+  const filtered = (Array.isArray(assets) ? assets : []).filter((a) => {
+
     const type = a.type?.toLowerCase();
     const selectedFilter = filter?.toLowerCase();
 
@@ -51,7 +60,7 @@ export default function AssetStoreFiori() {
     return matchType && matchSearch;
   });
 
-  /* ================= PAGINATION LOGIC (ADDED) ================= */
+  /* ================= PAGINATION LOGIC ================= */
   const totalPages = Math.ceil(filtered.length / pageSize);
 
   const paginatedFiltered = filtered.slice(
@@ -151,6 +160,7 @@ export default function AssetStoreFiori() {
 
       {/* FILTER */}
       <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-5 mb-8">
+
         <div className="flex flex-col lg:flex-row gap-4">
 
           <input
@@ -176,7 +186,7 @@ export default function AssetStoreFiori() {
             ))}
           </div>
 
-          {/* PAGE SIZE SELECTOR (ADDED) */}
+          {/* PAGE SIZE */}
           <select
             value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value))}
@@ -208,13 +218,6 @@ export default function AssetStoreFiori() {
                   </>
                 )}
 
-                {showHHTFields && (
-                  <>
-                    <th className="text-left px-6 py-4 font-semibold">Salesman</th>
-                    <th className="text-left px-6 py-4 font-semibold">Route</th>
-                  </>
-                )}
-
                 <th className="text-left px-6 py-4 font-semibold">Current User</th>
                 <th className="text-left px-6 py-4 font-semibold">Status</th>
                 <th className="text-center px-6 py-4 font-semibold">Actions</th>
@@ -230,8 +233,9 @@ export default function AssetStoreFiori() {
                   </td>
                 </tr>
               ) : (
-                paginatedFiltered.map((a, index) => (
+                paginatedFiltered.map((a) => (
                   <tr key={a._id} className="border-b hover:bg-blue-50/40">
+
                     <td className="px-6 py-4 font-semibold">{a.assetCode}</td>
                     <td className="px-6 py-4">{a.type}</td>
 
@@ -246,6 +250,7 @@ export default function AssetStoreFiori() {
                       <button onClick={() => openEdit(a)}>Edit</button>
                       <button onClick={() => deleteAsset(a._id)}>Delete</button>
                     </td>
+
                   </tr>
                 ))
               )}
@@ -256,7 +261,7 @@ export default function AssetStoreFiori() {
         </div>
       </div>
 
-      {/* PAGINATION UI (ADDED) */}
+      {/* PAGINATION */}
       <div className="flex justify-between items-center mt-6">
 
         <button
@@ -267,7 +272,7 @@ export default function AssetStoreFiori() {
           Prev
         </button>
 
-        <span className="text-gray-700">
+        <span>
           Page {currentPage} of {totalPages || 1}
         </span>
 
