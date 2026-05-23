@@ -10,8 +10,12 @@ export default function MyTickets() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
+  /* ================= MODALS ================= */
   const [reviewModal, setReviewModal] = useState(false);
+  const [editModal, setEditModal] = useState(false);
+
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [editData, setEditData] = useState(null);
 
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -41,6 +45,29 @@ export default function MyTickets() {
       load();
     } catch {
       toast.error("Reopen failed");
+    }
+  };
+
+  /* ================= EDIT ================= */
+  const openEdit = (ticket) => {
+    setEditData({ ...ticket });
+    setEditModal(true);
+  };
+
+  const updateTicket = async () => {
+    try {
+      await api.put(`/tickets/${editData._id}`, {
+        title: editData.title,
+        description: editData.description,
+        priority: editData.priority,
+        department: editData.department,
+      });
+
+      toast.success("Ticket updated");
+      setEditModal(false);
+      load();
+    } catch {
+      toast.error("Update failed");
     }
   };
 
@@ -111,7 +138,7 @@ export default function MyTickets() {
           onMouseEnter={() => setHoverRating(s)}
           onMouseLeave={() => setHoverRating(0)}
           onClick={() => setRating(s)}
-          className={`cursor-pointer transition ${
+          className={`cursor-pointer ${
             (hoverRating || rating) >= s
               ? "text-yellow-400"
               : "text-gray-300"
@@ -148,7 +175,7 @@ export default function MyTickets() {
             Loading tickets...
           </div>
         ) : (
-          <table className="w-full text-sm border-collapse">
+          <table className="w-full text-sm">
 
             {/* HEADER */}
             <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
@@ -157,11 +184,8 @@ export default function MyTickets() {
                 <th className="p-4 text-center">Status</th>
                 <th className="p-4 text-center">Priority</th>
                 <th className="p-4 text-center">Department</th>
-
-                {/* NEW FIELDS */}
                 <th className="p-4 text-center">Created</th>
                 <th className="p-4 text-center">Closed</th>
-
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -169,58 +193,56 @@ export default function MyTickets() {
             {/* BODY */}
             <tbody className="divide-y divide-gray-100">
               {tickets.map((t) => (
-                <tr
-                  key={t._id}
-                  className="hover:bg-gray-50 transition align-middle"
-                >
+                <tr key={t._id} className="hover:bg-gray-50">
 
                   {/* TITLE */}
-                  <td className="p-4 align-middle">
-                    <div className="font-medium text-gray-800">
-                      {t.title}
-                    </div>
-                    <div className="text-[11px] text-gray-500 truncate max-w-[320px]">
+                  <td className="p-4">
+                    <div className="font-medium">{t.title}</div>
+                    <div className="text-xs text-gray-500 truncate max-w-[300px]">
                       {t.description}
                     </div>
                   </td>
 
                   {/* STATUS */}
-                  <td className="p-4 text-center align-middle">
+                  <td className="p-4 text-center">
                     <span className={statusBadge(t.status)}>
                       {t.status}
                     </span>
                   </td>
 
                   {/* PRIORITY */}
-                  <td className="p-4 text-center align-middle">
+                  <td className="p-4 text-center">
                     <span className={priorityBadge(t.priority)}>
                       {t.priority}
                     </span>
                   </td>
 
                   {/* DEPARTMENT */}
-                  <td className="p-4 text-center text-gray-600 text-xs align-middle">
+                  <td className="p-4 text-center text-xs text-gray-600">
                     {t.department || "-"}
                   </td>
 
                   {/* CREATED */}
-                  <td className="p-4 text-center text-xs text-gray-600 align-middle">
+                  <td className="p-4 text-center text-xs text-gray-600">
                     {formatDate(t.createdAt)}
                   </td>
 
                   {/* CLOSED */}
-                  <td className="p-4 text-center text-xs text-gray-600 align-middle">
+                  <td className="p-4 text-center text-xs text-gray-600">
                     {t.status === "Resolved"
                       ? formatDate(t.resolvedAt || t.closedAt)
                       : "-"}
                   </td>
 
                   {/* ACTIONS */}
-                  <td className="p-4 text-right align-middle">
+                  <td className="p-4 text-right">
                     <div className="flex justify-end gap-2">
 
                       {(t.status === "Open" || t.status === "Reopened") && (
-                        <button className="px-3 py-1 text-xs rounded-md border border-gray-300 hover:bg-gray-100 transition">
+                        <button
+                          onClick={() => openEdit(t)}
+                          className="px-3 py-1 text-xs border rounded hover:bg-gray-100"
+                        >
                           Edit
                         </button>
                       )}
@@ -228,7 +250,7 @@ export default function MyTickets() {
                       {t.status === "Resolved" && (
                         <button
                           onClick={() => reopenTicket(t._id)}
-                          className="px-3 py-1 text-xs rounded-md bg-orange-50 text-orange-700 hover:bg-orange-100 transition"
+                          className="px-3 py-1 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100"
                         >
                           Reopen
                         </button>
@@ -237,7 +259,7 @@ export default function MyTickets() {
                       {t.status === "Resolved" && (
                         <button
                           onClick={() => openReview(t)}
-                          className="px-3 py-1 text-xs rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition"
+                          className="px-3 py-1 text-xs bg-green-50 text-green-700 rounded hover:bg-green-100"
                         >
                           {t.review ? "Edit Review" : "Review"}
                         </button>
@@ -254,10 +276,58 @@ export default function MyTickets() {
         )}
       </div>
 
-      {/* REVIEW MODAL */}
+      {/* ================= EDIT MODAL ================= */}
+      {editModal && editData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl w-[450px]">
+
+            <h2 className="font-semibold mb-3 text-center">
+              Edit Ticket
+            </h2>
+
+            <input
+              className="w-full border p-2 rounded mb-2"
+              value={editData.title}
+              onChange={(e) =>
+                setEditData({ ...editData, title: e.target.value })
+              }
+            />
+
+            <textarea
+              className="w-full border p-2 rounded mb-2"
+              value={editData.description}
+              onChange={(e) =>
+                setEditData({ ...editData, description: e.target.value })
+              }
+            />
+
+            <select
+              className="w-full border p-2 rounded mb-2"
+              value={editData.priority}
+              onChange={(e) =>
+                setEditData({ ...editData, priority: e.target.value })
+              }
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+
+            <button
+              onClick={updateTicket}
+              className="bg-blue-600 text-white w-full py-2 rounded"
+            >
+              Update Ticket
+            </button>
+
+          </div>
+        </div>
+      )}
+
+      {/* ================= REVIEW MODAL ================= */}
       {reviewModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[400px] shadow-lg">
+          <div className="bg-white p-6 rounded-xl w-[400px]">
 
             <h2 className="font-semibold mb-3 text-center">
               Rate Ticket
@@ -274,7 +344,7 @@ export default function MyTickets() {
 
             <button
               onClick={submitReview}
-              className="bg-green-600 text-white w-full py-2 mt-3 rounded hover:bg-green-700"
+              className="bg-green-600 text-white w-full py-2 mt-3 rounded"
             >
               Submit
             </button>
