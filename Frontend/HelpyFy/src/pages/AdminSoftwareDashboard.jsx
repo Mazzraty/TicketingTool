@@ -1,6 +1,9 @@
+// pages/AdminSoftwareDashboard.jsx
+
 import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -10,12 +13,16 @@ export default function AdminSoftwareDashboard() {
   const [page, setPage] = useState(1);
   const limit = 8;
 
+  // MODALS
+  const [addModal, setAddModal] = useState(false);
   const [editDrawer, setEditDrawer] = useState(false);
   const [editData, setEditData] = useState(null);
 
+  // INLINE EDIT
   const [inlineEditId, setInlineEditId] = useState(null);
   const [inlineEditData, setInlineEditData] = useState({});
 
+  // SORTING
   const [sortConfig, setSortConfig] = useState({
     key: "serviceName",
     direction: "asc",
@@ -44,10 +51,12 @@ export default function AdminSoftwareDashboard() {
     }
   };
 
+  // ADD
   const handleSubmit = async (e) => {
     e.preventDefault();
     await api.post("/software", form);
-    toast.success("Added");
+    toast.success("Software Added");
+
     setForm({
       serviceName: "",
       vendor: "",
@@ -57,16 +66,20 @@ export default function AdminSoftwareDashboard() {
       expiryDate: "",
       status: "Active",
     });
+
+    setAddModal(false);
     fetchSoftwares();
   };
 
+  // DELETE
   const deleteSoftware = async (id) => {
-    if (!window.confirm("Delete?")) return;
+    if (!window.confirm("Delete this software?")) return;
     await api.delete(`/software/${id}`);
     toast.success("Deleted");
     fetchSoftwares();
   };
 
+  // DRAWER EDIT
   const openDrawer = (item) => {
     setEditData(item);
     setEditDrawer(true);
@@ -76,28 +89,33 @@ export default function AdminSoftwareDashboard() {
     await api.put(`/software/${editData._id}`, editData);
     toast.success("Updated");
     setEditDrawer(false);
-    setEditData(null);
     fetchSoftwares();
   };
 
-  // SORTING
-  const sortedData = useMemo(() => {
-    let sorted = [...softwares];
-
-    if (sortConfig.key) {
-      sorted.sort((a, b) => {
-        const aVal = a[sortConfig.key];
-        const bVal = b[sortConfig.key];
-
-        if (aVal < bVal)
-          return sortConfig.direction === "asc" ? -1 : 1;
-        if (aVal > bVal)
-          return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
-      });
+  // SORT
+  const requestSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
     }
+    setSortConfig({ key, direction });
+  };
 
-    return sorted;
+  const sortedData = useMemo(() => {
+    const data = [...softwares];
+
+    data.sort((a, b) => {
+      if (!sortConfig.key) return 0;
+
+      const aVal = a[sortConfig.key];
+      const bVal = b[sortConfig.key];
+
+      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return data;
   }, [softwares, sortConfig]);
 
   const filtered = useMemo(() => {
@@ -113,6 +131,7 @@ export default function AdminSoftwareDashboard() {
     return filtered.slice(start, start + limit);
   }, [filtered, page]);
 
+  // KPI
   const dashboard = useMemo(() => {
     const today = new Date();
 
@@ -128,39 +147,31 @@ export default function AdminSoftwareDashboard() {
   }, [softwares]);
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-100 text-green-700";
-      case "Expired":
-        return "bg-red-100 text-red-700";
-      case "Renewed":
-        return "bg-blue-100 text-blue-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
-
-  const requestSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
+    if (status === "Active") return "bg-green-100 text-green-700";
+    if (status === "Expired") return "bg-red-100 text-red-700";
+    return "bg-blue-100 text-blue-700";
   };
 
   return (
     <div className="bg-gray-50 min-h-screen">
 
       {/* 🔥 STICKY KPI BAR */}
-      <div className="sticky top-0 z-50 bg-white shadow-md p-3 flex gap-4 justify-between">
-        <div className="font-bold">Software Dashboard</div>
+      <div className="sticky top-0 z-50 bg-white shadow flex justify-between px-6 py-3">
+        <h1 className="font-bold">Software Dashboard</h1>
 
-        <div className="flex gap-4 text-sm">
+        <div className="flex gap-5 text-sm">
           <span>Active: {dashboard.active}</span>
           <span>Expiring: {dashboard.expiring}</span>
           <span>Expired: {dashboard.expired}</span>
           <span>Cost: QAR {dashboard.cost}</span>
         </div>
+
+        <button
+          onClick={() => setAddModal(true)}
+          className="bg-black text-white px-3 py-1 rounded"
+        >
+          + Add
+        </button>
       </div>
 
       <div className="p-6">
@@ -173,34 +184,18 @@ export default function AdminSoftwareDashboard() {
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* FORM (kept simple) */}
-        <form onSubmit={handleSubmit} className="grid grid-cols-3 gap-3 mb-6">
-          <input placeholder="Service" className="border p-2"
-            value={form.serviceName}
-            onChange={(e) => setForm({ ...form, serviceName: e.target.value })}
-          />
-          <input placeholder="Vendor" className="border p-2"
-            value={form.vendor}
-            onChange={(e) => setForm({ ...form, vendor: e.target.value })}
-          />
-          <input placeholder="Amount" className="border p-2"
-            value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
-          />
-
-          <button className="bg-black text-white p-2 col-span-3">
-            Add
-          </button>
-        </form>
-
         {/* TABLE */}
-        <div className="bg-white rounded shadow overflow-auto">
+        <div className="bg-white rounded shadow overflow-hidden">
           <table className="w-full">
 
             <thead className="bg-gray-100 text-sm">
               <tr>
-                <th onClick={() => requestSort("serviceName")} className="p-3 cursor-pointer">Service</th>
-                <th onClick={() => requestSort("vendor")} className="p-3 cursor-pointer">Vendor</th>
+                <th className="p-3 cursor-pointer" onClick={() => requestSort("serviceName")}>
+                  Service
+                </th>
+                <th className="p-3 cursor-pointer" onClick={() => requestSort("vendor")}>
+                  Vendor
+                </th>
                 <th className="p-3">Expiry</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Action</th>
@@ -211,32 +206,15 @@ export default function AdminSoftwareDashboard() {
               {paginated.map((s) => (
                 <tr key={s._id} className="border-t hover:bg-gray-50">
 
-                  {/* INLINE EDIT */}
-                  <td className="p-3">
-                    {inlineEditId === s._id ? (
-                      <input
-                        value={inlineEditData.serviceName}
-                        onChange={(e) =>
-                          setInlineEditData({
-                            ...inlineEditData,
-                            serviceName: e.target.value,
-                          })
-                        }
-                        className="border p-1"
-                      />
-                    ) : (
-                      s.serviceName
-                    )}
-                  </td>
-
+                  <td className="p-3">{s.serviceName}</td>
                   <td className="p-3">{s.vendor}</td>
                   <td className="p-3">
                     {new Date(s.expiryDate).toLocaleDateString()}
                   </td>
 
-                  {/* STATUS BADGE */}
+                  {/* STATUS PILL */}
                   <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(s.status)}`}>
+                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(s.status)}`}>
                       {s.status}
                     </span>
                   </td>
@@ -247,7 +225,7 @@ export default function AdminSoftwareDashboard() {
                       onClick={() => openDrawer(s)}
                       className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded"
                     >
-                      Drawer
+                      Edit
                     </button>
 
                     <button
@@ -266,13 +244,71 @@ export default function AdminSoftwareDashboard() {
         </div>
       </div>
 
-      {/* DRAWER EDIT */}
+      {/* 🔥 ADD MODAL */}
+      {addModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+          <div className="bg-white w-[600px] p-6 rounded-xl">
+
+            <div className="flex justify-between mb-4">
+              <h2 className="font-bold">Add Software</h2>
+              <button onClick={() => setAddModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3">
+
+              <input className="border p-2" placeholder="Service"
+                value={form.serviceName}
+                onChange={(e) => setForm({ ...form, serviceName: e.target.value })}
+              />
+
+              <input className="border p-2" placeholder="Vendor"
+                value={form.vendor}
+                onChange={(e) => setForm({ ...form, vendor: e.target.value })}
+              />
+
+              <input className="border p-2" placeholder="Amount"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              />
+
+              <input type="date" className="border p-2"
+                value={form.purchaseDate}
+                onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
+              />
+
+              <input type="date" className="border p-2"
+                value={form.expiryDate}
+                onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+              />
+
+              <select className="border p-2 col-span-2"
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+              >
+                <option>Active</option>
+                <option>Expired</option>
+                <option>Renewed</option>
+              </select>
+
+              <button className="bg-black text-white p-2 col-span-2 rounded">
+                Save
+              </button>
+
+            </form>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* 🔥 DRAWER */}
       {editDrawer && (
         <div className="fixed inset-0 flex">
 
           <div className="flex-1 bg-black/40" onClick={() => setEditDrawer(false)} />
 
-          <div className="w-[400px] bg-white p-5 shadow-xl">
+          <div className="w-[400px] bg-white p-5">
             <h2 className="font-bold mb-4">Edit Software</h2>
 
             <input
@@ -293,7 +329,7 @@ export default function AdminSoftwareDashboard() {
 
             <button
               onClick={handleDrawerSave}
-              className="bg-green-600 text-white px-3 py-2 rounded w-full"
+              className="bg-green-600 text-white w-full p-2 rounded"
             >
               Save
             </button>
