@@ -14,10 +14,12 @@ export default function MyTickets() {
 
   const [reviewModal, setReviewModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
+  const [reopenModal, setReopenModal] = useState(false);
 
   const [selectedTicket, setSelectedTicket] = useState(null);
 
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
 
   const [editForm, setEditForm] = useState({
@@ -29,8 +31,6 @@ export default function MyTickets() {
 
   const [editFiles, setEditFiles] = useState([]);
 
-  const fileInputRef = useRef(null);
-
   useEffect(() => {
     load(page);
   }, [page]);
@@ -38,14 +38,10 @@ export default function MyTickets() {
   const load = async (pageNumber = 1) => {
     try {
       setLoading(true);
-
       const res = await api.get(`/tickets/my?page=${pageNumber}`);
-
       setTickets(res.data.data || []);
       setTotalPages(res.data.totalPages || 1);
-
-    } catch (err) {
-      console.log(err);
+    } catch {
       toast.error("Failed to load tickets");
     } finally {
       setLoading(false);
@@ -67,20 +63,31 @@ export default function MyTickets() {
     )}m`;
   };
 
-  /* ================= REOPEN ================= */
-  const reopenTicket = async (id) => {
+  /* ================= REOPEN CONFIRM ================= */
+  const askReopen = (ticket) => {
+    setSelectedTicket(ticket);
+    setReopenModal(true);
+  };
+
+  const confirmReopen = async () => {
     try {
-      await api.put(`/tickets/${id}/reopen`);
-      toast.success("Ticket reopened successfully");
+      await api.put(`/tickets/${selectedTicket._id}/reopen`);
+      toast.success("Ticket reopened");
+      setReopenModal(false);
       load(page);
-    } catch (err) {
+    } catch {
       toast.error("Failed to reopen");
     }
   };
 
-  /* ================= REVIEW ================= */
+  /* ================= STAR REVIEW ================= */
   const openReview = (ticket) => {
     setSelectedTicket(ticket);
+
+    // if editing existing review
+    setRating(ticket.rating || 0);
+    setComment(ticket.review || "");
+
     setReviewModal(true);
   };
 
@@ -88,17 +95,16 @@ export default function MyTickets() {
     try {
       await api.put(`/tickets/${selectedTicket._id}/review`, {
         review: comment,
-        rating: Number(rating),
+        rating,
       });
 
-      toast.success("Review submitted");
+      toast.success("Review saved");
 
       setReviewModal(false);
+      setRating(0);
       setComment("");
-      setRating(5);
 
       load(page);
-
     } catch {
       toast.error("Failed to submit review");
     }
@@ -120,53 +126,50 @@ export default function MyTickets() {
   };
 
   const handleEditChange = (e) => {
-    setEditForm({
-      ...editForm,
-      [e.target.name]: e.target.value,
-    });
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
   };
 
-  const handleFiles = (files) => {
-    const newFiles = Array.from(files);
-
-    const previewFiles = newFiles.map((file) =>
-      Object.assign(file, {
-        preview: URL.createObjectURL(file),
-      })
-    );
-
-    setEditFiles((prev) => [...prev, ...previewFiles]);
-  };
-
-  /* ================= FIXED EDIT SUBMIT ================= */
   const submitEdit = async () => {
     try {
       const formData = new FormData();
 
-      formData.append("title", editForm.title);
-      formData.append("description", editForm.description);
-      formData.append("department", editForm.department);
-      formData.append("priority", editForm.priority);
-
-      editFiles.forEach((file) => {
-        formData.append("files", file);
-      });
-
-      // ✅ IMPORTANT FIX: DO NOT set Content-Type manually
-      await api.put(
-        `/tickets/${selectedTicket._id}/edit`,
-        formData
+      Object.keys(editForm).forEach((k) =>
+        formData.append(k, editForm[k])
       );
 
-      toast.success("Ticket updated");
+      editFiles.forEach((f) => formData.append("files", f));
 
+      await api.put(`/tickets/${selectedTicket._id}/edit`, formData);
+
+      toast.success("Ticket updated");
       setEditModal(false);
       load(page);
-
-    } catch (err) {
-      console.log(err);
+    } catch {
       toast.error("Update failed");
     }
+  };
+
+  /* ================= STAR UI ================= */
+  const StarRating = () => {
+    return (
+      <div className="flex gap-1 text-2xl cursor-pointer">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span
+            key={star}
+            onMouseEnter={() => setHoverRating(star)}
+            onMouseLeave={() => setHoverRating(0)}
+            onClick={() => setRating(star)}
+            className={`${
+              (hoverRating || rating) >= star
+                ? "text-yellow-400"
+                : "text-gray-300"
+            }`}
+          >
+            ★
+          </span>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -186,12 +189,10 @@ export default function MyTickets() {
 
       {/* TABLE */}
       <div className="bg-white border rounded-xl overflow-hidden">
-
         {loading ? (
           <div className="p-10 text-center">Loading...</div>
         ) : (
           <table className="w-full text-sm">
-
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-3 text-left">Ticket</th>
@@ -243,56 +244,76 @@ export default function MyTickets() {
 
                     {t.status === "Resolved" && (
                       <button
-                        onClick={() => reopenTicket(t._id)}
+                        onClick={() => askReopen(t)}
                         className="text-orange-600"
                       >
                         Reopen
                       </button>
                     )}
 
-                    {t.status === "Resolved" && !t.review && (
+                    {t.status === "Resolved" && (
                       <button
                         onClick={() => openReview(t)}
                         className="text-green-600"
                       >
-                        Confirm & Review
+                        {t.review ? "Edit Review" : "Review"}
                       </button>
-                    )}
-
-                    {t.review && (
-                      <span className="text-green-700 text-xs">
-                        Reviewed
-                      </span>
                     )}
 
                   </td>
                 </tr>
               ))}
             </tbody>
-
           </table>
         )}
       </div>
 
-      {/* REVIEW MODAL */}
+      {/* ================= REOPEN MODAL ================= */}
+      {reopenModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white p-6 rounded w-[350px]">
+
+            <h2 className="font-semibold mb-3">
+              Confirm Reopen Ticket?
+            </h2>
+
+            <p className="text-sm text-gray-500 mb-4">
+              This will move ticket back to active state.
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={confirmReopen}
+                className="bg-orange-600 text-white px-4 py-2 w-full"
+              >
+                Yes Reopen
+              </button>
+
+              <button
+                onClick={() => setReopenModal(false)}
+                className="border px-4 py-2 w-full"
+              >
+                Cancel
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ================= REVIEW MODAL ================= */}
       {reviewModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
 
           <div className="bg-white p-6 rounded-xl w-[400px]">
 
             <h2 className="font-semibold mb-3">
-              Confirm & Review
+              Rate & Review Ticket
             </h2>
 
-            <select
-              value={rating}
-              onChange={(e) => setRating(e.target.value)}
-              className="w-full border p-2 mb-2"
-            >
-              {[5,4,3,2,1].map((n) => (
-                <option key={n}>{n}</option>
-              ))}
-            </select>
+            <div className="mb-3">
+              <StarRating />
+            </div>
 
             <textarea
               value={comment}
@@ -305,7 +326,7 @@ export default function MyTickets() {
               onClick={submitReview}
               className="bg-green-600 text-white w-full py-2"
             >
-              Submit
+              Save Review
             </button>
 
           </div>
