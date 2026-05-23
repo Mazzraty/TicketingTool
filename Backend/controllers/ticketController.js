@@ -386,27 +386,26 @@ export const addReview = async (req, res) => {
       });
     }
 
-    if (ticket.review) {
-      return res.status(400).json({
-        success: false,
-        message: "Already reviewed",
-      });
-    }
-
+    // ✅ ALLOW CREATE OR UPDATE (FIX)
     ticket.review = review;
     ticket.rating = rating;
+    ticket.reviewedAt = new Date(); // optional tracking
 
     await ticket.save();
 
     res.json({
       success: true,
-      message: "Review submitted",
+      message: "Review saved successfully",
+      data: ticket,
     });
+
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
-
 /* ======================================================
    ✅ STATS
 ====================================================== */
