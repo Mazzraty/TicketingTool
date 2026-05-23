@@ -11,27 +11,30 @@ import {
   addReview,
   getTicketById,
   reopenTicket,
-
-  // ✅ NEW
   confirmResolution,
   deleteAttachment,
 } from "../controllers/ticketController.js";
 
-import {
-  adminOnly,
-  protect,
-} from "../middleware/authMiddleware.js";
-
+import { adminOnly, protect } from "../middleware/authMiddleware.js";
 import { upload } from "../middleware/upload.js";
 
 const router = express.Router();
 
+/* ======================================================
+   🔥 IMPORTANT: ADMIN STATS (MUST BE FIRST)
+====================================================== */
+router.get(
+  "/stats",
+  protect,
+  adminOnly,
+  getTicketStats
+);
 
-// ======================================================
-// ✅ USER ROUTES
-// ======================================================
+/* ======================================================
+   👤 USER ROUTES
+====================================================== */
 
-// CREATE
+// CREATE TICKET
 router.post(
   "/",
   protect,
@@ -68,41 +71,32 @@ router.put(
   deleteAttachment
 );
 
-// REVIEW
+// REVIEW TICKET
 router.put(
   "/:id/review",
   protect,
   addReview
 );
 
-// ✅ USER CONFIRM RESOLUTION
+// CONFIRM RESOLUTION (USER)
 router.put(
   "/:id/confirm",
   protect,
   confirmResolution
 );
 
-// ✅ REOPEN
+// REOPEN TICKET
 router.put(
   "/:id/reopen",
   protect,
   reopenTicket
 );
 
+/* ======================================================
+   🛠️ ADMIN ROUTES
+====================================================== */
 
-// ======================================================
-// ✅ ADMIN ROUTES
-// ======================================================
-
-// STATS
-router.get(
-  "/stats",
-  protect,
-  adminOnly,
-  getTicketStats
-);
-
-// ALL TICKETS
+// GET ALL TICKETS
 router.get(
   "/",
   protect,
