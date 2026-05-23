@@ -110,13 +110,13 @@ export default function AdminSoftwareDashboard() {
 
       {/* HEADER */}
       <div className="bg-white shadow px-6 py-4 flex justify-between items-center">
-        <h1 className="font-bold text-xl">Software Dashboard</h1>
+        <h1 className="font-bold text-xl">Vendor Dashboard</h1>
 
         <button
           onClick={() => setAddModal(true)}
           className="bg-black text-white px-4 py-2 rounded"
         >
-          + Add Software
+          + Add Vendor
         </button>
       </div>
 
