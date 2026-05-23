@@ -12,14 +12,27 @@ export default function AssetStoreFiori() {
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
+  // PAGINATION
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   /* ================= LOAD ================= */
   const loadAssets = async () => {
     try {
       const res = await api.get("/assets");
-      setAssets(res.data);
+
+      // ✅ FIX: always force array
+      const data =
+        Array.isArray(res.data)
+          ? res.data
+          : res.data?.data || res.data?.assets || [];
+
+      setAssets(data);
+
     } catch (err) {
       console.error(err);
       toast.error("Failed to load assets");
+      setAssets([]); // safety
     }
   };
 
@@ -27,11 +40,11 @@ export default function AssetStoreFiori() {
     loadAssets();
   }, []);
 
-  /* ================= FILTER (FIXED) ================= */
-  const filtered = assets.filter((a) => {
+  /* ================= FILTER (SAFE) ================= */
+  const filtered = (Array.isArray(assets) ? assets : []).filter((a) => {
 
-    const type = a.type?.toLowerCase();     // ✅ FIX
-    const selectedFilter = filter?.toLowerCase(); // ✅ FIX
+    const type = a.type?.toLowerCase();
+    const selectedFilter = filter?.toLowerCase();
 
     const matchType =
       selectedFilter === "all" || type === selectedFilter;
@@ -47,6 +60,14 @@ export default function AssetStoreFiori() {
 
     return matchType && matchSearch;
   });
+
+  /* ================= PAGINATION LOGIC ================= */
+  const totalPages = Math.ceil(filtered.length / pageSize);
+
+  const paginatedData = filtered.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
 
   /* ================= KPI ================= */
   const total = assets.length;
@@ -102,61 +123,20 @@ export default function AssetStoreFiori() {
         </p>
       </div>
 
-      {/* KPI */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-
-        <div className="bg-white border rounded-2xl p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Total Assets</p>
-          <h2 className="text-3xl font-bold mt-2">{total}</h2>
-        </div>
-
-        <div className="bg-white border rounded-2xl p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Laptops</p>
-          <h2 className="text-3xl font-bold text-blue-600 mt-2">{laptop}</h2>
-        </div>
-
-        <div className="bg-white border rounded-2xl p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Printers</p>
-          <h2 className="text-3xl font-bold text-green-600 mt-2">{printer}</h2>
-        </div>
-
-        <div className="bg-white border rounded-2xl p-5 shadow-sm">
-          <p className="text-sm text-gray-500">HHT Devices</p>
-          <h2 className="text-3xl font-bold text-purple-600 mt-2">{hht}</h2>
-        </div>
-
-      </div>
-
-      {/* FILTER BAR */}
-      <div className="bg-white border rounded-2xl shadow-sm p-4 mb-6">
-
-        <div className="flex flex-col md:flex-row gap-3">
-
-          <input
-            className="flex-1 border rounded-xl p-3"
-            placeholder="Search asset / serial / salesman..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <div className="flex gap-2 flex-wrap">
-            {["All", "Laptop", "Printer", "HHT"].map((t) => (
-              <button
-                key={t}
-                onClick={() => setFilter(t)}
-                className={`px-4 py-2 rounded-xl text-sm border ${
-                  filter === t
-                    ? "bg-blue-600 text-white"
-                    : "bg-white hover:bg-gray-100"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-        </div>
-
+      {/* PAGE SIZE SELECTOR */}
+      <div className="flex justify-end mb-3">
+        <select
+          className="border p-2 rounded-lg"
+          value={pageSize}
+          onChange={(e) => {
+            setPageSize(Number(e.target.value));
+            setPage(1);
+          }}
+        >
+          <option value={10}>10</option>
+          <option value={25}>25</option>
+          <option value={50}>50</option>
+        </select>
       </div>
 
       {/* TABLE */}
@@ -178,14 +158,14 @@ export default function AssetStoreFiori() {
           </thead>
 
           <tbody>
-            {filtered.length === 0 ? (
+            {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan="8" className="text-center p-10 text-gray-400">
                   No assets found
                 </td>
               </tr>
             ) : (
-              filtered.map((a) => (
+              paginatedData.map((a) => (
                 <tr key={a._id} className="border-t hover:bg-gray-50">
 
                   <td className="p-3 font-medium">{a.assetCode}</td>
@@ -212,21 +192,21 @@ export default function AssetStoreFiori() {
                         onClick={() =>
                           window.open(`/admin/assets/history?code=${a.assetCode}`)
                         }
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-xs"
+                        className="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs"
                       >
                         History
                       </button>
 
                       <button
                         onClick={() => openEdit(a)}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-xs"
+                        className="bg-yellow-500 text-white px-3 py-1 rounded-lg text-xs"
                       >
                         Edit
                       </button>
 
                       <button
                         onClick={() => deleteAsset(a._id)}
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs"
+                        className="bg-red-600 text-white px-3 py-1 rounded-lg text-xs"
                       >
                         Delete
                       </button>
@@ -242,6 +222,31 @@ export default function AssetStoreFiori() {
         </table>
       </div>
 
+      {/* PAGINATION CONTROLS */}
+      <div className="flex justify-center gap-2 mt-5">
+
+        <button
+          disabled={page === 1}
+          onClick={() => setPage(page - 1)}
+          className="px-3 py-1 border rounded disabled:opacity-40"
+        >
+          Prev
+        </button>
+
+        <span className="px-3 py-1">
+          Page {page} / {totalPages || 1}
+        </span>
+
+        <button
+          disabled={page === totalPages || totalPages === 0}
+          onClick={() => setPage(page + 1)}
+          className="px-3 py-1 border rounded disabled:opacity-40"
+        >
+          Next
+        </button>
+
+      </div>
+
       {/* EDIT MODAL (UNCHANGED) */}
       {editOpen && selected && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -255,17 +260,14 @@ export default function AssetStoreFiori() {
 
             <div className="grid md:grid-cols-2 gap-4">
 
-              <input
-                className="border p-3 rounded-xl"
-                placeholder="Asset Code"
+              <input className="border p-3 rounded-xl"
                 value={selected.assetCode || ""}
                 onChange={(e) =>
                   setSelected({ ...selected, assetCode: e.target.value })
                 }
               />
 
-              <select
-                className="border p-3 rounded-xl"
+              <select className="border p-3 rounded-xl"
                 value={selected.type || ""}
                 onChange={(e) =>
                   setSelected({ ...selected, type: e.target.value })
@@ -276,121 +278,19 @@ export default function AssetStoreFiori() {
                 <option value="HHT">HHT</option>
               </select>
 
-              <input
-                className="border p-3 rounded-xl"
-                placeholder="Model"
-                value={selected.model || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, model: e.target.value })
-                }
-              />
-
-              <input
-                className="border p-3 rounded-xl"
-                placeholder="Serial Number"
-                value={selected.serialNumber || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, serialNumber: e.target.value })
-                }
-              />
-
-              <input
-                className="border p-3 rounded-xl"
-                placeholder="Salesman Code"
-                value={selected.salesmanCode || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, salesmanCode: e.target.value })
-                }
-              />
-
-              <input
-                className="border p-3 rounded-xl"
-                placeholder="Salesman Name"
-                value={selected.salesmanName || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, salesmanName: e.target.value })
-                }
-              />
-
-              <input
-                className="border p-3 rounded-xl"
-                placeholder="Route"
-                value={selected.route || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, route: e.target.value })
-                }
-              />
-
-              <input
-                className="border p-3 rounded-xl"
-                placeholder="Supervisor"
-                value={selected.supervisor || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, supervisor: e.target.value })
-                }
-              />
-
-              <input
-                className="border p-3 rounded-xl"
-                placeholder="SOTI"
-                value={selected.soti || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, soti: e.target.value })
-                }
-              />
-
-              <input
-                className="border p-3 rounded-xl"
-                placeholder="IMEI"
-                value={selected.imei || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, imei: e.target.value })
-                }
-              />
-
-              <input
-                className="border p-3 rounded-xl"
-                placeholder="SIM Number"
-                value={selected.simNumber || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, simNumber: e.target.value })
-                }
-              />
-
-              <select
-                className="border rounded-xl p-3"
-                value={selected.status || ""}
-                onChange={(e) =>
-                  setSelected({ ...selected, status: e.target.value })
-                }
-              >
-                <option value="available">available</option>
-                <option value="assigned">assigned</option>
-              </select>
-
             </div>
-
-            <textarea
-              className="w-full border rounded-xl p-3 mt-4"
-              rows="4"
-              placeholder="Notes"
-              value={selected.notes || ""}
-              onChange={(e) =>
-                setSelected({ ...selected, notes: e.target.value })
-              }
-            />
 
             <div className="flex gap-3 mt-5">
               <button
                 onClick={updateAsset}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl"
+                className="flex-1 bg-blue-600 text-white py-3 rounded-xl"
               >
                 Save Changes
               </button>
 
               <button
                 onClick={() => setEditOpen(false)}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl"
+                className="flex-1 bg-gray-200 py-3 rounded-xl"
               >
                 Cancel
               </button>
