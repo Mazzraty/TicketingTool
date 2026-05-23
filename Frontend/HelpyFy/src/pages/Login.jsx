@@ -95,141 +95,88 @@ export default function Login() {
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="relative z-10 w-full max-w-6xl grid lg:grid-cols-2 gap-6 p-4">
+      <div className="relative z-10 w-full flex items-center justify-center p-4">
 
-        {/* LEFT SIDE */}
-        <div className="relative rounded-[32px] overflow-hidden shadow-2xl hidden lg:block bg-black/30 backdrop-blur-sm">
+        {/* LOGIN CARD */}
+        <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl border border-white/30 p-8">
 
-          {/* BACKGROUND LOGO */}
-          <img
-            src="https://logos-world.net/wp-content/uploads/2024/01/Mazzraty-Symbol.png"
-            alt="Mazzraty"
-            className="absolute inset-0 w-full h-full object-contain p-20 opacity-20"
-          />
+          {/* HEADER */}
+          <div className="text-center mb-8">
 
-          {/* GRADIENT */}
-          <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/30 to-green-900/70"></div>
-
-          {/* CONTENT */}
-          <div className="relative z-10 p-10 h-full flex flex-col justify-between text-white">
-
-            {/* LOGO */}
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-2xl w-fit">
+            <div className="flex justify-center mb-4">
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
-                className="h-10"
+                className="h-12"
                 alt="logo"
               />
             </div>
 
-            {/* TEXT */}
-            <div className="space-y-5">
-              <p className="text-green-200 tracking-[6px] text-sm">
-                ENTERPRISE PLATFORM
-              </p>
+            <h2 className="text-3xl font-bold text-gray-900">
+              Welcome Back
+            </h2>
 
-              <h1 className="text-5xl font-bold leading-tight">
-                Smart IT Helpdesk System
-              </h1>
-
-              <p className="text-white/80 text-lg leading-relaxed">
-                Manage tickets, employees, assets and IT operations
-                in a single unified enterprise system.
-              </p>
-            </div>
-
-            {/* FOOTER */}
-            <div className="text-xs text-white/60 border-t border-white/10 pt-5">
-              © 2026 Mazzraty Enterprise System
-            </div>
+            <p className="text-gray-500 text-sm mt-2">
+              Sign in to your enterprise dashboard
+            </p>
 
           </div>
-        </div>
 
-        {/* RIGHT SIDE */}
-        <div className="flex items-center justify-center">
+          {/* FORM */}
+          <form onSubmit={handleLogin} className="space-y-5">
 
-          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl border border-white/30 p-8">
-
-            {/* HEADER */}
-            <div className="text-center mb-8">
-
-              <div className="flex justify-center mb-4">
-                <img
-                  src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
-                  className="h-12"
-                  alt="logo"
-                />
-              </div>
-
-              <h2 className="text-3xl font-bold text-gray-900">
-                Welcome Back
-              </h2>
-
-              <p className="text-gray-500 text-sm mt-2">
-                Sign in to your enterprise dashboard
-              </p>
-
+            {/* EMAIL */}
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+              <input
+                type="email"
+                className="w-full bg-transparent outline-none text-sm"
+                placeholder="Email Address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
 
-            {/* FORM */}
-            <form onSubmit={handleLogin} className="space-y-5">
+            {/* PASSWORD */}
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+              <input
+                type="password"
+                className="w-full bg-transparent outline-none text-sm"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
 
-              {/* EMAIL */}
-              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
-                <input
-                  type="email"
-                  className="w-full bg-transparent outline-none text-sm"
-                  placeholder="Email Address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-
-              {/* PASSWORD */}
-              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
-                <input
-                  type="password"
-                  className="w-full bg-transparent outline-none text-sm"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-
-              {/* FORGOT PASSWORD */}
-              <div className="text-right -mt-2">
-                <span
-                  onClick={() => setShowModal(true)}
-                  className="text-xs text-blue-600 cursor-pointer hover:underline"
-                >
-                  Forgot Password?
-                </span>
-              </div>
-
-              {/* BUTTON */}
-              <button
-                type="submit"
-                className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 transition-all duration-300 text-white py-3 rounded-2xl font-semibold shadow-lg"
-              >
-                Sign In
-              </button>
-
-            </form>
-
-            {/* REGISTER */}
-            <div className="mt-5 text-center">
+            {/* FORGOT PASSWORD */}
+            <div className="text-right -mt-2">
               <span
-                onClick={() => navigate("/register")}
-                className="text-sm text-green-600 cursor-pointer hover:underline"
+                onClick={() => setShowModal(true)}
+                className="text-xs text-blue-600 cursor-pointer hover:underline"
               >
-                Create new account
+                Forgot Password?
               </span>
             </div>
 
-          </div>
-        </div>
+            {/* BUTTON */}
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 transition-all duration-300 text-white py-3 rounded-2xl font-semibold shadow-lg"
+            >
+              Sign In
+            </button>
 
+          </form>
+
+          {/* REGISTER */}
+          <div className="mt-5 text-center">
+            <span
+              onClick={() => navigate("/register")}
+              className="text-sm text-green-600 cursor-pointer hover:underline"
+            >
+              Create new account
+            </span>
+          </div>
+
+        </div>
       </div>
 
       {/* ================= FORGOT PASSWORD MODAL ================= */}
