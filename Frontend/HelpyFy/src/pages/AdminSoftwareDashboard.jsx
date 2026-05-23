@@ -160,7 +160,7 @@ export default function AdminSoftwareDashboard() {
 
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Vendor List</h1>
+        <h1 className="text-3xl font-bold">Vendor's List</h1>
 
         <button
           onClick={downloadPDF}
@@ -193,7 +193,7 @@ export default function AdminSoftwareDashboard() {
 
       {/* ADD SOFTWARE */}
       <div className="bg-white p-6 rounded-2xl shadow mb-6">
-        <h2 className="text-xl font-semibold mb-4">Add Software</h2>
+        <h2 className="text-xl font-semibold mb-4">Add Vendor</h2>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-3 gap-4">
 
