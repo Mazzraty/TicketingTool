@@ -71,6 +71,24 @@ export default function AssetStoreFiori() {
   /* ================= TABLE CONTROL ================= */
   const showHHTFields = filter === "HHT";
 
+  /* ================= CURRENT USER ================= */
+  const getCurrentUser = (asset) => {
+
+    if (asset.employee?.name) {
+      return asset.employee.name;
+    }
+
+    if (asset.assignedTo?.name) {
+      return asset.assignedTo.name;
+    }
+
+    if (asset.salesmanName) {
+      return asset.salesmanName;
+    }
+
+    return "-";
+  };
+
   /* ================= EDIT ================= */
   const openEdit = (asset) => {
     setSelected(asset);
@@ -279,6 +297,10 @@ export default function AssetStoreFiori() {
                 )}
 
                 <th className="text-left px-6 py-4 font-semibold">
+                  Current User
+                </th>
+
+                <th className="text-left px-6 py-4 font-semibold">
                   Status
                 </th>
 
@@ -296,7 +318,7 @@ export default function AssetStoreFiori() {
 
                 <tr>
                   <td
-                    colSpan="8"
+                    colSpan="9"
                     className="text-center py-14 text-gray-400"
                   >
                     No assets found
@@ -358,6 +380,12 @@ export default function AssetStoreFiori() {
                       </>
                     )}
 
+                    {/* CURRENT USER */}
+                    <td className="px-6 py-4 text-gray-700 font-medium">
+                      {getCurrentUser(a)}
+                    </td>
+
+                    {/* STATUS */}
                     <td className="px-6 py-4">
 
                       <span
@@ -372,11 +400,11 @@ export default function AssetStoreFiori() {
 
                     </td>
 
+                    {/* ACTIONS */}
                     <td className="px-6 py-4">
 
-                      <div className="flex items-center justify-center gap-3">
+                      <div className="flex items-center justify-center gap-2">
 
-                        {/* HISTORY */}
                         <button
                           onClick={() =>
                             window.open(
@@ -384,36 +412,34 @@ export default function AssetStoreFiori() {
                             )
                           }
                           className="
-                            min-w-[90px]
-                            h-10
-                            rounded-xl
+                            min-w-[85px]
+                            h-9
+                            rounded-lg
                             bg-[#0a6ed1]
                             hover:bg-[#085caf]
                             text-white
-                            text-sm
+                            text-xs
                             font-semibold
-                            shadow-sm
                             border border-[#0a6ed1]
+                            shadow-sm
                             transition-all
                           "
                         >
                           History
                         </button>
 
-                        {/* EDIT */}
                         <button
                           onClick={() => openEdit(a)}
                           className="
-                            min-w-[90px]
-                            h-10
-                            rounded-xl
+                            min-w-[85px]
+                            h-9
+                            rounded-lg
                             bg-white
                             hover:bg-[#f5f7fa]
                             text-[#0a6ed1]
-                            text-sm
+                            text-xs
                             font-semibold
-                            border
-                            border-[#0a6ed1]
+                            border border-[#0a6ed1]
                             shadow-sm
                             transition-all
                           "
@@ -421,20 +447,18 @@ export default function AssetStoreFiori() {
                           Edit
                         </button>
 
-                        {/* DELETE */}
                         <button
                           onClick={() => deleteAsset(a._id)}
                           className="
-                            min-w-[90px]
-                            h-10
-                            rounded-xl
+                            min-w-[85px]
+                            h-9
+                            rounded-lg
                             bg-white
                             hover:bg-red-50
                             text-red-600
-                            text-sm
+                            text-xs
                             font-semibold
-                            border
-                            border-red-200
+                            border border-red-200
                             shadow-sm
                             transition-all
                           "
@@ -459,188 +483,6 @@ export default function AssetStoreFiori() {
         </div>
 
       </div>
-
-      {/* EDIT MODAL */}
-      {editOpen && selected && (
-
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-
-          <div className="
-            bg-white
-            rounded-2xl
-            w-full
-            max-w-3xl
-            shadow-[0_8px_32px_rgba(0,0,0,0.15)]
-            border
-            border-gray-200
-            overflow-hidden
-          ">
-
-            {/* HEADER */}
-            <div className="
-              flex
-              items-center
-              justify-between
-              px-8
-              py-5
-              border-b
-              bg-[#f7f9fb]
-            ">
-
-              <h2 className="text-2xl font-bold text-gray-800">
-                Edit Asset
-              </h2>
-
-              <button
-                onClick={() => setEditOpen(false)}
-                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
-              >
-                ✕
-              </button>
-
-            </div>
-
-            {/* BODY */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-8">
-
-              <input
-                className="border border-gray-300 rounded-xl px-4 py-3"
-                placeholder="Asset Code"
-                value={selected.assetCode || ""}
-                onChange={(e) =>
-                  setSelected({
-                    ...selected,
-                    assetCode: e.target.value,
-                  })
-                }
-              />
-
-              <select
-                className="border border-gray-300 rounded-xl px-4 py-3"
-                value={selected.type || ""}
-                onChange={(e) =>
-                  setSelected({
-                    ...selected,
-                    type: e.target.value,
-                  })
-                }
-              >
-                <option value="Laptop">Laptop</option>
-                <option value="Printer">Printer</option>
-                <option value="HHT">HHT</option>
-              </select>
-
-              {(selected.type === "Laptop" ||
-                selected.type === "Printer") && (
-                <>
-                  <input
-                    className="border border-gray-300 rounded-xl px-4 py-3"
-                    placeholder="Model"
-                    value={selected.model || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        model: e.target.value,
-                      })
-                    }
-                  />
-
-                  <input
-                    className="border border-gray-300 rounded-xl px-4 py-3"
-                    placeholder="Serial Number"
-                    value={selected.serialNumber || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        serialNumber: e.target.value,
-                      })
-                    }
-                  />
-                </>
-              )}
-
-              {selected.type === "HHT" && (
-                <>
-                  <input
-                    className="border border-gray-300 rounded-xl px-4 py-3"
-                    placeholder="Salesman Name"
-                    value={selected.salesmanName || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        salesmanName: e.target.value,
-                      })
-                    }
-                  />
-
-                  <input
-                    className="border border-gray-300 rounded-xl px-4 py-3"
-                    placeholder="Route"
-                    value={selected.route || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        route: e.target.value,
-                      })
-                    }
-                  />
-                </>
-              )}
-
-            </div>
-
-            {/* FOOTER */}
-            <div className="
-              flex
-              justify-end
-              gap-3
-              px-8
-              py-5
-              border-t
-              bg-[#f7f9fb]
-            ">
-
-              <button
-                onClick={updateAsset}
-                className="
-                  min-w-[140px]
-                  h-11
-                  bg-[#0a6ed1]
-                  hover:bg-[#085caf]
-                  text-white
-                  rounded-xl
-                  font-semibold
-                  transition-all
-                "
-              >
-                Save Changes
-              </button>
-
-              <button
-                onClick={() => setEditOpen(false)}
-                className="
-                  min-w-[140px]
-                  h-11
-                  bg-white
-                  hover:bg-gray-100
-                  text-gray-700
-                  border
-                  border-gray-300
-                  rounded-xl
-                  font-semibold
-                  transition-all
-                "
-              >
-                Cancel
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      )}
 
     </div>
   );
