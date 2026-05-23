@@ -88,7 +88,7 @@ export default function Navbar() {
             <div className="leading-tight">
 
               <h1 className="text-[17px] font-bold text-gray-800">
-                HelpyFy
+                Mazzraty
               </h1>
 
               <p className="text-[11px] text-gray-500 uppercase tracking-wide">
