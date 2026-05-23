@@ -46,7 +46,7 @@ export default function Navbar() {
         { label: "Asset Dashboard", path: "/admin/assets/fiori" },
         { label: "Employees", path: "/admin/employees" },
         {
-          label: "Software Dashboard",
+          label: "Vendor List",
           path: "/admin/software-dashboard",
         },
       ];
