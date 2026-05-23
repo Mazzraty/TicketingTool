@@ -10,7 +10,6 @@ export default function AdminSoftwareDashboard() {
   const [page, setPage] = useState(1);
   const limit = 8;
 
-  // MODALS ONLY
   const [addModal, setAddModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [editData, setEditData] = useState(null);
@@ -71,7 +70,7 @@ export default function AdminSoftwareDashboard() {
     fetchSoftwares();
   };
 
-  // OPEN EDIT MODAL
+  // OPEN EDIT
   const openEdit = (item) => {
     setEditData(item);
     setEditModal(true);
@@ -86,7 +85,6 @@ export default function AdminSoftwareDashboard() {
     fetchSoftwares();
   };
 
-  // SORT
   const requestSort = (key) => {
     let direction = "asc";
     if (sortConfig.key === key && sortConfig.direction === "asc") {
@@ -123,20 +121,6 @@ export default function AdminSoftwareDashboard() {
     return filtered.slice(start, start + limit);
   }, [filtered, page]);
 
-  const dashboard = useMemo(() => {
-    const today = new Date();
-
-    return {
-      active: softwares.filter((s) => s.status === "Active").length,
-      expiring: softwares.filter((s) => {
-        const d = new Date(s.expiryDate);
-        return d.getMonth() === today.getMonth();
-      }).length,
-      expired: softwares.filter((s) => new Date(s.expiryDate) < today).length,
-      cost: softwares.reduce((a, b) => a + Number(b.amount || 0), 0),
-    };
-  }, [softwares]);
-
   return (
     <div className="bg-gray-100 min-h-screen">
 
@@ -152,17 +136,8 @@ export default function AdminSoftwareDashboard() {
         </button>
       </div>
 
-      {/* KPI (NON-STICKY SIMPLE BAR) */}
-      <div className="grid grid-cols-4 gap-4 p-6">
-        <div className="bg-white p-4 rounded shadow">Active: {dashboard.active}</div>
-        <div className="bg-white p-4 rounded shadow">Expiring: {dashboard.expiring}</div>
-        <div className="bg-white p-4 rounded shadow">Expired: {dashboard.expired}</div>
-        <div className="bg-white p-4 rounded shadow">Cost: QAR {dashboard.cost}</div>
-      </div>
-
-      <div className="px-6">
-
-        {/* SEARCH */}
+      {/* SEARCH */}
+      <div className="p-6">
         <input
           className="border p-2 rounded w-1/3 mb-4"
           placeholder="Search..."
@@ -198,11 +173,7 @@ export default function AdminSoftwareDashboard() {
                     {new Date(s.expiryDate).toLocaleDateString()}
                   </td>
 
-                  <td className="p-3">
-                    <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">
-                      {s.status}
-                    </span>
-                  </td>
+                  <td className="p-3">{s.status}</td>
 
                   <td className="p-3 flex gap-2">
                     <button
@@ -228,41 +199,47 @@ export default function AdminSoftwareDashboard() {
         </div>
       </div>
 
-      {/* ================= ADD MODAL ================= */}
+      {/* ================= ADD MODAL (FIXED ALIGNMENT + CANCEL) ================= */}
       {addModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white w-[600px] p-6 rounded-xl">
+
+          <div className="bg-white w-[650px] p-6 rounded-xl">
 
             <h2 className="font-bold mb-4">Add Software</h2>
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
 
-              <input className="border p-2" placeholder="Service Name"
+              <input className="border p-2 rounded" placeholder="Service Name"
                 value={form.serviceName}
                 onChange={(e) => setForm({ ...form, serviceName: e.target.value })}
               />
 
-              <input className="border p-2" placeholder="Vendor"
+              <input className="border p-2 rounded" placeholder="Vendor"
                 value={form.vendor}
                 onChange={(e) => setForm({ ...form, vendor: e.target.value })}
               />
 
-              <input className="border p-2" placeholder="Amount"
+              <input className="border p-2 rounded" placeholder="Duration"
+                value={form.durationMonths}
+                onChange={(e) => setForm({ ...form, durationMonths: e.target.value })}
+              />
+
+              <input className="border p-2 rounded" placeholder="Amount"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
               />
 
-              <input type="date" className="border p-2"
+              <input type="date" className="border p-2 rounded"
                 value={form.purchaseDate}
                 onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
               />
 
-              <input type="date" className="border p-2"
+              <input type="date" className="border p-2 rounded"
                 value={form.expiryDate}
                 onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
               />
 
-              <select className="border p-2 col-span-2"
+              <select className="border p-2 rounded col-span-2"
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
               >
@@ -271,42 +248,111 @@ export default function AdminSoftwareDashboard() {
                 <option>Renewed</option>
               </select>
 
-              <button className="bg-black text-white p-2 col-span-2 rounded">
-                Save
-              </button>
+              {/* BUTTONS */}
+              <div className="col-span-2 flex justify-end gap-3 mt-2">
+
+                <button
+                  type="button"
+                  onClick={() => setAddModal(false)}
+                  className="px-4 py-2 bg-gray-400 text-white rounded"
+                >
+                  Cancel
+                </button>
+
+                <button className="px-4 py-2 bg-black text-white rounded">
+                  Save
+                </button>
+
+              </div>
 
             </form>
           </div>
         </div>
       )}
 
-      {/* ================= EDIT MODAL ================= */}
+      {/* ================= EDIT MODAL (FULL DETAILS + CANCEL) ================= */}
       {editModal && editData && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white w-[500px] p-6 rounded-xl">
+
+          <div className="bg-white w-[650px] p-6 rounded-xl">
 
             <h2 className="font-bold mb-4">Edit Software</h2>
 
-            <input className="border p-2 w-full mb-2"
-              value={editData.serviceName}
-              onChange={(e) =>
-                setEditData({ ...editData, serviceName: e.target.value })
-              }
-            />
+            <div className="grid grid-cols-2 gap-4">
 
-            <input className="border p-2 w-full mb-4"
-              value={editData.vendor}
-              onChange={(e) =>
-                setEditData({ ...editData, vendor: e.target.value })
-              }
-            />
+              <input className="border p-2 rounded"
+                value={editData.serviceName}
+                onChange={(e) =>
+                  setEditData({ ...editData, serviceName: e.target.value })
+                }
+              />
 
-            <button
-              onClick={handleUpdate}
-              className="bg-green-600 text-white w-full p-2 rounded"
-            >
-              Update
-            </button>
+              <input className="border p-2 rounded"
+                value={editData.vendor}
+                onChange={(e) =>
+                  setEditData({ ...editData, vendor: e.target.value })
+                }
+              />
+
+              <input className="border p-2 rounded"
+                value={editData.durationMonths}
+                onChange={(e) =>
+                  setEditData({ ...editData, durationMonths: e.target.value })
+                }
+              />
+
+              <input className="border p-2 rounded"
+                value={editData.amount}
+                onChange={(e) =>
+                  setEditData({ ...editData, amount: e.target.value })
+                }
+              />
+
+              <input type="date" className="border p-2 rounded"
+                value={editData.purchaseDate}
+                onChange={(e) =>
+                  setEditData({ ...editData, purchaseDate: e.target.value })
+                }
+              />
+
+              <input type="date" className="border p-2 rounded"
+                value={editData.expiryDate}
+                onChange={(e) =>
+                  setEditData({ ...editData, expiryDate: e.target.value })
+                }
+              />
+
+              <select className="border p-2 rounded col-span-2"
+                value={editData.status}
+                onChange={(e) =>
+                  setEditData({ ...editData, status: e.target.value })
+                }
+              >
+                <option>Active</option>
+                <option>Expired</option>
+                <option>Renewed</option>
+              </select>
+
+            </div>
+
+            {/* ACTIONS */}
+            <div className="flex justify-end gap-3 mt-4">
+
+              <button
+                onClick={() => setEditModal(false)}
+                className="px-4 py-2 bg-gray-400 text-white rounded"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleUpdate}
+                className="px-4 py-2 bg-green-600 text-white rounded"
+              >
+                Update
+              </button>
+
+            </div>
 
           </div>
         </div>
