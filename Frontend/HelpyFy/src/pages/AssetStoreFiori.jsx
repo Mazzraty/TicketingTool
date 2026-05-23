@@ -78,15 +78,27 @@ export default function AssetStoreFiori() {
       return asset.employee.name;
     }
 
+    if (asset.employee?.employeeName) {
+      return asset.employee.employeeName;
+    }
+
     if (asset.assignedTo?.name) {
       return asset.assignedTo.name;
+    }
+
+    if (asset.assignedTo?.employeeName) {
+      return asset.assignedTo.employeeName;
+    }
+
+    if (asset.user?.name) {
+      return asset.user.name;
     }
 
     if (asset.salesmanName) {
       return asset.salesmanName;
     }
 
-    return "-";
+    return "Not Assigned";
   };
 
   /* ================= EDIT ================= */
@@ -380,12 +392,10 @@ export default function AssetStoreFiori() {
                       </>
                     )}
 
-                    {/* CURRENT USER */}
                     <td className="px-6 py-4 text-gray-700 font-medium">
                       {getCurrentUser(a)}
                     </td>
 
-                    {/* STATUS */}
                     <td className="px-6 py-4">
 
                       <span
@@ -400,7 +410,6 @@ export default function AssetStoreFiori() {
 
                     </td>
 
-                    {/* ACTIONS */}
                     <td className="px-6 py-4">
 
                       <div className="flex items-center justify-center gap-2">
@@ -411,57 +420,21 @@ export default function AssetStoreFiori() {
                               `/admin/assets/history?code=${a.assetCode}`
                             )
                           }
-                          className="
-                            min-w-[85px]
-                            h-9
-                            rounded-lg
-                            bg-[#0a6ed1]
-                            hover:bg-[#085caf]
-                            text-white
-                            text-xs
-                            font-semibold
-                            border border-[#0a6ed1]
-                            shadow-sm
-                            transition-all
-                          "
+                          className="min-w-[85px] h-9 rounded-lg bg-[#0a6ed1] hover:bg-[#085caf] text-white text-xs font-semibold border border-[#0a6ed1] shadow-sm transition-all"
                         >
                           History
                         </button>
 
                         <button
                           onClick={() => openEdit(a)}
-                          className="
-                            min-w-[85px]
-                            h-9
-                            rounded-lg
-                            bg-white
-                            hover:bg-[#f5f7fa]
-                            text-[#0a6ed1]
-                            text-xs
-                            font-semibold
-                            border border-[#0a6ed1]
-                            shadow-sm
-                            transition-all
-                          "
+                          className="min-w-[85px] h-9 rounded-lg bg-white hover:bg-[#f5f7fa] text-[#0a6ed1] text-xs font-semibold border border-[#0a6ed1] shadow-sm transition-all"
                         >
                           Edit
                         </button>
 
                         <button
                           onClick={() => deleteAsset(a._id)}
-                          className="
-                            min-w-[85px]
-                            h-9
-                            rounded-lg
-                            bg-white
-                            hover:bg-red-50
-                            text-red-600
-                            text-xs
-                            font-semibold
-                            border border-red-200
-                            shadow-sm
-                            transition-all
-                          "
+                          className="min-w-[85px] h-9 rounded-lg bg-white hover:bg-red-50 text-red-600 text-xs font-semibold border border-red-200 shadow-sm transition-all"
                         >
                           Delete
                         </button>
@@ -483,6 +456,266 @@ export default function AssetStoreFiori() {
         </div>
 
       </div>
+
+      {/* ================= EDIT MODAL ================= */}
+      {editOpen && selected && (
+
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+
+            {/* HEADER */}
+            <div className="bg-[#0a6ed1] px-6 py-4 flex items-center justify-between">
+
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  Edit Asset
+                </h2>
+
+                <p className="text-blue-100 text-sm">
+                  Update asset information
+                </p>
+              </div>
+
+              <button
+                onClick={() => setEditOpen(false)}
+                className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 text-white transition"
+              >
+                ✕
+              </button>
+
+            </div>
+
+            {/* BODY */}
+            <div className="p-6 max-h-[75vh] overflow-y-auto">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 block mb-2">
+                    Asset Code
+                  </label>
+
+                  <input
+                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                    value={selected.assetCode || ""}
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        assetCode: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 block mb-2">
+                    Type
+                  </label>
+
+                  <select
+                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                    value={selected.type || ""}
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        type: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="Laptop">Laptop</option>
+                    <option value="Printer">Printer</option>
+                    <option value="HHT">HHT</option>
+                  </select>
+                </div>
+
+                {(selected.type === "Laptop" ||
+                  selected.type === "Printer") && (
+                  <>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Model
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.model || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            model: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Serial Number
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.serialNumber || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            serialNumber: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selected.type === "HHT" && (
+                  <>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Salesman Name
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.salesmanName || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            salesmanName: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Route
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.route || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            route: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        IMEI
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.imei || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            imei: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        SIM Number
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.simNumber || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            simNumber: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="md:col-span-2">
+
+                  <label className="text-sm font-semibold text-gray-700 block mb-2">
+                    Status
+                  </label>
+
+                  <select
+                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                    value={selected.status || ""}
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        status: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="available">
+                      available
+                    </option>
+
+                    <option value="assigned">
+                      assigned
+                    </option>
+
+                  </select>
+
+                </div>
+
+                <div className="md:col-span-2">
+
+                  <label className="text-sm font-semibold text-gray-700 block mb-2">
+                    Notes
+                  </label>
+
+                  <textarea
+                    rows="4"
+                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                    value={selected.notes || ""}
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        notes: e.target.value,
+                      })
+                    }
+                  />
+
+                </div>
+
+              </div>
+
+              {/* FOOTER */}
+              <div className="flex gap-4 mt-8">
+
+                <button
+                  onClick={updateAsset}
+                  className="flex-1 h-12 rounded-2xl bg-[#0a6ed1] hover:bg-[#085caf] text-white font-semibold shadow-sm transition"
+                >
+                  Save Changes
+                </button>
+
+                <button
+                  onClick={() => setEditOpen(false)}
+                  className="flex-1 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold transition"
+                >
+                  Cancel
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
     </div>
   );
