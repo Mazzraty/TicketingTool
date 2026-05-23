@@ -67,6 +67,18 @@ export default function MyTickets() {
     }
   };
 
+  /* ================= DATE FORMAT ================= */
+  const formatDate = (date) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   /* ================= BADGES ================= */
   const statusBadge = (status) => {
     const base = "px-2 py-1 text-[11px] rounded font-medium";
@@ -145,6 +157,11 @@ export default function MyTickets() {
                 <th className="p-4 text-center">Status</th>
                 <th className="p-4 text-center">Priority</th>
                 <th className="p-4 text-center">Department</th>
+
+                {/* NEW FIELDS */}
+                <th className="p-4 text-center">Created</th>
+                <th className="p-4 text-center">Closed</th>
+
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -184,6 +201,18 @@ export default function MyTickets() {
                   {/* DEPARTMENT */}
                   <td className="p-4 text-center text-gray-600 text-xs align-middle">
                     {t.department || "-"}
+                  </td>
+
+                  {/* CREATED */}
+                  <td className="p-4 text-center text-xs text-gray-600 align-middle">
+                    {formatDate(t.createdAt)}
+                  </td>
+
+                  {/* CLOSED */}
+                  <td className="p-4 text-center text-xs text-gray-600 align-middle">
+                    {t.status === "Resolved"
+                      ? formatDate(t.resolvedAt || t.closedAt)
+                      : "-"}
                   </td>
 
                   {/* ACTIONS */}
