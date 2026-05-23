@@ -1,14 +1,12 @@
 import Ticket from "../models/ticketSchema.js";
 import User from "../models/userShema.js";
-
 import sendEmail from "../utils/sendEmail.js";
 import { ticketAdminEmail } from "../utils/ticketAdminEmail.js";
 import { ticketUserEmail } from "../utils/ticketUserEmail.js";
 
-
-// ======================================================
-// ✅ CREATE TICKET
-// ======================================================
+/* ======================================================
+   ✅ CREATE TICKET
+====================================================== */
 export const createTicket = async (req, res) => {
   try {
     const { title, description, department, priority } = req.body;
@@ -16,12 +14,11 @@ export const createTicket = async (req, res) => {
     if (!title || !description) {
       return res.status(400).json({
         success: false,
-        message: "Title & Description required",
+        message: "Title and description required",
       });
     }
 
-    const attachments =
-      req.files?.map((f) => f.path || f.filename) || [];
+    const attachments = req.files?.map((f) => f.path) || [];
 
     const slaHours = {
       Low: 72,
@@ -30,10 +27,6 @@ export const createTicket = async (req, res) => {
       Critical: 2,
     };
 
-    const slaDue = new Date(
-      Date.now() + (slaHours[priority] || 72) * 3600000
-    );
-
     const ticket = await Ticket.create({
       title,
       description,
@@ -41,19 +34,21 @@ export const createTicket = async (req, res) => {
       priority,
       attachments,
       userId: req.user.id,
-      slaDue,
+      slaDue: new Date(Date.now() + (slaHours[priority] || 72) * 3600000),
 
+      status: "Open",
       reopened: false,
       review: "",
       rating: 0,
       resolvedAt: null,
+      closedAt: null,
       reopenedAt: null,
     });
 
     const user = await User.findById(req.user.id);
     const admins = await User.find({ role: "admin" });
 
-    // EMAIL (non-blocking)
+    /* EMAIL (non-blocking) */
     sendEmail({
       to: admins.map((a) => a.email),
       subject: "New Ticket Created",
@@ -62,36 +57,33 @@ export const createTicket = async (req, res) => {
 
     sendEmail({
       to: user.email,
-      subject: "Ticket Created",
+      subject: "Ticket Created Successfully",
       html: ticketUserEmail(ticket),
     });
 
-    // SOCKET
+    /* SOCKET */
     if (global.io) {
-      global.io.emit("newTicket", {
-        ticket,
-        user: { name: user.name, email: user.email },
-      });
+      global.io.emit("newTicket", ticket);
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Ticket created successfully",
       data: ticket,
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("CREATE TICKET ERROR:", err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-// ======================================================
-// ✅ GET USER TICKETS
-// ======================================================
+/* ======================================================
+   ✅ GET USER TICKETS
+====================================================== */
 export const getUserTickets = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page = Number(req.query.page) || 1;
     const limit = 5;
 
     const tickets = await Ticket.find({ userId: req.user.id })
@@ -99,9 +91,7 @@ export const getUserTickets = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    const total = await Ticket.countDocuments({
-      userId: req.user.id,
-    });
+    const total = await Ticket.countDocuments({ userId: req.user.id });
 
     res.json({
       success: true,
@@ -110,20 +100,17 @@ export const getUserTickets = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-// ======================================================
-// ✅ GET ALL TICKETS (ADMIN)
-// ======================================================
+/* ======================================================
+   ✅ GET ALL TICKETS (ADMIN)
+====================================================== */
 export const getAllTickets = async (req, res) => {
   try {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-
-    const total = await Ticket.countDocuments();
 
     const tickets = await Ticket.find()
       .populate("userId", "name email")
@@ -131,23 +118,24 @@ export const getAllTickets = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
+    const total = await Ticket.countDocuments();
+
     res.json({
       success: true,
       data: tickets,
-      total,
       page,
       pages: Math.ceil(total / limit),
+      total,
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-// ======================================================
-// ✅ GET SINGLE TICKET
-// ======================================================
+/* ======================================================
+   ✅ GET SINGLE TICKET
+====================================================== */
 export const getTicketById = async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.id).populate(
@@ -168,49 +156,26 @@ export const getTicketById = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-// ======================================================
-// ✅ UPDATE STATUS (ADMIN ONLY)
-// ======================================================
+/* ======================================================
+   ✅ UPDATE STATUS (ADMIN ONLY)
+====================================================== */
 export const updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
-    // ==========================
-    // ✅ VALIDATE INPUT FIRST
-    // ==========================
-    if (!status) {
+    const allowed = ["Open", "In Progress", "Resolved", "Closed"];
+
+    if (!allowed.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Status is required",
+        message: "Invalid status",
       });
     }
 
-    // ==========================
-    // ✅ ALLOWED STATUSES (MUST MATCH FRONTEND)
-    // ==========================
-    const allowedStatus = [
-      "Open",
-      "In Progress",
-      "Resolved",
-      "Closed",
-    ];
-
-    if (!allowedStatus.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status value",
-        allowedStatus,
-      });
-    }
-
-    // ==========================
-    // FIND TICKET
-    // ==========================
     const ticket = await Ticket.findById(req.params.id);
 
     if (!ticket) {
@@ -220,14 +185,13 @@ export const updateStatus = async (req, res) => {
       });
     }
 
-    // ==========================
-    // UPDATE STATUS
-    // ==========================
     ticket.status = status;
 
-    // ==========================
-    // AUTO TIMESTAMP HANDLING
-    // ==========================
+    /* ================= TIMELINE ================= */
+    if (status === "In Progress") {
+      ticket.inProgressAt = new Date();
+    }
+
     if (status === "Resolved") {
       ticket.resolvedAt = new Date();
     }
@@ -240,91 +204,51 @@ export const updateStatus = async (req, res) => {
       ticket.reopened = true;
       ticket.reopenedAt = new Date();
       ticket.resolvedAt = null;
-      ticket.review = "";
-      ticket.rating = 0;
+      ticket.closedAt = null;
     }
 
-    // ==========================
-    // SAVE
-    // ==========================
     await ticket.save();
 
     return res.json({
       success: true,
-      message: "Status updated successfully",
+      message: "Status updated",
       data: ticket,
     });
 
   } catch (err) {
-    console.error("❌ updateStatus error:", err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-//admin 
-
-export const getTicketStats = async (req, res) => {
-  try {
-    const stats = await Ticket.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-
-    const format = {
-      total: 0,
-      open: 0,
-      inProgress: 0,
-      resolved: 0,
-      closed: 0,
-    };
-
-    stats.forEach((s) => {
-      format.total += s.count;
-
-      if (s._id === "Open") format.open = s.count;
-      if (s._id === "In Progress") format.inProgress = s.count;
-      if (s._id === "Resolved") format.resolved = s.count;
-      if (s._id === "Closed") format.closed = s.count;
-    });
-
-    res.json(format);
-
-  } catch (err) {
-    console.error("STATS ERROR:", err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// ======================================================
-// ✅ USER REOPEN TICKET (IMPORTANT FIX)
-// ======================================================
+/* ======================================================
+   ✅ USER REOPEN TICKET (IMPORTANT FIX)
+====================================================== */
 export const reopenTicket = async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.id);
 
     if (!ticket) {
-      return res.status(404).json({ message: "Ticket not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
     }
 
     if (ticket.userId.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Unauthorized" });
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     ticket.status = "Open";
     ticket.reopened = true;
     ticket.reopenedAt = new Date();
     ticket.resolvedAt = null;
+    ticket.closedAt = null;
 
     await ticket.save();
 
-    // SOCKET (NOT new ticket)
     if (global.io) {
       global.io.emit("ticketReopened", {
         ticketId: ticket._id,
@@ -332,76 +256,20 @@ export const reopenTicket = async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: "Ticket reopened successfully",
       data: ticket,
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-// ======================================================
-// ✅ EDIT TICKET (OPEN / REOPEN ONLY)
-// ======================================================
-export const editTicket = async (req, res) => {
-  try {
-    const ticket = await Ticket.findById(req.params.id);
-
-    if (!ticket) {
-      return res.status(404).json({ message: "Ticket not found" });
-    }
-
-    if (ticket.userId.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
-
-    if (!["Open", "Reopened"].includes(ticket.status)) {
-      return res.status(400).json({
-        message: "Only open/reopened tickets can be edited",
-      });
-    }
-
-    const { title, description, department, priority } = req.body;
-
-    ticket.title = title || ticket.title;
-    ticket.description = description || ticket.description;
-    ticket.department = department || ticket.department;
-    ticket.priority = priority || ticket.priority;
-
-    const slaHours = {
-      Low: 72,
-      Medium: 24,
-      High: 8,
-      Critical: 2,
-    };
-
-    if (priority) {
-      ticket.slaDue = new Date(
-        Date.now() + slaHours[priority] * 3600000
-      );
-    }
-
-    await ticket.save();
-
-    res.json({
-      success: true,
-      message: "Ticket updated",
-      data: ticket,
-    });
-
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-
-// ======================================================
-// ✅ ADD REVIEW
-// ======================================================
+/* ======================================================
+   ✅ ADD REVIEW
+====================================================== */
 export const addReview = async (req, res) => {
   try {
     const { review, rating } = req.body;
@@ -409,18 +277,23 @@ export const addReview = async (req, res) => {
     const ticket = await Ticket.findById(req.params.id);
 
     if (!ticket) {
-      return res.status(404).json({ message: "Ticket not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
     }
 
     if (ticket.status !== "Resolved") {
       return res.status(400).json({
+        success: false,
         message: "Only resolved tickets can be reviewed",
       });
     }
 
     if (ticket.review) {
       return res.status(400).json({
-        message: "Review already exists",
+        success: false,
+        message: "Review already submitted",
       });
     }
 
@@ -429,30 +302,29 @@ export const addReview = async (req, res) => {
 
     await ticket.save();
 
-    res.json({
+    return res.json({
       success: true,
-      message: "Review added",
+      message: "Review added successfully",
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-// ======================================================
-// ✅ DELETE TICKET
-// ======================================================
+/* ======================================================
+   ✅ DELETE TICKET
+====================================================== */
 export const deleteTicket = async (req, res) => {
   try {
     await Ticket.findByIdAndDelete(req.params.id);
 
     res.json({
       success: true,
-      message: "Ticket deleted",
+      message: "Ticket deleted successfully",
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };

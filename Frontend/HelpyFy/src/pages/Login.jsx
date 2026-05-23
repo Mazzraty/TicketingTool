@@ -81,7 +81,15 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-[#eef5e8] flex items-center justify-center p-4">
-
+          {/* BACKGROUND IMAGE */}
+               <div className="absolute inset-0">
+                 <img
+                   src={milkImage}
+                   className="w-full h-full object-cover"
+                   alt="background"
+                 />
+                 <div className="absolute inset-0 bg-black/60"></div>
+               </div>
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6">
 
         {/* LEFT SIDE */}

@@ -2,111 +2,63 @@ import mongoose from "mongoose";
 
 const ticketSchema = new mongoose.Schema(
   {
-    // =========================
     // BASIC INFO
-    // =========================
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, required: true },
+    department: { type: String, default: "General" },
 
-    description: {
-      type: String,
-      required: true,
-    },
-
-    department: {
-      type: String,
-      default: "General",
-    },
-
-    // =========================
     // PRIORITY
-    // =========================
     priority: {
       type: String,
       enum: ["Low", "Medium", "High", "Critical"],
       default: "Low",
     },
 
-    // =========================
     // STATUS
-    // =========================
     status: {
       type: String,
       enum: ["Open", "In Progress", "Resolved", "Closed"],
       default: "Open",
     },
 
-    // =========================
     // ATTACHMENTS
-    // =========================
-    attachments: {
-      type: [String],
-      default: [],
-    },
+    attachments: { type: [String], default: [] },
 
-    // =========================
-    // SLA (optional but useful)
-    // =========================
-    slaDue: {
-      type: Date,
-    },
+    // SLA
+    slaDue: { type: Date },
 
-    // =========================
-    // USER FEEDBACK
-    // =========================
-    review: {
-      type: String,
-      default: "",
-    },
+    // REVIEW
+    review: { type: String, default: "" },
+    rating: { type: Number, min: 0, max: 5, default: 0 },
 
-    rating: {
-      type: Number,
-      min: 0,
-      max: 5,
-      default: 0,
-    },
+    // TIMESTAMPS
+    resolvedAt: { type: Date, default: null },
+    closedAt: { type: Date, default: null },
 
-    // =========================
-    // TIMESTAMPS (CUSTOM TRACKING)
-    // =========================
+    reopened: { type: Boolean, default: false },
+    reopenedAt: { type: Date, default: null },
 
-    // when ticket is resolved
-    resolvedAt: {
-      type: Date,
-      default: null,
-    },
-
-    // when ticket is fully closed
-    closedAt: {
-      type: Date,
-      default: null,
-    },
-
-    // reopen tracking
-    reopened: {
-      type: Boolean,
-      default: false,
-    },
-
-    reopenedAt: {
-      type: Date,
-      default: null,
-    },
-
-    // =========================
-    // USER REFERENCE
-    // =========================
+    // USER
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+
+    // ⭐ NEW: FULL TIMELINE TRACKING
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: ["Open", "In Progress", "Resolved", "Closed"],
+        },
+        changedAt: { type: Date, default: Date.now },
+        note: { type: String, default: "" },
+      },
+    ],
   },
   {
-    timestamps: true, // createdAt = OPEN time, updatedAt = last change
+    timestamps: true,
   }
 );
 
