@@ -4,25 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
 export default function AdminSoftwareDashboard() {
   const [softwares, setSoftwares] = useState([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const limit = 8;
 
-  // MODALS
+  // MODALS ONLY
   const [addModal, setAddModal] = useState(false);
-  const [editDrawer, setEditDrawer] = useState(false);
+  const [editModal, setEditModal] = useState(false);
   const [editData, setEditData] = useState(null);
 
-  // INLINE EDIT
-  const [inlineEditId, setInlineEditId] = useState(null);
-  const [inlineEditData, setInlineEditData] = useState({});
-
-  // SORTING
   const [sortConfig, setSortConfig] = useState({
     key: "serviceName",
     direction: "asc",
@@ -79,16 +71,18 @@ export default function AdminSoftwareDashboard() {
     fetchSoftwares();
   };
 
-  // DRAWER EDIT
-  const openDrawer = (item) => {
+  // OPEN EDIT MODAL
+  const openEdit = (item) => {
     setEditData(item);
-    setEditDrawer(true);
+    setEditModal(true);
   };
 
-  const handleDrawerSave = async () => {
+  const handleUpdate = async () => {
     await api.put(`/software/${editData._id}`, editData);
-    toast.success("Updated");
-    setEditDrawer(false);
+    toast.success("Updated Successfully");
+
+    setEditModal(false);
+    setEditData(null);
     fetchSoftwares();
   };
 
@@ -105,8 +99,6 @@ export default function AdminSoftwareDashboard() {
     const data = [...softwares];
 
     data.sort((a, b) => {
-      if (!sortConfig.key) return 0;
-
       const aVal = a[sortConfig.key];
       const bVal = b[sortConfig.key];
 
@@ -131,7 +123,6 @@ export default function AdminSoftwareDashboard() {
     return filtered.slice(start, start + limit);
   }, [filtered, page]);
 
-  // KPI
   const dashboard = useMemo(() => {
     const today = new Date();
 
@@ -146,35 +137,30 @@ export default function AdminSoftwareDashboard() {
     };
   }, [softwares]);
 
-  const getStatusColor = (status) => {
-    if (status === "Active") return "bg-green-100 text-green-700";
-    if (status === "Expired") return "bg-red-100 text-red-700";
-    return "bg-blue-100 text-blue-700";
-  };
-
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-100 min-h-screen">
 
-      {/* 🔥 STICKY KPI BAR */}
-      <div className="sticky top-0 z-50 bg-white shadow flex justify-between px-6 py-3">
-        <h1 className="font-bold">Software Dashboard</h1>
-
-        <div className="flex gap-5 text-sm">
-          <span>Active: {dashboard.active}</span>
-          <span>Expiring: {dashboard.expiring}</span>
-          <span>Expired: {dashboard.expired}</span>
-          <span>Cost: QAR {dashboard.cost}</span>
-        </div>
+      {/* HEADER */}
+      <div className="bg-white shadow px-6 py-4 flex justify-between items-center">
+        <h1 className="font-bold text-xl">Software Dashboard</h1>
 
         <button
           onClick={() => setAddModal(true)}
-          className="bg-black text-white px-3 py-1 rounded"
+          className="bg-black text-white px-4 py-2 rounded"
         >
-          + Add
+          + Add Software
         </button>
       </div>
 
-      <div className="p-6">
+      {/* KPI (NON-STICKY SIMPLE BAR) */}
+      <div className="grid grid-cols-4 gap-4 p-6">
+        <div className="bg-white p-4 rounded shadow">Active: {dashboard.active}</div>
+        <div className="bg-white p-4 rounded shadow">Expiring: {dashboard.expiring}</div>
+        <div className="bg-white p-4 rounded shadow">Expired: {dashboard.expired}</div>
+        <div className="bg-white p-4 rounded shadow">Cost: QAR {dashboard.cost}</div>
+      </div>
+
+      <div className="px-6">
 
         {/* SEARCH */}
         <input
@@ -188,7 +174,7 @@ export default function AdminSoftwareDashboard() {
         <div className="bg-white rounded shadow overflow-hidden">
           <table className="w-full">
 
-            <thead className="bg-gray-100 text-sm">
+            <thead className="bg-gray-100">
               <tr>
                 <th className="p-3 cursor-pointer" onClick={() => requestSort("serviceName")}>
                   Service
@@ -212,17 +198,15 @@ export default function AdminSoftwareDashboard() {
                     {new Date(s.expiryDate).toLocaleDateString()}
                   </td>
 
-                  {/* STATUS PILL */}
                   <td className="p-3">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(s.status)}`}>
+                    <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">
                       {s.status}
                     </span>
                   </td>
 
                   <td className="p-3 flex gap-2">
-
                     <button
-                      onClick={() => openDrawer(s)}
+                      onClick={() => openEdit(s)}
                       className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded"
                     >
                       Edit
@@ -234,8 +218,8 @@ export default function AdminSoftwareDashboard() {
                     >
                       Delete
                     </button>
-
                   </td>
+
                 </tr>
               ))}
             </tbody>
@@ -244,20 +228,16 @@ export default function AdminSoftwareDashboard() {
         </div>
       </div>
 
-      {/* 🔥 ADD MODAL */}
+      {/* ================= ADD MODAL ================= */}
       {addModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
           <div className="bg-white w-[600px] p-6 rounded-xl">
 
-            <div className="flex justify-between mb-4">
-              <h2 className="font-bold">Add Software</h2>
-              <button onClick={() => setAddModal(false)}>✕</button>
-            </div>
+            <h2 className="font-bold mb-4">Add Software</h2>
 
             <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3">
 
-              <input className="border p-2" placeholder="Service"
+              <input className="border p-2" placeholder="Service Name"
                 value={form.serviceName}
                 onChange={(e) => setForm({ ...form, serviceName: e.target.value })}
               />
@@ -296,31 +276,25 @@ export default function AdminSoftwareDashboard() {
               </button>
 
             </form>
-
           </div>
-
         </div>
       )}
 
-      {/* 🔥 DRAWER */}
-      {editDrawer && (
-        <div className="fixed inset-0 flex">
+      {/* ================= EDIT MODAL ================= */}
+      {editModal && editData && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white w-[500px] p-6 rounded-xl">
 
-          <div className="flex-1 bg-black/40" onClick={() => setEditDrawer(false)} />
-
-          <div className="w-[400px] bg-white p-5">
             <h2 className="font-bold mb-4">Edit Software</h2>
 
-            <input
-              className="border p-2 w-full mb-2"
+            <input className="border p-2 w-full mb-2"
               value={editData.serviceName}
               onChange={(e) =>
                 setEditData({ ...editData, serviceName: e.target.value })
               }
             />
 
-            <input
-              className="border p-2 w-full mb-4"
+            <input className="border p-2 w-full mb-4"
               value={editData.vendor}
               onChange={(e) =>
                 setEditData({ ...editData, vendor: e.target.value })
@@ -328,13 +302,13 @@ export default function AdminSoftwareDashboard() {
             />
 
             <button
-              onClick={handleDrawerSave}
+              onClick={handleUpdate}
               className="bg-green-600 text-white w-full p-2 rounded"
             >
-              Save
+              Update
             </button>
-          </div>
 
+          </div>
         </div>
       )}
 
