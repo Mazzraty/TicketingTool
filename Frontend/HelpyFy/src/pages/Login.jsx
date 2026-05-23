@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../auth/AuthContext.jsx";
 
-import milkImage from "../assets/milk2.png";
+import milkImage from "../assets/milk.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
