@@ -10,13 +10,15 @@ export default function AdminTickets() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [stats, setStats] = useState({
+  const initialStats = {
     total: 0,
     open: 0,
     inProgress: 0,
     resolved: 0,
     closed: 0,
-  });
+  };
+
+  const [stats, setStats] = useState(initialStats);
 
   // ================= LOAD =================
   useEffect(() => {
@@ -27,22 +29,39 @@ export default function AdminTickets() {
   const load = async (pageNumber = 1) => {
     try {
       setLoading(true);
+
       const res = await api.get(`/tickets?page=${pageNumber}&limit=10`);
-      setTickets(res.data.data || []);
-      setTotalPages(res.data.pages || 1);
-    } catch {
+
+      setTickets(res?.data?.data || []);
+      setTotalPages(res?.data?.pages || 1);
+
+    } catch (err) {
       toast.error("Failed to load tickets");
     } finally {
       setLoading(false);
     }
   };
 
+  // ================= FIXED STATS (IMPORTANT) =================
   const loadStats = async () => {
     try {
       const res = await api.get("/tickets/stats");
-      setStats(res.data || stats);
-    } catch {
+
+      const data = res?.data?.data;
+
+      // SAFE ASSIGNMENT (prevents React crash #31)
+      setStats({
+        total: data?.total ?? 0,
+        open: data?.open ?? 0,
+        inProgress: data?.inProgress ?? 0,
+        resolved: data?.resolved ?? 0,
+        closed: data?.closed ?? 0,
+      });
+
+    } catch (err) {
       toast.error("Failed to load stats");
+
+      setStats(initialStats);
     }
   };
 
@@ -50,9 +69,12 @@ export default function AdminTickets() {
   const updateStatus = async (id, status) => {
     try {
       await api.put(`/tickets/${id}`, { status });
+
       toast.success("Status updated");
+
       load(page);
       loadStats();
+
     } catch {
       toast.error("Update failed");
     }
@@ -77,26 +99,27 @@ export default function AdminTickets() {
     return "bg-gray-100 text-gray-600";
   };
 
-  // ================= TIME HELPERS =================
-  const formatDateTime = (date) => {
-    if (!date) return null;
-    return new Date(date).toLocaleString();
-  };
+  // ================= TIME =================
+  const formatDateTime = (date) =>
+    date ? new Date(date).toLocaleString() : "-";
 
   const getOpenTime = (createdAt) => {
     const diff = new Date() - new Date(createdAt);
-    return `${Math.floor(diff / 3600000)}h ${Math.floor((diff % 3600000) / 60000)}m`;
+    return `${Math.floor(diff / 3600000)}h ${Math.floor(
+      (diff % 3600000) / 60000
+    )}m`;
   };
 
   const getSolvedTime = (createdAt, resolvedAt) => {
     if (!resolvedAt) return "-";
     const diff = new Date(resolvedAt) - new Date(createdAt);
-    return `${Math.floor(diff / 3600000)}h ${Math.floor((diff % 3600000) / 60000)}m`;
+    return `${Math.floor(diff / 3600000)}h ${Math.floor(
+      (diff % 3600000) / 60000
+    )}m`;
   };
 
-  // ================= STAR =================
   const renderStars = (rating) => (
-    <span className="text-yellow-500 text-sm">
+    <span className="text-yellow-500">
       {"★".repeat(rating || 0)}
       {"☆".repeat(5 - (rating || 0))}
     </span>
@@ -105,112 +128,35 @@ export default function AdminTickets() {
   return (
     <div className="min-h-screen bg-[#f4f6f9] flex">
 
-      {/* ================= SIDE DRAWER ================= */}
+      {/* ================= SIDE PANEL ================= */}
       {selected && (
-        <div className="w-[420px] bg-white border-l shadow-xl p-5">
+        <div className="w-[420px] bg-white border-l p-5">
 
-          <div className="flex justify-between items-center border-b pb-2">
-            <h2 className="font-bold text-lg">Ticket Preview</h2>
+          <div className="flex justify-between border-b pb-2">
+            <h2 className="font-bold">Ticket Preview</h2>
             <button onClick={() => setSelected(null)}>✕</button>
           </div>
 
-          <p className="font-semibold mt-3 text-gray-800">
-            {selected.title}
-          </p>
+          <p className="font-semibold mt-3">{selected.title}</p>
+          <p className="text-xs text-gray-500">{selected.userId?.email}</p>
 
-          <p className="text-xs text-gray-500">
-            {selected.userId?.email}
-          </p>
-
-          {/* COMPLAINT */}
-          <div className="mt-3 bg-gray-50 p-3 rounded border text-sm">
+          <div className="mt-3 bg-gray-50 p-3 rounded text-sm">
             {selected.description}
           </div>
 
-          {/* ================= TIMELINE (ADDED) ================= */}
-          <div className="mt-4">
-            <p className="text-xs font-semibold mb-2">Ticket Timeline</p>
-
-            <div className="border-l pl-4 space-y-3">
-
-              {/* OPENED */}
-              <div className="relative">
-                <div className="absolute -left-2 top-1 w-3 h-3 bg-green-500 rounded-full"></div>
-                <p className="text-xs font-semibold">Opened</p>
-                <p className="text-xs text-gray-500">
-                  {formatDateTime(selected.createdAt)}
-                </p>
-              </div>
-
-              {/* IN PROGRESS */}
-              <div className="relative">
-                <div className={`absolute -left-2 top-1 w-3 h-3 rounded-full ${
-                  selected.status === "In Progress"
-                    ? "bg-blue-500"
-                    : "bg-gray-300"
-                }`}></div>
-                <p className="text-xs font-semibold">In Progress</p>
-                <p className="text-xs text-gray-500">
-                  {selected.status !== "Open"
-                    ? "Updated during lifecycle"
-                    : "-"}
-                </p>
-              </div>
-
-              {/* RESOLVED */}
-              <div className="relative">
-                <div className={`absolute -left-2 top-1 w-3 h-3 rounded-full ${
-                  selected.resolvedAt ? "bg-yellow-500" : "bg-gray-300"
-                }`}></div>
-                <p className="text-xs font-semibold">Resolved</p>
-                <p className="text-xs text-gray-500">
-                  {formatDateTime(selected.resolvedAt) || "-"}
-                </p>
-              </div>
-
-              {/* CLOSED */}
-              <div className="relative">
-                <div className={`absolute -left-2 top-1 w-3 h-3 rounded-full ${
-                  selected.closedAt ? "bg-red-500" : "bg-gray-300"
-                }`}></div>
-                <p className="text-xs font-semibold">Closed</p>
-                <p className="text-xs text-gray-500">
-                  {formatDateTime(selected.closedAt) || "-"}
-                </p>
-              </div>
-
-            </div>
+          <div className="mt-4 text-xs">
+            <p><b>Opened:</b> {formatDateTime(selected.createdAt)}</p>
+            <p><b>Resolved:</b> {formatDateTime(selected.resolvedAt)}</p>
+            <p><b>Closed:</b> {formatDateTime(selected.closedAt)}</p>
           </div>
 
-          {/* ATTACHMENTS */}
           <div className="mt-4">
-            <p className="text-xs font-semibold mb-2">Attachments</p>
-
-            {selected.attachments?.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
-                {selected.attachments.map((img, i) => (
-                  <img
-                    key={i}
-                    src={img}
-                    className="h-24 w-full object-cover rounded border"
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400">No attachments</p>
-            )}
-          </div>
-
-          {/* REVIEW */}
-          <div className="mt-4">
-            <p className="text-xs font-semibold mb-1">Review</p>
+            <p className="font-semibold text-xs mb-2">Review</p>
 
             {selected.rating ? (
               <>
                 {renderStars(selected.rating)}
-                <p className="text-xs text-gray-600 mt-1">
-                  {selected.review}
-                </p>
+                <p className="text-xs">{selected.review}</p>
               </>
             ) : (
               <p className="text-xs text-gray-400">No review</p>
@@ -224,12 +170,12 @@ export default function AdminTickets() {
       <div className="flex-1 p-6">
 
         {/* HEADER */}
-        <div className="flex justify-between bg-white p-4 rounded border">
-          <h1 className="font-bold text-lg">Ticket Management</h1>
+        <div className="flex justify-between bg-white p-4 border rounded">
+          <h1 className="font-bold">Ticket Management</h1>
 
           <input
-            className="border px-3 py-1 rounded text-sm w-64"
-            placeholder="Search tickets..."
+            className="border px-3 py-1 rounded text-sm"
+            placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -238,15 +184,15 @@ export default function AdminTickets() {
         {/* STATS */}
         <div className="grid grid-cols-5 gap-3 mt-4">
           {Object.entries(stats).map(([k, v]) => (
-            <div key={k} className="bg-white border rounded p-3">
+            <div key={k} className="bg-white border p-3 rounded">
               <p className="text-xs text-gray-500 capitalize">{k}</p>
-              <p className="font-bold text-lg">{v}</p>
+              <p className="font-bold">{v}</p>
             </div>
           ))}
         </div>
 
         {/* TABLE */}
-        <div className="bg-white mt-4 border rounded-xl overflow-hidden">
+        <div className="bg-white mt-4 border rounded">
 
           {loading ? (
             <div className="p-10 text-center">Loading...</div>
@@ -256,40 +202,36 @@ export default function AdminTickets() {
               <thead className="bg-gray-100 text-xs">
                 <tr>
                   <th className="p-3 text-left">Title</th>
-                  <th className="p-3 text-left">User</th>
-                  <th className="p-3 text-center">Priority</th>
-                  <th className="p-3 text-center">Status</th>
-                  <th className="p-3 text-center">Open</th>
-                  <th className="p-3 text-center">Closed</th>
-                  <th className="p-3 text-center">Review</th>
-                  <th className="p-3 text-center">Action</th>
+                  <th>User</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Open</th>
+                  <th>Closed</th>
+                  <th>Review</th>
+                  <th>Action</th>
                 </tr>
               </thead>
 
               <tbody>
                 {filtered.map((t) => (
-                  <tr key={t._id} className="border-t hover:bg-gray-50 align-top">
+                  <tr key={t._id} className="border-t">
 
                     <td className="p-3">
                       <p className="font-semibold">{t.title}</p>
-                      <p className="text-xs text-gray-500">{t.description}</p>
                     </td>
 
-                    <td className="p-3">
-                      {t.userId?.email || "N/A"}
-                    </td>
+                    <td>{t.userId?.email}</td>
 
-                    <td className="p-3 text-center">
-                      <span className={`px-2 py-1 rounded text-xs ${priorityColor(t.priority)}`}>
+                    <td>
+                      <span className={`px-2 text-xs ${priorityColor(t.priority)}`}>
                         {t.priority}
                       </span>
                     </td>
 
-                    <td className="p-3 text-center">
+                    <td>
                       <select
                         value={t.status}
                         onChange={(e) => updateStatus(t._id, e.target.value)}
-                        className="border text-xs p-1 rounded"
                       >
                         <option>Open</option>
                         <option>In Progress</option>
@@ -298,22 +240,17 @@ export default function AdminTickets() {
                       </select>
                     </td>
 
-                    <td className="p-3 text-center text-xs">
-                      {getOpenTime(t.createdAt)}
-                    </td>
+                    <td>{getOpenTime(t.createdAt)}</td>
+                    <td>{getSolvedTime(t.createdAt, t.resolvedAt)}</td>
 
-                    <td className="p-3 text-center text-xs">
-                      {getSolvedTime(t.createdAt, t.resolvedAt)}
-                    </td>
-
-                    <td className="p-3 text-center">
+                    <td>
                       {t.rating ? renderStars(t.rating) : "No review"}
                     </td>
 
-                    <td className="p-3 text-center">
+                    <td>
                       <button
                         onClick={() => setSelected(t)}
-                        className="text-blue-600 text-sm"
+                        className="text-blue-600"
                       >
                         View
                       </button>
@@ -329,21 +266,13 @@ export default function AdminTickets() {
 
         {/* PAGINATION */}
         <div className="flex justify-between mt-4">
-          <button
-            onClick={() => setPage(page - 1)}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded"
-          >
+          <button disabled={page === 1} onClick={() => setPage(page - 1)}>
             Prev
           </button>
 
-          <p className="text-sm">{page} / {totalPages}</p>
+          <p>{page} / {totalPages}</p>
 
-          <button
-            onClick={() => setPage(page + 1)}
-            disabled={page === totalPages}
-            className="px-3 py-1 border rounded"
-          >
+          <button disabled={page === totalPages} onClick={() => setPage(page + 1)}>
             Next
           </button>
         </div>
