@@ -220,7 +220,7 @@ export default function AssetStoreFiori() {
                 onClick={() => setFilter(t)}
                 className={`px-5 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 ${
                   filter === t
-                    ? "bg-[#0a6ed1] text-white shadow-md"
+                    ? "bg-blue-600 text-white shadow-md"
                     : "bg-white border border-gray-300 hover:bg-gray-100 text-gray-700"
                 }`}
               >
@@ -242,7 +242,7 @@ export default function AssetStoreFiori() {
 
           <table className="w-full text-sm">
 
-            <thead className="bg-[#f7f9fb] border-b">
+            <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
 
               <tr className="text-gray-700">
 
@@ -254,6 +254,7 @@ export default function AssetStoreFiori() {
                   Type
                 </th>
 
+                {/* LAPTOP + PRINTER */}
                 {!showHHTFields && (
                   <>
                     <th className="text-left px-6 py-4 font-semibold">
@@ -266,6 +267,7 @@ export default function AssetStoreFiori() {
                   </>
                 )}
 
+                {/* HHT ONLY */}
                 {showHHTFields && (
                   <>
                     <th className="text-left px-6 py-4 font-semibold">
@@ -334,6 +336,7 @@ export default function AssetStoreFiori() {
 
                     </td>
 
+                    {/* LAPTOP + PRINTER */}
                     {!showHHTFields && (
                       <>
                         <td className="px-6 py-4 text-gray-700">
@@ -346,6 +349,7 @@ export default function AssetStoreFiori() {
                       </>
                     )}
 
+                    {/* HHT ONLY */}
                     {showHHTFields && (
                       <>
                         <td className="px-6 py-4 text-gray-700">
@@ -374,7 +378,7 @@ export default function AssetStoreFiori() {
 
                     <td className="px-6 py-4">
 
-                      <div className="flex items-center justify-center gap-3">
+                      <div className="flex items-center justify-center gap-2">
 
                         {/* HISTORY */}
                         <button
@@ -383,19 +387,7 @@ export default function AssetStoreFiori() {
                               `/admin/assets/history?code=${a.assetCode}`
                             )
                           }
-                          className="
-                            min-w-[90px]
-                            h-10
-                            rounded-xl
-                            bg-[#0a6ed1]
-                            hover:bg-[#085caf]
-                            text-white
-                            text-sm
-                            font-semibold
-                            shadow-sm
-                            border border-[#0a6ed1]
-                            transition-all
-                          "
+                          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition shadow-sm hover:shadow-md"
                         >
                           History
                         </button>
@@ -403,20 +395,7 @@ export default function AssetStoreFiori() {
                         {/* EDIT */}
                         <button
                           onClick={() => openEdit(a)}
-                          className="
-                            min-w-[90px]
-                            h-10
-                            rounded-xl
-                            bg-white
-                            hover:bg-[#f5f7fa]
-                            text-[#0a6ed1]
-                            text-sm
-                            font-semibold
-                            border
-                            border-[#0a6ed1]
-                            shadow-sm
-                            transition-all
-                          "
+                          className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition shadow-sm hover:shadow-md"
                         >
                           Edit
                         </button>
@@ -424,20 +403,7 @@ export default function AssetStoreFiori() {
                         {/* DELETE */}
                         <button
                           onClick={() => deleteAsset(a._id)}
-                          className="
-                            min-w-[90px]
-                            h-10
-                            rounded-xl
-                            bg-white
-                            hover:bg-red-50
-                            text-red-600
-                            text-sm
-                            font-semibold
-                            border
-                            border-red-200
-                            shadow-sm
-                            transition-all
-                          "
+                          className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition shadow-sm hover:shadow-md"
                         >
                           Delete
                         </button>
@@ -465,27 +431,9 @@ export default function AssetStoreFiori() {
 
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
 
-          <div className="
-            bg-white
-            rounded-2xl
-            w-full
-            max-w-3xl
-            shadow-[0_8px_32px_rgba(0,0,0,0.15)]
-            border
-            border-gray-200
-            overflow-hidden
-          ">
+          <div className="bg-white rounded-3xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
 
-            {/* HEADER */}
-            <div className="
-              flex
-              items-center
-              justify-between
-              px-8
-              py-5
-              border-b
-              bg-[#f7f9fb]
-            ">
+            <div className="flex items-center justify-between mb-6">
 
               <h2 className="text-2xl font-bold text-gray-800">
                 Edit Asset
@@ -493,143 +441,231 @@ export default function AssetStoreFiori() {
 
               <button
                 onClick={() => setEditOpen(false)}
-                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
+                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg"
               >
                 ✕
               </button>
 
             </div>
 
-            {/* BODY */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-              <input
-                className="border border-gray-300 rounded-xl px-4 py-3"
-                placeholder="Asset Code"
-                value={selected.assetCode || ""}
-                onChange={(e) =>
-                  setSelected({
-                    ...selected,
-                    assetCode: e.target.value,
-                  })
-                }
-              />
+              {/* COMMON */}
+              <div>
+                <label className="text-sm text-gray-600 mb-2 block">
+                  Asset Code
+                </label>
 
-              <select
-                className="border border-gray-300 rounded-xl px-4 py-3"
-                value={selected.type || ""}
-                onChange={(e) =>
-                  setSelected({
-                    ...selected,
-                    type: e.target.value,
-                  })
-                }
-              >
-                <option value="Laptop">Laptop</option>
-                <option value="Printer">Printer</option>
-                <option value="HHT">HHT</option>
-              </select>
+                <input
+                  className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                  value={selected.assetCode || ""}
+                  onChange={(e) =>
+                    setSelected({
+                      ...selected,
+                      assetCode: e.target.value,
+                    })
+                  }
+                />
+              </div>
 
+              <div>
+                <label className="text-sm text-gray-600 mb-2 block">
+                  Type
+                </label>
+
+                <select
+                  className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                  value={selected.type || ""}
+                  onChange={(e) =>
+                    setSelected({
+                      ...selected,
+                      type: e.target.value,
+                    })
+                  }
+                >
+                  <option value="Laptop">Laptop</option>
+                  <option value="Printer">Printer</option>
+                  <option value="HHT">HHT</option>
+                </select>
+              </div>
+
+              {/* LAPTOP / PRINTER */}
               {(selected.type === "Laptop" ||
                 selected.type === "Printer") && (
                 <>
-                  <input
-                    className="border border-gray-300 rounded-xl px-4 py-3"
-                    placeholder="Model"
-                    value={selected.model || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        model: e.target.value,
-                      })
-                    }
-                  />
+                  <div>
+                    <label className="text-sm text-gray-600 mb-2 block">
+                      Model
+                    </label>
 
-                  <input
-                    className="border border-gray-300 rounded-xl px-4 py-3"
-                    placeholder="Serial Number"
-                    value={selected.serialNumber || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        serialNumber: e.target.value,
-                      })
-                    }
-                  />
+                    <input
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.model || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          model: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-gray-600 mb-2 block">
+                      Serial Number
+                    </label>
+
+                    <input
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.serialNumber || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          serialNumber: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </>
               )}
 
+              {/* HHT */}
               {selected.type === "HHT" && (
                 <>
-                  <input
-                    className="border border-gray-300 rounded-xl px-4 py-3"
-                    placeholder="Salesman Name"
-                    value={selected.salesmanName || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        salesmanName: e.target.value,
-                      })
-                    }
-                  />
+                  <div>
+                    <label className="text-sm text-gray-600 mb-2 block">
+                      Salesman Name
+                    </label>
 
-                  <input
-                    className="border border-gray-300 rounded-xl px-4 py-3"
-                    placeholder="Route"
-                    value={selected.route || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        route: e.target.value,
-                      })
-                    }
-                  />
+                    <input
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.salesmanName || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          salesmanName: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-gray-600 mb-2 block">
+                      Route
+                    </label>
+
+                    <input
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.route || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          route: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-gray-600 mb-2 block">
+                      IMEI
+                    </label>
+
+                    <input
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.imei || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          imei: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-gray-600 mb-2 block">
+                      SIM Number
+                    </label>
+
+                    <input
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.simNumber || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          simNumber: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </>
               )}
+
+              {/* STATUS */}
+              <div className="md:col-span-2">
+
+                <label className="text-sm text-gray-600 mb-2 block">
+                  Status
+                </label>
+
+                <select
+                  className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                  value={selected.status || ""}
+                  onChange={(e) =>
+                    setSelected({
+                      ...selected,
+                      status: e.target.value,
+                    })
+                  }
+                >
+                  <option value="available">
+                    available
+                  </option>
+
+                  <option value="assigned">
+                    assigned
+                  </option>
+                </select>
+
+              </div>
+
+              {/* NOTES */}
+              <div className="md:col-span-2">
+
+                <label className="text-sm text-gray-600 mb-2 block">
+                  Notes
+                </label>
+
+                <textarea
+                  rows="4"
+                  className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                  value={selected.notes || ""}
+                  onChange={(e) =>
+                    setSelected({
+                      ...selected,
+                      notes: e.target.value,
+                    })
+                  }
+                />
+
+              </div>
 
             </div>
 
-            {/* FOOTER */}
-            <div className="
-              flex
-              justify-end
-              gap-3
-              px-8
-              py-5
-              border-t
-              bg-[#f7f9fb]
-            ">
+            {/* BUTTONS */}
+            <div className="flex gap-4 mt-8">
 
               <button
                 onClick={updateAsset}
-                className="
-                  min-w-[140px]
-                  h-11
-                  bg-[#0a6ed1]
-                  hover:bg-[#085caf]
-                  text-white
-                  rounded-xl
-                  font-semibold
-                  transition-all
-                "
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-semibold transition"
               >
                 Save Changes
               </button>
 
               <button
                 onClick={() => setEditOpen(false)}
-                className="
-                  min-w-[140px]
-                  h-11
-                  bg-white
-                  hover:bg-gray-100
-                  text-gray-700
-                  border
-                  border-gray-300
-                  rounded-xl
-                  font-semibold
-                  transition-all
-                "
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-2xl font-semibold transition"
               >
                 Cancel
               </button>
