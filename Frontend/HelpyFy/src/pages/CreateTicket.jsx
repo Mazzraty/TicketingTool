@@ -21,6 +21,10 @@ export default function CreateTicket() {
     setForm({ ...form, priority: level });
   };
 
+  const removeFile = (index) => {
+    setFiles(files.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -33,6 +37,7 @@ export default function CreateTicket() {
       setLoading(true);
 
       const data = new FormData();
+
       Object.keys(form).forEach((k) => data.append(k, form[k]));
       files.forEach((f) => data.append("files", f));
 
@@ -41,31 +46,28 @@ export default function CreateTicket() {
       const res = await api.post("/tickets", data, {
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
         },
       });
 
-      // ✅ SUCCESS HANDLING (BASED ON BACKEND)
       if (res.data?.success) {
         toast.success(res.data.message || "Ticket created");
 
-        // ⚠️ EMAIL STATUS CHECK
         if (res.data.emailStatus === "failed") {
           toast.error("Ticket created but email failed");
         }
+
+        setForm({
+          title: "",
+          description: "",
+          priority: "Low",
+          department: "",
+        });
+
+        setFiles([]);
       } else {
         toast.error("Ticket creation failed");
       }
-
-      // RESET FORM
-      setForm({
-        title: "",
-        description: "",
-        priority: "Low",
-        department: "",
-      });
-
-      setFiles([]);
-
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to create ticket");
     } finally {
@@ -73,24 +75,10 @@ export default function CreateTicket() {
     }
   };
 
-  const priorityStyle = (level) => {
-    switch (level) {
-      case "Low":
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
-      case "Medium":
-        return "bg-amber-50 text-amber-700 border-amber-200";
-      case "High":
-        return "bg-orange-50 text-orange-700 border-orange-200";
-      case "Critical":
-        return "bg-red-50 text-red-700 border-red-200";
-      default:
-        return "bg-gray-50 text-gray-700 border-gray-200";
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-100">
 
+      {/* HEADER */}
       <div className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-6 py-5">
           <h1 className="text-lg font-semibold text-gray-900">
@@ -114,30 +102,36 @@ export default function CreateTicket() {
 
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
 
+            {/* TITLE */}
             <input
               name="title"
               value={form.title}
               onChange={handleChange}
-              placeholder="Title"
-              className="w-full px-4 py-3 border rounded-lg"
+              placeholder="Ticket Title"
+              className="w-full px-4 py-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-200"
             />
 
+            {/* DESCRIPTION */}
             <textarea
               name="description"
               value={form.description}
               onChange={handleChange}
-              placeholder="Description"
-              className="w-full px-4 py-3 border rounded-lg"
+              placeholder="Describe your issue..."
+              rows={4}
+              className="w-full px-4 py-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-200"
             />
 
+            {/* PRIORITY */}
             <div className="flex gap-2 flex-wrap">
               {["Low", "Medium", "High", "Critical"].map((level) => (
                 <button
                   key={level}
                   type="button"
                   onClick={() => setPriority(level)}
-                  className={`px-3 py-1 text-xs border rounded-md ${
-                    form.priority === level ? "bg-indigo-600 text-white" : ""
+                  className={`px-3 py-1 text-xs border rounded-md transition ${
+                    form.priority === level
+                      ? "bg-indigo-600 text-white"
+                      : "bg-white text-gray-600"
                   }`}
                 >
                   {level}
@@ -145,24 +139,65 @@ export default function CreateTicket() {
               ))}
             </div>
 
+            {/* DEPARTMENT */}
             <input
               name="department"
               value={form.department}
               onChange={handleChange}
               placeholder="Department"
-              className="w-full px-4 py-3 border rounded-lg"
+              className="w-full px-4 py-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-200"
             />
 
-            <input
-              type="file"
-              multiple
-              onChange={(e) => setFiles([...e.target.files])}
-            />
+            {/* FILE UPLOAD UI */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 text-center bg-gray-50">
 
+              <input
+                type="file"
+                multiple
+                id="fileUpload"
+                className="hidden"
+                onChange={(e) => setFiles([...e.target.files])}
+              />
+
+              <label
+                htmlFor="fileUpload"
+                className="cursor-pointer text-indigo-600 font-medium"
+              >
+                Click to upload files
+              </label>
+
+              <p className="text-xs text-gray-500 mt-1">
+                or select multiple files from your device
+              </p>
+
+              {/* FILE LIST */}
+              {files.length > 0 && (
+                <div className="mt-4 space-y-2 text-left">
+                  {files.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between items-center bg-white border rounded px-3 py-2"
+                    >
+                      <span className="text-sm truncate">{file.name}</span>
+
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        className="text-red-500 text-xs"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* SUBMIT */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg"
+              className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition"
             >
               {loading ? "Submitting..." : "Submit Ticket"}
             </button>
@@ -179,11 +214,16 @@ export default function CreateTicket() {
           <p><b>Department:</b> {form.department || "-"}</p>
 
           {files.length > 0 && (
-            <ul className="mt-3 text-sm">
-              {files.map((f, i) => (
-                <li key={i}>{f.name}</li>
-              ))}
-            </ul>
+            <div className="mt-3">
+              <p className="font-medium text-sm mb-2">Attachments:</p>
+              <ul className="text-sm space-y-1">
+                {files.map((f, i) => (
+                  <li key={i} className="text-gray-600">
+                    📎 {f.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
 
