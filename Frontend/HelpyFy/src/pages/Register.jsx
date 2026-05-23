@@ -33,7 +33,9 @@ export default function Register() {
 
     try {
       await api.post("/auth/register", form);
+
       toast.success("Account created successfully");
+
       navigate("/login");
     } catch (err) {
       toast.error(err.response?.data?.message || "Registration failed");
@@ -47,20 +49,22 @@ export default function Register() {
         ${activeField === fieldName ? "bg-blue-600" : "bg-transparent"}
       `}
       />
+
       {children}
     </div>
   );
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-6">
+    <div className="relative min-h-screen flex items-center justify-center p-6 overflow-hidden">
 
       {/* BACKGROUND IMAGE */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 z-0">
         <img
           src={milkImage}
           className="w-full h-full object-cover"
           alt="background"
         />
+
         <div className="absolute inset-0 bg-black/60"></div>
       </div>
 
@@ -71,12 +75,24 @@ export default function Register() {
 
           {/* HEADER */}
           <div className="mb-6 text-center">
+
+            {/* MAZZRATY LOGO */}
+            <div className="flex justify-center mb-4">
+              <img
+                src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+                className="h-12"
+                alt="Mazzraty Logo"
+              />
+            </div>
+
             <h1 className="text-2xl font-semibold text-gray-800">
               Create Account
             </h1>
+
             <p className="text-sm text-gray-500 mt-1">
               Enterprise Registration Portal
             </p>
+
           </div>
 
           {/* FORM */}
@@ -131,6 +147,7 @@ export default function Register() {
             {fieldWrapper(
               "password",
               <div className="relative">
+
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
@@ -149,6 +166,7 @@ export default function Register() {
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
+
               </div>
             )}
 
