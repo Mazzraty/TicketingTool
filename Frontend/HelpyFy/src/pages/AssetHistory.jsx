@@ -8,7 +8,6 @@ export default function AssetHistoryPage() {
 
   const [employeeId, setEmployeeId] = useState("");
   const [assetCode, setAssetCode] = useState("");
-
   const [assetType, setAssetType] = useState("All");
 
   const [empHistory, setEmpHistory] = useState([]);
@@ -28,18 +27,8 @@ export default function AssetHistoryPage() {
           api.get("/assets"),
         ]);
 
-        // ✅ FIX ONLY HERE
-        setEmployees(
-          Array.isArray(empRes.data)
-            ? empRes.data
-            : empRes.data?.data || []
-        );
-
-        setAssets(
-          Array.isArray(assetRes.data)
-            ? assetRes.data
-            : assetRes.data?.data || []
-        );
+        setEmployees(Array.isArray(empRes.data) ? empRes.data : []);
+        setAssets(Array.isArray(assetRes.data) ? assetRes.data : []);
       } catch (err) {
         console.error(err);
         toast.error("Failed to load data");
@@ -51,6 +40,8 @@ export default function AssetHistoryPage() {
 
   /* ===============================
      EMPLOYEE HISTORY
+     FIXED ROUTE:
+     /api/assets/employee/:id
   =============================== */
   useEffect(() => {
     if (!employeeId) {
@@ -63,15 +54,10 @@ export default function AssetHistoryPage() {
         setLoadingEmp(true);
 
         const res = await api.get(
-          `/assets/history/employee/${employeeId}?type=${assetType}`
+          `/assets/employee/${employeeId}?type=${assetType}`
         );
 
-        // ✅ FIX ONLY HERE
-        setEmpHistory(
-          Array.isArray(res.data)
-            ? res.data
-            : res.data?.data || []
-        );
+        setEmpHistory(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error(err);
         toast.error("Employee history not found");
@@ -85,6 +71,8 @@ export default function AssetHistoryPage() {
 
   /* ===============================
      ASSET HISTORY
+     FIXED ROUTE:
+     /api/assets/asset/:code
   =============================== */
   useEffect(() => {
     if (!assetCode) {
@@ -97,15 +85,10 @@ export default function AssetHistoryPage() {
         setLoadingAsset(true);
 
         const res = await api.get(
-          `/assets/history/asset/${assetCode}?type=${assetType}`
+          `/assets/asset/${assetCode}?type=${assetType}`
         );
 
-        // ✅ FIX ONLY HERE
-        setAssetHistory(
-          Array.isArray(res.data)
-            ? res.data
-            : res.data?.data || []
-        );
+        setAssetHistory(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error(err);
         toast.error("Asset history not found");
@@ -148,13 +131,11 @@ export default function AssetHistoryPage() {
             >
               <option value="">Select Employee</option>
 
-              {/* ✅ SAFE MAP */}
-              {Array.isArray(employees) &&
-                employees.map((emp) => (
-                  <option key={emp._id} value={emp.staffCode}>
-                    {emp.staffCode} - {emp.name}
-                  </option>
-                ))}
+              {employees.map((emp) => (
+                <option key={emp._id} value={emp._id}>
+                  {emp.staffCode} - {emp.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -171,17 +152,15 @@ export default function AssetHistoryPage() {
             >
               <option value="">Select Asset</option>
 
-              {/* ✅ SAFE MAP */}
-              {Array.isArray(assets) &&
-                assets.map((asset) => (
-                  <option key={asset._id} value={asset.assetCode}>
-                    {asset.assetCode} - {asset.type}
-                  </option>
-                ))}
+              {assets.map((asset) => (
+                <option key={asset._id} value={asset.assetCode}>
+                  {asset.assetCode} - {asset.type}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* TYPE FILTER */}
+          {/* TYPE */}
           <div>
             <label className="text-sm font-medium text-gray-600">
               Asset Type
@@ -239,7 +218,9 @@ export default function AssetHistoryPage() {
               ) : (
                 empHistory.map((h) => (
                   <tr key={h._id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3">{h.asset?.assetCode}</td>
+                    <td className="px-4 py-3">
+                      {h.asset?.assetCode}
+                    </td>
                     <td className="px-4 py-3">{h.assetType}</td>
                     <td className="px-4 py-3 capitalize">{h.status}</td>
                     <td className="px-4 py-3">
