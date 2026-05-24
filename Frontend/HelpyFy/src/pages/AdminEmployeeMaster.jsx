@@ -6,6 +6,14 @@ export default function AdminEmployeeMaster() {
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState("");
 
+  // pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+
+  // edit
+  const [editId, setEditId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
   const [newEmployee, setNewEmployee] = useState({
     staffCode: "",
     name: "",
@@ -55,12 +63,32 @@ export default function AdminEmployeeMaster() {
     }
   };
 
-  // FILTERED LIST
+  // EDIT SAVE
+  const saveEdit = async (id) => {
+    try {
+      await api.put(`/employees/${id}`, editForm);
+      toast.success("Employee Updated");
+      setEditId(null);
+      loadEmployees();
+    } catch {
+      toast.error("Update failed");
+    }
+  };
+
+  // FILTER
   const filteredEmployees = employees.filter(
     (e) =>
       e.staffCode?.toLowerCase().includes(search.toLowerCase()) ||
       e.name?.toLowerCase().includes(search.toLowerCase()) ||
       e.department?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // PAGINATION LOGIC
+  const totalPages = Math.ceil(filteredEmployees.length / pageSize);
+
+  const paginated = filteredEmployees.slice(
+    (page - 1) * pageSize,
+    page * pageSize
   );
 
   return (
@@ -74,7 +102,10 @@ export default function AdminEmployeeMaster() {
           className="border p-2 mt-3 w-64 rounded"
           placeholder="Search employee..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
         />
       </div>
 
@@ -164,12 +195,14 @@ export default function AdminEmployeeMaster() {
               <th className="p-2 text-left">Designation</th>
               <th className="p-2 text-left">Visa No</th>
               <th className="p-2 text-left">Visa Expiry</th>
+              <th className="p-2 text-left">Action</th>
             </tr>
           </thead>
 
           <tbody>
-            {filteredEmployees.map((emp) => (
+            {paginated.map((emp) => (
               <tr key={emp._id} className="border-t">
+
                 <td className="p-2">{emp.staffCode}</td>
                 <td className="p-2">{emp.name}</td>
                 <td className="p-2">{emp.department}</td>
@@ -180,12 +213,121 @@ export default function AdminEmployeeMaster() {
                     ? new Date(emp.visaExpiryDate).toLocaleDateString()
                     : "-"}
                 </td>
+
+                <td className="p-2">
+                  <button
+                    onClick={() => {
+                      setEditId(emp._id);
+                      setEditForm(emp);
+                    }}
+                    className="bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                  >
+                    Edit
+                  </button>
+                </td>
+
               </tr>
             ))}
           </tbody>
 
         </table>
       </div>
+
+      {/* PAGINATION */}
+      <div className="flex items-center justify-between mt-4">
+
+        <div>
+          Page {page} of {totalPages || 1}
+        </div>
+
+        <div className="flex gap-2">
+
+          <button
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Prev
+          </button>
+
+          <button
+            disabled={page === totalPages}
+            onClick={() => setPage(page + 1)}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+
+        </div>
+
+      </div>
+
+      {/* EDIT MODAL */}
+      {editId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+
+          <div className="bg-white p-6 rounded-xl w-[500px]">
+
+            <h2 className="font-bold mb-3">Edit Employee</h2>
+
+            <input
+              className="border p-2 w-full mb-2"
+              value={editForm.staffCode || ""}
+              onChange={(e) =>
+                setEditForm({ ...editForm, staffCode: e.target.value })
+              }
+              placeholder="Staff Code"
+            />
+
+            <input
+              className="border p-2 w-full mb-2"
+              value={editForm.name || ""}
+              onChange={(e) =>
+                setEditForm({ ...editForm, name: e.target.value })
+              }
+              placeholder="Name"
+            />
+
+            <input
+              className="border p-2 w-full mb-2"
+              value={editForm.department || ""}
+              onChange={(e) =>
+                setEditForm({ ...editForm, department: e.target.value })
+              }
+              placeholder="Department"
+            />
+
+            <input
+              className="border p-2 w-full mb-2"
+              value={editForm.designation || ""}
+              onChange={(e) =>
+                setEditForm({ ...editForm, designation: e.target.value })
+              }
+              placeholder="Designation"
+            />
+
+            <div className="flex gap-2 mt-3">
+
+              <button
+                onClick={() => saveEdit(editId)}
+                className="bg-green-600 text-white px-3 py-1 rounded flex-1"
+              >
+                Save
+              </button>
+
+              <button
+                onClick={() => setEditId(null)}
+                className="bg-gray-300 px-3 py-1 rounded flex-1"
+              >
+                Cancel
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
 
     </div>
   );
