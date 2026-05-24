@@ -317,9 +317,17 @@ export const getEmployeeHistory = async (req, res) => {
 ========================= */
 export const getAssetHistory = async (req, res) => {
   try {
-    const asset = await Asset.findOne({
-      assetCode: req.params.code,
-    });
+    const { code } = req.params;
+
+    let asset;
+
+    // try assetCode first
+    asset = await Asset.findOne({ assetCode: code });
+
+    // fallback to Mongo ID
+    if (!asset) {
+      asset = await Asset.findById(code);
+    }
 
     if (!asset) {
       return res.status(404).json({ msg: "Asset not found" });
