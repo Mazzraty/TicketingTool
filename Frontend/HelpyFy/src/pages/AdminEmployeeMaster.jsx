@@ -2,275 +2,191 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
-export default function AssetHistoryPage() {
+export default function AdminEmployeeMaster() {
   const [employees, setEmployees] = useState([]);
-  const [assets, setAssets] = useState([]);
+  const [search, setSearch] = useState("");
 
-  const [employeeId, setEmployeeId] = useState("");
-  const [assetCode, setAssetCode] = useState("");
+  const [newEmployee, setNewEmployee] = useState({
+    staffCode: "",
+    name: "",
+    department: "",
+    designation: "",
+    visaNo: "",
+    visaExpiryDate: "",
+  });
 
-  const [assetType, setAssetType] = useState("All");
+  // LOAD EMPLOYEES
+  const loadEmployees = async () => {
+    try {
+      const res = await api.get("/employees");
+      setEmployees(res.data);
+    } catch {
+      toast.error("Failed to load employees");
+    }
+  };
 
-  const [empHistory, setEmpHistory] = useState([]);
-  const [assetHistory, setAssetHistory] = useState([]);
-
-  const [loadingEmp, setLoadingEmp] = useState(false);
-  const [loadingAsset, setLoadingAsset] = useState(false);
-
-  /* ===============================
-     LOAD EMPLOYEES + ASSETS
-  =============================== */
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [empRes, assetRes] = await Promise.all([
-          api.get("/employees"),
-          api.get("/assets"),
-        ]);
-
-        setEmployees(Array.isArray(empRes.data) ? empRes.data : empRes.data?.data || []);
-        setAssets(Array.isArray(assetRes.data) ? assetRes.data : assetRes.data?.data || []);
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to load data");
-      }
-    };
-
-    loadData();
+    loadEmployees();
   }, []);
 
-  /* ===============================
-     EMPLOYEE HISTORY
-  =============================== */
-  useEffect(() => {
-    if (!employeeId) {
-      setEmpHistory([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      try {
-        setLoadingEmp(true);
-
-        // ✅ FIXED ROUTE (IMPORTANT)
-        const res = await api.get(`/assets/employee/${employeeId}`);
-
-        setEmpHistory(Array.isArray(res.data) ? res.data : res.data?.data || []);
-      } catch (err) {
-        console.error(err);
-        toast.error("Employee history not found");
-      } finally {
-        setLoadingEmp(false);
+  // ADD EMPLOYEE
+  const addEmployee = async () => {
+    try {
+      if (!newEmployee.staffCode || !newEmployee.name) {
+        return toast.error("Staff Code & Name required");
       }
-    }, 300);
 
-    return () => clearTimeout(timer);
-  }, [employeeId]);
+      await api.post("/employees", newEmployee);
 
-  /* ===============================
-     ASSET HISTORY
-  =============================== */
-  useEffect(() => {
-    if (!assetCode) {
-      setAssetHistory([]);
-      return;
+      toast.success("Employee Added");
+
+      setNewEmployee({
+        staffCode: "",
+        name: "",
+        department: "",
+        designation: "",
+        visaNo: "",
+        visaExpiryDate: "",
+      });
+
+      loadEmployees();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add employee");
     }
+  };
 
-    const timer = setTimeout(async () => {
-      try {
-        setLoadingAsset(true);
-
-        // ✅ FIXED ROUTE (IMPORTANT)
-        const res = await api.get(`/assets/asset/${assetCode}`);
-
-        setAssetHistory(Array.isArray(res.data) ? res.data : res.data?.data || []);
-      } catch (err) {
-        console.error(err);
-        toast.error("Asset history not found");
-      } finally {
-        setLoadingAsset(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [assetCode]);
+  // FILTERED LIST
+  const filteredEmployees = employees.filter(
+    (e) =>
+      e.staffCode?.toLowerCase().includes(search.toLowerCase()) ||
+      e.name?.toLowerCase().includes(search.toLowerCase()) ||
+      e.department?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="p-6 bg-[#f4f6f9] min-h-screen">
+    <div className="p-6 bg-gray-100 min-h-screen">
 
       {/* HEADER */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Asset History Management
-        </h1>
-        <p className="text-sm text-gray-500">
-          Asset Tracking System (Laptop / Printer / HHT)
-        </p>
+      <div className="bg-white p-4 rounded-xl shadow mb-4">
+        <h1 className="text-xl font-bold">Employee Master</h1>
+
+        <input
+          className="border p-2 mt-3 w-64 rounded"
+          placeholder="Search employee..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
-      {/* FILTERS */}
-      <div className="bg-white rounded-xl border shadow-sm p-4 mb-5">
-        <div className="grid md:grid-cols-3 gap-4">
+      {/* ADD EMPLOYEE */}
+      <div className="bg-white p-4 rounded-xl shadow mb-4">
+        <h2 className="font-bold mb-3">➕ Add Employee</h2>
 
-          {/* EMPLOYEE */}
-          <div>
-            <label className="text-sm font-medium text-gray-600">
-              Employee
-            </label>
+        <div className="grid md:grid-cols-3 gap-3">
 
-            <select
-              className="w-full border rounded-lg p-2 mt-1"
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-            >
-              <option value="">Select Employee</option>
+          <input
+            className="border p-2 rounded"
+            placeholder="Staff Code"
+            value={newEmployee.staffCode}
+            onChange={(e) =>
+              setNewEmployee({ ...newEmployee, staffCode: e.target.value })
+            }
+          />
 
-              {Array.isArray(employees) &&
-                employees.map((emp) => (
-                  <option key={emp._id} value={emp.staffCode}>
-                    {emp.staffCode} - {emp.name}
-                  </option>
-                ))}
-            </select>
-          </div>
+          <input
+            className="border p-2 rounded"
+            placeholder="Name"
+            value={newEmployee.name}
+            onChange={(e) =>
+              setNewEmployee({ ...newEmployee, name: e.target.value })
+            }
+          />
 
-          {/* ASSET */}
-          <div>
-            <label className="text-sm font-medium text-gray-600">
-              Asset
-            </label>
+          <input
+            className="border p-2 rounded"
+            placeholder="Department"
+            value={newEmployee.department}
+            onChange={(e) =>
+              setNewEmployee({ ...newEmployee, department: e.target.value })
+            }
+          />
 
-            <select
-              className="w-full border rounded-lg p-2 mt-1"
-              value={assetCode}
-              onChange={(e) => setAssetCode(e.target.value)}
-            >
-              <option value="">Select Asset</option>
+          <input
+            className="border p-2 rounded"
+            placeholder="Designation"
+            value={newEmployee.designation}
+            onChange={(e) =>
+              setNewEmployee({ ...newEmployee, designation: e.target.value })
+            }
+          />
 
-              {Array.isArray(assets) &&
-                assets.map((asset) => (
-                  <option key={asset._id} value={asset.assetCode}>
-                    {asset.assetCode} - {asset.type}
-                  </option>
-                ))}
-            </select>
-          </div>
+          <input
+            className="border p-2 rounded"
+            placeholder="Visa No"
+            value={newEmployee.visaNo}
+            onChange={(e) =>
+              setNewEmployee({ ...newEmployee, visaNo: e.target.value })
+            }
+          />
 
-          {/* TYPE */}
-          <div>
-            <label className="text-sm font-medium text-gray-600">
-              Asset Type
-            </label>
-
-            <select
-              className="w-full border rounded-lg p-2 mt-1"
-              value={assetType}
-              onChange={(e) => setAssetType(e.target.value)}
-            >
-              <option value="All">All</option>
-              <option value="Laptop">Laptop</option>
-              <option value="Printer">Printer</option>
-              <option value="HHT">HHT</option>
-            </select>
-          </div>
+          <input
+            type="date"
+            className="border p-2 rounded"
+            value={newEmployee.visaExpiryDate}
+            onChange={(e) =>
+              setNewEmployee({
+                ...newEmployee,
+                visaExpiryDate: e.target.value,
+              })
+            }
+          />
 
         </div>
+
+        <button
+          onClick={addEmployee}
+          className="mt-3 bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Save Employee
+        </button>
       </div>
 
-      {/* TABLES */}
-      <div className="grid lg:grid-cols-2 gap-5">
+      {/* TABLE */}
+      <div className="bg-white p-4 rounded-xl shadow overflow-x-auto">
 
-        {/* EMPLOYEE HISTORY */}
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <table className="w-full text-sm">
 
-          <div className="bg-gray-100 px-4 py-3 border-b font-semibold">
-            Employee History
-          </div>
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-2 text-left">Staff Code</th>
+              <th className="p-2 text-left">Name</th>
+              <th className="p-2 text-left">Department</th>
+              <th className="p-2 text-left">Designation</th>
+              <th className="p-2 text-left">Visa No</th>
+              <th className="p-2 text-left">Visa Expiry</th>
+            </tr>
+          </thead>
 
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left">Asset</th>
-                <th className="px-4 py-3 text-left">Type</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Assigned</th>
-                <th className="px-4 py-3 text-left">Returned</th>
+          <tbody>
+            {filteredEmployees.map((emp) => (
+              <tr key={emp._id} className="border-t">
+                <td className="p-2">{emp.staffCode}</td>
+                <td className="p-2">{emp.name}</td>
+                <td className="p-2">{emp.department}</td>
+                <td className="p-2">{emp.designation}</td>
+                <td className="p-2">{emp.visaNo}</td>
+                <td className="p-2">
+                  {emp.visaExpiryDate
+                    ? new Date(emp.visaExpiryDate).toLocaleDateString()
+                    : "-"}
+                </td>
               </tr>
-            </thead>
+            ))}
+          </tbody>
 
-            <tbody>
-              {loadingEmp ? (
-                <tr><td colSpan="5" className="p-4 text-center">Loading...</td></tr>
-              ) : empHistory.length === 0 ? (
-                <tr><td colSpan="5" className="p-4 text-center text-gray-400">No data</td></tr>
-              ) : (
-                empHistory.map((h) => (
-                  <tr key={h._id} className="border-t">
-                    <td className="px-4 py-2">{h.asset?.assetCode}</td>
-                    <td className="px-4 py-2">{h.assetType}</td>
-                    <td className="px-4 py-2">{h.status}</td>
-                    <td className="px-4 py-2">
-                      {new Date(h.assignedDate).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2">
-                      {h.returnedDate
-                        ? new Date(h.returnedDate).toLocaleString()
-                        : "Active"}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* ASSET HISTORY */}
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-
-          <div className="bg-gray-100 px-4 py-3 border-b font-semibold">
-            Asset History
-          </div>
-
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left">Employee</th>
-                <th className="px-4 py-3 text-left">Type</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Assigned</th>
-                <th className="px-4 py-3 text-left">Returned</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loadingAsset ? (
-                <tr><td colSpan="5" className="p-4 text-center">Loading...</td></tr>
-              ) : assetHistory.length === 0 ? (
-                <tr><td colSpan="5" className="p-4 text-center text-gray-400">No data</td></tr>
-              ) : (
-                assetHistory.map((h) => (
-                  <tr key={h._id} className="border-t">
-                    <td className="px-4 py-2">
-                      {h.employee?.staffCode} - {h.employee?.name}
-                    </td>
-                    <td className="px-4 py-2">{h.assetType}</td>
-                    <td className="px-4 py-2">{h.status}</td>
-                    <td className="px-4 py-2">
-                      {new Date(h.assignedDate).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2">
-                      {h.returnedDate
-                        ? new Date(h.returnedDate).toLocaleString()
-                        : "Active"}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
+        </table>
       </div>
+
     </div>
   );
 }
