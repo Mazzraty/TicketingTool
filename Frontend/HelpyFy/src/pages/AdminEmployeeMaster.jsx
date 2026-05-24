@@ -233,33 +233,67 @@ export default function AdminEmployeeMaster() {
         </table>
       </div>
 
-      {/* PAGINATION */}
-      <div className="flex items-center justify-between mt-4">
+      {/* PAGINATION (MODERN UI) */}
+      <div className="flex items-center justify-between mt-4 bg-white p-3 rounded-xl shadow">
 
-        <div>
-          Page {page} of {totalPages || 1}
+        <div className="text-sm text-gray-600">
+          Page <b>{page}</b> of <b>{totalPages || 1}</b>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1 flex-wrap">
 
           <button
+            onClick={() => setPage(1)}
             disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="px-3 py-1 border rounded disabled:opacity-40"
           >
-            Prev
+            ⏮
           </button>
 
           <button
-            disabled={page === totalPages}
-            onClick={() => setPage(page + 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+            className="px-3 py-1 border rounded disabled:opacity-40"
           >
-            Next
+            ◀
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2))
+            .map((p, i, arr) => (
+              <div key={p} className="flex items-center">
+                {i > 0 && arr[i - 1] !== p - 1 && (
+                  <span className="px-2">...</span>
+                )}
+
+                <button
+                  onClick={() => setPage(p)}
+                  className={`px-3 py-1 rounded border ${
+                    page === p ? "bg-blue-600 text-white" : "hover:bg-gray-100"
+                  }`}
+                >
+                  {p}
+                </button>
+              </div>
+            ))}
+
+          <button
+            onClick={() => setPage(page + 1)}
+            disabled={page === totalPages}
+            className="px-3 py-1 border rounded disabled:opacity-40"
+          >
+            ▶
+          </button>
+
+          <button
+            onClick={() => setPage(totalPages)}
+            disabled={page === totalPages}
+            className="px-3 py-1 border rounded disabled:opacity-40"
+          >
+            ⏭
           </button>
 
         </div>
-
       </div>
 
       {/* EDIT MODAL */}
