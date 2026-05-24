@@ -14,7 +14,6 @@ export default function AssetStoreFiori() {
   /* ================= LOAD ================= */
   const loadAssets = async () => {
     try {
-      // ✅ LOAD ALL ASSETS
       const res = await api.get("/assets?limit=1000");
 
       console.log("ASSET RESPONSE:", res.data);
@@ -456,6 +455,7 @@ export default function AssetStoreFiori() {
             {/* BODY */}
             <div className="p-6 max-h-[75vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
                 <div>
                   <label className="text-sm font-semibold text-gray-700 block mb-2">
                     Asset Code
@@ -463,14 +463,11 @@ export default function AssetStoreFiori() {
 
                   <input
                     className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                    value={
-                      selected.assetCode || ""
-                    }
+                    value={selected.assetCode || ""}
                     onChange={(e) =>
                       setSelected({
                         ...selected,
-                        assetCode:
-                          e.target.value,
+                        assetCode: e.target.value,
                       })
                     }
                   />
@@ -504,6 +501,233 @@ export default function AssetStoreFiori() {
                     </option>
                   </select>
                 </div>
+
+                {(selected.type === "Laptop" ||
+                  selected.type === "Printer") && (
+                  <>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Model
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.model || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            model: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Serial Number
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.serialNumber || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            serialNumber: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selected.type === "Printer" && (
+                  <>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Route
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.route || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            route: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Supervisor
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.supervisor || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            supervisor: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Salesman Code
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.salesmanCode || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            salesmanCode: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Salesman Name
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.salesmanName || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            salesmanName: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selected.type === "HHT" && (
+                  <>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Salesman Name
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.salesmanName || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            salesmanName: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        Route
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.route || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            route: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        IMEI
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.imei || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            imei: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 block mb-2">
+                        SIM Number
+                      </label>
+
+                      <input
+                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                        value={selected.simNumber || ""}
+                        onChange={(e) =>
+                          setSelected({
+                            ...selected,
+                            simNumber: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="md:col-span-2">
+                  <label className="text-sm font-semibold text-gray-700 block mb-2">
+                    Status
+                  </label>
+
+                  <select
+                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                    value={selected.status || ""}
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        status: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="available">
+                      available
+                    </option>
+
+                    <option value="assigned">
+                      assigned
+                    </option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-sm font-semibold text-gray-700 block mb-2">
+                    Notes
+                  </label>
+
+                  <textarea
+                    rows="4"
+                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                    value={selected.notes || ""}
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        notes: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
               </div>
 
               {/* FOOTER */}
@@ -524,6 +748,7 @@ export default function AssetStoreFiori() {
                   Cancel
                 </button>
               </div>
+
             </div>
           </div>
         </div>
