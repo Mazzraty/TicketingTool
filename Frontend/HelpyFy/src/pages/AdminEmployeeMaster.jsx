@@ -17,9 +17,9 @@ export default function AssetHistoryPage() {
   const [loadingEmp, setLoadingEmp] = useState(false);
   const [loadingAsset, setLoadingAsset] = useState(false);
 
-  /* =========================
+  /* ===============================
      LOAD EMPLOYEES + ASSETS
-  ========================= */
+  =============================== */
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -39,9 +39,9 @@ export default function AssetHistoryPage() {
     loadData();
   }, []);
 
-  /* =========================
+  /* ===============================
      EMPLOYEE HISTORY
-  ========================= */
+  =============================== */
   useEffect(() => {
     if (!employeeId) {
       setEmpHistory([]);
@@ -52,9 +52,8 @@ export default function AssetHistoryPage() {
       try {
         setLoadingEmp(true);
 
-        const res = await api.get(
-          `/assets/history/employee/${employeeId}?type=${assetType}`
-        );
+        // ✅ FIXED ROUTE (IMPORTANT)
+        const res = await api.get(`/assets/employee/${employeeId}`);
 
         setEmpHistory(Array.isArray(res.data) ? res.data : res.data?.data || []);
       } catch (err) {
@@ -66,11 +65,11 @@ export default function AssetHistoryPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [employeeId, assetType]);
+  }, [employeeId]);
 
-  /* =========================
+  /* ===============================
      ASSET HISTORY
-  ========================= */
+  =============================== */
   useEffect(() => {
     if (!assetCode) {
       setAssetHistory([]);
@@ -81,9 +80,8 @@ export default function AssetHistoryPage() {
       try {
         setLoadingAsset(true);
 
-        const res = await api.get(
-          `/assets/history/asset/${assetCode}?type=${assetType}`
-        );
+        // ✅ FIXED ROUTE (IMPORTANT)
+        const res = await api.get(`/assets/asset/${assetCode}`);
 
         setAssetHistory(Array.isArray(res.data) ? res.data : res.data?.data || []);
       } catch (err) {
@@ -95,11 +93,12 @@ export default function AssetHistoryPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [assetCode, assetType]);
+  }, [assetCode]);
 
   return (
     <div className="p-6 bg-[#f4f6f9] min-h-screen">
 
+      {/* HEADER */}
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-gray-800">
           Asset History Management
@@ -183,6 +182,7 @@ export default function AssetHistoryPage() {
 
         {/* EMPLOYEE HISTORY */}
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+
           <div className="bg-gray-100 px-4 py-3 border-b font-semibold">
             Employee History
           </div>
@@ -209,9 +209,13 @@ export default function AssetHistoryPage() {
                     <td className="px-4 py-2">{h.asset?.assetCode}</td>
                     <td className="px-4 py-2">{h.assetType}</td>
                     <td className="px-4 py-2">{h.status}</td>
-                    <td className="px-4 py-2">{new Date(h.assignedDate).toLocaleString()}</td>
                     <td className="px-4 py-2">
-                      {h.returnedDate ? new Date(h.returnedDate).toLocaleString() : "Active"}
+                      {new Date(h.assignedDate).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-2">
+                      {h.returnedDate
+                        ? new Date(h.returnedDate).toLocaleString()
+                        : "Active"}
                     </td>
                   </tr>
                 ))
@@ -222,6 +226,7 @@ export default function AssetHistoryPage() {
 
         {/* ASSET HISTORY */}
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+
           <div className="bg-gray-100 px-4 py-3 border-b font-semibold">
             Asset History
           </div>
@@ -245,12 +250,18 @@ export default function AssetHistoryPage() {
               ) : (
                 assetHistory.map((h) => (
                   <tr key={h._id} className="border-t">
-                    <td className="px-4 py-2">{h.employee?.staffCode} - {h.employee?.name}</td>
+                    <td className="px-4 py-2">
+                      {h.employee?.staffCode} - {h.employee?.name}
+                    </td>
                     <td className="px-4 py-2">{h.assetType}</td>
                     <td className="px-4 py-2">{h.status}</td>
-                    <td className="px-4 py-2">{new Date(h.assignedDate).toLocaleString()}</td>
                     <td className="px-4 py-2">
-                      {h.returnedDate ? new Date(h.returnedDate).toLocaleString() : "Active"}
+                      {new Date(h.assignedDate).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-2">
+                      {h.returnedDate
+                        ? new Date(h.returnedDate).toLocaleString()
+                        : "Active"}
                     </td>
                   </tr>
                 ))
