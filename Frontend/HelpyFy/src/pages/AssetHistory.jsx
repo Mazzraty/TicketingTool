@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function AssetHistoryPage() {
   const [employees, setEmployees] = useState([]);
@@ -10,6 +12,8 @@ export default function AssetHistoryPage() {
   const [assetCode, setAssetCode] = useState("");
   const [assetType, setAssetType] = useState("All");
 
+  const [assetSearch, setAssetSearch] = useState("");
+
   const [empHistory, setEmpHistory] = useState([]);
   const [assetHistory, setAssetHistory] = useState([]);
 
@@ -17,7 +21,7 @@ export default function AssetHistoryPage() {
   const [loadingAsset, setLoadingAsset] = useState(false);
 
   /* ===============================
-     LOAD EMPLOYEES + ASSETS
+     LOAD DATA
   =============================== */
   useEffect(() => {
     const loadData = async () => {
@@ -30,7 +34,6 @@ export default function AssetHistoryPage() {
         setEmployees(Array.isArray(empRes.data) ? empRes.data : []);
         setAssets(Array.isArray(assetRes.data) ? assetRes.data : []);
       } catch (err) {
-        console.error(err);
         toast.error("Failed to load data");
       }
     };
@@ -40,8 +43,6 @@ export default function AssetHistoryPage() {
 
   /* ===============================
      EMPLOYEE HISTORY
-     FIXED ROUTE:
-     /api/assets/employee/:id
   =============================== */
   useEffect(() => {
     if (!employeeId) {
@@ -58,8 +59,7 @@ export default function AssetHistoryPage() {
         );
 
         setEmpHistory(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error(err);
+      } catch {
         toast.error("Employee history not found");
       } finally {
         setLoadingEmp(false);
@@ -71,8 +71,6 @@ export default function AssetHistoryPage() {
 
   /* ===============================
      ASSET HISTORY
-     FIXED ROUTE:
-     /api/assets/asset/:code
   =============================== */
   useEffect(() => {
     if (!assetCode) {
@@ -89,8 +87,7 @@ export default function AssetHistoryPage() {
         );
 
         setAssetHistory(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error(err);
+      } catch {
         toast.error("Asset history not found");
       } finally {
         setLoadingAsset(false);
@@ -100,197 +97,212 @@ export default function AssetHistoryPage() {
     return () => clearTimeout(timer);
   }, [assetCode, assetType]);
 
+  /* ===============================
+     PDF EXPORT - EMPLOYEE HISTORY
+  =============================== */
+  const exportEmpPDF = () => {
+    const doc = new jsPDF();
+
+    doc.text("Employee Asset History", 14, 10);
+
+    autoTable(doc, {
+      head: [["Asset", "Type", "Status", "Assigned", "Returned"]],
+      body: empHistory.map((h) => [
+        h.asset?.assetCode,
+        h.assetType,
+        h.status,
+        new Date(h.assignedDate).toLocaleString(),
+        h.returnedDate
+          ? new Date(h.returnedDate).toLocaleString()
+          : "Active",
+      ]),
+    });
+
+    doc.save("employee-history.pdf");
+  };
+
+  /* ===============================
+     PDF EXPORT - ASSET HISTORY
+  =============================== */
+  const exportAssetPDF = () => {
+    const doc = new jsPDF();
+
+    doc.text("Asset History", 14, 10);
+
+    autoTable(doc, {
+      head: [["Employee", "Type", "Status", "Assigned", "Returned"]],
+      body: assetHistory.map((h) => [
+        `${h.employee?.staffCode} - ${h.employee?.name}`,
+        h.assetType,
+        h.status,
+        new Date(h.assignedDate).toLocaleString(),
+        h.returnedDate
+          ? new Date(h.returnedDate).toLocaleString()
+          : "Active",
+      ]),
+    });
+
+    doc.save("asset-history.pdf");
+  };
+
   return (
     <div className="p-6 bg-[#f4f6f9] min-h-screen">
 
       {/* HEADER */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Asset History Management
-        </h1>
-        <p className="text-sm text-gray-500">
-          Asset Tracking System (Laptop / Printer / HHT)
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold mb-5">
+        Asset History Management
+      </h1>
 
       {/* FILTERS */}
-      <div className="bg-white rounded-xl border shadow-sm p-4 mb-5">
+      <div className="bg-white p-4 rounded-xl border mb-5">
 
         <div className="grid md:grid-cols-3 gap-4">
 
           {/* EMPLOYEE */}
+          <select
+            className="border p-2 rounded"
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value)}
+          >
+            <option value="">Select Employee</option>
+            {employees.map((emp) => (
+              <option key={emp._id} value={emp._id}>
+                {emp.staffCode} - {emp.name}
+              </option>
+            ))}
+          </select>
+
+          {/* ASSET SEARCH */}
           <div>
-            <label className="text-sm font-medium text-gray-600">
-              Employee
-            </label>
+            <input
+              className="border p-2 rounded w-full mb-2"
+              placeholder="Search asset..."
+              value={assetSearch}
+              onChange={(e) => setAssetSearch(e.target.value)}
+            />
 
             <select
-              className="w-full border rounded-lg p-2 mt-1"
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-            >
-              <option value="">Select Employee</option>
-
-              {employees.map((emp) => (
-                <option key={emp._id} value={emp._id}>
-                  {emp.staffCode} - {emp.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* ASSET */}
-          <div>
-            <label className="text-sm font-medium text-gray-600">
-              Asset
-            </label>
-
-            <select
-              className="w-full border rounded-lg p-2 mt-1"
+              className="border p-2 rounded w-full"
               value={assetCode}
               onChange={(e) => setAssetCode(e.target.value)}
             >
               <option value="">Select Asset</option>
 
-              {assets.map((asset) => (
-                <option key={asset._id} value={asset.assetCode}>
-                  {asset.assetCode} - {asset.type}
-                </option>
-              ))}
+              {assets
+                .filter((a) =>
+                  a.assetCode
+                    ?.toLowerCase()
+                    .includes(assetSearch.toLowerCase())
+                )
+                .map((asset) => (
+                  <option key={asset._id} value={asset.assetCode}>
+                    {asset.assetCode} - {asset.type}
+                  </option>
+                ))}
             </select>
           </div>
 
           {/* TYPE */}
-          <div>
-            <label className="text-sm font-medium text-gray-600">
-              Asset Type
-            </label>
-
-            <select
-              className="w-full border rounded-lg p-2 mt-1"
-              value={assetType}
-              onChange={(e) => setAssetType(e.target.value)}
-            >
-              <option value="All">All</option>
-              <option value="Laptop">Laptop</option>
-              <option value="Printer">Printer</option>
-              <option value="HHT">HHT</option>
-            </select>
-          </div>
+          <select
+            className="border p-2 rounded"
+            value={assetType}
+            onChange={(e) => setAssetType(e.target.value)}
+          >
+            <option value="All">All</option>
+            <option value="Laptop">Laptop</option>
+            <option value="Printer">Printer</option>
+            <option value="HHT">HHT</option>
+          </select>
 
         </div>
       </div>
 
-      {/* TABLES */}
-      <div className="grid lg:grid-cols-2 gap-5">
+      {/* EMPLOYEE HISTORY */}
+      <div className="bg-white p-4 rounded-xl border mb-5">
 
-        {/* EMPLOYEE HISTORY */}
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <div className="flex justify-between mb-3">
+          <h2 className="font-bold">Employee History</h2>
 
-          <div className="bg-gray-100 px-4 py-3 border-b font-semibold">
-            Employee History
-          </div>
-
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-4 py-3 border-b">Asset</th>
-                <th className="text-left px-4 py-3 border-b">Type</th>
-                <th className="text-left px-4 py-3 border-b">Status</th>
-                <th className="text-left px-4 py-3 border-b">Assigned</th>
-                <th className="text-left px-4 py-3 border-b">Returned</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loadingEmp ? (
-                <tr>
-                  <td colSpan="5" className="text-center p-6">
-                    Loading...
-                  </td>
-                </tr>
-              ) : empHistory.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="text-center p-6 text-gray-400">
-                    No employee history
-                  </td>
-                </tr>
-              ) : (
-                empHistory.map((h) => (
-                  <tr key={h._id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      {h.asset?.assetCode}
-                    </td>
-                    <td className="px-4 py-3">{h.assetType}</td>
-                    <td className="px-4 py-3 capitalize">{h.status}</td>
-                    <td className="px-4 py-3">
-                      {new Date(h.assignedDate).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      {h.returnedDate
-                        ? new Date(h.returnedDate).toLocaleString()
-                        : "Active"}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <button
+            onClick={exportEmpPDF}
+            className="bg-red-600 text-white px-3 py-1 rounded"
+          >
+            Export PDF
+          </button>
         </div>
 
-        {/* ASSET HISTORY */}
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-100">
+              <th>Asset</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Assigned</th>
+              <th>Returned</th>
+            </tr>
+          </thead>
 
-          <div className="bg-gray-100 px-4 py-3 border-b font-semibold">
-            Asset History
-          </div>
-
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-4 py-3 border-b">Employee</th>
-                <th className="text-left px-4 py-3 border-b">Type</th>
-                <th className="text-left px-4 py-3 border-b">Status</th>
-                <th className="text-left px-4 py-3 border-b">Assigned</th>
-                <th className="text-left px-4 py-3 border-b">Returned</th>
+          <tbody>
+            {empHistory.map((h) => (
+              <tr key={h._id} className="border-t">
+                <td>{h.asset?.assetCode}</td>
+                <td>{h.assetType}</td>
+                <td>{h.status}</td>
+                <td>{new Date(h.assignedDate).toLocaleString()}</td>
+                <td>
+                  {h.returnedDate
+                    ? new Date(h.returnedDate).toLocaleString()
+                    : "Active"}
+                </td>
               </tr>
-            </thead>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-            <tbody>
-              {loadingAsset ? (
-                <tr>
-                  <td colSpan="5" className="text-center p-6">
-                    Loading...
-                  </td>
-                </tr>
-              ) : assetHistory.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="text-center p-6 text-gray-400">
-                    No asset history
-                  </td>
-                </tr>
-              ) : (
-                assetHistory.map((h) => (
-                  <tr key={h._id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      {h.employee?.staffCode} - {h.employee?.name}
-                    </td>
-                    <td className="px-4 py-3">{h.assetType}</td>
-                    <td className="px-4 py-3 capitalize">{h.status}</td>
-                    <td className="px-4 py-3">
-                      {new Date(h.assignedDate).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      {h.returnedDate
-                        ? new Date(h.returnedDate).toLocaleString()
-                        : "Active"}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* ASSET HISTORY */}
+      <div className="bg-white p-4 rounded-xl border">
+
+        <div className="flex justify-between mb-3">
+          <h2 className="font-bold">Asset History</h2>
+
+          <button
+            onClick={exportAssetPDF}
+            className="bg-red-600 text-white px-3 py-1 rounded"
+          >
+            Export PDF
+          </button>
         </div>
+
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-100">
+              <th>Employee</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Assigned</th>
+              <th>Returned</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {assetHistory.map((h) => (
+              <tr key={h._id} className="border-t">
+                <td>
+                  {h.employee?.staffCode} - {h.employee?.name}
+                </td>
+                <td>{h.assetType}</td>
+                <td>{h.status}</td>
+                <td>{new Date(h.assignedDate).toLocaleString()}</td>
+                <td>
+                  {h.returnedDate
+                    ? new Date(h.returnedDate).toLocaleString()
+                    : "Active"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
       </div>
     </div>
