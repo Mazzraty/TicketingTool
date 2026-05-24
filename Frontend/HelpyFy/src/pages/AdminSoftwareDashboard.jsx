@@ -90,20 +90,58 @@ export default function AdminSoftwareDashboard() {
   /* =========================
      DELETE SOFTWARE
   ========================= */
-  const deleteSoftware = async (id) => {
-    try {
-      if (!window.confirm("Delete this vendor?")) return;
+/* =========================
+   DELETE SOFTWARE
+========================= */
+const deleteSoftware = async (id) => {
 
-      await api.delete(`/software/${id}`);
+  toast((t) => (
+    <div className="flex flex-col gap-3">
 
-      toast.success("Deleted Successfully");
+      <p className="font-medium">
+        Delete this vendor?
+      </p>
 
-      fetchSoftwares();
-    } catch (err) {
-      console.error(err);
-      toast.error("Delete failed");
-    }
-  };
+      <div className="flex justify-end gap-2">
+
+        <button
+          onClick={() => toast.dismiss(t.id)}
+          className="px-3 py-1 rounded bg-gray-200 text-gray-700 text-sm"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={async () => {
+            try {
+              await api.delete(`/software/${id}`);
+
+              toast.dismiss(t.id);
+
+              toast.success("Deleted Successfully");
+
+              fetchSoftwares();
+            } catch (err) {
+              console.error(err);
+
+              toast.dismiss(t.id);
+
+              toast.error("Delete failed");
+            }
+          }}
+          className="px-3 py-1 rounded bg-red-600 text-white text-sm"
+        >
+          Delete
+        </button>
+
+      </div>
+
+    </div>
+  ), {
+    duration: 10000,
+  });
+
+};
 
   /* =========================
      OPEN EDIT
