@@ -28,6 +28,7 @@ export default function AssetHistoryPage() {
           api.get("/assets"),
         ]);
 
+        // ✅ FIX ONLY HERE
         setEmployees(
           Array.isArray(empRes.data)
             ? empRes.data
@@ -65,6 +66,7 @@ export default function AssetHistoryPage() {
           `/assets/history/employee/${employeeId}?type=${assetType}`
         );
 
+        // ✅ FIX ONLY HERE
         setEmpHistory(
           Array.isArray(res.data)
             ? res.data
@@ -98,6 +100,7 @@ export default function AssetHistoryPage() {
           `/assets/history/asset/${assetCode}?type=${assetType}`
         );
 
+        // ✅ FIX ONLY HERE
         setAssetHistory(
           Array.isArray(res.data)
             ? res.data
@@ -145,6 +148,7 @@ export default function AssetHistoryPage() {
             >
               <option value="">Select Employee</option>
 
+              {/* ✅ SAFE MAP */}
               {Array.isArray(employees) &&
                 employees.map((emp) => (
                   <option key={emp._id} value={emp.staffCode}>
@@ -167,6 +171,7 @@ export default function AssetHistoryPage() {
             >
               <option value="">Select Asset</option>
 
+              {/* ✅ SAFE MAP */}
               {Array.isArray(assets) &&
                 assets.map((asset) => (
                   <option key={asset._id} value={asset.assetCode}>
