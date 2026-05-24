@@ -16,19 +16,19 @@ export default function AssetStoreFiori() {
     try {
       const res = await api.get("/assets");
 
-      console.log("ASSET API RESPONSE:", res.data);
+      console.log("ASSET RESPONSE:", res.data);
 
-      // ✅ FIX
-      const assetData = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data.assets)
-        ? res.data.assets
-        : [];
-
-      setAssets(assetData);
+      // ✅ FIXED
+      setAssets(
+        Array.isArray(res.data.assets)
+          ? res.data.assets
+          : []
+      );
     } catch (err) {
       console.error(err);
+
       toast.error("Failed to load assets");
+
       setAssets([]);
     }
   };
@@ -44,34 +44,51 @@ export default function AssetStoreFiori() {
         const selectedFilter = filter?.toLowerCase();
 
         const matchType =
-          selectedFilter === "all" || type === selectedFilter;
+          selectedFilter === "all" ||
+          type === selectedFilter;
 
         const text = search.toLowerCase();
 
         const matchSearch =
-          a.assetCode?.toLowerCase().includes(text) ||
+          a.assetCode
+            ?.toLowerCase()
+            .includes(text) ||
           a.model?.toLowerCase().includes(text) ||
-          a.serialNumber?.toLowerCase().includes(text) ||
-          a.salesmanName?.toLowerCase().includes(text) ||
-          a.salesmanCode?.toLowerCase().includes(text);
+          a.serialNumber
+            ?.toLowerCase()
+            .includes(text) ||
+          a.salesmanName
+            ?.toLowerCase()
+            .includes(text) ||
+          a.salesmanCode
+            ?.toLowerCase()
+            .includes(text);
 
         return matchType && matchSearch;
       })
     : [];
 
   /* ================= KPI ================= */
-  const total = Array.isArray(assets) ? assets.length : 0;
+  const total = Array.isArray(assets)
+    ? assets.length
+    : 0;
 
   const laptop = Array.isArray(assets)
-    ? assets.filter((a) => a.type === "Laptop").length
+    ? assets.filter(
+        (a) => a.type === "Laptop"
+      ).length
     : 0;
 
   const printer = Array.isArray(assets)
-    ? assets.filter((a) => a.type === "Printer").length
+    ? assets.filter(
+        (a) => a.type === "Printer"
+      ).length
     : 0;
 
   const hht = Array.isArray(assets)
-    ? assets.filter((a) => a.type === "HHT").length
+    ? assets.filter(
+        (a) => a.type === "HHT"
+      ).length
     : 0;
 
   /* ================= TABLE CONTROL ================= */
@@ -115,7 +132,10 @@ export default function AssetStoreFiori() {
   /* ================= UPDATE ================= */
   const updateAsset = async () => {
     try {
-      await api.put(`/assets/${selected._id}`, selected);
+      await api.put(
+        `/assets/${selected._id}`,
+        selected
+      );
 
       toast.success("Asset Updated");
 
@@ -125,7 +145,10 @@ export default function AssetStoreFiori() {
     } catch (err) {
       console.error(err);
 
-      toast.error(err.response?.data?.msg || "Update failed");
+      toast.error(
+        err.response?.data?.msg ||
+          "Update failed"
+      );
     }
   };
 
@@ -146,7 +169,10 @@ export default function AssetStoreFiori() {
     } catch (err) {
       console.error(err);
 
-      toast.error(err.response?.data?.msg || "Delete failed");
+      toast.error(
+        err.response?.data?.msg ||
+          "Delete failed"
+      );
     }
   };
 
