@@ -293,9 +293,7 @@ export const deleteAsset = async (req, res) => {
 ========================= */
 export const getEmployeeHistory = async (req, res) => {
   try {
-    const employee = await EmployeeMaster.findOne({
-      staffCode: req.params.id,
-    });
+    const employee = await EmployeeMaster.findById(req.params.id);
 
     if (!employee) {
       return res.status(404).json({ msg: "Employee not found" });
@@ -307,7 +305,7 @@ export const getEmployeeHistory = async (req, res) => {
       .populate("asset")
       .sort({ createdAt: -1 });
 
-    res.json(history);
+    return res.json(history);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: err.message });
