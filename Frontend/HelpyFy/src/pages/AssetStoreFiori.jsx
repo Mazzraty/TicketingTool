@@ -14,11 +14,11 @@ export default function AssetStoreFiori() {
   /* ================= LOAD ================= */
   const loadAssets = async () => {
     try {
-      const res = await api.get("/assets");
+      // ✅ LOAD ALL ASSETS
+      const res = await api.get("/assets?limit=1000");
 
       console.log("ASSET RESPONSE:", res.data);
 
-      // ✅ FIXED
       setAssets(
         Array.isArray(res.data.assets)
           ? res.data.assets
@@ -69,27 +69,19 @@ export default function AssetStoreFiori() {
     : [];
 
   /* ================= KPI ================= */
-  const total = Array.isArray(assets)
-    ? assets.length
-    : 0;
+  const total = assets.length;
 
-  const laptop = Array.isArray(assets)
-    ? assets.filter(
-        (a) => a.type === "Laptop"
-      ).length
-    : 0;
+  const laptop = assets.filter(
+    (a) => a.type === "Laptop"
+  ).length;
 
-  const printer = Array.isArray(assets)
-    ? assets.filter(
-        (a) => a.type === "Printer"
-      ).length
-    : 0;
+  const printer = assets.filter(
+    (a) => a.type === "Printer"
+  ).length;
 
-  const hht = Array.isArray(assets)
-    ? assets.filter(
-        (a) => a.type === "HHT"
-      ).length
-    : 0;
+  const hht = assets.filter(
+    (a) => a.type === "HHT"
+  ).length;
 
   /* ================= TABLE CONTROL ================= */
   const showHHTFields = filter === "HHT";
@@ -434,6 +426,108 @@ export default function AssetStoreFiori() {
           </table>
         </div>
       </div>
+
+      {/* ================= EDIT MODAL ================= */}
+      {editOpen && selected && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+            {/* HEADER */}
+            <div className="bg-[#0a6ed1] px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  Edit Asset
+                </h2>
+
+                <p className="text-blue-100 text-sm">
+                  Update asset information
+                </p>
+              </div>
+
+              <button
+                onClick={() =>
+                  setEditOpen(false)
+                }
+                className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 text-white transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* BODY */}
+            <div className="p-6 max-h-[75vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 block mb-2">
+                    Asset Code
+                  </label>
+
+                  <input
+                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                    value={
+                      selected.assetCode || ""
+                    }
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        assetCode:
+                          e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 block mb-2">
+                    Type
+                  </label>
+
+                  <select
+                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                    value={selected.type || ""}
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        type: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="Laptop">
+                      Laptop
+                    </option>
+
+                    <option value="Printer">
+                      Printer
+                    </option>
+
+                    <option value="HHT">
+                      HHT
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              {/* FOOTER */}
+              <div className="flex gap-4 mt-8">
+                <button
+                  onClick={updateAsset}
+                  className="flex-1 h-12 rounded-2xl bg-[#0a6ed1] hover:bg-[#085caf] text-white font-semibold shadow-sm transition"
+                >
+                  Save Changes
+                </button>
+
+                <button
+                  onClick={() =>
+                    setEditOpen(false)
+                  }
+                  className="flex-1 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
