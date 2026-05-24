@@ -390,7 +390,7 @@ export default function AssetStoreFiori() {
 
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
-                        <button
+                        {/* <button
                           onClick={() =>
                             window.open(
                               `/admin/assets/history?code=${a.assetCode}`
@@ -399,7 +399,7 @@ export default function AssetStoreFiori() {
                           className="min-w-[85px] h-9 rounded-lg bg-[#0a6ed1] hover:bg-[#085caf] text-white text-xs font-semibold border border-[#0a6ed1] shadow-sm transition-all"
                         >
                           History
-                        </button>
+                        </button> */}
 
                         <button
                           onClick={() => openEdit(a)}
