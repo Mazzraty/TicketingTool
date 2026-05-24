@@ -1,3 +1,5 @@
+// pages/AssetHistoryPage.jsx
+
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -10,7 +12,9 @@ export default function AssetHistoryPage() {
 
   const [employeeId, setEmployeeId] = useState("");
   const [assetCode, setAssetCode] = useState("");
+
   const [assetType, setAssetType] = useState("All");
+
   const [assetSearch, setAssetSearch] = useState("");
 
   const [empHistory, setEmpHistory] = useState([]);
@@ -19,7 +23,9 @@ export default function AssetHistoryPage() {
   const [loadingEmp, setLoadingEmp] = useState(false);
   const [loadingAsset, setLoadingAsset] = useState(false);
 
-  /* ================= LOAD DATA ================= */
+  /* ===================================
+     LOAD EMPLOYEES + ASSETS
+  =================================== */
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -28,9 +34,22 @@ export default function AssetHistoryPage() {
           api.get("/assets"),
         ]);
 
-        // ✅ FIXED
-        setEmployees(empRes.data || []);
-        setAssets(assetRes.data?.assets || []);
+        console.log("EMPLOYEES =>", empRes.data);
+        console.log("ASSETS =>", assetRes.data);
+
+        // EMPLOYEES
+        setEmployees(
+          Array.isArray(empRes.data)
+            ? empRes.data
+            : empRes.data?.employees || []
+        );
+
+        // ASSETS
+        setAssets(
+          Array.isArray(assetRes.data)
+            ? assetRes.data
+            : assetRes.data?.assets || []
+        );
       } catch (err) {
         console.error(err);
         toast.error("Failed to load data");
@@ -40,7 +59,9 @@ export default function AssetHistoryPage() {
     loadData();
   }, []);
 
-  /* ================= EMP HISTORY ================= */
+  /* ===================================
+     EMPLOYEE HISTORY
+  =================================== */
   useEffect(() => {
     if (!employeeId) {
       setEmpHistory([]);
@@ -55,7 +76,9 @@ export default function AssetHistoryPage() {
           `/assets/employee/${employeeId}?type=${assetType}`
         );
 
-        setEmpHistory(Array.isArray(res.data) ? res.data : []);
+        setEmpHistory(
+          Array.isArray(res.data) ? res.data : []
+        );
       } catch (err) {
         console.error(err);
         toast.error("Employee history not found");
@@ -67,7 +90,9 @@ export default function AssetHistoryPage() {
     return () => clearTimeout(timer);
   }, [employeeId, assetType]);
 
-  /* ================= ASSET HISTORY ================= */
+  /* ===================================
+     ASSET HISTORY
+  =================================== */
   useEffect(() => {
     if (!assetCode) {
       setAssetHistory([]);
@@ -82,7 +107,9 @@ export default function AssetHistoryPage() {
           `/assets/asset/${assetCode}?type=${assetType}`
         );
 
-        setAssetHistory(Array.isArray(res.data) ? res.data : []);
+        setAssetHistory(
+          Array.isArray(res.data) ? res.data : []
+        );
       } catch (err) {
         console.error(err);
         toast.error("Asset history not found");
@@ -94,7 +121,9 @@ export default function AssetHistoryPage() {
     return () => clearTimeout(timer);
   }, [assetCode, assetType]);
 
-  /* ================= STATUS ================= */
+  /* ===================================
+     STATUS BADGE
+  =================================== */
   const statusBadge = (h) => {
     if (!h.returnedDate) {
       return (
@@ -111,18 +140,25 @@ export default function AssetHistoryPage() {
     );
   };
 
-  /* ================= PDF EMP ================= */
+  /* ===================================
+     EXPORT EMP PDF
+  =================================== */
   const exportEmpPDF = () => {
     const doc = new jsPDF();
+
     doc.text("Employee Asset History", 14, 10);
 
     autoTable(doc, {
       head: [["Asset", "Type", "Status", "Assigned", "Returned"]],
+
       body: empHistory.map((h) => [
-        h.asset?.assetCode,
-        h.assetType,
-        h.status,
-        new Date(h.assignedDate).toLocaleString(),
+        h.asset?.assetCode || "-",
+        h.assetType || "-",
+        h.status || "-",
+        h.assignedDate
+          ? new Date(h.assignedDate).toLocaleString()
+          : "-",
+
         h.returnedDate
           ? new Date(h.returnedDate).toLocaleString()
           : "Active",
@@ -132,18 +168,28 @@ export default function AssetHistoryPage() {
     doc.save("employee-history.pdf");
   };
 
-  /* ================= PDF ASSET ================= */
+  /* ===================================
+     EXPORT ASSET PDF
+  =================================== */
   const exportAssetPDF = () => {
     const doc = new jsPDF();
+
     doc.text("Asset History", 14, 10);
 
     autoTable(doc, {
       head: [["Employee", "Type", "Status", "Assigned", "Returned"]],
+
       body: assetHistory.map((h) => [
-        `${h.employee?.staffCode} - ${h.employee?.name}`,
-        h.assetType,
-        h.status,
-        new Date(h.assignedDate).toLocaleString(),
+        `${h.employee?.staffCode || "-"} - ${
+          h.employee?.name || "-"
+        }`,
+        h.assetType || "-",
+        h.status || "-",
+
+        h.assignedDate
+          ? new Date(h.assignedDate).toLocaleString()
+          : "-",
+
         h.returnedDate
           ? new Date(h.returnedDate).toLocaleString()
           : "Active",
@@ -157,159 +203,352 @@ export default function AssetHistoryPage() {
     <div className="p-6 bg-gray-100 min-h-screen">
 
       {/* HEADER */}
-      <h1 className="text-2xl font-bold mb-4">Asset History</h1>
+      <div className="mb-5">
+        <h1 className="text-2xl font-bold">
+          Asset History
+        </h1>
+
+        <p className="text-sm text-gray-500">
+          Track employee & asset assignment history
+        </p>
+      </div>
 
       {/* FILTERS */}
-      <div className="bg-white p-4 rounded shadow mb-5">
+      <div className="bg-white p-5 rounded-xl shadow mb-5">
+
         <div className="grid md:grid-cols-3 gap-4">
 
           {/* EMPLOYEE */}
-          <select
-            className="border p-2 rounded"
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-          >
-            <option value="">Select Employee</option>
-            {employees.map((emp) => (
-              <option key={emp._id} value={emp._id}>
-                {emp.staffCode} - {emp.name}
-              </option>
-            ))}
-          </select>
-
-          {/* ASSET SEARCH */}
           <div>
+            <label className="text-xs text-gray-500 mb-1 block">
+              Employee
+            </label>
+
+            <select
+              className="border p-2 rounded w-full"
+              value={employeeId}
+              onChange={(e) =>
+                setEmployeeId(e.target.value)
+              }
+            >
+              <option value="">
+                Select Employee
+              </option>
+
+              {employees.map((emp) => (
+                <option
+                  key={emp._id}
+                  value={emp._id}
+                >
+                  {emp.staffCode} - {emp.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* ASSET */}
+          <div>
+
+            <label className="text-xs text-gray-500 mb-1 block">
+              Asset
+            </label>
+
             <input
               className="border p-2 rounded w-full mb-2"
               placeholder="Search asset code..."
               value={assetSearch}
-              onChange={(e) => setAssetSearch(e.target.value)}
+              onChange={(e) =>
+                setAssetSearch(e.target.value)
+              }
             />
 
             <select
               className="border p-2 rounded w-full"
               value={assetCode}
-              onChange={(e) => setAssetCode(e.target.value)}
+              onChange={(e) =>
+                setAssetCode(e.target.value)
+              }
             >
-              <option value="">Select Asset</option>
+              <option value="">
+                Select Asset
+              </option>
 
               {assets
                 .filter((a) =>
                   a.assetCode
                     ?.toLowerCase()
-                    .includes(assetSearch.toLowerCase())
+                    .includes(
+                      assetSearch.toLowerCase()
+                    )
                 )
                 .map((asset) => (
-                  <option key={asset._id} value={asset.assetCode}>
+                  <option
+                    key={asset._id}
+                    value={asset.assetCode}
+                  >
                     {asset.assetCode} - {asset.type}
                   </option>
                 ))}
             </select>
+
           </div>
 
           {/* TYPE */}
-          <select
-            className="border p-2 rounded"
-            value={assetType}
-            onChange={(e) => setAssetType(e.target.value)}
-          >
-            <option value="All">All</option>
-            <option value="Laptop">Laptop</option>
-            <option value="Printer">Printer</option>
-            <option value="HHT">HHT</option>
-          </select>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">
+              Asset Type
+            </label>
+
+            <select
+              className="border p-2 rounded w-full"
+              value={assetType}
+              onChange={(e) =>
+                setAssetType(e.target.value)
+              }
+            >
+              <option value="All">All</option>
+              <option value="Laptop">
+                Laptop
+              </option>
+              <option value="Printer">
+                Printer
+              </option>
+              <option value="HHT">
+                HHT
+              </option>
+            </select>
+          </div>
 
         </div>
       </div>
 
-      {/* EMP TABLE */}
-      <div className="bg-white p-4 rounded shadow mb-5">
-        <div className="flex justify-between mb-3">
-          <h2 className="font-bold">Employee History</h2>
+      {/* EMPLOYEE HISTORY */}
+      <div className="bg-white rounded-xl shadow p-5 mb-5">
+
+        <div className="flex justify-between items-center mb-4">
+
+          <div>
+            <h2 className="font-bold text-lg">
+              Employee History
+            </h2>
+
+            <p className="text-sm text-gray-500">
+              Assignment records by employee
+            </p>
+          </div>
 
           <button
             onClick={exportEmpPDF}
-            className="bg-red-600 text-white px-3 py-1 rounded"
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
           >
             Export PDF
           </button>
+
         </div>
 
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 text-left">Asset</th>
-              <th className="p-2 text-left">Type</th>
-              <th className="p-2 text-left">Status</th>
-              <th className="p-2 text-left">Assigned</th>
-              <th className="p-2 text-left">Returned</th>
-            </tr>
-          </thead>
+        <div className="overflow-x-auto">
 
-          <tbody>
-            {empHistory.map((h) => (
-              <tr key={h._id} className="border-t">
-                <td className="p-2">{h.asset?.assetCode}</td>
-                <td className="p-2">{h.assetType}</td>
-                <td className="p-2">{statusBadge(h)}</td>
-                <td className="p-2">
-                  {new Date(h.assignedDate).toLocaleString()}
-                </td>
-                <td className="p-2">
-                  {h.returnedDate
-                    ? new Date(h.returnedDate).toLocaleString()
-                    : "Active"}
-                </td>
+          <table className="w-full text-sm">
+
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">
+                  Asset
+                </th>
+
+                <th className="p-3 text-left">
+                  Type
+                </th>
+
+                <th className="p-3 text-left">
+                  Status
+                </th>
+
+                <th className="p-3 text-left">
+                  Assigned
+                </th>
+
+                <th className="p-3 text-left">
+                  Returned
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+
+              {loadingEmp ? (
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="p-5 text-center"
+                  >
+                    Loading...
+                  </td>
+                </tr>
+              ) : empHistory.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="p-5 text-center text-gray-500"
+                  >
+                    No employee history found
+                  </td>
+                </tr>
+              ) : (
+                empHistory.map((h) => (
+                  <tr
+                    key={h._id}
+                    className="border-t hover:bg-gray-50"
+                  >
+                    <td className="p-3">
+                      {h.asset?.assetCode || "-"}
+                    </td>
+
+                    <td className="p-3">
+                      {h.assetType}
+                    </td>
+
+                    <td className="p-3">
+                      {statusBadge(h)}
+                    </td>
+
+                    <td className="p-3">
+                      {new Date(
+                        h.assignedDate
+                      ).toLocaleString()}
+                    </td>
+
+                    <td className="p-3">
+                      {h.returnedDate
+                        ? new Date(
+                            h.returnedDate
+                          ).toLocaleString()
+                        : "Active"}
+                    </td>
+                  </tr>
+                ))
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
       </div>
 
-      {/* ASSET TABLE */}
-      <div className="bg-white p-4 rounded shadow">
-        <div className="flex justify-between mb-3">
-          <h2 className="font-bold">Asset History</h2>
+      {/* ASSET HISTORY */}
+      <div className="bg-white rounded-xl shadow p-5">
+
+        <div className="flex justify-between items-center mb-4">
+
+          <div>
+            <h2 className="font-bold text-lg">
+              Asset History
+            </h2>
+
+            <p className="text-sm text-gray-500">
+              Assignment records by asset
+            </p>
+          </div>
 
           <button
             onClick={exportAssetPDF}
-            className="bg-red-600 text-white px-3 py-1 rounded"
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
           >
             Export PDF
           </button>
+
         </div>
 
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 text-left">Employee</th>
-              <th className="p-2 text-left">Type</th>
-              <th className="p-2 text-left">Status</th>
-              <th className="p-2 text-left">Assigned</th>
-              <th className="p-2 text-left">Returned</th>
-            </tr>
-          </thead>
+        <div className="overflow-x-auto">
 
-          <tbody>
-            {assetHistory.map((h) => (
-              <tr key={h._id} className="border-t">
-                <td className="p-2">
-                  {h.employee?.staffCode} - {h.employee?.name}
-                </td>
-                <td className="p-2">{h.assetType}</td>
-                <td className="p-2">{statusBadge(h)}</td>
-                <td className="p-2">
-                  {new Date(h.assignedDate).toLocaleString()}
-                </td>
-                <td className="p-2">
-                  {h.returnedDate
-                    ? new Date(h.returnedDate).toLocaleString()
-                    : "Active"}
-                </td>
+          <table className="w-full text-sm">
+
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">
+                  Employee
+                </th>
+
+                <th className="p-3 text-left">
+                  Type
+                </th>
+
+                <th className="p-3 text-left">
+                  Status
+                </th>
+
+                <th className="p-3 text-left">
+                  Assigned
+                </th>
+
+                <th className="p-3 text-left">
+                  Returned
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+
+              {loadingAsset ? (
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="p-5 text-center"
+                  >
+                    Loading...
+                  </td>
+                </tr>
+              ) : assetHistory.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="p-5 text-center text-gray-500"
+                  >
+                    No asset history found
+                  </td>
+                </tr>
+              ) : (
+                assetHistory.map((h) => (
+                  <tr
+                    key={h._id}
+                    className="border-t hover:bg-gray-50"
+                  >
+                    <td className="p-3">
+                      {h.employee?.staffCode} -{" "}
+                      {h.employee?.name}
+                    </td>
+
+                    <td className="p-3">
+                      {h.assetType}
+                    </td>
+
+                    <td className="p-3">
+                      {statusBadge(h)}
+                    </td>
+
+                    <td className="p-3">
+                      {new Date(
+                        h.assignedDate
+                      ).toLocaleString()}
+                    </td>
+
+                    <td className="p-3">
+                      {h.returnedDate
+                        ? new Date(
+                            h.returnedDate
+                          ).toLocaleString()
+                        : "Active"}
+                    </td>
+                  </tr>
+                ))
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
       </div>
 
     </div>
