@@ -216,72 +216,118 @@ export default function AdminSoftwareDashboard() {
       </div>
 
       {/* ================= ADD MODAL ================= */}
-      {addModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+     {addModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+    <div className="bg-white w-[650px] p-6 rounded-xl">
 
-          <div className="bg-white w-[650px] p-6 rounded-xl">
+      <h2 className="font-bold mb-4">Add Vendor</h2>
 
-            <h2 className="font-bold mb-4">Add Software</h2>
+      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+        <input
+          className="border p-2 rounded"
+          placeholder="Service Name"
+          value={form.serviceName}
+          onChange={(e) =>
+            setForm({ ...form, serviceName: e.target.value })
+          }
+        />
 
-              <input className="border p-2 rounded" placeholder="Service Name"
-                value={form.serviceName}
-                onChange={(e) => setForm({ ...form, serviceName: e.target.value })}
-              />
+        <input
+          className="border p-2 rounded"
+          placeholder="Vendor"
+          value={form.vendor}
+          onChange={(e) =>
+            setForm({ ...form, vendor: e.target.value })
+          }
+        />
 
-              <input className="border p-2 rounded" placeholder="Vendor"
-                value={form.vendor}
-                onChange={(e) => setForm({ ...form, vendor: e.target.value })}
-              />
+        <input
+          className="border p-2 rounded"
+          placeholder="Duration"
+          value={form.durationMonths}
+          onChange={(e) =>
+            setForm({ ...form, durationMonths: e.target.value })
+          }
+        />
 
-              <input className="border p-2 rounded" placeholder="Duration"
-                value={form.durationMonths}
-                onChange={(e) => setForm({ ...form, durationMonths: e.target.value })}
-              />
+        <input
+          className="border p-2 rounded"
+          placeholder="Amount"
+          value={form.amount}
+          onChange={(e) =>
+            setForm({ ...form, amount: e.target.value })
+          }
+        />
 
-              <input className="border p-2 rounded" placeholder="Amount"
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              />
+        {/* START DATE */}
+        <div className="flex flex-col">
+          <label className="text-xs text-gray-500 mb-1">
+            Start Date
+          </label>
 
-              <input type="date" className="border p-2 rounded"
-                value={form.purchaseDate}
-                onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
-              />
-
-              <input type="date" className="border p-2 rounded"
-                value={form.expiryDate}
-                onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
-              />
-
-              <select className="border p-2 rounded col-span-2"
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-              >
-                <option>Active</option>
-                <option>Expired</option>
-                <option>Renewed</option>
-              </select>
-
-              <div className="col-span-2 flex justify-end gap-3 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setAddModal(false)}
-                  className="px-4 py-2 bg-gray-400 text-white rounded"
-                >
-                  Cancel
-                </button>
-
-                <button className="px-4 py-2 bg-black text-white rounded">
-                  Save
-                </button>
-              </div>
-
-            </form>
-          </div>
+          <input
+            type="date"
+            className="border p-2 rounded"
+            value={form.purchaseDate}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                purchaseDate: e.target.value,
+              })
+            }
+          />
         </div>
-      )}
+
+        {/* END DATE */}
+        <div className="flex flex-col">
+          <label className="text-xs text-gray-500 mb-1">
+            End Date
+          </label>
+
+          <input
+            type="date"
+            className="border p-2 rounded"
+            value={form.expiryDate}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                expiryDate: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <select
+          className="border p-2 rounded col-span-2"
+          value={form.status}
+          onChange={(e) =>
+            setForm({ ...form, status: e.target.value })
+          }
+        >
+          <option>Active</option>
+          <option>Expired</option>
+          <option>Renewed</option>
+        </select>
+
+        <div className="col-span-2 flex justify-end gap-3 mt-2">
+          <button
+            type="button"
+            onClick={() => setAddModal(false)}
+            className="px-4 py-2 bg-gray-400 text-white rounded"
+          >
+            Cancel
+          </button>
+
+          <button className="px-4 py-2 bg-black text-white rounded">
+            Save
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+)}
 
       {/* ================= EDIT MODAL ================= */}
       {editModal && editData && (
@@ -289,7 +335,7 @@ export default function AdminSoftwareDashboard() {
 
           <div className="bg-white w-[650px] p-6 rounded-xl">
 
-            <h2 className="font-bold mb-4">Edit Software</h2>
+            <h2 className="font-bold mb-4">Edit vendor</h2>
 
             <div className="grid grid-cols-2 gap-4">
 
