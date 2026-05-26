@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
-import api from "../api/axios";
+
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -11,10 +11,7 @@ export default function Navbar() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notifications] = useState(2);
   const { user, logout } = useAuth();
-  const [search, setSearch] = useState("");
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const searchRef = useRef(null);
+
   const role = (user?.role || "guest").toLowerCase();
 
   const handleLogout = () => {
@@ -37,53 +34,7 @@ export default function Navbar() {
     return () =>
       document.removeEventListener("mousedown", handleClick);
   }, []);
-  const handleSearch = async (value) => {
-    setSearch(value);
 
-    if (!value.trim()) {
-      setResults([]);
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const [tickets, assets, employees] = await Promise.all([
-        api.get(`/tickets?search=${value}`),
-        api.get(`/assets?search=${value}`),
-        api.get(`/employees?search=${value}`),
-      ]);
-
-      const merged = [
-        ...(tickets.data || []).map((t) => ({
-          type: "ticket",
-          _id: t._id,
-          title: t.title,
-          status: t.status,
-        })),
-
-        ...(assets.data || []).map((a) => ({
-          type: "asset",
-          _id: a._id,
-          assetCode: a.assetCode,
-          assetType: a.type,
-        })),
-
-        ...(employees.data || []).map((e) => ({
-          type: "employee",
-          _id: e._id,
-          name: e.name,
-          staffCode: e.staffCode,
-        })),
-      ];
-
-      setResults(merged);
-    } catch (err) {
-      console.error("Search error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
   const navItems = useMemo(() => {
     if (role === "admin") {
       return [
@@ -172,50 +123,9 @@ export default function Navbar() {
         >
 
           {/* SEARCH */}
-          <div className="hidden md:flex relative items-center">
-
-            <input
-              ref={searchRef}
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search tickets, assets, employees..."
-              className="w-64 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0a6ed1]"
-            />
-
-            {/* DROPDOWN */}
-            {search && (
-              <div className="absolute top-12 left-0 w-96 bg-white border rounded-xl shadow-lg max-h-80 overflow-y-auto z-50">
-
-                {loading ? (
-                  <p className="p-3 text-sm text-gray-500">Searching...</p>
-                ) : results.length === 0 ? (
-                  <p className="p-3 text-sm text-gray-500">No results</p>
-                ) : (
-                  results.map((item) => (
-                    <div
-                      key={item._id}
-                      className="p-3 border-b hover:bg-gray-100 cursor-pointer text-sm"
-                    >
-
-                      {item.type === "ticket" && (
-                        <p>🎫 {item.title} <span className="text-gray-500">({item.status})</span></p>
-                      )}
-
-                      {item.type === "asset" && (
-                        <p>📦 {item.assetCode} <span className="text-gray-500">({item.assetType})</span></p>
-                      )}
-
-                      {item.type === "employee" && (
-                        <p>👤 {item.name} <span className="text-gray-500">({item.staffCode})</span></p>
-                      )}
-
-                    </div>
-                  ))
-                )}
-
-              </div>
-            )}
-          </div>
+          <button className="hidden md:flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 transition">
+            🔍
+          </button>
 
           {/* NOTIFICATIONS */}
           <button className="relative flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 transition">
@@ -321,10 +231,11 @@ export default function Navbar() {
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileMenu(false)}
-                className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${location.pathname === item.path
+                className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                  location.pathname === item.path
                     ? "bg-[#0a6ed1] text-white"
                     : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                }`}
               >
                 {item.label}
               </Link>
