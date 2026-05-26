@@ -13,74 +13,69 @@ export default function AssetHistoryPage() {
   const [employeeId, setEmployeeId] = useState("");
   const [assetCode, setAssetCode] = useState("");
 
-  const [employeeSearch, setEmployeeSearch] =
-    useState("");
+  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [assetSearch, setAssetSearch] = useState("");
 
-  const [assetSearch, setAssetSearch] =
-    useState("");
+  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
+  const [showAssetDropdown, setShowAssetDropdown] = useState(false);
 
-  const [showEmployeeDropdown, setShowEmployeeDropdown] =
-    useState(false);
+  const [assetType, setAssetType] = useState("All");
 
-  const [showAssetDropdown, setShowAssetDropdown] =
-    useState(false);
+  const [empHistory, setEmpHistory] = useState([]);
+  const [assetHistory, setAssetHistory] = useState([]);
 
-  const [assetType, setAssetType] =
-    useState("All");
+  const [loadingEmp, setLoadingEmp] = useState(false);
+  const [loadingAsset, setLoadingAsset] = useState(false);
 
-  const [empHistory, setEmpHistory] =
-    useState([]);
+  /* =========================
+     🔄 REFRESH FUNCTION
+  ========================= */
+  const handleRefresh = () => {
+    setEmployeeId("");
+    setAssetCode("");
 
-  const [assetHistory, setAssetHistory] =
-    useState([]);
+    setEmployeeSearch("");
+    setAssetSearch("");
 
-  const [loadingEmp, setLoadingEmp] =
-    useState(false);
+    setEmpHistory([]);
+    setAssetHistory([]);
 
-  const [loadingAsset, setLoadingAsset] =
-    useState(false);
+    setShowEmployeeDropdown(false);
+    setShowAssetDropdown(false);
 
-  /* ===================================
+    setAssetType("All");
+
+    toast.success("Refreshed successfully");
+  };
+
+  /* =========================
      FILTERED EMPLOYEES
-  =================================== */
-  const filteredEmployees = employees.filter(
-    (emp) =>
-      `${emp.staffCode} ${emp.name}`
-        .toLowerCase()
-        .includes(employeeSearch.toLowerCase())
+  ========================= */
+  const filteredEmployees = employees.filter((emp) =>
+    `${emp.staffCode} ${emp.name}`
+      .toLowerCase()
+      .includes(employeeSearch.toLowerCase())
   );
 
-  /* ===================================
+  /* =========================
      FILTERED ASSETS
-  =================================== */
-  const filteredAssets = assets.filter(
-    (asset) =>
-      `${asset.assetCode} ${asset.type}`
-        .toLowerCase()
-        .includes(assetSearch.toLowerCase())
+  ========================= */
+  const filteredAssets = assets.filter((asset) =>
+    `${asset.assetCode} ${asset.type}`
+      .toLowerCase()
+      .includes(assetSearch.toLowerCase())
   );
 
-  /* ===================================
-     LOAD EMPLOYEES + ASSETS
-  =================================== */
+  /* =========================
+     LOAD DATA
+  ========================= */
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [empRes, assetRes] =
-          await Promise.all([
-            api.get("/employees"),
-            api.get("/assets?limit=1000"),
-          ]);
-
-        console.log(
-          "EMPLOYEES =>",
-          empRes.data
-        );
-
-        console.log(
-          "ASSETS =>",
-          assetRes.data
-        );
+        const [empRes, assetRes] = await Promise.all([
+          api.get("/employees"),
+          api.get("/assets?limit=1000"),
+        ]);
 
         setEmployees(
           Array.isArray(empRes.data)
@@ -91,14 +86,11 @@ export default function AssetHistoryPage() {
         setAssets(
           Array.isArray(assetRes.data)
             ? assetRes.data
-            : Array.isArray(
-                assetRes.data?.assets
-              )
+            : Array.isArray(assetRes.data?.assets)
             ? assetRes.data.assets
             : []
         );
       } catch (err) {
-        console.error(err);
         toast.error("Failed to load data");
       }
     };
@@ -106,9 +98,9 @@ export default function AssetHistoryPage() {
     loadData();
   }, []);
 
-  /* ===================================
+  /* =========================
      EMPLOYEE HISTORY
-  =================================== */
+  ========================= */
   useEffect(() => {
     if (!employeeId) {
       setEmpHistory([]);
@@ -123,16 +115,9 @@ export default function AssetHistoryPage() {
           `/assets/employee/${employeeId}?type=${assetType}`
         );
 
-        setEmpHistory(
-          Array.isArray(res.data)
-            ? res.data
-            : []
-        );
+        setEmpHistory(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error(err);
-        toast.error(
-          "Employee history not found"
-        );
+        toast.error("Employee history not found");
       } finally {
         setLoadingEmp(false);
       }
@@ -141,9 +126,9 @@ export default function AssetHistoryPage() {
     return () => clearTimeout(timer);
   }, [employeeId, assetType]);
 
-  /* ===================================
+  /* =========================
      ASSET HISTORY
-  =================================== */
+  ========================= */
   useEffect(() => {
     if (!assetCode) {
       setAssetHistory([]);
@@ -158,16 +143,9 @@ export default function AssetHistoryPage() {
           `/assets/asset/${assetCode}?type=${assetType}`
         );
 
-        setAssetHistory(
-          Array.isArray(res.data)
-            ? res.data
-            : []
-        );
+        setAssetHistory(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error(err);
-        toast.error(
-          "Asset history not found"
-        );
+        toast.error("Asset history not found");
       } finally {
         setLoadingAsset(false);
       }
@@ -176,9 +154,9 @@ export default function AssetHistoryPage() {
     return () => clearTimeout(timer);
   }, [assetCode, assetType]);
 
-  /* ===================================
+  /* =========================
      STATUS BADGE
-  =================================== */
+  ========================= */
   const statusBadge = (h) => {
     if (!h.returnedDate) {
       return (
@@ -195,44 +173,25 @@ export default function AssetHistoryPage() {
     );
   };
 
-  /* ===================================
+  /* =========================
      EXPORT EMP PDF
-  =================================== */
+  ========================= */
   const exportEmpPDF = () => {
     const doc = new jsPDF();
 
-    doc.text(
-      "Employee Asset History",
-      14,
-      10
-    );
+    doc.text("Employee Asset History", 14, 10);
 
     autoTable(doc, {
-      head: [
-        [
-          "Asset",
-          "Type",
-          "Status",
-          "Assigned",
-          "Returned",
-        ],
-      ],
-
+      head: [["Asset", "Type", "Status", "Assigned", "Returned"]],
       body: empHistory.map((h) => [
         h.asset?.assetCode || "-",
         h.assetType || "-",
         h.status || "-",
-
         h.assignedDate
-          ? new Date(
-              h.assignedDate
-            ).toLocaleString()
+          ? new Date(h.assignedDate).toLocaleString()
           : "-",
-
         h.returnedDate
-          ? new Date(
-              h.returnedDate
-            ).toLocaleString()
+          ? new Date(h.returnedDate).toLocaleString()
           : "Active",
       ]),
     });
@@ -240,44 +199,25 @@ export default function AssetHistoryPage() {
     doc.save("employee-history.pdf");
   };
 
-  /* ===================================
+  /* =========================
      EXPORT ASSET PDF
-  =================================== */
+  ========================= */
   const exportAssetPDF = () => {
     const doc = new jsPDF();
 
     doc.text("Asset History", 14, 10);
 
     autoTable(doc, {
-      head: [
-        [
-          "Employee",
-          "Type",
-          "Status",
-          "Assigned",
-          "Returned",
-        ],
-      ],
-
+      head: [["Employee", "Type", "Status", "Assigned", "Returned"]],
       body: assetHistory.map((h) => [
-        `${h.employee?.staffCode || "-"} - ${
-          h.employee?.name || "-"
-        }`,
-
+        `${h.employee?.staffCode || "-"} - ${h.employee?.name || "-"}`,
         h.assetType || "-",
-
         h.status || "-",
-
         h.assignedDate
-          ? new Date(
-              h.assignedDate
-            ).toLocaleString()
+          ? new Date(h.assignedDate).toLocaleString()
           : "-",
-
         h.returnedDate
-          ? new Date(
-              h.returnedDate
-            ).toLocaleString()
+          ? new Date(h.returnedDate).toLocaleString()
           : "Active",
       ]),
     });
@@ -289,15 +229,23 @@ export default function AssetHistoryPage() {
     <div className="p-6 bg-gray-100 min-h-screen">
 
       {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Asset History
-        </h1>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">
+            Asset History
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Track employee & asset assignment history
+          </p>
+        </div>
 
-        <p className="text-sm text-gray-500 mt-1">
-          Track employee & asset
-          assignment history
-        </p>
+        {/* 🔄 REFRESH BUTTON */}
+        <button
+          onClick={handleRefresh}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-medium"
+        >
+          Refresh
+        </button>
       </div>
 
       {/* FILTERS */}
@@ -307,199 +255,106 @@ export default function AssetHistoryPage() {
 
           {/* EMPLOYEE SEARCH */}
           <div className="relative">
-
-            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">
+            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase">
               Search Employee
             </label>
 
             <input
               type="text"
-              className="border border-gray-300 p-3 rounded-xl w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search by staff code or employee..."
+              className="border p-3 rounded-xl w-full"
               value={employeeSearch}
               onChange={(e) => {
-                setEmployeeSearch(
-                  e.target.value
-                );
-
-                setShowEmployeeDropdown(
-                  true
-                );
+                setEmployeeSearch(e.target.value);
+                setShowEmployeeDropdown(true);
               }}
-              onFocus={() =>
-                setShowEmployeeDropdown(
-                  true
-                )
-              }
+              onFocus={() => setShowEmployeeDropdown(true)}
+              placeholder="Search employee..."
             />
 
-            {/* DROPDOWN */}
-            {showEmployeeDropdown &&
-              employeeSearch &&
-              filteredEmployees.length >
-                0 && (
-                <div className="absolute z-50 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-60 overflow-y-auto">
-
-                  {filteredEmployees.map(
-                    (emp) => (
-                      <div
-                        key={emp._id}
-                        onClick={() => {
-                          setEmployeeId(
-                            emp._id
-                          );
-
-                          setEmployeeSearch(
-                            `${emp.staffCode} - ${emp.name}`
-                          );
-
-                          setShowEmployeeDropdown(
-                            false
-                          );
-                        }}
-                        className="p-3 hover:bg-blue-50 cursor-pointer border-b"
-                      >
-                        <div className="font-semibold text-sm text-gray-800">
-                          {
-                            emp.staffCode
-                          }
-                        </div>
-
-                        <div className="text-xs text-gray-500">
-                          {emp.name}
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
-
-            {/* SELECTED */}
-            {employeeId && (
-              <div className="mt-2 text-xs bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-100">
-                Selected:{" "}
-                {employeeSearch}
+            {showEmployeeDropdown && employeeSearch && (
+              <div className="absolute z-50 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-60 overflow-y-auto">
+                {filteredEmployees.map((emp) => (
+                  <div
+                    key={emp._id}
+                    onClick={() => {
+                      setEmployeeId(emp._id);
+                      setEmployeeSearch(`${emp.staffCode} - ${emp.name}`);
+                      setShowEmployeeDropdown(false);
+                    }}
+                    className="p-3 hover:bg-blue-50 cursor-pointer border-b"
+                  >
+                    <div className="font-semibold text-sm">
+                      {emp.staffCode}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {emp.name}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
 
           {/* ASSET SEARCH */}
           <div className="relative">
-
-            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">
+            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase">
               Search Asset
             </label>
 
             <input
               type="text"
-              className="border border-gray-300 p-3 rounded-xl w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search by asset code..."
+              className="border p-3 rounded-xl w-full"
               value={assetSearch}
               onChange={(e) => {
-                setAssetSearch(
-                  e.target.value
-                );
-
-                setShowAssetDropdown(
-                  true
-                );
+                setAssetSearch(e.target.value);
+                setShowAssetDropdown(true);
               }}
-              onFocus={() =>
-                setShowAssetDropdown(
-                  true
-                )
-              }
+              onFocus={() => setShowAssetDropdown(true)}
+              placeholder="Search asset..."
             />
 
-            {/* DROPDOWN */}
-            {showAssetDropdown &&
-              assetSearch &&
-              filteredAssets.length >
-                0 && (
-                <div className="absolute z-50 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-60 overflow-y-auto">
-
-                  {filteredAssets.map(
-                    (asset) => (
-                      <div
-                        key={asset._id}
-                        onClick={() => {
-                          setAssetCode(
-                            asset.assetCode
-                          );
-
-                          setAssetSearch(
-                            `${asset.assetCode} - ${asset.type}`
-                          );
-
-                          setShowAssetDropdown(
-                            false
-                          );
-                        }}
-                        className="p-3 hover:bg-blue-50 cursor-pointer border-b"
-                      >
-                        <div className="font-semibold text-sm text-gray-800">
-                          {
-                            asset.assetCode
-                          }
-                        </div>
-
-                        <div className="text-xs text-gray-500">
-                          {asset.type}
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
-
-            {/* SELECTED */}
-            {assetCode && (
-              <div className="mt-2 text-xs bg-green-50 text-green-700 px-3 py-2 rounded-lg border border-green-100">
-                Selected: {assetSearch}
+            {showAssetDropdown && assetSearch && (
+              <div className="absolute z-50 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-60 overflow-y-auto">
+                {filteredAssets.map((asset) => (
+                  <div
+                    key={asset._id}
+                    onClick={() => {
+                      setAssetCode(asset.assetCode);
+                      setAssetSearch(`${asset.assetCode} - ${asset.type}`);
+                      setShowAssetDropdown(false);
+                    }}
+                    className="p-3 hover:bg-blue-50 cursor-pointer border-b"
+                  >
+                    <div className="font-semibold text-sm">
+                      {asset.assetCode}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {asset.type}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
 
           {/* TYPE */}
           <div>
-
-            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">
+            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase">
               Asset Type
             </label>
 
             <select
-              className="border border-gray-300 p-3 rounded-xl w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border p-3 rounded-xl w-full"
               value={assetType}
-              onChange={(e) =>
-                setAssetType(
-                  e.target.value
-                )
-              }
+              onChange={(e) => setAssetType(e.target.value)}
             >
-              <option value="All">
-                All
-              </option>
-
-              <option value="Laptop">
-                Laptop
-              </option>
-
-              <option value="Printer">
-                Printer
-              </option>
-
-              <option value="HHT">
-                HHT
-              </option>
+              <option value="All">All</option>
+              <option value="Laptop">Laptop</option>
+              <option value="Printer">Printer</option>
+              <option value="HHT">HHT</option>
             </select>
-
           </div>
-
-        </div>
-      </div>
-
-      {/* EMPLOYEE HISTORY */}
-      <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+            <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
 
         <div className="flex justify-between items-center mb-5">
 
@@ -642,6 +497,10 @@ export default function AssetHistoryPage() {
 
         
       </div>
+        </div>
+      </div>
+
+      
 
     </div>
   );
