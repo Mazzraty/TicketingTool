@@ -66,23 +66,58 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute role="admin" />}>
         <Route element={<AdminLayout />}>
 
-          <Route path="/admin/dashboard" element={<AdminDashboardFiori />} />
+          {/* DEFAULT ADMIN ENTRY */}
+          <Route
+            path="/admin"
+            element={<Navigate to="/admin/dashboard" replace />}
+          />
 
-          <Route path="/admin" element={<AdminTickets />} />
+          {/* DASHBOARD */}
+          <Route
+            path="/admin/dashboard"
+            element={<AdminDashboardFiori />}
+          />
 
-          <Route path="/admin/employees" element={<AdminEmployeeMaster />} />
+          {/* TICKETS (ADD THIS) */}
+          <Route
+            path="/admin/tickets"
+            element={<AdminTickets />}
+          />
 
-          <Route path="/admin/assets" element={<AdminAssets />} />
+          <Route
+            path="/admin/employees"
+            element={<AdminEmployeeMaster />}
+          />
 
-          <Route path="/admin/assets/history" element={<AssetHistoryPage />} />
+          <Route
+            path="/admin/assets"
+            element={<AdminAssets />}
+          />
 
-          <Route path="/admin/assets/upload-excel" element={<AssetExcelUpload />} />
+          <Route
+            path="/admin/assets/history"
+            element={<AssetHistoryPage />}
+          />
 
-          <Route path="/admin/software-dashboard" element={<AdminSoftwareDashboard />} />
+          <Route
+            path="/admin/assets/upload-excel"
+            element={<AssetExcelUpload />}
+          />
 
-          <Route path="/admin/assets/fiori" element={<AssetStoreFiori />} />
+          <Route
+            path="/admin/software-dashboard"
+            element={<AdminSoftwareDashboard />}
+          />
 
-          <Route path="/admin/assets/upload-laptop" element={<LaptopUpload />} />
+          <Route
+            path="/admin/assets/fiori"
+            element={<AssetStoreFiori />}
+          />
+
+          <Route
+            path="/admin/assets/upload-laptop"
+            element={<LaptopUpload />}
+          />
 
         </Route>
       </Route>
