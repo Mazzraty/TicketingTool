@@ -39,7 +39,7 @@ export default function Navbar() {
     if (role === "admin") {
       return [
         { label: "Dashboard", path: "/admin/dashboard" },
-        { label: "Admin Tickets", path: "/admin/tickets" },
+        { label: "Tickets", path: "/admin/tickets" },
         // { label: "Assets Assign", path: "/admin/assets" },
         // { label: "Upload Excel", path: "/admin/assets/upload-excel" },
         // { label: "Asset History", path: "/admin/assets/history" },
