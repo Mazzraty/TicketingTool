@@ -31,7 +31,7 @@ export default function AssetHistoryPage() {
       try {
         const [empRes, assetRes] = await Promise.all([
           api.get("/employees"),
-          api.get("/assets"),
+          api.get("/assets?limit=1000"),
         ]);
 
         console.log("EMPLOYEES =>", empRes.data);
@@ -48,7 +48,9 @@ export default function AssetHistoryPage() {
         setAssets(
           Array.isArray(assetRes.data)
             ? assetRes.data
-            : assetRes.data?.assets || []
+            : Array.isArray(assetRes.data?.assets)
+            ? assetRes.data.assets
+            : []
         );
       } catch (err) {
         console.error(err);
