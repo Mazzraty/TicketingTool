@@ -90,58 +90,58 @@ export default function AdminSoftwareDashboard() {
   /* =========================
      DELETE SOFTWARE
   ========================= */
-/* =========================
-   DELETE SOFTWARE
-========================= */
-const deleteSoftware = async (id) => {
+  /* =========================
+     DELETE SOFTWARE
+  ========================= */
+  const deleteSoftware = async (id) => {
 
-  toast((t) => (
-    <div className="flex flex-col gap-3">
+    toast((t) => (
+      <div className="flex flex-col gap-3">
 
-      <p className="font-medium">
-        Delete this vendor?
-      </p>
+        <p className="font-medium">
+          Delete this vendor?
+        </p>
 
-      <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2">
 
-        <button
-          onClick={() => toast.dismiss(t.id)}
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 text-sm"
-        >
-          Cancel
-        </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1 rounded bg-gray-200 text-gray-700 text-sm"
+          >
+            Cancel
+          </button>
 
-        <button
-          onClick={async () => {
-            try {
-              await api.delete(`/software/${id}`);
+          <button
+            onClick={async () => {
+              try {
+                await api.delete(`/software/${id}`);
 
-              toast.dismiss(t.id);
+                toast.dismiss(t.id);
 
-              toast.success("Deleted Successfully");
+                toast.success("Deleted Successfully");
 
-              fetchSoftwares();
-            } catch (err) {
-              console.error(err);
+                fetchSoftwares();
+              } catch (err) {
+                console.error(err);
 
-              toast.dismiss(t.id);
+                toast.dismiss(t.id);
 
-              toast.error("Delete failed");
-            }
-          }}
-          className="px-3 py-1 rounded bg-red-600 text-white text-sm"
-        >
-          Delete
-        </button>
+                toast.error("Delete failed");
+              }
+            }}
+            className="px-3 py-1 rounded bg-red-600 text-white text-sm"
+          >
+            Delete
+          </button>
+
+        </div>
 
       </div>
+    ), {
+      duration: 10000,
+    });
 
-    </div>
-  ), {
-    duration: 10000,
-  });
-
-};
+  };
 
   /* =========================
      OPEN EDIT
@@ -233,7 +233,15 @@ const deleteSoftware = async (id) => {
 
   return (
     <div className="bg-[#f4f6f9] min-h-screen">
-
+      {/* ================= BACK NAVIGATION ================= */}
+      <div className="mb-4">
+        <button
+          onClick={() => window.history.back()}
+          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition shadow-sm text-sm font-semibold"
+        >
+          ← Back
+        </button>
+      </div>
       {/* HEADER */}
       <div className="bg-white border-b shadow-sm px-6 py-4 flex items-center justify-between">
 
@@ -366,29 +374,28 @@ const deleteSoftware = async (id) => {
                   <td className="px-4 py-3">
                     {s.purchaseDate
                       ? new Date(
-                          s.purchaseDate
-                        ).toLocaleDateString()
+                        s.purchaseDate
+                      ).toLocaleDateString()
                       : "-"}
                   </td>
 
                   <td className="px-4 py-3">
                     {s.expiryDate
                       ? new Date(
-                          s.expiryDate
-                        ).toLocaleDateString()
+                        s.expiryDate
+                      ).toLocaleDateString()
                       : "-"}
                   </td>
 
                   <td className="px-4 py-3">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold
-                      ${
-                        s.status === "Active"
+                      ${s.status === "Active"
                           ? "bg-green-100 text-green-700"
                           : s.status === "Expired"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
+                            ? "bg-red-100 text-red-700"
+                            : "bg-blue-100 text-blue-700"
+                        }`}
                     >
                       {s.status}
                     </span>
