@@ -39,32 +39,32 @@ export default function AssetStoreFiori() {
   /* ================= FILTER ================= */
   const filtered = Array.isArray(assets)
     ? assets.filter((a) => {
-        const type = a.type?.toLowerCase();
-        const selectedFilter = filter?.toLowerCase();
+      const type = a.type?.toLowerCase();
+      const selectedFilter = filter?.toLowerCase();
 
-        const matchType =
-          selectedFilter === "all" ||
-          type === selectedFilter;
+      const matchType =
+        selectedFilter === "all" ||
+        type === selectedFilter;
 
-        const text = search.toLowerCase();
+      const text = search.toLowerCase();
 
-        const matchSearch =
-          a.assetCode
-            ?.toLowerCase()
-            .includes(text) ||
-          a.model?.toLowerCase().includes(text) ||
-          a.serialNumber
-            ?.toLowerCase()
-            .includes(text) ||
-          a.salesmanName
-            ?.toLowerCase()
-            .includes(text) ||
-          a.salesmanCode
-            ?.toLowerCase()
-            .includes(text);
+      const matchSearch =
+        a.assetCode
+          ?.toLowerCase()
+          .includes(text) ||
+        a.model?.toLowerCase().includes(text) ||
+        a.serialNumber
+          ?.toLowerCase()
+          .includes(text) ||
+        a.salesmanName
+          ?.toLowerCase()
+          .includes(text) ||
+        a.salesmanCode
+          ?.toLowerCase()
+          .includes(text);
 
-        return matchType && matchSearch;
-      })
+      return matchType && matchSearch;
+    })
     : [];
 
   /* ================= KPI ================= */
@@ -138,7 +138,7 @@ export default function AssetStoreFiori() {
 
       toast.error(
         err.response?.data?.msg ||
-          "Update failed"
+        "Update failed"
       );
     }
   };
@@ -162,7 +162,7 @@ export default function AssetStoreFiori() {
 
       toast.error(
         err.response?.data?.msg ||
-          "Delete failed"
+        "Delete failed"
       );
     }
   };
@@ -179,31 +179,31 @@ export default function AssetStoreFiori() {
           Asset Management Dashboard
         </p>
       </div>
-       {/* ================= NAVIGATION ================= */}
-<div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-4 mb-6 flex flex-wrap gap-3">
+      {/* ================= NAVIGATION ================= */}
+      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-4 mb-6 flex flex-wrap gap-3">
 
-  <button
-    onClick={() => window.location.href = "/admin/assets"}
-    className="px-5 py-2 rounded-2xl text-sm font-semibold bg-[#0a6ed1] text-white shadow-sm hover:bg-[#085caf] transition"
-  >
-    Assets Assign
-  </button>
+        <button
+          onClick={() => window.location.href = "/admin/assets"}
+          className="px-5 py-2 rounded-2xl text-sm font-semibold bg-[#0a6ed1] text-white shadow-sm hover:bg-[#085caf] transition"
+        >
+          Assets Assign
+        </button>
 
-  <button
-    onClick={() => window.location.href = "/admin/assets/upload-excel"}
-    className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-  >
-    Upload Excel
-  </button>
 
-  <button
-    onClick={() => window.location.href = "/admin/assets/history"}
-    className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-  >
-    Asset History
-  </button>
 
-</div>
+        <button
+          onClick={() => window.location.href = "/admin/assets/history"}
+          className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+        >
+          Asset History
+        </button>
+        <button
+          onClick={() => window.location.href = "/admin/assets/upload-excel"}
+          className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+        >
+          Upload Excel
+        </button>
+      </div>
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
         <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm">
@@ -269,11 +269,10 @@ export default function AssetStoreFiori() {
               <button
                 key={t}
                 onClick={() => setFilter(t)}
-                className={`px-5 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 ${
-                  filter === t
-                    ? "bg-[#0a6ed1] text-white shadow-md"
-                    : "bg-white border border-gray-300 hover:bg-gray-100 text-gray-700"
-                }`}
+                className={`px-5 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 ${filter === t
+                  ? "bg-[#0a6ed1] text-white shadow-md"
+                  : "bg-white border border-gray-300 hover:bg-gray-100 text-gray-700"
+                  }`}
               >
                 {t}
               </button>
@@ -348,11 +347,10 @@ export default function AssetStoreFiori() {
                 filtered.map((a, index) => (
                   <tr
                     key={a._id}
-                    className={`border-b last:border-0 hover:bg-blue-50/40 transition ${
-                      index % 2 === 0
-                        ? "bg-white"
-                        : "bg-gray-50/40"
-                    }`}
+                    className={`border-b last:border-0 hover:bg-blue-50/40 transition ${index % 2 === 0
+                      ? "bg-white"
+                      : "bg-gray-50/40"
+                      }`}
                   >
                     <td className="px-6 py-4 font-semibold text-gray-800">
                       {a.assetCode}
@@ -360,13 +358,12 @@ export default function AssetStoreFiori() {
 
                     <td className="px-6 py-4">
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          a.type === "Laptop"
-                            ? "bg-blue-100 text-blue-700"
-                            : a.type === "Printer"
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${a.type === "Laptop"
+                          ? "bg-blue-100 text-blue-700"
+                          : a.type === "Printer"
                             ? "bg-green-100 text-green-700"
                             : "bg-purple-100 text-purple-700"
-                        }`}
+                          }`}
                       >
                         {a.type}
                       </span>
@@ -402,11 +399,10 @@ export default function AssetStoreFiori() {
 
                     <td className="px-6 py-4">
                       <span
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold ${
-                          a.status === "available"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
+                        className={`px-4 py-1.5 rounded-full text-xs font-bold ${a.status === "available"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                          }`}
                       >
                         {a.status}
                       </span>
@@ -528,42 +524,42 @@ export default function AssetStoreFiori() {
 
                 {(selected.type === "Laptop" ||
                   selected.type === "Printer") && (
-                  <>
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 block mb-2">
-                        Model
-                      </label>
+                    <>
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 block mb-2">
+                          Model
+                        </label>
 
-                      <input
-                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                        value={selected.model || ""}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            model: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                        <input
+                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          value={selected.model || ""}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              model: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
 
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 block mb-2">
-                        Serial Number
-                      </label>
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 block mb-2">
+                          Serial Number
+                        </label>
 
-                      <input
-                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                        value={selected.serialNumber || ""}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            serialNumber: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </>
-                )}
+                        <input
+                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          value={selected.serialNumber || ""}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              serialNumber: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
 
                 {selected.type === "Printer" && (
                   <>
