@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
-
+import api from "../api/axios";
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
