@@ -13,13 +13,52 @@ export default function AssetHistoryPage() {
   const [employeeId, setEmployeeId] = useState("");
   const [assetCode, setAssetCode] = useState("");
 
-  const [assetType, setAssetType] = useState("All");
+  const [employeeSearch, setEmployeeSearch] =
+    useState("");
 
-  const [empHistory, setEmpHistory] = useState([]);
-  const [assetHistory, setAssetHistory] = useState([]);
+  const [assetSearch, setAssetSearch] =
+    useState("");
 
-  const [loadingEmp, setLoadingEmp] = useState(false);
-  const [loadingAsset, setLoadingAsset] = useState(false);
+  const [showEmployeeDropdown, setShowEmployeeDropdown] =
+    useState(false);
+
+  const [showAssetDropdown, setShowAssetDropdown] =
+    useState(false);
+
+  const [assetType, setAssetType] =
+    useState("All");
+
+  const [empHistory, setEmpHistory] =
+    useState([]);
+
+  const [assetHistory, setAssetHistory] =
+    useState([]);
+
+  const [loadingEmp, setLoadingEmp] =
+    useState(false);
+
+  const [loadingAsset, setLoadingAsset] =
+    useState(false);
+
+  /* ===================================
+     FILTERED EMPLOYEES
+  =================================== */
+  const filteredEmployees = employees.filter(
+    (emp) =>
+      `${emp.staffCode} ${emp.name}`
+        .toLowerCase()
+        .includes(employeeSearch.toLowerCase())
+  );
+
+  /* ===================================
+     FILTERED ASSETS
+  =================================== */
+  const filteredAssets = assets.filter(
+    (asset) =>
+      `${asset.assetCode} ${asset.type}`
+        .toLowerCase()
+        .includes(assetSearch.toLowerCase())
+  );
 
   /* ===================================
      LOAD EMPLOYEES + ASSETS
@@ -27,26 +66,34 @@ export default function AssetHistoryPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [empRes, assetRes] = await Promise.all([
-          api.get("/employees"),
-          api.get("/assets?limit=1000"),
-        ]);
+        const [empRes, assetRes] =
+          await Promise.all([
+            api.get("/employees"),
+            api.get("/assets?limit=1000"),
+          ]);
 
-        console.log("EMPLOYEES =>", empRes.data);
-        console.log("ASSETS =>", assetRes.data);
+        console.log(
+          "EMPLOYEES =>",
+          empRes.data
+        );
 
-        // EMPLOYEES
+        console.log(
+          "ASSETS =>",
+          assetRes.data
+        );
+
         setEmployees(
           Array.isArray(empRes.data)
             ? empRes.data
             : empRes.data?.employees || []
         );
 
-        // ASSETS
         setAssets(
           Array.isArray(assetRes.data)
             ? assetRes.data
-            : Array.isArray(assetRes.data?.assets)
+            : Array.isArray(
+                assetRes.data?.assets
+              )
             ? assetRes.data.assets
             : []
         );
@@ -77,11 +124,15 @@ export default function AssetHistoryPage() {
         );
 
         setEmpHistory(
-          Array.isArray(res.data) ? res.data : []
+          Array.isArray(res.data)
+            ? res.data
+            : []
         );
       } catch (err) {
         console.error(err);
-        toast.error("Employee history not found");
+        toast.error(
+          "Employee history not found"
+        );
       } finally {
         setLoadingEmp(false);
       }
@@ -108,11 +159,15 @@ export default function AssetHistoryPage() {
         );
 
         setAssetHistory(
-          Array.isArray(res.data) ? res.data : []
+          Array.isArray(res.data)
+            ? res.data
+            : []
         );
       } catch (err) {
         console.error(err);
-        toast.error("Asset history not found");
+        toast.error(
+          "Asset history not found"
+        );
       } finally {
         setLoadingAsset(false);
       }
@@ -127,14 +182,14 @@ export default function AssetHistoryPage() {
   const statusBadge = (h) => {
     if (!h.returnedDate) {
       return (
-        <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">
+        <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 font-medium">
           Active
         </span>
       );
     }
 
     return (
-      <span className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-700">
+      <span className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-700 font-medium">
         Returned
       </span>
     );
@@ -146,21 +201,38 @@ export default function AssetHistoryPage() {
   const exportEmpPDF = () => {
     const doc = new jsPDF();
 
-    doc.text("Employee Asset History", 14, 10);
+    doc.text(
+      "Employee Asset History",
+      14,
+      10
+    );
 
     autoTable(doc, {
-      head: [["Asset", "Type", "Status", "Assigned", "Returned"]],
+      head: [
+        [
+          "Asset",
+          "Type",
+          "Status",
+          "Assigned",
+          "Returned",
+        ],
+      ],
 
       body: empHistory.map((h) => [
         h.asset?.assetCode || "-",
         h.assetType || "-",
         h.status || "-",
+
         h.assignedDate
-          ? new Date(h.assignedDate).toLocaleString()
+          ? new Date(
+              h.assignedDate
+            ).toLocaleString()
           : "-",
 
         h.returnedDate
-          ? new Date(h.returnedDate).toLocaleString()
+          ? new Date(
+              h.returnedDate
+            ).toLocaleString()
           : "Active",
       ]),
     });
@@ -177,21 +249,35 @@ export default function AssetHistoryPage() {
     doc.text("Asset History", 14, 10);
 
     autoTable(doc, {
-      head: [["Employee", "Type", "Status", "Assigned", "Returned"]],
+      head: [
+        [
+          "Employee",
+          "Type",
+          "Status",
+          "Assigned",
+          "Returned",
+        ],
+      ],
 
       body: assetHistory.map((h) => [
         `${h.employee?.staffCode || "-"} - ${
           h.employee?.name || "-"
         }`,
+
         h.assetType || "-",
+
         h.status || "-",
 
         h.assignedDate
-          ? new Date(h.assignedDate).toLocaleString()
+          ? new Date(
+              h.assignedDate
+            ).toLocaleString()
           : "-",
 
         h.returnedDate
-          ? new Date(h.returnedDate).toLocaleString()
+          ? new Date(
+              h.returnedDate
+            ).toLocaleString()
           : "Active",
       ]),
     });
@@ -203,136 +289,196 @@ export default function AssetHistoryPage() {
     <div className="p-6 bg-gray-100 min-h-screen">
 
       {/* HEADER */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">
           Asset History
         </h1>
 
-        <p className="text-sm text-gray-500">
-          Track employee & asset assignment history
+        <p className="text-sm text-gray-500 mt-1">
+          Track employee & asset
+          assignment history
         </p>
       </div>
 
       {/* FILTERS */}
-      <div className="bg-white p-5 rounded-xl shadow mb-5">
+      <div className="bg-white p-6 rounded-2xl shadow-sm border mb-6">
 
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-3 gap-5">
 
-          {/* EMPLOYEE */}
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">
+          {/* EMPLOYEE SEARCH */}
+          <div className="relative">
+
+            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">
               Search Employee
             </label>
 
             <input
-              list="employee-list"
-              className="border p-2 rounded w-full"
-              placeholder="Search employee..."
-              value={employeeId}
-              onChange={(e) =>
-                setEmployeeId(e.target.value)
+              type="text"
+              className="border border-gray-300 p-3 rounded-xl w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search by staff code or employee..."
+              value={employeeSearch}
+              onChange={(e) => {
+                setEmployeeSearch(
+                  e.target.value
+                );
+
+                setShowEmployeeDropdown(
+                  true
+                );
+              }}
+              onFocus={() =>
+                setShowEmployeeDropdown(
+                  true
+                )
               }
             />
 
-            <datalist id="employee-list">
-              {employees
-                .filter((emp) =>
-                  `${emp.staffCode} ${emp.name}`
-                    .toLowerCase()
-                    .includes(employeeId.toLowerCase())
-                )
-                .map((emp) => (
-                  <option
-                    key={emp._id}
-                    value={emp._id}
-                  >
-                    {emp.staffCode} - {emp.name}
-                  </option>
-                ))}
-            </datalist>
+            {/* DROPDOWN */}
+            {showEmployeeDropdown &&
+              employeeSearch &&
+              filteredEmployees.length >
+                0 && (
+                <div className="absolute z-50 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-60 overflow-y-auto">
 
+                  {filteredEmployees.map(
+                    (emp) => (
+                      <div
+                        key={emp._id}
+                        onClick={() => {
+                          setEmployeeId(
+                            emp._id
+                          );
+
+                          setEmployeeSearch(
+                            `${emp.staffCode} - ${emp.name}`
+                          );
+
+                          setShowEmployeeDropdown(
+                            false
+                          );
+                        }}
+                        className="p-3 hover:bg-blue-50 cursor-pointer border-b"
+                      >
+                        <div className="font-semibold text-sm text-gray-800">
+                          {
+                            emp.staffCode
+                          }
+                        </div>
+
+                        <div className="text-xs text-gray-500">
+                          {emp.name}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
+            {/* SELECTED */}
             {employeeId && (
-              <p className="text-xs text-gray-500 mt-1">
-                {
-                  employees.find(
-                    (e) => e._id === employeeId
-                  )?.staffCode
-                }{" "}
-                -{" "}
-                {
-                  employees.find(
-                    (e) => e._id === employeeId
-                  )?.name
-                }
-              </p>
+              <div className="mt-2 text-xs bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-100">
+                Selected:{" "}
+                {employeeSearch}
+              </div>
             )}
           </div>
 
-          {/* ASSET */}
-          <div>
+          {/* ASSET SEARCH */}
+          <div className="relative">
 
-            <label className="text-xs text-gray-500 mb-1 block">
+            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">
               Search Asset
             </label>
 
             <input
-              list="asset-list"
-              className="border p-2 rounded w-full"
-              placeholder="Search asset..."
-              value={assetCode}
-              onChange={(e) =>
-                setAssetCode(e.target.value)
+              type="text"
+              className="border border-gray-300 p-3 rounded-xl w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search by asset code..."
+              value={assetSearch}
+              onChange={(e) => {
+                setAssetSearch(
+                  e.target.value
+                );
+
+                setShowAssetDropdown(
+                  true
+                );
+              }}
+              onFocus={() =>
+                setShowAssetDropdown(
+                  true
+                )
               }
             />
 
-            <datalist id="asset-list">
-              {assets
-                .filter((a) =>
-                  `${a.assetCode} ${a.type}`
-                    .toLowerCase()
-                    .includes(assetCode.toLowerCase())
-                )
-                .map((asset) => (
-                  <option
-                    key={asset._id}
-                    value={asset.assetCode}
-                  >
-                    {asset.assetCode} - {asset.type}
-                  </option>
-                ))}
-            </datalist>
+            {/* DROPDOWN */}
+            {showAssetDropdown &&
+              assetSearch &&
+              filteredAssets.length >
+                0 && (
+                <div className="absolute z-50 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-60 overflow-y-auto">
 
+                  {filteredAssets.map(
+                    (asset) => (
+                      <div
+                        key={asset._id}
+                        onClick={() => {
+                          setAssetCode(
+                            asset.assetCode
+                          );
+
+                          setAssetSearch(
+                            `${asset.assetCode} - ${asset.type}`
+                          );
+
+                          setShowAssetDropdown(
+                            false
+                          );
+                        }}
+                        className="p-3 hover:bg-blue-50 cursor-pointer border-b"
+                      >
+                        <div className="font-semibold text-sm text-gray-800">
+                          {
+                            asset.assetCode
+                          }
+                        </div>
+
+                        <div className="text-xs text-gray-500">
+                          {asset.type}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
+            {/* SELECTED */}
             {assetCode && (
-              <p className="text-xs text-gray-500 mt-1">
-                {
-                  assets.find(
-                    (a) => a.assetCode === assetCode
-                  )?.assetCode
-                }{" "}
-                -{" "}
-                {
-                  assets.find(
-                    (a) => a.assetCode === assetCode
-                  )?.type
-                }
-              </p>
+              <div className="mt-2 text-xs bg-green-50 text-green-700 px-3 py-2 rounded-lg border border-green-100">
+                Selected: {assetSearch}
+              </div>
             )}
           </div>
 
           {/* TYPE */}
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">
+
+            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">
               Asset Type
             </label>
 
             <select
-              className="border p-2 rounded w-full"
+              className="border border-gray-300 p-3 rounded-xl w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={assetType}
               onChange={(e) =>
-                setAssetType(e.target.value)
+                setAssetType(
+                  e.target.value
+                )
               }
             >
-              <option value="All">All</option>
+              <option value="All">
+                All
+              </option>
 
               <option value="Laptop">
                 Laptop
@@ -346,33 +492,34 @@ export default function AssetHistoryPage() {
                 HHT
               </option>
             </select>
+
           </div>
 
         </div>
       </div>
 
       {/* EMPLOYEE HISTORY */}
-      <div className="bg-white rounded-xl shadow p-5 mb-5">
+      <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
 
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-5">
 
           <div>
-            <h2 className="font-bold text-lg">
+            <h2 className="font-bold text-xl text-gray-800">
               Employee History
             </h2>
 
-            <p className="text-sm text-gray-500">
-              Assignment records by employee
+            <p className="text-sm text-gray-500 mt-1">
+              Assignment records by
+              employee
             </p>
           </div>
 
           <button
             onClick={exportEmpPDF}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-medium"
           >
             Export PDF
           </button>
-
         </div>
 
         <div className="overflow-x-auto">
@@ -381,23 +528,23 @@ export default function AssetHistoryPage() {
 
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-3 text-left">
+                <th className="p-4 text-left font-semibold">
                   Asset
                 </th>
 
-                <th className="p-3 text-left">
+                <th className="p-4 text-left font-semibold">
                   Type
                 </th>
 
-                <th className="p-3 text-left">
+                <th className="p-4 text-left font-semibold">
                   Status
                 </th>
 
-                <th className="p-3 text-left">
+                <th className="p-4 text-left font-semibold">
                   Assigned
                 </th>
 
-                <th className="p-3 text-left">
+                <th className="p-4 text-left font-semibold">
                   Returned
                 </th>
               </tr>
@@ -409,18 +556,20 @@ export default function AssetHistoryPage() {
                 <tr>
                   <td
                     colSpan="5"
-                    className="p-5 text-center"
+                    className="p-6 text-center"
                   >
                     Loading...
                   </td>
                 </tr>
-              ) : empHistory.length === 0 ? (
+              ) : empHistory.length ===
+                0 ? (
                 <tr>
                   <td
                     colSpan="5"
-                    className="p-5 text-center text-gray-500"
+                    className="p-6 text-center text-gray-500"
                   >
-                    No employee history found
+                    No employee history
+                    found
                   </td>
                 </tr>
               ) : (
@@ -429,25 +578,27 @@ export default function AssetHistoryPage() {
                     key={h._id}
                     className="border-t hover:bg-gray-50"
                   >
-                    <td className="p-3">
-                      {h.asset?.assetCode || "-"}
+                    <td className="p-4">
+                      {h.asset
+                        ?.assetCode ||
+                        "-"}
                     </td>
 
-                    <td className="p-3">
+                    <td className="p-4">
                       {h.assetType}
                     </td>
 
-                    <td className="p-3">
+                    <td className="p-4">
                       {statusBadge(h)}
                     </td>
 
-                    <td className="p-3">
+                    <td className="p-4">
                       {new Date(
                         h.assignedDate
                       ).toLocaleString()}
                     </td>
 
-                    <td className="p-3">
+                    <td className="p-4">
                       {h.returnedDate
                         ? new Date(
                             h.returnedDate
@@ -466,27 +617,27 @@ export default function AssetHistoryPage() {
       </div>
 
       {/* ASSET HISTORY */}
-      <div className="bg-white rounded-xl shadow p-5">
+      <div className="bg-white rounded-2xl shadow-sm border p-6">
 
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-5">
 
           <div>
-            <h2 className="font-bold text-lg">
+            <h2 className="font-bold text-xl text-gray-800">
               Asset History
             </h2>
 
-            <p className="text-sm text-gray-500">
-              Assignment records by asset
+            <p className="text-sm text-gray-500 mt-1">
+              Assignment records by
+              asset
             </p>
           </div>
 
           <button
             onClick={exportAssetPDF}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-medium"
           >
             Export PDF
           </button>
-
         </div>
 
         <div className="overflow-x-auto">
@@ -495,23 +646,23 @@ export default function AssetHistoryPage() {
 
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-3 text-left">
+                <th className="p-4 text-left font-semibold">
                   Employee
                 </th>
 
-                <th className="p-3 text-left">
+                <th className="p-4 text-left font-semibold">
                   Type
                 </th>
 
-                <th className="p-3 text-left">
+                <th className="p-4 text-left font-semibold">
                   Status
                 </th>
 
-                <th className="p-3 text-left">
+                <th className="p-4 text-left font-semibold">
                   Assigned
                 </th>
 
-                <th className="p-3 text-left">
+                <th className="p-4 text-left font-semibold">
                   Returned
                 </th>
               </tr>
@@ -523,18 +674,20 @@ export default function AssetHistoryPage() {
                 <tr>
                   <td
                     colSpan="5"
-                    className="p-5 text-center"
+                    className="p-6 text-center"
                   >
                     Loading...
                   </td>
                 </tr>
-              ) : assetHistory.length === 0 ? (
+              ) : assetHistory.length ===
+                0 ? (
                 <tr>
                   <td
                     colSpan="5"
-                    className="p-5 text-center text-gray-500"
+                    className="p-6 text-center text-gray-500"
                   >
-                    No asset history found
+                    No asset history
+                    found
                   </td>
                 </tr>
               ) : (
@@ -543,26 +696,33 @@ export default function AssetHistoryPage() {
                     key={h._id}
                     className="border-t hover:bg-gray-50"
                   >
-                    <td className="p-3">
-                      {h.employee?.staffCode} -{" "}
-                      {h.employee?.name}
+                    <td className="p-4">
+                      {
+                        h.employee
+                          ?.staffCode
+                      }{" "}
+                      -{" "}
+                      {
+                        h.employee
+                          ?.name
+                      }
                     </td>
 
-                    <td className="p-3">
+                    <td className="p-4">
                       {h.assetType}
                     </td>
 
-                    <td className="p-3">
+                    <td className="p-4">
                       {statusBadge(h)}
                     </td>
 
-                    <td className="p-3">
+                    <td className="p-4">
                       {new Date(
                         h.assignedDate
                       ).toLocaleString()}
                     </td>
 
-                    <td className="p-3">
+                    <td className="p-4">
                       {h.returnedDate
                         ? new Date(
                             h.returnedDate
