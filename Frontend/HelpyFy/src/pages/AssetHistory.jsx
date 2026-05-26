@@ -15,8 +15,6 @@ export default function AssetHistoryPage() {
 
   const [assetType, setAssetType] = useState("All");
 
-  const [assetSearch, setAssetSearch] = useState("");
-
   const [empHistory, setEmpHistory] = useState([]);
   const [assetHistory, setAssetHistory] = useState([]);
 
@@ -223,65 +221,76 @@ export default function AssetHistoryPage() {
           {/* EMPLOYEE */}
           <div>
             <label className="text-xs text-gray-500 mb-1 block">
-              Employee
+              Search Employee
             </label>
 
-            <select
+            <input
+              list="employee-list"
               className="border p-2 rounded w-full"
+              placeholder="Search employee..."
               value={employeeId}
               onChange={(e) =>
                 setEmployeeId(e.target.value)
               }
-            >
-              <option value="">
-                Select Employee
-              </option>
+            />
 
-              {employees.map((emp) => (
-                <option
-                  key={emp._id}
-                  value={emp._id}
-                >
-                  {emp.staffCode} - {emp.name}
-                </option>
-              ))}
-            </select>
+            <datalist id="employee-list">
+              {employees
+                .filter((emp) =>
+                  `${emp.staffCode} ${emp.name}`
+                    .toLowerCase()
+                    .includes(employeeId.toLowerCase())
+                )
+                .map((emp) => (
+                  <option
+                    key={emp._id}
+                    value={emp._id}
+                  >
+                    {emp.staffCode} - {emp.name}
+                  </option>
+                ))}
+            </datalist>
+
+            {employeeId && (
+              <p className="text-xs text-gray-500 mt-1">
+                {
+                  employees.find(
+                    (e) => e._id === employeeId
+                  )?.staffCode
+                }{" "}
+                -{" "}
+                {
+                  employees.find(
+                    (e) => e._id === employeeId
+                  )?.name
+                }
+              </p>
+            )}
           </div>
 
           {/* ASSET */}
           <div>
 
             <label className="text-xs text-gray-500 mb-1 block">
-              Asset
+              Search Asset
             </label>
 
             <input
-              className="border p-2 rounded w-full mb-2"
-              placeholder="Search asset code..."
-              value={assetSearch}
-              onChange={(e) =>
-                setAssetSearch(e.target.value)
-              }
-            />
-
-            <select
+              list="asset-list"
               className="border p-2 rounded w-full"
+              placeholder="Search asset..."
               value={assetCode}
               onChange={(e) =>
                 setAssetCode(e.target.value)
               }
-            >
-              <option value="">
-                Select Asset
-              </option>
+            />
 
+            <datalist id="asset-list">
               {assets
                 .filter((a) =>
-                  a.assetCode
-                    ?.toLowerCase()
-                    .includes(
-                      assetSearch.toLowerCase()
-                    )
+                  `${a.assetCode} ${a.type}`
+                    .toLowerCase()
+                    .includes(assetCode.toLowerCase())
                 )
                 .map((asset) => (
                   <option
@@ -291,8 +300,23 @@ export default function AssetHistoryPage() {
                     {asset.assetCode} - {asset.type}
                   </option>
                 ))}
-            </select>
+            </datalist>
 
+            {assetCode && (
+              <p className="text-xs text-gray-500 mt-1">
+                {
+                  assets.find(
+                    (a) => a.assetCode === assetCode
+                  )?.assetCode
+                }{" "}
+                -{" "}
+                {
+                  assets.find(
+                    (a) => a.assetCode === assetCode
+                  )?.type
+                }
+              </p>
+            )}
           </div>
 
           {/* TYPE */}
@@ -309,12 +333,15 @@ export default function AssetHistoryPage() {
               }
             >
               <option value="All">All</option>
+
               <option value="Laptop">
                 Laptop
               </option>
+
               <option value="Printer">
                 Printer
               </option>
+
               <option value="HHT">
                 HHT
               </option>
