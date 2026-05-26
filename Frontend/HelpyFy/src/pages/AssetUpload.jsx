@@ -283,7 +283,15 @@ export default function EmployeeExcelUpload() {
   ========================= */
   return (
     <div className="p-6 bg-[#f5f7fa] min-h-screen">
-
+         {/* ================= BACK NAVIGATION ================= */}
+<div className="mb-4">
+  <button
+    onClick={() => window.history.back()}
+    className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition shadow-sm text-sm font-semibold"
+  >
+    ← Back
+  </button>
+</div>
       <h1 className="text-3xl font-bold text-[#0a2342] mb-2">
       Upload 
       </h1>
