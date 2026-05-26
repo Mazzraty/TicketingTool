@@ -46,7 +46,7 @@ export default function AdminDashboardFiori() {
           Admin Dashboard
         </h1>
         <p className="text-gray-500">
-          SAP Fiori Control Center
+          Control Center
         </p>
       </div>
 
