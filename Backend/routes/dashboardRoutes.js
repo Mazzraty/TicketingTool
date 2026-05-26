@@ -1,9 +1,11 @@
 import express from "express";
-import { getDashboardStats } from "../controllers/dashboardController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { getDashboardStats, getRecentAssets, getRecentTickets } from "../controllers/dashboardController.js";
+import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/stats", protect, getDashboardStats);
+router.get("/stats", protect, adminOnly, getDashboardStats);
+router.get("/recent-assets", protect, adminOnly, getRecentAssets);
+router.get("/recent-tickets", protect, adminOnly, getRecentTickets);
 
 export default router;

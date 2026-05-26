@@ -1,10 +1,10 @@
 import Asset from "../models/assetSchema.js";
-import Employee from "../models/employeeMasterSchema.js";
 import Ticket from "../models/ticketSchema.js";
+import Employee from "../models/employeeMasterSchema.js";
 
+/* ================= DASHBOARD STATS ================= */
 export const getDashboardStats = async (req, res) => {
   try {
-    // ================= ASSETS =================
     const totalAssets = await Asset.countDocuments();
 
     const laptops = await Asset.countDocuments({ type: "Laptop" });
@@ -14,16 +14,13 @@ export const getDashboardStats = async (req, res) => {
     const assigned = await Asset.countDocuments({ status: "assigned" });
     const available = await Asset.countDocuments({ status: "available" });
 
-    // ================= EMPLOYEES =================
     const employees = await Employee.countDocuments();
 
-    // ================= TICKETS =================
     const openTickets = await Ticket.countDocuments({
-      status: "open",
+      status: { $ne: "closed" },
     });
 
-    // ================= RESPONSE =================
-    res.status(200).json({
+    res.json({
       totalAssets,
       laptops,
       printers,
@@ -33,11 +30,34 @@ export const getDashboardStats = async (req, res) => {
       employees,
       openTickets,
     });
-
   } catch (err) {
-    console.error("Dashboard Stats Error:", err);
-    res.status(500).json({
-      message: "Failed to load dashboard stats",
-    });
+    console.error(err);
+    res.status(500).json({ message: "Dashboard stats error" });
+  }
+};
+
+/* ================= RECENT ASSETS ================= */
+export const getRecentAssets = async (req, res) => {
+  try {
+    const assets = await Asset.find()
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    res.json(assets);
+  } catch (err) {
+    res.status(500).json({ message: "Recent assets error" });
+  }
+};
+
+/* ================= RECENT TICKETS ================= */
+export const getRecentTickets = async (req, res) => {
+  try {
+    const tickets = await Ticket.find()
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    res.json(tickets);
+  } catch (err) {
+    res.status(500).json({ message: "Recent tickets error" });
   }
 };
