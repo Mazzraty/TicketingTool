@@ -66,52 +66,52 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute role="admin" />}>
 
         <Route element={<AdminLayout />}>
-
           <Route
-            path="/admin"
-            element={<AdminTickets />}
+            path="/admin/dashboard"
+            element={<AdminDashboardFiori />}
           />
 
-          <Route
-            path="/admin/employees"
-            element={<AdminEmployeeMaster />}
-          />
-
-          <Route
-            path="/admin/assets"
-            element={<AdminAssets />}
-          />
-
-          <Route
-            path="/admin/assets/history"
-            element={<AssetHistoryPage />}
-          />
-
-          <Route
-            path="/admin/assets/upload-excel"
-            element={<AssetExcelUpload />}
-          />
-
-          {/* SOFTWARE DASHBOARD */}
-          <Route
-            path="/admin/software-dashboard"
-            element={<AdminSoftwareDashboard />}
-          />
-          <Route
-            path="/admin/assets/fiori"
-            element={<AssetStoreFiori />}
-          />
-          <Route
-            path="/admin/assets/upload-laptop"
-            element={<LaptopUpload />}
-          />
         </Route>
         <Route
-          path="/admin/dashboard"
-          element={<AdminDashboardFiori />}
+          path="/admin"
+          element={<AdminTickets />}
         />
 
+        <Route
+          path="/admin/employees"
+          element={<AdminEmployeeMaster />}
+        />
+
+        <Route
+          path="/admin/assets"
+          element={<AdminAssets />}
+        />
+
+        <Route
+          path="/admin/assets/history"
+          element={<AssetHistoryPage />}
+        />
+
+        <Route
+          path="/admin/assets/upload-excel"
+          element={<AssetExcelUpload />}
+        />
+
+        {/* SOFTWARE DASHBOARD */}
+        <Route
+          path="/admin/software-dashboard"
+          element={<AdminSoftwareDashboard />}
+        />
+        <Route
+          path="/admin/assets/fiori"
+          element={<AssetStoreFiori />}
+        />
+        <Route
+          path="/admin/assets/upload-laptop"
+          element={<LaptopUpload />}
+        />
       </Route>
+
 
       {/* ================= FALLBACK ================= */}
       <Route
