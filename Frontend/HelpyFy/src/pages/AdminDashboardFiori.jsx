@@ -16,7 +16,6 @@ export default function AdminDashboardFiori() {
   const [recentAssets, setRecentAssets] = useState([]);
   const [recentTickets, setRecentTickets] = useState([]);
 
-  /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
     try {
       const [statsRes, assetsRes, ticketsRes] = await Promise.all([
@@ -25,7 +24,18 @@ export default function AdminDashboardFiori() {
         api.get("/dashboard/recent-tickets"),
       ]);
 
-      setStats(statsRes.data || {});
+      setStats({
+        totalAssets: 0,
+        laptops: 0,
+        printers: 0,
+        hht: 0,
+        assigned: 0,
+        available: 0,
+        employees: 0,
+        openTickets: 0,
+        ...statsRes.data,
+      });
+
       setRecentAssets(assetsRes.data || []);
       setRecentTickets(ticketsRes.data || []);
     } catch (err) {
@@ -42,12 +52,8 @@ export default function AdminDashboardFiori() {
 
       {/* HEADER */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Admin Dashboard
-        </h1>
-        <p className="text-gray-500">
-          Control Center
-        </p>
+        <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+        <p className="text-gray-500">Control Center</p>
       </div>
 
       {/* KPI */}
@@ -57,7 +63,9 @@ export default function AdminDashboardFiori() {
         <Tile title="Available" value={stats.available} />
         <Tile title="Employees" value={stats.employees} />
 
-        <Tile title="Open Tickets" value={stats.open} />
+        {/* FIXED HERE */}
+        <Tile title="Open Tickets" value={stats.openTickets} />
+
         <Tile title="Laptops" value={stats.laptops} />
         <Tile title="Printers" value={stats.printers} />
         <Tile title="HHT" value={stats.hht} />
@@ -70,16 +78,14 @@ export default function AdminDashboardFiori() {
         </h2>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
           <ActionTile label="Add Asset" path="/admin/assets" />
           <ActionTile label="Assign Asset" path="/admin/assets" />
           <ActionTile label="Upload Excel" path="/admin/assets/upload-excel" />
           <ActionTile label="Asset History" path="/admin/assets/history" />
-
         </div>
       </div>
 
-      {/* REAL DATA SECTIONS */}
+      {/* RECENT DATA */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* RECENT ASSETS */}
@@ -126,9 +132,7 @@ function Tile({ title, value }) {
   return (
     <div className="bg-white p-5 rounded-2xl border shadow-sm hover:shadow-md transition">
       <p className="text-sm text-gray-500">{title}</p>
-      <h2 className="text-3xl font-bold mt-2 text-blue-600">
-        {value}
-      </h2>
+      <h2 className="text-3xl font-bold mt-2 text-blue-600">{value}</h2>
     </div>
   );
 }
