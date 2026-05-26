@@ -179,7 +179,31 @@ export default function AssetStoreFiori() {
           Asset Management Dashboard
         </p>
       </div>
+       {/* ================= NAVIGATION ================= */}
+<div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-4 mb-6 flex flex-wrap gap-3">
 
+  <button
+    onClick={() => window.location.href = "/admin/assets"}
+    className="px-5 py-2 rounded-2xl text-sm font-semibold bg-[#0a6ed1] text-white shadow-sm hover:bg-[#085caf] transition"
+  >
+    Assets Assign
+  </button>
+
+  <button
+    onClick={() => window.location.href = "/admin/assets/upload-excel"}
+    className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+  >
+    Upload Excel
+  </button>
+
+  <button
+    onClick={() => window.location.href = "/admin/assets/history"}
+    className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+  >
+    Asset History
+  </button>
+
+</div>
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
         <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm">
