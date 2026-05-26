@@ -16,8 +16,27 @@ export const getDashboardStats = async (req, res) => {
 
     const employees = await Employee.countDocuments();
 
+   import Ticket from "../models/Ticket.js";
+import Asset from "../models/Asset.js";
+import Employee from "../models/Employee.js";
+
+/* ================= DASHBOARD STATS ================= */
+export const getDashboardStats = async (req, res) => {
+  try {
+    const totalAssets = await Asset.countDocuments();
+
+    const laptops = await Asset.countDocuments({ type: "Laptop" });
+    const printers = await Asset.countDocuments({ type: "Printer" });
+    const hht = await Asset.countDocuments({ type: "HHT" });
+
+    const assigned = await Asset.countDocuments({ status: "assigned" });
+    const available = await Asset.countDocuments({ status: "available" });
+
+    const employees = await Employee.countDocuments();
+
+    // ✅ FIX: correct open ticket count
     const openTickets = await Ticket.countDocuments({
-      status: { $ne: "closed" },
+      status: "Open",
     });
 
     res.json({
@@ -28,8 +47,9 @@ export const getDashboardStats = async (req, res) => {
       assigned,
       available,
       employees,
-      openTickets,
+      openTickets, // ✅ IMPORTANT FIX
     });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Dashboard stats error" });
