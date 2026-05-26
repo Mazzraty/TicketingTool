@@ -2,177 +2,102 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 import api from "../api/axios";
-
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
 
-  const searchRef = useRef(null);
-  const debounceRef = useRef(null);
-
   const [open, setOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notifications] = useState(2);
-
   const { user, logout } = useAuth();
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const searchRef = useRef(null);
   const role = (user?.role || "guest").toLowerCase();
 
-  /* ================= SAP SEARCH STATES ================= */
-  const [openSearch, setOpenSearch] = useState(false);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
-
-  const [history, setHistory] = useState(
-    JSON.parse(localStorage.getItem("searchHistory") || "[]")
-  );
-
-  /* ================= LOGOUT ================= */
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
-  /* ================= OUTSIDE CLICK ================= */
   useEffect(() => {
     const handleClick = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target)
+      ) {
         setOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+
+    return () =>
+      document.removeEventListener("mousedown", handleClick);
   }, []);
-
-  /* ================= CTRL + K + KEYBOARD ================= */
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (e.ctrlKey && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setOpenSearch(true);
-      }
-
-      if (e.key === "Escape") {
-        setOpenSearch(false);
-        setQuery("");
-        setResults([]);
-      }
-
-      if (!openSearch) return;
-
-      if (e.key === "ArrowDown") {
-        setSelectedIndex((p) =>
-          p < results.length - 1 ? p + 1 : 0
-        );
-      }
-
-      if (e.key === "ArrowUp") {
-        setSelectedIndex((p) =>
-          p > 0 ? p - 1 : results.length - 1
-        );
-      }
-
-      if (e.key === "Enter") {
-        const item = results[selectedIndex];
-        if (item) handleOpen(item);
-      }
-    };
-
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [openSearch, results, selectedIndex]);
-
-  /* ================= SEARCH API ================= */
-  const handleSearch = (value) => {
-    setQuery(value);
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+  const handleSearch = async (value) => {
+    setSearch(value);
 
     if (!value.trim()) {
       setResults([]);
       return;
     }
 
-    debounceRef.current = setTimeout(async () => {
-      try {
-        setLoading(true);
+    try {
+      setLoading(true);
 
-        const [tickets, assets, employees] = await Promise.all([
-          api.get(`/tickets?search=${value}`),
-          api.get(`/assets?search=${value}`),
-          api.get(`/employees?search=${value}`),
-        ]);
+      const [tickets, assets, employees] = await Promise.all([
+        api.get(`/tickets?search=${value}`),
+        api.get(`/assets?search=${value}`),
+        api.get(`/employees?search=${value}`),
+      ]);
 
-        const merged = [
-          ...(tickets.data || []).map((t) => ({
-            type: "ticket",
-            _id: t._id,
-            title: t.title,
-            status: t.status,
-          })),
+      const merged = [
+        ...(tickets.data || []).map((t) => ({
+          type: "ticket",
+          _id: t._id,
+          title: t.title,
+          status: t.status,
+        })),
 
-          ...(assets.data || []).map((a) => ({
-            type: "asset",
-            _id: a._id,
-            assetCode: a.assetCode,
-            assetType: a.type,
-          })),
+        ...(assets.data || []).map((a) => ({
+          type: "asset",
+          _id: a._id,
+          assetCode: a.assetCode,
+          assetType: a.type,
+        })),
 
-          ...(employees.data || []).map((e) => ({
-            type: "employee",
-            _id: e._id,
-            name: e.name,
-            staffCode: e.staffCode,
-          })),
-        ];
+        ...(employees.data || []).map((e) => ({
+          type: "employee",
+          _id: e._id,
+          name: e.name,
+          staffCode: e.staffCode,
+        })),
+      ];
 
-        setResults(merged);
-        setSelectedIndex(0);
-      } catch (err) {
-        console.error("Search error:", err);
-      } finally {
-        setLoading(false);
-      }
-    }, 250);
-  };
-
-  /* ================= HISTORY ================= */
-  const saveHistory = (q) => {
-    const updated = [q, ...history.filter((h) => h !== q)].slice(0, 5);
-    setHistory(updated);
-    localStorage.setItem("searchHistory", JSON.stringify(updated));
-  };
-
-  /* ================= OPEN ITEM ================= */
-  const handleOpen = (item) => {
-    if (!item) return;
-
-    saveHistory(query);
-
-    setOpenSearch(false);
-    setQuery("");
-
-    if (item.type === "ticket") {
-      navigate(`/admin/tickets/${item._id}`);
-    } else if (item.type === "asset") {
-      navigate(`/admin/assets`);
-    } else if (item.type === "employee") {
-      navigate(`/admin/employees`);
+      setResults(merged);
+    } catch (err) {
+      console.error("Search error:", err);
+    } finally {
+      setLoading(false);
     }
   };
-
-  /* ================= NAV ITEMS ================= */
   const navItems = useMemo(() => {
     if (role === "admin") {
       return [
         { label: "Dashboard", path: "/admin/dashboard" },
         { label: "Tickets", path: "/admin/tickets" },
+        // { label: "Assets Assign", path: "/admin/assets" },
+        // { label: "Upload Excel", path: "/admin/assets/upload-excel" },
+        // { label: "Asset History", path: "/admin/assets/history" },
         { label: "Asset Dashboard", path: "/admin/assets/fiori" },
         { label: "Employees", path: "/admin/employees" },
-        { label: "Vendor List", path: "/admin/software-dashboard" },
+        {
+          label: "Vendor List",
+          path: "/admin/software-dashboard",
+        },
       ];
     }
 
@@ -196,164 +121,214 @@ export default function Navbar() {
         {/* LEFT */}
         <div className="flex items-center gap-8">
 
+          {/* LOGO */}
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-white border shadow-sm flex items-center justify-center p-2">
+
+            <div className="w-11 h-11 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center p-2">
+
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+                alt="logo"
                 className="object-contain"
               />
+
             </div>
 
-            <div>
-              <h1 className="text-[17px] font-bold">Mazzraty</h1>
-              <p className="text-[11px] text-gray-500">
+            <div className="leading-tight">
+
+              <h1 className="text-[17px] font-bold text-gray-800">
+                Mazzraty
+              </h1>
+
+              <p className="text-[11px] text-gray-500 uppercase tracking-wide">
                 IT Service Management
               </p>
+
             </div>
           </Link>
 
-          <nav className="hidden lg:flex gap-1">
+          {/* DESKTOP NAV */}
+          <nav className="hidden lg:flex items-center gap-1">
+
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`px-4 py-2 rounded-lg text-sm ${isActive(item.path)}`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(
+                  item.path
+                )}`}
               >
                 {item.label}
               </Link>
             ))}
+
           </nav>
         </div>
 
         {/* RIGHT */}
-        <div className="flex items-center gap-3" ref={dropdownRef}>
+        <div
+          className="flex items-center gap-3 relative"
+          ref={dropdownRef}
+        >
 
-          {/* SEARCH BUTTON */}
-          <button
-            onClick={() => setOpenSearch(true)}
-            className="w-10 h-10 border rounded-lg"
-          >
-            🔍
-          </button>
+          {/* SEARCH */}
+          <div className="hidden md:flex relative items-center">
 
-          {/* NOTIFICATION */}
-          <button className="w-10 h-10 border rounded-lg">
+            <input
+              ref={searchRef}
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Search tickets, assets, employees..."
+              className="w-64 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0a6ed1]"
+            />
+
+            {/* DROPDOWN */}
+            {search && (
+              <div className="absolute top-12 left-0 w-96 bg-white border rounded-xl shadow-lg max-h-80 overflow-y-auto z-50">
+
+                {loading ? (
+                  <p className="p-3 text-sm text-gray-500">Searching...</p>
+                ) : results.length === 0 ? (
+                  <p className="p-3 text-sm text-gray-500">No results</p>
+                ) : (
+                  results.map((item) => (
+                    <div
+                      key={item._id}
+                      className="p-3 border-b hover:bg-gray-100 cursor-pointer text-sm"
+                    >
+
+                      {item.type === "ticket" && (
+                        <p>🎫 {item.title} <span className="text-gray-500">({item.status})</span></p>
+                      )}
+
+                      {item.type === "asset" && (
+                        <p>📦 {item.assetCode} <span className="text-gray-500">({item.assetType})</span></p>
+                      )}
+
+                      {item.type === "employee" && (
+                        <p>👤 {item.name} <span className="text-gray-500">({item.staffCode})</span></p>
+                      )}
+
+                    </div>
+                  ))
+                )}
+
+              </div>
+            )}
+          </div>
+
+          {/* NOTIFICATIONS */}
+          <button className="relative flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 transition">
+
             🔔
+
+            {notifications > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
+                {notifications}
+              </span>
+            )}
           </button>
 
           {/* ROLE */}
-          <div className="hidden md:flex px-3 py-2 bg-gray-100 rounded-lg text-xs">
+          <div className="hidden md:flex items-center px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold capitalize border border-gray-200">
             {role}
           </div>
 
           {/* USER */}
           <button
             onClick={() => setOpen(!open)}
-            className="w-10 h-10 bg-[#0a6ed1] text-white rounded-full"
+            className="w-10 h-10 rounded-full bg-[#0a6ed1] text-white flex items-center justify-center font-semibold shadow-sm hover:opacity-90 transition"
           >
             {user?.name?.charAt(0).toUpperCase() || "U"}
           </button>
 
-          {/* USER DROPDOWN */}
+          {/* DROPDOWN */}
           {open && (
-            <div className="absolute right-0 top-14 w-72 bg-white border rounded-2xl shadow-xl">
+            <div className="absolute right-0 top-14 w-72 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
 
-              <div className="p-4 border-b">
-                <p className="text-sm">{user?.email}</p>
+              {/* HEADER */}
+              <div className="px-5 py-5 border-b bg-gray-50">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="w-12 h-12 rounded-full bg-[#0a6ed1] text-white flex items-center justify-center font-bold">
+                    {user?.name?.charAt(0).toUpperCase() || "U"}
+                  </div>
+
+                  <div className="min-w-0">
+
+                    <p className="text-xs text-gray-500">
+                      Signed in as
+                    </p>
+
+                    <p className="text-sm font-semibold text-gray-800 truncate">
+                      {user?.email || "Guest"}
+                    </p>
+
+                  </div>
+                </div>
               </div>
 
-              <button
-                onClick={handleLogout}
-                className="w-full text-left p-3 text-red-600"
-              >
-                Logout
-              </button>
+              {/* ROLE */}
+              <div className="px-5 py-4 border-b">
 
+                <div className="flex items-center justify-between">
+
+                  <span className="text-sm text-gray-500">
+                    Access Role
+                  </span>
+
+                  <span className="px-3 py-1 rounded-full bg-blue-100 text-[#0a6ed1] text-xs font-semibold capitalize">
+                    {role}
+                  </span>
+
+                </div>
+              </div>
+
+              {/* MENU */}
+              <div className="p-2">
+
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition text-sm font-medium"
+                >
+                  🚪 Logout
+                </button>
+
+              </div>
             </div>
           )}
+
+          {/* MOBILE MENU */}
+          <button
+            onClick={() => setMobileMenu(!mobileMenu)}
+            className="lg:hidden w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-700 text-xl transition"
+          >
+            ☰
+          </button>
+
         </div>
       </div>
 
-      {/* ================= SAP SEARCH MODAL ================= */}
-      {openSearch && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-24">
+      {/* MOBILE NAV */}
+      {mobileMenu && (
+        <div className="lg:hidden border-t border-gray-200 bg-white px-4 py-4">
 
-          <div className="bg-white w-[900px] h-[520px] rounded-2xl shadow-2xl flex overflow-hidden">
+          <div className="space-y-2">
 
-            {/* LEFT */}
-            <div className="w-1/2 border-r">
-
-              <input
-                autoFocus
-                value={query}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Search tickets, assets, employees..."
-                className="w-full p-4 border-b outline-none"
-              />
-
-              {!query && (
-                <div className="p-3 text-xs text-gray-500">
-                  Recent Searches
-                  {history.map((h, i) => (
-                    <div
-                      key={i}
-                      onClick={() => handleSearch(h)}
-                      className="p-2 hover:bg-gray-100 cursor-pointer rounded"
-                    >
-                      🕘 {h}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="overflow-y-auto max-h-[420px]">
-                {results.map((item, i) => (
-                  <div
-                    key={item._id}
-                    onClick={() => handleOpen(item)}
-                    className={`p-3 border-b cursor-pointer ${
-                      i === selectedIndex ? "bg-blue-50" : ""
-                    }`}
-                  >
-                    {item.type === "ticket" && (
-                      <p>🎫 {item.title}</p>
-                    )}
-                    {item.type === "asset" && (
-                      <p>📦 {item.assetCode}</p>
-                    )}
-                    {item.type === "employee" && (
-                      <p>👤 {item.name}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* RIGHT PREVIEW */}
-            <div className="w-1/2 p-5 bg-gray-50">
-              {results[selectedIndex] ? (
-                <>
-                  <h2 className="font-bold mb-4">Preview</h2>
-
-                  {results[selectedIndex].type === "ticket" && (
-                    <div>
-                      <p><b>Title:</b> {results[selectedIndex].title}</p>
-                      <p><b>Status:</b> {results[selectedIndex].status}</p>
-                    </div>
-                  )}
-
-                  {results[selectedIndex].type === "asset" && (
-                    <p>{results[selectedIndex].assetCode}</p>
-                  )}
-
-                  {results[selectedIndex].type === "employee" && (
-                    <p>{results[selectedIndex].name}</p>
-                  )}
-                </>
-              ) : (
-                <p className="text-gray-400">No preview</p>
-              )}
-            </div>
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setMobileMenu(false)}
+                className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${location.pathname === item.path
+                    ? "bg-[#0a6ed1] text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                  }`}
+              >
+                {item.label}
+              </Link>
+            ))}
 
           </div>
         </div>
