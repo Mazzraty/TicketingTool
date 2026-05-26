@@ -23,7 +23,7 @@ import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
 import AdminLayout from "../layouts/AdminLayout.jsx";
 import LaptopUpload from "../pages/LaptopUpload.jsx";
-import AdminDashboardFiori from "../pages/AdminDashbaordFiori.jsx";
+import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
 
 
 export default function AppRoutes() {
