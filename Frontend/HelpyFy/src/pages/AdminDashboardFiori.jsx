@@ -57,7 +57,7 @@ export default function AdminDashboardFiori() {
         <Tile title="Available" value={stats.available} />
         <Tile title="Employees" value={stats.employees} />
 
-        <Tile title="Open Tickets" value={stats.openTickets} />
+        <Tile title="Open Tickets" value={stats.open} />
         <Tile title="Laptops" value={stats.laptops} />
         <Tile title="Printers" value={stats.printers} />
         <Tile title="HHT" value={stats.hht} />
