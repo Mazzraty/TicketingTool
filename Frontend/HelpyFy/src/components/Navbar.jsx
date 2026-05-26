@@ -38,7 +38,7 @@ export default function Navbar() {
   const navItems = useMemo(() => {
     if (role === "admin") {
       return [
-        { label: "Dashboard", path: "/" },
+        { label: "Dashboard", path: "/admin/dashboard" },
         { label: "Admin Tickets", path: "/admin" },
         // { label: "Assets Assign", path: "/admin/assets" },
         // { label: "Upload Excel", path: "/admin/assets/upload-excel" },

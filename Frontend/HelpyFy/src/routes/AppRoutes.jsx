@@ -17,6 +17,7 @@ import AssetHistoryPage from "../pages/AssetHistory.jsx";
 import AssetExcelUpload from "../pages/AssetUpload.jsx";
 import AdminSoftwareDashboard from "../pages/AdminSoftwareDashboard.jsx";
 import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";
+import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
@@ -104,6 +105,10 @@ export default function AppRoutes() {
             element={<LaptopUpload />}
           />
         </Route>
+        <Route
+          path="/admin/dashboard"
+          element={<AdminDashboardFiori />}
+        />
 
       </Route>
 
