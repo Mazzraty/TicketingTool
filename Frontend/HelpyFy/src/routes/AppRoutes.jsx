@@ -17,12 +17,13 @@ import AssetHistoryPage from "../pages/AssetHistory.jsx";
 import AssetExcelUpload from "../pages/AssetUpload.jsx";
 import AdminSoftwareDashboard from "../pages/AdminSoftwareDashboard.jsx";
 import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";
-import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
+
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
 import AdminLayout from "../layouts/AdminLayout.jsx";
 import LaptopUpload from "../pages/LaptopUpload.jsx";
+import AdminDashboardFiori from "../pages/AdminDashbaordFiori.jsx";
 
 
 export default function AppRoutes() {
