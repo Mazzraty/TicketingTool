@@ -8,21 +8,23 @@ const assetSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Laptop / Printer / HHT
     type: {
       type: String,
       enum: ["Laptop", "Printer", "HHT"],
       default: "Laptop",
     },
 
-    // Common
     model: String,
-
     serialNumber: String,
 
     status: {
       type: String,
-      enum: ["available", "assigned"],
+      enum: [
+        "available",
+        "assigned",
+        "repair",
+        "scrapped",
+      ],
       default: "available",
     },
 
@@ -31,20 +33,35 @@ const assetSchema = new mongoose.Schema(
     ========================= */
 
     route: String,
-
     salesmanCode: String,
-
     salesmanName: String,
-
     supervisor: String,
 
     soti: String,
-
     imei: String,
-
     simNumber: String,
 
     notes: String,
+
+    /* =========================
+       NEW FIELDS
+    ========================= */
+
+    replacementFor: {
+      type: String,
+      default: "",
+    },
+
+    assignedDate: Date,
+
+    repairDate: Date,
+
+    retiredDate: Date,
+
+    active: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,

@@ -180,49 +180,49 @@ export default function AssetStoreFiori() {
         </p>
       </div>
       {/* ================= NAVIGATION ================= */}
-     {/* ================= STICKY NAVIGATION ================= */}
-<div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm mb-6">
+      {/* ================= STICKY NAVIGATION ================= */}
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm mb-6">
 
-  <div className="px-4 py-3 flex flex-wrap gap-3 items-center">
+        <div className="px-4 py-3 flex flex-wrap gap-3 items-center">
 
-    <button
-      onClick={() => window.location.href = "/admin/assets"}
-      className="px-5 py-2 rounded-2xl text-sm font-semibold bg-[#0a6ed1] text-white shadow-sm hover:bg-[#085caf] transition"
-    >
-      Assets Assign
-    </button>
+          <button
+            onClick={() => window.location.href = "/admin/assets"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-[#0a6ed1] text-white shadow-sm hover:bg-[#085caf] transition"
+          >
+            Assets Assign
+          </button>
 
-    <button
-      onClick={() => window.location.href = "/admin/assets/history"}
-      className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-    >
-      Asset History
-    </button>
+          <button
+            onClick={() => window.location.href = "/admin/assets/history"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+          >
+            Asset History
+          </button>
 
-    <button
-      onClick={() => window.location.href = "/admin/assets/upload-excel"}
-      className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-    >
-      Upload Employees
-    </button>
+          <button
+            onClick={() => window.location.href = "/admin/assets/upload-excel"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+          >
+            Upload Employees
+          </button>
 
-    <button
-      onClick={() => window.location.href = "/admin/assets/upload-printer"}
-      className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-    >
-      Upload Printer
-    </button>
+          <button
+            onClick={() => window.location.href = "/admin/assets/upload-printer"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+          >
+            Upload Printer
+          </button>
 
-    <button
-      onClick={() => window.location.href = "/admin/assets/upload-laptop"}
-      className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-    >
-      Upload Laptop
-    </button>
+          <button
+            onClick={() => window.location.href = "/admin/assets/upload-laptop"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+          >
+            Upload Laptop
+          </button>
 
-  </div>
+        </div>
 
-</div>
+      </div>
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
         <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm">
@@ -419,8 +419,12 @@ export default function AssetStoreFiori() {
                     <td className="px-6 py-4">
                       <span
                         className={`px-4 py-1.5 rounded-full text-xs font-bold ${a.status === "available"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
+                            ? "bg-green-100 text-green-700"
+                            : a.status === "assigned"
+                              ? "bg-blue-100 text-blue-700"
+                              : a.status === "damaged"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-gray-100 text-gray-700"
                           }`}
                       >
                         {a.status}
@@ -740,11 +744,15 @@ export default function AssetStoreFiori() {
                     }
                   >
                     <option value="available">
-                      available
+                      Available
                     </option>
 
                     <option value="assigned">
-                      assigned
+                      Assigned
+                    </option>
+
+                    <option value="damaged">
+                      Damaged
                     </option>
                   </select>
                 </div>
