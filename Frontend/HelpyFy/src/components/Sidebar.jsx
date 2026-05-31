@@ -87,42 +87,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             )}
 
             <div className="space-y-2">
-
-              {/* <NavItem
-                to="/admin"
-                icon="🛠"
-                label="Admin Dashboard"
-              />
-
-              <NavItem
-                to="/admin/employees"
-                icon="👨‍💼"
-                label="Employees"
-              />
-
-              {/* <NavItem
-                to="/admin/assets/upload-excel"
-                icon="📤"
-                label="Upload Excel"
-              /> */}
-
-              <NavItem
-                to="/admin/assets"
-                icon="📦"
-                label="Assets"
-              />
-
-              <NavItem
-                to="/admin/assets/history"
-                icon="📈"
-                label="Asset History"
-              /> */}
-              {/* <NavItem
-                to="/admin/assets/upload-laptop"
-                icon="💻"
-                label="Laptop Upload"
-              /> */}
-
               <div className="space-y-2">
 
                 <NavItem
@@ -144,6 +108,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 />
 
               </div>
+
             </div>
           </div>
         )}
