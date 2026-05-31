@@ -235,20 +235,21 @@ export const updateAsset = async (req, res) => {
       return res.status(404).json({ msg: "Asset not found" });
     }
 
-    const allowedFields = [
-      "assetCode",
-      "type",
-      "model",
-      "serialNumber",
-      "route",
-      "salesmanCode",
-      "salesmanName",
-      "supervisor",
-      "soti",
-      "imei",
-      "simNumber",
-      "notes",
-    ];
+  const allowedFields = [
+  "assetCode",
+  "type",
+  "model",
+  "serialNumber",
+  "route",
+  "salesmanCode",
+  "salesmanName",
+  "supervisor",
+  "soti",
+  "imei",
+  "simNumber",
+  "notes",
+  "status", // ADD THIS
+];
 
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
