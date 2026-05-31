@@ -70,22 +70,16 @@ export default function AdminDashboardFiori() {
     loadDashboard();
   }, []);
 
-  /* ================= SAFE CHART DATA ================= */
+  /* ================= CHART DATA ================= */
   const assetChart = [
-    { name: "Laptops", value: Number(stats.laptops || 0) },
-    { name: "Printers", value: Number(stats.printers || 0) },
-    { name: "HHT", value: Number(stats.hht || 0) },
+    { name: "Laptops", value: stats.laptops || 0 },
+    { name: "Printers", value: stats.printers || 0 },
+    { name: "HHT", value: stats.hht || 0 },
   ];
 
   const assetStatus = [
-    { name: "Assigned", value: Number(stats.assigned || 0) },
-    { name: "Available", value: Number(stats.available || 0) },
-  ];
-
-  const softwareChart = [
-    { name: "Active", value: Number(stats.totalActiveLicenses || 0) },
-    { name: "Expiring", value: Number(stats.expiringThisMonth || 0) },
-    { name: "Expired", value: Number(stats.expiredServices || 0) },
+    { name: "Assigned", value: stats.assigned || 0 },
+    { name: "Available", value: stats.available || 0 },
   ];
 
   const COLORS = ["#3b82f6", "#10b981", "#ef4444"];
@@ -94,9 +88,7 @@ export default function AdminDashboardFiori() {
   const Tile = ({ title, value }) => (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
       <p className="text-gray-500 text-sm">{title}</p>
-      <h2 className="text-3xl font-bold mt-2 text-gray-800">
-        {value}
-      </h2>
+      <h2 className="text-3xl font-bold mt-2 text-gray-800">{value}</h2>
     </div>
   );
 
@@ -169,22 +161,6 @@ export default function AdminDashboardFiori() {
         </div>
       </div>
 
-      {/* SOFTWARE CHART */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
-        <h2 className="mb-4 font-semibold text-gray-700">
-          Software Overview
-        </h2>
-
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={softwareChart}>
-            <XAxis dataKey="name" stroke="#6b7280" />
-            <YAxis stroke="#6b7280" />
-            <Tooltip />
-            <Bar dataKey="value" fill="#10b981" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
       {/* RECENT ASSETS */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
         <h2 className="font-semibold mb-4 text-gray-700">
@@ -214,7 +190,7 @@ export default function AdminDashboardFiori() {
         </table>
       </div>
 
-      {/* RECENT SOFTWARE */}
+      {/* RECENT SOFTWARE (TABLE ONLY - NO CHART) */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5">
         <h2 className="font-semibold mb-4 text-gray-700">
           Recent Software
