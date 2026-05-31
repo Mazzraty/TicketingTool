@@ -209,6 +209,12 @@ export default function AssetStoreFiori() {
         >
           Upload Printer
         </button>
+         <button
+          onClick={() => window.location.href = "/admin/assets/upload-laptop"}
+          className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+        >
+          Upload Laptop
+        </button>
       </div>
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
