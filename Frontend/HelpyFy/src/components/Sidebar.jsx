@@ -102,7 +102,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 />
 
                 <NavItem
-                  to="/admin/assets"
+                  to="/admin/assets/fiori"
                   icon="📦"
                   label="Asset Management"
                 />
