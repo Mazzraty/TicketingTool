@@ -188,7 +188,7 @@ export default function AssetStoreFiori() {
         >
           Assets Assign
         </button>
-
+            
 
 
         <button
@@ -201,7 +201,13 @@ export default function AssetStoreFiori() {
           onClick={() => window.location.href = "/admin/assets/upload-excel"}
           className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
         >
-          Upload Excel
+          Upload Employees
+        </button>
+         <button
+          onClick={() => window.location.href = "/admin/assets/upload-printer"}
+          className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+        >
+          Upload Printer
         </button>
       </div>
       {/* KPI */}

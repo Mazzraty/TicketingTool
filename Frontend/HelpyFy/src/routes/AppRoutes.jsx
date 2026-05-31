@@ -17,7 +17,7 @@ import AssetHistoryPage from "../pages/AssetHistory.jsx";
 import AssetExcelUpload from "../pages/AssetUpload.jsx";
 import AdminSoftwareDashboard from "../pages/AdminSoftwareDashboard.jsx";
 import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";
-
+import PrinterUpload from "../pages/PrinterUpload.jsx";
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
@@ -117,6 +117,10 @@ export default function AppRoutes() {
           <Route
             path="/admin/assets/upload-laptop"
             element={<LaptopUpload />}
+          />
+          <Route
+            path="/admin/assets/upload-printer"
+            element={<PrinterUpload />}
           />
 
         </Route>
