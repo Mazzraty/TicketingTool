@@ -50,7 +50,7 @@ export default function EmployeeExcelUpload() {
   const clean = (v) => (v ? v.toString().trim() : "");
 
   /* =========================
-     FUZZY MATCH ENGINE (AI CORE)
+     FUZZY MATCH ENGINE
   ========================= */
   const similarity = (a, b) => {
     const str1 = a.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -69,7 +69,7 @@ export default function EmployeeExcelUpload() {
   };
 
   /* =========================
-     AI SMART MAPPER
+     SMART MAPPER
   ========================= */
   const fuzzyMapRow = (row, allowedFields) => {
     const cleaned = {};
@@ -81,18 +81,13 @@ export default function EmployeeExcelUpload() {
 
       rowKeys.forEach((key) => {
         const score = similarity(field, key);
-
         if (score > bestScore) {
           bestScore = score;
           bestMatch = key;
         }
       });
 
-      if (bestScore >= 0.6) {
-        cleaned[field] = row[bestMatch];
-      } else {
-        cleaned[field] = "";
-      }
+      cleaned[field] = bestScore >= 0.6 ? row[bestMatch] : "";
     });
 
     return cleaned;
@@ -157,11 +152,9 @@ export default function EmployeeExcelUpload() {
         const detected = detectType(json[0]);
         setFileType(detected);
 
-        /* ================= EMPLOYEE ================= */
         if (detected === "Employee") {
           const formatted = json.map((r) => {
             const row = fuzzyMapRow(r, ALLOWED_EMPLOYEE_FIELDS);
-
             return {
               type: "Employee",
               staffCode: clean(row.staffCode),
@@ -174,15 +167,12 @@ export default function EmployeeExcelUpload() {
               dateOfJoining: clean(row.dateOfJoining),
             };
           });
-
           setRows(formatted);
         }
 
-        /* ================= HHT ================= */
         if (detected === "HHT") {
           const formatted = json.map((r) => {
             const row = fuzzyMapRow(r, ALLOWED_HHT_FIELDS);
-
             return {
               type: "HHT",
               assetCode: clean(row.assetCode),
@@ -195,15 +185,12 @@ export default function EmployeeExcelUpload() {
               route: clean(row.route),
             };
           });
-
           setRows(formatted);
         }
 
-        /* ================= PRINTER ================= */
         if (detected === "Printer") {
           const formatted = json.map((r) => {
             const row = fuzzyMapRow(r, ALLOWED_PRINTER_FIELDS);
-
             return {
               type: "Printer",
               assetCode: clean(row.assetCode),
@@ -215,7 +202,6 @@ export default function EmployeeExcelUpload() {
               route: clean(row.route),
             };
           });
-
           setRows(formatted);
         }
       } catch (err) {
@@ -279,56 +265,92 @@ export default function EmployeeExcelUpload() {
   };
 
   /* =========================
-     UI
+     UI (PRINTER STYLE ONLY)
   ========================= */
   return (
-    <div className="p-6 bg-[#f5f7fa] min-h-screen">
-      {/* ================= BACK NAVIGATION ================= */}
-      <div className="mb-4">
+    <div className="min-h-screen bg-[#f4f6f9] p-6">
+
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Smart Excel Upload
+          </h1>
+          <p className="text-sm text-gray-500">
+            Employee / Printer / HHT Asset Upload
+          </p>
+        </div>
+
         <button
           onClick={() => window.history.back()}
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition shadow-sm text-sm font-semibold"
+          className="px-4 py-2 rounded-xl bg-white border text-gray-700 hover:bg-gray-100 text-sm"
         >
           ← Back
         </button>
       </div>
-      <h1 className="text-3xl font-bold text-[#0a2342] mb-2">
-        Upload
-      </h1>
 
-      <p className="text-gray-500 mb-5">
-        Smart Excel upload
-      </p>
+      {/* CARD */}
+      <div className="bg-white border rounded-2xl p-6 shadow-sm">
 
-      <div className="bg-white p-5 rounded-2xl border shadow-sm">
+        {/* DROP ZONE */}
+        <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 cursor-pointer hover:bg-gray-50 transition">
 
-        <input
-          type="file"
-          onChange={handleFile}
-          className="mb-4"
-        />
+          <input
+            type="file"
+            onChange={handleFile}
+            className="hidden"
+          />
 
-        {file && (
-          <div className="mb-4">
-            <p>📄 {file.name}</p>
-            <p className="text-blue-600 font-semibold">
-              Detected: {fileType}
+          <p className="text-lg font-semibold text-gray-700">
+            📤 Drag & Drop Excel File
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            or click to browse
+          </p>
+
+          {file && (
+            <p className="mt-3 text-sm text-blue-600">
+              {file.name}
             </p>
+          )}
+        </label>
 
-            <p className="text-green-600">
-              Valid: {validCount} | Invalid: {invalidCount}
-            </p>
+        {/* STATS */}
+        {rows.length > 0 && (
+          <div className="grid grid-cols-3 gap-4 mt-6">
+
+            <div className="bg-gray-50 p-4 rounded-xl border text-center">
+              Total
+              <div className="font-bold text-xl">{rows.length}</div>
+            </div>
+
+            <div className="bg-green-50 p-4 rounded-xl border text-center">
+              Valid
+              <div className="font-bold text-green-700 text-xl">
+                {validCount}
+              </div>
+            </div>
+
+            <div className="bg-red-50 p-4 rounded-xl border text-center">
+              Invalid
+              <div className="font-bold text-red-600 text-xl">
+                {invalidCount}
+              </div>
+            </div>
+
           </div>
         )}
 
+        {/* TABLE */}
         {rows.length > 0 && (
-          <div className="overflow-auto border rounded-xl">
+          <div className="mt-6 overflow-x-auto border rounded-xl">
 
             <table className="w-full text-sm">
+
               <thead className="bg-gray-100">
                 <tr>
                   {Object.keys(rows[0]).map((h) => (
-                    <th key={h} className="p-2 border">
+                    <th key={h} className="p-3 text-left border">
                       {h}
                     </th>
                   ))}
@@ -339,12 +361,12 @@ export default function EmployeeExcelUpload() {
                 {rows.map((r, i) => (
                   <tr
                     key={i}
-                    className={
+                    className={`border-t ${
                       isValid(r) ? "" : "bg-red-100"
-                    }
+                    }`}
                   >
                     {Object.values(r).map((v, j) => (
-                      <td key={j} className="p-2 border">
+                      <td key={j} className="p-3 border">
                         {v}
                       </td>
                     ))}
@@ -356,13 +378,18 @@ export default function EmployeeExcelUpload() {
           </div>
         )}
 
-        <button
-          onClick={uploadExcel}
-          disabled={loading}
-          className="mt-5 bg-blue-600 text-white px-6 py-2 rounded-xl"
-        >
-          {loading ? "Uploading..." : `Upload ${fileType}`}
-        </button>
+        {/* BUTTON */}
+        {rows.length > 0 && (
+          <div className="flex justify-end mt-6">
+            <button
+              onClick={uploadExcel}
+              disabled={loading}
+              className="px-6 py-2 rounded-xl bg-[#0a6ed1] text-white font-semibold hover:bg-[#085caf] disabled:opacity-50"
+            >
+              {loading ? "Uploading..." : `Upload ${fileType}`}
+            </button>
+          </div>
+        )}
 
       </div>
     </div>
