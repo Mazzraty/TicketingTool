@@ -117,11 +117,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 icon="📈"
                 label="Asset History"
               />
-              <NavItem
+              {/* <NavItem
                 to="/admin/assets/upload-laptop"
                 icon="💻"
                 label="Laptop Upload"
-              />
+              /> */}
             </div>
           </div>
         )}
