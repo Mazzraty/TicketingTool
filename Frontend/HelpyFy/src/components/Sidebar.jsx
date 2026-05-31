@@ -100,11 +100,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 label="Employees"
               />
 
-              <NavItem
+              {/* <NavItem
                 to="/admin/assets/upload-excel"
                 icon="📤"
                 label="Upload Excel"
-              />
+              /> */}
 
               <NavItem
                 to="/admin/assets"
