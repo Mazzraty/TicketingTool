@@ -44,192 +44,142 @@ export default function EmployeeExcelUpload() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  /* =========================
-     CLEAN VALUE
-  ========================= */
   const clean = (v) => (v ? v.toString().trim() : "");
 
-  /* =========================
-     FUZZY MATCH ENGINE (AI CORE)
-  ========================= */
+  /* ================= FUZZY ================= */
   const similarity = (a, b) => {
-    const str1 = a.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const str2 = b.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const s1 = a.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const s2 = b.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (s1 === s2) return 1;
 
-    if (str1 === str2) return 1;
+    let m = 0;
+    const len = Math.max(s1.length, s2.length);
 
-    let matches = 0;
-    const len = Math.max(str1.length, str2.length);
-
-    for (let i = 0; i < Math.min(str1.length, str2.length); i++) {
-      if (str1[i] === str2[i]) matches++;
+    for (let i = 0; i < Math.min(s1.length, s2.length); i++) {
+      if (s1[i] === s2[i]) m++;
     }
-
-    return matches / len;
+    return m / len;
   };
 
-  /* =========================
-     AI SMART MAPPER
-  ========================= */
-  const fuzzyMapRow = (row, allowedFields) => {
+  const fuzzyMapRow = (row, fields) => {
     const cleaned = {};
-    const rowKeys = Object.keys(row);
+    const keys = Object.keys(row);
 
-    allowedFields.forEach((field) => {
-      let bestMatch = null;
-      let bestScore = 0;
+    fields.forEach((field) => {
+      let best = null;
+      let score = 0;
 
-      rowKeys.forEach((key) => {
-        const score = similarity(field, key);
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestMatch = key;
+      keys.forEach((k) => {
+        const s = similarity(field, k);
+        if (s > score) {
+          score = s;
+          best = k;
         }
       });
 
-      if (bestScore >= 0.6) {
-        cleaned[field] = row[bestMatch];
-      } else {
-        cleaned[field] = "";
-      }
+      cleaned[field] = score >= 0.6 ? row[best] : "";
     });
 
     return cleaned;
   };
 
-  /* =========================
-     DETECT TYPE
-  ========================= */
   const detectType = (row) => {
     const keys = Object.keys(row).map((k) =>
       k.toLowerCase().replace(/[-_\s]/g, "")
     );
 
-    if (
-      keys.includes("imei") ||
-      keys.includes("simnumber") ||
-      keys.includes("salesmancode")
-    ) {
+    if (keys.includes("imei") || keys.includes("simnumber"))
       return "HHT";
-    }
 
-    if (
-      keys.includes("printerserial") ||
-      keys.includes("printermodel")
-    ) {
+    if (keys.includes("serialnumber") || keys.includes("printermodel"))
       return "Printer";
-    }
 
     return "Employee";
   };
 
-  /* =========================
-     FILE HANDLER
-  ========================= */
+  /* ================= FILE ================= */
   const handleFile = (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
+    const f = e.target.files[0];
+    if (!f) return;
 
-    setFile(selectedFile);
+    setFile(f);
 
     const reader = new FileReader();
 
     reader.onload = (event) => {
-      try {
-        const workbook = XLSX.read(event.target.result, {
-          type: "array",
-        });
+      const wb = XLSX.read(event.target.result, { type: "array" });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, {
+        defval: "",
+        raw: false,
+      });
 
-        const sheet =
-          workbook.Sheets[workbook.SheetNames[0]];
-
-        const json = XLSX.utils.sheet_to_json(sheet, {
-          defval: "",
-          raw: false,
-        });
-
-        if (!json.length) {
-          toast.error("Excel is empty");
-          return;
-        }
-
-        const detected = detectType(json[0]);
-        setFileType(detected);
-
-        /* ================= EMPLOYEE ================= */
-        if (detected === "Employee") {
-          const formatted = json.map((r) => {
-            const row = fuzzyMapRow(r, ALLOWED_EMPLOYEE_FIELDS);
-
-            return {
-              type: "Employee",
-              staffCode: clean(row.staffCode),
-              name: clean(row.name),
-              department: clean(row.department),
-              designation: clean(row.designation),
-              division: clean(row.division),
-              placeOfWork: clean(row.placeOfWork),
-              visaNo: clean(row.visaNo),
-              dateOfJoining: clean(row.dateOfJoining),
-            };
-          });
-
-          setRows(formatted);
-        }
-
-        /* ================= HHT ================= */
-        if (detected === "HHT") {
-          const formatted = json.map((r) => {
-            const row = fuzzyMapRow(r, ALLOWED_HHT_FIELDS);
-
-            return {
-              type: "HHT",
-              assetCode: clean(row.assetCode),
-              model: clean(row.model),
-              imei: clean(row.imei),
-              simNumber: clean(row.simNumber),
-              salesmanCode: clean(row.salesmanCode),
-              salesmanName: clean(row.salesmanName),
-              supervisor: clean(row.supervisor),
-              route: clean(row.route),
-            };
-          });
-
-          setRows(formatted);
-        }
-
-        /* ================= PRINTER ================= */
-        if (detected === "Printer") {
-          const formatted = json.map((r) => {
-            const row = fuzzyMapRow(r, ALLOWED_PRINTER_FIELDS);
-
-            return {
-              type: "Printer",
-              assetCode: clean(row.assetCode),
-              model: clean(row.model),
-              serialNumber: clean(row.serialNumber),
-              salesmanCode: clean(row.salesmanCode),
-              salesmanName: clean(row.salesmanName),
-              supervisor: clean(row.supervisor),
-              route: clean(row.route),
-            };
-          });
-
-          setRows(formatted);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error("Invalid Excel file");
+      if (!json.length) {
+        toast.error("Empty file");
+        return;
       }
+
+      const type = detectType(json[0]);
+      setFileType(type);
+
+      let formatted = [];
+
+      if (type === "Employee") {
+        formatted = json.map((r) => {
+          const row = fuzzyMapRow(r, ALLOWED_EMPLOYEE_FIELDS);
+          return {
+            type: "Employee",
+            staffCode: clean(row.staffCode),
+            name: clean(row.name),
+            department: clean(row.department),
+            designation: clean(row.designation),
+            division: clean(row.division),
+            placeOfWork: clean(row.placeOfWork),
+            visaNo: clean(row.visaNo),
+            dateOfJoining: clean(row.dateOfJoining),
+          };
+        });
+      }
+
+      if (type === "HHT") {
+        formatted = json.map((r) => {
+          const row = fuzzyMapRow(r, ALLOWED_HHT_FIELDS);
+          return {
+            type: "HHT",
+            assetCode: clean(row.assetCode),
+            model: clean(row.model),
+            imei: clean(row.imei),
+            simNumber: clean(row.simNumber),
+            salesmanCode: clean(row.salesmanCode),
+            salesmanName: clean(row.salesmanName),
+            supervisor: clean(row.supervisor),
+            route: clean(row.route),
+          };
+        });
+      }
+
+      if (type === "Printer") {
+        formatted = json.map((r) => {
+          const row = fuzzyMapRow(r, ALLOWED_PRINTER_FIELDS);
+          return {
+            type: "Printer",
+            assetCode: clean(row.assetCode),
+            model: clean(row.model),
+            serialNumber: clean(row.serialNumber),
+            salesmanCode: clean(row.salesmanCode),
+            salesmanName: clean(row.salesmanName),
+            supervisor: clean(row.supervisor),
+            route: clean(row.route),
+          };
+        });
+      }
+
+      setRows(formatted);
     };
 
-    reader.readAsArrayBuffer(selectedFile);
+    reader.readAsArrayBuffer(f);
   };
 
-  /* =========================
-     VALIDATION
-  ========================= */
   const isValid = (r) => {
     if (r.type === "Employee") return r.staffCode && r.name;
     if (r.type === "HHT") return r.assetCode && r.imei;
@@ -237,12 +187,6 @@ export default function EmployeeExcelUpload() {
     return false;
   };
 
-  const validCount = rows.filter(isValid).length;
-  const invalidCount = rows.length - validCount;
-
-  /* =========================
-     UPLOAD
-  ========================= */
   const uploadExcel = async () => {
     try {
       setLoading(true);
@@ -250,7 +194,7 @@ export default function EmployeeExcelUpload() {
       const valid = rows.filter(isValid);
 
       if (!valid.length) {
-        toast.error("No valid rows found");
+        toast.error("No valid rows");
         return;
       }
 
@@ -258,49 +202,48 @@ export default function EmployeeExcelUpload() {
         const res = await api.post("/employees/bulk-upload", {
           employees: valid,
         });
-
         toast.success(`Employees Inserted: ${res.data.inserted}`);
       } else {
         const res = await api.post("/assets/bulk-upload", {
           assets: valid,
         });
-
         toast.success(`Assets Inserted: ${res.data.inserted}`);
       }
 
       setRows([]);
       setFile(null);
     } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Upload failed");
+      toast.error("Upload failed");
     } finally {
       setLoading(false);
     }
   };
 
-  /* =========================
-     UI
-  ========================= */
+  /* ================= UI (MATCH PRINTER STYLE) ================= */
   return (
     <div className="p-6 bg-[#f5f7fa] min-h-screen">
-      {/* ================= BACK NAVIGATION ================= */}
+
+      {/* BACK */}
       <div className="mb-4">
         <button
           onClick={() => window.history.back()}
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition shadow-sm text-sm font-semibold"
+          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 shadow-sm text-sm font-semibold"
         >
           ← Back
         </button>
       </div>
-      <h1 className="text-3xl font-bold text-[#0a2342] mb-2">
-        Upload
-      </h1>
+
+      {/* TITLE */}
+      <h2 className="text-2xl font-bold text-gray-800">
+        Smart Excel Upload
+      </h2>
 
       <p className="text-gray-500 mb-5">
-        Smart Excel upload
+        Employee / Asset bulk upload system
       </p>
 
-      <div className="bg-white p-5 rounded-2xl border shadow-sm">
+      {/* CARD */}
+      <div className="bg-white p-5 rounded-3xl border shadow-sm">
 
         <input
           type="file"
@@ -309,21 +252,20 @@ export default function EmployeeExcelUpload() {
         />
 
         {file && (
-          <div className="mb-4">
-            <p>📄 {file.name}</p>
-            <p className="text-blue-600 font-semibold">
+          <div className="mb-4 text-sm">
+            <p className="font-semibold">📄 {file.name}</p>
+            <p className="text-blue-600">
               Detected: {fileType}
             </p>
-
             <p className="text-green-600">
-              Valid: {validCount} | Invalid: {invalidCount}
+              Valid: {rows.filter(isValid).length} | Invalid: {rows.length - rows.filter(isValid).length}
             </p>
           </div>
         )}
 
+        {/* TABLE */}
         {rows.length > 0 && (
-          <div className="overflow-auto border rounded-xl">
-
+          <div className="overflow-auto border rounded-2xl">
             <table className="w-full text-sm">
               <thead className="bg-gray-100">
                 <tr>
@@ -339,9 +281,7 @@ export default function EmployeeExcelUpload() {
                 {rows.map((r, i) => (
                   <tr
                     key={i}
-                    className={
-                      isValid(r) ? "" : "bg-red-100"
-                    }
+                    className={isValid(r) ? "" : "bg-red-100"}
                   >
                     {Object.values(r).map((v, j) => (
                       <td key={j} className="p-2 border">
@@ -351,11 +291,11 @@ export default function EmployeeExcelUpload() {
                   </tr>
                 ))}
               </tbody>
-
             </table>
           </div>
         )}
 
+        {/* BUTTON */}
         <button
           onClick={uploadExcel}
           disabled={loading}
@@ -363,7 +303,6 @@ export default function EmployeeExcelUpload() {
         >
           {loading ? "Uploading..." : `Upload ${fileType}`}
         </button>
-
       </div>
     </div>
   );
