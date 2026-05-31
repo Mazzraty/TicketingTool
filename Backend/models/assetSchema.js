@@ -18,15 +18,14 @@ const assetSchema = new mongoose.Schema(
     serialNumber: String,
 
     status: {
-      type: String,
-      enum: [
-        "available",
-        "assigned",
-        "repair",
-        "scrapped",
-      ],
-      default: "available",
-    },
+  type: String,
+  enum: [
+    "available",
+    "assigned",
+    "damaged",
+  ],
+  default: "available",
+},
 
     /* =========================
        PRINTER & HHT DETAILS
