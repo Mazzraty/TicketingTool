@@ -170,51 +170,57 @@ export default function AssetStoreFiori() {
   return (
     <div className="min-h-screen bg-[#f5f7fa] p-6">
       {/* HEADER */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Asset Details
-        </h1>
 
-        <p className="text-gray-500 mt-1">
-          Asset Management Dashboard
-        </p>
-      </div>
-      {/* ================= NAVIGATION ================= */}
-      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-4 mb-6 flex flex-wrap gap-3">
+      {/* ================= STICKY NAVIGATION ================= */}
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm mb-6">
 
-        <button
-          onClick={() => window.location.href = "/admin/assets"}
-          className="px-5 py-2 rounded-2xl text-sm font-semibold bg-[#0a6ed1] text-white shadow-sm hover:bg-[#085caf] transition"
-        >
-          Assets Assign
-        </button>
-            
+        <div className="px-4 py-3 flex flex-wrap gap-3 items-center">
 
+          <button
+            onClick={() => window.location.href = "/admin/assets"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-[#0a6ed1] text-white shadow-sm hover:bg-[#085caf] transition"
+          >
+            Assets Assign
+          </button>
 
-        <button
-          onClick={() => window.location.href = "/admin/assets/history"}
-          className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-        >
-          Asset History
-        </button>
-        <button
-          onClick={() => window.location.href = "/admin/assets/upload-excel"}
-          className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-        >
-          Upload Employees
-        </button>
-         <button
-          onClick={() => window.location.href = "/admin/assets/upload-printer"}
-          className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-        >
-          Upload Printer
-        </button>
-         <button
-          onClick={() => window.location.href = "/admin/assets/upload-laptop"}
-          className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-        >
-          Upload Laptop
-        </button>
+          <button
+            onClick={() => window.location.href = "/admin/assets/history"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+          >
+            Asset History
+          </button>
+
+          <button
+            onClick={() => window.location.href = "/admin/assets/upload-excel"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+          >
+            Upload Employees
+          </button>
+
+          <button
+            onClick={() => window.location.href = "/admin/assets/upload-printer"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+          >
+            Upload Printer
+          </button>
+
+          <button
+            onClick={() => window.location.href = "/admin/assets/upload-laptop"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+          >
+            Upload Laptop
+          </button>
+
+        </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800">
+            Asset Details
+          </h1>
+
+          <p className="text-gray-500 mt-1">
+            Asset Management Dashboard
+          </p>
+        </div>
       </div>
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
