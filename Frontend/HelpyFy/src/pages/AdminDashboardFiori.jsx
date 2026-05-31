@@ -62,7 +62,7 @@ export default function AdminDashboardFiori() {
       setRecentAssets(Array.isArray(assetsRes.data) ? assetsRes.data : []);
       setRecentSoftware(Array.isArray(softwareRes.data) ? softwareRes.data : []);
     } catch (err) {
-      console.error("Dashboard error:", err);
+      console.error(err);
     }
   };
 
@@ -88,26 +88,28 @@ export default function AdminDashboardFiori() {
     { name: "Expired", value: Number(stats.expiredServices || 0) },
   ];
 
-  const COLORS = ["#60a5fa", "#34d399", "#f87171"];
+  const COLORS = ["#3b82f6", "#10b981", "#ef4444"];
 
   /* ================= TILE ================= */
-  const Tile = ({ title, value, color }) => (
-    <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5 shadow-lg">
-      <p className="text-gray-400 text-sm">{title}</p>
-      <h2 className={`text-3xl font-bold mt-2 ${color || "text-white"}`}>
+  const Tile = ({ title, value }) => (
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+      <p className="text-gray-500 text-sm">{title}</p>
+      <h2 className="text-3xl font-bold mt-2 text-gray-800">
         {value}
       </h2>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0b1220] text-white p-6">
+    <div className="min-h-screen bg-[#f5f7fa] text-gray-900 p-6">
 
       {/* HEADER */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-gray-400">
-          SAP Fiori Enterprise Overview (Dark Mode)
+        <h1 className="text-3xl font-bold text-gray-800">
+          Admin Dashboard
+        </h1>
+        <p className="text-gray-500">
+          SAP Fiori Enterprise Overview
         </p>
       </div>
 
@@ -115,26 +117,27 @@ export default function AdminDashboardFiori() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 
         <Tile title="Total Assets" value={stats.totalAssets} />
-        <Tile title="Assigned" value={stats.assigned} color="text-blue-400" />
-        <Tile title="Available" value={stats.available} color="text-green-400" />
-        <Tile title="Employees" value={stats.employees} color="text-purple-400" />
+        <Tile title="Assigned" value={stats.assigned} />
+        <Tile title="Available" value={stats.available} />
+        <Tile title="Employees" value={stats.employees} />
 
-        <Tile title="Open Tickets" value={stats.openTickets} color="text-red-400" />
-        <Tile title="Active Licenses" value={stats.totalActiveLicenses} color="text-blue-300" />
-        <Tile title="Expiring Licenses" value={stats.expiringThisMonth} color="text-yellow-400" />
+        <Tile title="Open Tickets" value={stats.openTickets} />
+        <Tile title="Active Licenses" value={stats.totalActiveLicenses} />
+        <Tile title="Expiring Licenses" value={stats.expiringThisMonth} />
         <Tile
           title="Annual Software Cost"
           value={`QAR ${Number(stats.annualSoftwareCost).toLocaleString()}`}
-          color="text-green-400"
         />
       </div>
 
       {/* CHARTS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 
-        {/* ASSET PIE */}
-        <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5">
-          <h2 className="mb-4 font-semibold">Asset Distribution</h2>
+        {/* PIE CHART */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+          <h2 className="mb-4 font-semibold text-gray-700">
+            Asset Distribution
+          </h2>
 
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
@@ -149,41 +152,47 @@ export default function AdminDashboardFiori() {
           </ResponsiveContainer>
         </div>
 
-        {/* STATUS BAR */}
-        <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5">
-          <h2 className="mb-4 font-semibold">Asset Status</h2>
+        {/* BAR CHART */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+          <h2 className="mb-4 font-semibold text-gray-700">
+            Asset Status
+          </h2>
 
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={assetStatus}>
-              <XAxis dataKey="name" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" />
+              <XAxis dataKey="name" stroke="#6b7280" />
+              <YAxis stroke="#6b7280" />
               <Tooltip />
-              <Bar dataKey="value" fill="#60a5fa" />
+              <Bar dataKey="value" fill="#3b82f6" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* SOFTWARE CHART */}
-      <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5 mb-6">
-        <h2 className="mb-4 font-semibold">Software Overview</h2>
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
+        <h2 className="mb-4 font-semibold text-gray-700">
+          Software Overview
+        </h2>
 
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={softwareChart}>
-            <XAxis dataKey="name" stroke="#9ca3af" />
-            <YAxis stroke="#9ca3af" />
+            <XAxis dataKey="name" stroke="#6b7280" />
+            <YAxis stroke="#6b7280" />
             <Tooltip />
-            <Bar dataKey="value" fill="#34d399" />
+            <Bar dataKey="value" fill="#10b981" />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* RECENT ASSETS */}
-      <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5 mb-6">
-        <h2 className="font-semibold mb-4">Recent Assets</h2>
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
+        <h2 className="font-semibold mb-4 text-gray-700">
+          Recent Assets
+        </h2>
 
         <table className="w-full text-sm">
-          <thead className="text-gray-400 border-b border-gray-600">
+          <thead className="text-gray-500 border-b">
             <tr>
               <th className="p-2 text-left">Code</th>
               <th className="p-2 text-left">Type</th>
@@ -194,7 +203,7 @@ export default function AdminDashboardFiori() {
 
           <tbody>
             {recentAssets.map((a) => (
-              <tr key={a._id} className="border-b border-gray-700">
+              <tr key={a._id} className="border-b hover:bg-gray-50">
                 <td className="p-2">{a.assetCode}</td>
                 <td className="p-2">{a.type}</td>
                 <td className="p-2">{a.model || "-"}</td>
@@ -206,11 +215,13 @@ export default function AdminDashboardFiori() {
       </div>
 
       {/* RECENT SOFTWARE */}
-      <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5">
-        <h2 className="font-semibold mb-4">Recent Software</h2>
+      <div className="bg-white border border-gray-200 rounded-2xl p-5">
+        <h2 className="font-semibold mb-4 text-gray-700">
+          Recent Software
+        </h2>
 
         <table className="w-full text-sm">
-          <thead className="text-gray-400 border-b border-gray-600">
+          <thead className="text-gray-500 border-b">
             <tr>
               <th className="p-2 text-left">Service</th>
               <th className="p-2 text-left">Vendor</th>
@@ -221,7 +232,7 @@ export default function AdminDashboardFiori() {
 
           <tbody>
             {recentSoftware.map((s) => (
-              <tr key={s._id} className="border-b border-gray-700">
+              <tr key={s._id} className="border-b hover:bg-gray-50">
                 <td className="p-2">{s.serviceName}</td>
                 <td className="p-2">{s.vendor}</td>
                 <td className="p-2">
