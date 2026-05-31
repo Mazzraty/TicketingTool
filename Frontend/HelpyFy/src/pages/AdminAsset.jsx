@@ -122,7 +122,7 @@ export default function AdminAssets() {
 
       toast.error(
         err.response?.data?.msg ||
-          "Assignment Failed"
+        "Assignment Failed"
       );
     }
   };
@@ -152,7 +152,14 @@ export default function AdminAssets() {
 
   return (
     <div className="p-6 bg-[#f4f6f9] min-h-screen">
-
+      <div className="mb-4">
+        <button
+          onClick={() => window.history.back()}
+          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition shadow-sm text-sm font-semibold"
+        >
+          ← Back
+        </button>
+      </div>
       <h1 className="text-2xl font-bold mb-1">
         Asset Management
       </h1>
@@ -218,44 +225,44 @@ export default function AdminAssets() {
 
             {(type === "Printer" ||
               type === "HHT") && (
-              <>
-                <input
-                  className="border p-2 rounded"
-                  placeholder="Route"
-                  value={route}
-                  onChange={(e) =>
-                    setRoute(e.target.value)
-                  }
-                />
+                <>
+                  <input
+                    className="border p-2 rounded"
+                    placeholder="Route"
+                    value={route}
+                    onChange={(e) =>
+                      setRoute(e.target.value)
+                    }
+                  />
 
-                <input
-                  className="border p-2 rounded"
-                  placeholder="Salesman Code"
-                  value={salesmanCode}
-                  onChange={(e) =>
-                    setSalesmanCode(e.target.value)
-                  }
-                />
+                  <input
+                    className="border p-2 rounded"
+                    placeholder="Salesman Code"
+                    value={salesmanCode}
+                    onChange={(e) =>
+                      setSalesmanCode(e.target.value)
+                    }
+                  />
 
-                <input
-                  className="border p-2 rounded"
-                  placeholder="Salesman Name"
-                  value={salesmanName}
-                  onChange={(e) =>
-                    setSalesmanName(e.target.value)
-                  }
-                />
+                  <input
+                    className="border p-2 rounded"
+                    placeholder="Salesman Name"
+                    value={salesmanName}
+                    onChange={(e) =>
+                      setSalesmanName(e.target.value)
+                    }
+                  />
 
-                <input
-                  className="border p-2 rounded"
-                  placeholder="Supervisor"
-                  value={supervisor}
-                  onChange={(e) =>
-                    setSupervisor(e.target.value)
-                  }
-                />
-              </>
-            )}
+                  <input
+                    className="border p-2 rounded"
+                    placeholder="Supervisor"
+                    value={supervisor}
+                    onChange={(e) =>
+                      setSupervisor(e.target.value)
+                    }
+                  />
+                </>
+              )}
 
             {type === "Printer" && (
               <input
@@ -335,9 +342,9 @@ export default function AdminAssets() {
                 value={
                   selectedEmployee
                     ? {
-                        value: selectedEmployee,
-                        label: selectedEmployee,
-                      }
+                      value: selectedEmployee,
+                      label: selectedEmployee,
+                    }
                     : null
                 }
 
