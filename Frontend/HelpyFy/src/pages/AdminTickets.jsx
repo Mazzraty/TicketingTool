@@ -242,8 +242,8 @@ export default function AdminTickets() {
                     <th className="p-3 text-left">User</th>
                     <th className="p-3 text-center">Priority</th>
                     <th className="p-3 text-center">Status</th>
-                    <th className="p-3 text-center">Open</th>
-                    <th className="p-3 text-center">Closed</th>
+                    <th className="p-3 text-center">Opened Date & Time</th>
+                    <th className="p-3 text-center">Closed Date & Time</th>
 
                     {/* ✅ FILE COLUMN */}
                     <th className="p-3 text-center">Files</th>
@@ -281,11 +281,11 @@ export default function AdminTickets() {
                       </td>
 
                       <td className="p-3 text-center text-xs">
-                        {getOpenTime(t.createdAt)}
+                        {formatDateTime(t.createdAt)}
                       </td>
 
                       <td className="p-3 text-center text-xs">
-                        {getSolvedTime(t.createdAt, t.resolvedAt)}
+                        {formatDateTime(t.closedAt || t.resolvedAt)}
                       </td>
 
                       {/* ✅ FILES IN TABLE */}

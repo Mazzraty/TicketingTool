@@ -101,7 +101,7 @@ export default function AdminDashboardFiori() {
           Admin Dashboard
         </h1>
         <p className="text-gray-500">
-          SAP Fiori Enterprise Overview
+           Enterprise Overview
         </p>
       </div>
 
