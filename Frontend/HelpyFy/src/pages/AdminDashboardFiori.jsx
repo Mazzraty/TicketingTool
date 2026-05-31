@@ -1,51 +1,34 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 export default function AdminDashboardFiori() {
-  const [stats, setStats] = useState({
-    totalAssets: 0,
-    laptops: 0,
-    printers: 0,
-    hht: 0,
-    assigned: 0,
-    available: 0,
-    employees: 0,
-    openTickets: 0,
-    inProgress: 0,
-    closed: 0,
-  });
-
+  const [stats, setStats] = useState({});
   const [recentAssets, setRecentAssets] = useState([]);
-  const [recentTickets, setRecentTickets] = useState([]);
-
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [comment, setComment] = useState("");
-  const [rating, setRating] = useState(0);
+  const [recentSoftware, setRecentSoftware] = useState([]);
 
   const loadDashboard = async () => {
     try {
-      const [statsRes, assetsRes, ticketsRes] = await Promise.all([
+      const [statsRes, assetsRes, softwareRes] = await Promise.all([
         api.get("/dashboard/stats"),
         api.get("/dashboard/recent-assets"),
-        api.get("/dashboard/recent-tickets"),
+        api.get("/dashboard/recent-software"),
       ]);
 
-      setStats({
-        totalAssets: 0,
-        laptops: 0,
-        printers: 0,
-        hht: 0,
-        assigned: 0,
-        available: 0,
-        employees: 0,
-        openTickets: 0,
-        inProgress: 0,
-        closed: 0,
-        ...statsRes.data,
-      });
-
+      setStats(statsRes.data || {});
       setRecentAssets(assetsRes.data || []);
-      setRecentTickets(ticketsRes.data || []);
+      setRecentSoftware(softwareRes.data || []);
     } catch (err) {
       console.error(err);
     }
@@ -55,158 +38,170 @@ export default function AdminDashboardFiori() {
     loadDashboard();
   }, []);
 
+  /* ================= DARK CHART DATA ================= */
+  const assetChart = [
+    { name: "Laptops", value: stats.laptops || 0 },
+    { name: "Printers", value: stats.printers || 0 },
+    { name: "HHT", value: stats.hht || 0 },
+  ];
+
+  const assetStatus = [
+    { name: "Assigned", value: stats.assigned || 0 },
+    { name: "Available", value: stats.available || 0 },
+  ];
+
+  const softwareChart = [
+    { name: "Active", value: stats.totalActiveLicenses || 0 },
+    { name: "Expiring", value: stats.expiringThisMonth || 0 },
+    { name: "Expired", value: stats.expiredServices || 0 },
+  ];
+
+  const COLORS = ["#60a5fa", "#34d399", "#f87171", "#fbbf24"];
+
+  /* ================= TILE ================= */
+  const Tile = ({ title, value, color }) => (
+    <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5 shadow-lg">
+      <p className="text-gray-400 text-sm">{title}</p>
+      <h2 className={`text-3xl font-bold mt-2 ${color}`}>
+        {value}
+      </h2>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-[#f5f7fa] p-6">
+    <div className="min-h-screen bg-[#0b1220] text-white p-6">
 
       {/* HEADER */}
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-
-      {/* KPI */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <Tile title="Assets" value={stats.totalAssets} />
-        <Tile title="Assigned" value={stats.assigned} />
-        <Tile title="Available" value={stats.available} />
-        <Tile title="Employees" value={stats.employees} />
-
-        <Tile title="Open" value={stats.openTickets} />
-        <Tile title="Progress" value={stats.inProgress} />
-        <Tile title="Closed" value={stats.closed} />
-        <Tile title="Laptops" value={stats.laptops} />
-      </div>
-
-      {/* RECENT TICKETS */}
-      <div className="bg-white p-5 rounded-xl shadow mb-6">
-        <h2 className="font-semibold mb-3">Recent Tickets</h2>
-
-        {recentTickets.map((t) => (
-          <div
-            key={t._id}
-            onClick={() => setSelectedTicket(t)}
-            className="p-3 border rounded mb-2 cursor-pointer hover:bg-gray-100"
-          >
-            <p className="font-medium">{t.title}</p>
-            <p className="text-sm text-gray-500">{t.status}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* OBJECT PAGE MODAL */}
-      {selectedTicket && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-
-          <div className="bg-white w-[95%] h-[90%] rounded-2xl flex flex-col">
-
-            {/* HEADER */}
-            <div className="flex justify-between p-4 border-b">
-              <h2 className="text-xl font-bold">Ticket Object Page</h2>
-              <button onClick={() => setSelectedTicket(null)}>✕</button>
-            </div>
-
-            {/* BODY */}
-            <div className="flex flex-1 overflow-hidden">
-
-              {/* LEFT */}
-              <div className="w-1/3 p-4 border-r overflow-y-auto">
-                <h3 className="text-lg font-semibold">{selectedTicket.title}</h3>
-
-                <p className="text-gray-600 mt-2">
-                  {selectedTicket.description}
-                </p>
-
-                <div className="mt-4 text-sm space-y-2">
-                  <p><b>Dept:</b> {selectedTicket.department}</p>
-                  <p><b>Priority:</b> {selectedTicket.priority}</p>
-                  <p><b>Status:</b> {selectedTicket.status}</p>
-                </div>
-
-                <div className="mt-6 space-y-2">
-                  <button className="w-full bg-green-500 text-white p-2 rounded">
-                    Approve
-                  </button>
-                  <button className="w-full bg-red-500 text-white p-2 rounded">
-                    Reject
-                  </button>
-                </div>
-              </div>
-
-              {/* RIGHT TIMELINE */}
-              <div className="w-1/3 p-4 border-r overflow-y-auto">
-                <h3 className="font-semibold mb-4">Timeline</h3>
-
-                <Timeline label="Created" time={selectedTicket.createdAt} color="bg-blue-500" />
-                <Timeline label="In Progress" time={selectedTicket.inProgressAt} color="bg-yellow-500" />
-                <Timeline label="Closed" time={selectedTicket.closedAt} color="bg-green-500" />
-                <Timeline label="Reopened" time={selectedTicket.reopenedAt} color="bg-red-500" />
-              </div>
-
-              {/* BOTTOM RIGHT PANEL */}
-              <div className="w-1/3 p-4 flex flex-col">
-
-                {/* COMMENTS */}
-                <h3 className="font-semibold mb-2">Comments</h3>
-
-                <textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  className="border p-2 rounded h-24 mb-2"
-                />
-
-                <button className="bg-blue-500 text-white p-2 rounded mb-4">
-                  Add Comment
-                </button>
-
-                {/* RATING */}
-                <h3 className="font-semibold mb-2">Rating</h3>
-
-                <div className="flex gap-1 mb-4">
-                  {[1,2,3,4,5].map((n) => (
-                    <span
-                      key={n}
-                      onClick={() => setRating(n)}
-                      className={`text-2xl cursor-pointer ${
-                        rating >= n ? "text-yellow-400" : "text-gray-300"
-                      }`}
-                    >
-                      ★
-                    </span>
-                  ))}
-                </div>
-
-                <button className="bg-purple-600 text-white p-2 rounded">
-                  Submit Rating
-                </button>
-
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ================= TILE ================= */
-function Tile({ title, value }) {
-  return (
-    <div className="bg-white p-4 rounded-xl shadow">
-      <p className="text-gray-500 text-sm">{title}</p>
-      <h2 className="text-2xl font-bold">{value}</h2>
-    </div>
-  );
-}
-
-/* ================= TIMELINE ================= */
-function Timeline({ label, time, color }) {
-  return (
-    <div className="flex gap-3 mb-3">
-      <div className={`w-3 h-3 rounded-full ${color}`}></div>
-      <div>
-        <p className="font-medium">{label}</p>
-        <p className="text-xs text-gray-500">
-          {time ? new Date(time).toLocaleString() : "Pending"}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">
+          Admin Dashboard
+        </h1>
+        <p className="text-gray-400">
+          SAP Fiori Dark Mode Executive Overview
         </p>
       </div>
+
+      {/* KPI */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+
+        <Tile title="Total Assets" value={stats.totalAssets} />
+        <Tile title="Assigned" value={stats.assigned} color="text-blue-400" />
+        <Tile title="Available" value={stats.available} color="text-green-400" />
+        <Tile title="Employees" value={stats.employees} color="text-purple-400" />
+
+        <Tile title="Open Tickets" value={stats.openTickets} color="text-red-400" />
+        <Tile title="Active Licenses" value={stats.totalActiveLicenses} color="text-blue-300" />
+        <Tile title="Expiring" value={stats.expiringThisMonth} color="text-yellow-400" />
+        <Tile
+          title="Annual Cost"
+          value={`QAR ${Number(stats.annualSoftwareCost || 0).toLocaleString()}`}
+          color="text-green-400"
+        />
+      </div>
+
+      {/* CHARTS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+        <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5">
+          <h2 className="mb-4 font-semibold">Asset Distribution</h2>
+
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie data={assetChart} dataKey="value" nameKey="name" outerRadius={90}>
+                {assetChart.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5">
+          <h2 className="mb-4 font-semibold">Asset Status</h2>
+
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={assetStatus}>
+              <XAxis dataKey="name" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip />
+              <Bar dataKey="value" fill="#60a5fa" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* SOFTWARE */}
+      <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5 mb-6">
+        <h2 className="mb-4 font-semibold">Software Overview</h2>
+
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={softwareChart}>
+            <XAxis dataKey="name" stroke="#9ca3af" />
+            <YAxis stroke="#9ca3af" />
+            <Tooltip />
+            <Bar dataKey="value" fill="#34d399" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* RECENT ASSETS */}
+      <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5 mb-6">
+        <h2 className="font-semibold mb-4">Recent Assets</h2>
+
+        <table className="w-full text-sm">
+          <thead className="text-gray-400 border-b border-gray-600">
+            <tr>
+              <th className="p-2 text-left">Code</th>
+              <th className="p-2 text-left">Type</th>
+              <th className="p-2 text-left">Model</th>
+              <th className="p-2 text-left">Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {recentAssets.map((a) => (
+              <tr key={a._id} className="border-b border-gray-700">
+                <td className="p-2">{a.assetCode}</td>
+                <td className="p-2">{a.type}</td>
+                <td className="p-2">{a.model || "-"}</td>
+                <td className="p-2">{a.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* RECENT SOFTWARE */}
+      <div className="bg-[#1f2937] border border-gray-700 rounded-2xl p-5">
+        <h2 className="font-semibold mb-4">Recent Software</h2>
+
+        <table className="w-full text-sm">
+          <thead className="text-gray-400 border-b border-gray-600">
+            <tr>
+              <th className="p-2 text-left">Service</th>
+              <th className="p-2 text-left">Vendor</th>
+              <th className="p-2 text-left">Expiry</th>
+              <th className="p-2 text-left">Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {recentSoftware.map((s) => (
+              <tr key={s._id} className="border-b border-gray-700">
+                <td className="p-2">{s.serviceName}</td>
+                <td className="p-2">{s.vendor}</td>
+                <td className="p-2">
+                  {new Date(s.expiryDate).toLocaleDateString()}
+                </td>
+                <td className="p-2">{s.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
     </div>
   );
 }
