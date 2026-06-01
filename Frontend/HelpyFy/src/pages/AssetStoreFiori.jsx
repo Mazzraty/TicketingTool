@@ -7,6 +7,7 @@ export default function AssetStoreFiori() {
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [showFilters, setShowFilters] = useState(false);
   // EDIT
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -256,7 +257,7 @@ export default function AssetStoreFiori() {
         </div>
       </div>
 
-      {/* FILTER */}
+
       {/* FILTER - SAP STYLE */}
       <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6 mb-8">
 
