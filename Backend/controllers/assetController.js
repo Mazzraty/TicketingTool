@@ -346,3 +346,34 @@ export const getAssetHistory = async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 };
+
+//User Asset History
+
+
+export const getMyAssets = async (req, res) => {
+  try {
+    const employee = await EmployeeMaster.findOne({
+      staffCode: req.user.employeeId,
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        msg: "Employee record not found",
+      });
+    }
+
+    const assets = await AssetAssignment.find({
+      employee: employee._id,
+      status: "active",
+    })
+      .populate("asset")
+      .sort({ assignedDate: -1 });
+
+    res.json(assets);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      msg: err.message,
+    });
+  }
+};
