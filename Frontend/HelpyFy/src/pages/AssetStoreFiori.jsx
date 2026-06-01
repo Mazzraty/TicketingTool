@@ -199,12 +199,7 @@ export default function AssetStoreFiori() {
             Asset History
           </button>
 
-          <button
-            onClick={() => window.location.href = "/admin/assets/upload-excel"}
-            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-          >
-            Upload Employees
-          </button>
+          
 
           <button
             onClick={() => window.location.href = "/admin/assets/upload-printer"}
