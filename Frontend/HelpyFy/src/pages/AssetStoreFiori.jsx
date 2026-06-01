@@ -257,45 +257,70 @@ export default function AssetStoreFiori() {
       </div>
 
       {/* FILTER */}
-      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-5 mb-8">
-        <div className="flex flex-col lg:flex-row gap-4">
+      {/* FILTER - SAP STYLE */}
+      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6 mb-8">
+
+        {/* SEARCH ROW */}
+        <div className="flex flex-col lg:flex-row gap-4 items-center mb-5">
+
           <input
             className="flex-1 border border-gray-300 rounded-2xl px-5 py-3 outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Search asset / serial / salesman..."
             value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
-            }
+            onChange={(e) => setSearch(e.target.value)}
           />
 
-          <div className="flex gap-3 flex-wrap">
-            {[
-              "All",
-              "Laptop",
-              "Printer",
-              "HHT",
-            ].map((t) => (
+          {/* QUICK RESET */}
+          <button
+            onClick={() => {
+              setSearch("");
+              setFilter("All");
+              setStatusFilter("All");
+            }}
+            className="px-5 py-3 rounded-2xl text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+          >
+            Reset Filters
+          </button>
+        </div>
+
+        {/* TYPE FILTER */}
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-gray-500 mb-2">
+            TYPE
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            {["All", "Laptop", "Printer", "HHT"].map((t) => (
               <button
                 key={t}
                 onClick={() => setFilter(t)}
-                className={`px-5 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 ${filter === t
-                  ? "bg-[#0a6ed1] text-white shadow-md"
-                  : "bg-white border border-gray-300 hover:bg-gray-100 text-gray-700"
+                className={`px-4 py-2 rounded-full text-sm font-semibold border transition
+            ${filter === t
+                    ? "bg-[#0a6ed1] text-white border-[#0a6ed1] shadow-sm"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                   }`}
               >
                 {t}
               </button>
-
             ))}
           </div>
-          <div className="flex gap-3 flex-wrap mt-3">
+        </div>
+
+        {/* STATUS FILTER */}
+        <div>
+          <p className="text-xs font-semibold text-gray-500 mb-2">
+            STATUS
+          </p>
+
+          <div className="flex flex-wrap gap-2">
             {["All", "available", "assigned", "damaged"].map((s) => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-5 py-3 rounded-2xl text-sm font-semibold transition-all ${statusFilter === s
-                    ? "bg-[#0a6ed1] text-white shadow-md"
-                    : "bg-white border border-gray-300 hover:bg-gray-100 text-gray-700"
+                className={`px-4 py-2 rounded-full text-sm font-semibold border transition
+            ${statusFilter === s
+                    ? "bg-green-600 text-white border-green-600 shadow-sm"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                   }`}
               >
                 {s}
@@ -303,6 +328,7 @@ export default function AssetStoreFiori() {
             ))}
           </div>
         </div>
+
       </div>
 
       {/* TABLE */}
