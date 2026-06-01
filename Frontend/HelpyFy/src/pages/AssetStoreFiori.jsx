@@ -6,7 +6,7 @@ export default function AssetStoreFiori() {
   const [assets, setAssets] = useState([]);
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
-
+  const [statusFilter, setStatusFilter] = useState("All");
   // EDIT
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -43,27 +43,22 @@ export default function AssetStoreFiori() {
       const selectedFilter = filter?.toLowerCase();
 
       const matchType =
-        selectedFilter === "all" ||
-        type === selectedFilter;
+        selectedFilter === "all" || type === selectedFilter;
+
+      const matchStatus =
+        statusFilter === "All" ||
+        a.status?.toLowerCase() === statusFilter.toLowerCase();
 
       const text = search.toLowerCase();
 
       const matchSearch =
-        a.assetCode
-          ?.toLowerCase()
-          .includes(text) ||
+        a.assetCode?.toLowerCase().includes(text) ||
         a.model?.toLowerCase().includes(text) ||
-        a.serialNumber
-          ?.toLowerCase()
-          .includes(text) ||
-        a.salesmanName
-          ?.toLowerCase()
-          .includes(text) ||
-        a.salesmanCode
-          ?.toLowerCase()
-          .includes(text);
+        a.serialNumber?.toLowerCase().includes(text) ||
+        a.salesmanName?.toLowerCase().includes(text) ||
+        a.salesmanCode?.toLowerCase().includes(text);
 
-      return matchType && matchSearch;
+      return matchType && matchStatus && matchSearch;
     })
     : [];
 
@@ -199,7 +194,7 @@ export default function AssetStoreFiori() {
             Asset History
           </button>
 
-          
+
 
           <button
             onClick={() => window.location.href = "/admin/assets/upload-printer"}
@@ -289,6 +284,21 @@ export default function AssetStoreFiori() {
                   }`}
               >
                 {t}
+              </button>
+
+            ))}
+          </div>
+          <div className="flex gap-3 flex-wrap mt-3">
+            {["All", "available", "assigned", "damaged"].map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-5 py-3 rounded-2xl text-sm font-semibold transition-all ${statusFilter === s
+                    ? "bg-[#0a6ed1] text-white shadow-md"
+                    : "bg-white border border-gray-300 hover:bg-gray-100 text-gray-700"
+                  }`}
+              >
+                {s}
               </button>
             ))}
           </div>
@@ -414,12 +424,12 @@ export default function AssetStoreFiori() {
                     <td className="px-6 py-4">
                       <span
                         className={`px-4 py-1.5 rounded-full text-xs font-bold ${a.status === "available"
-                            ? "bg-green-100 text-green-700"
-                            : a.status === "assigned"
-                              ? "bg-blue-100 text-blue-700"
-                              : a.status === "damaged"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-gray-100 text-gray-700"
+                          ? "bg-green-100 text-green-700"
+                          : a.status === "assigned"
+                            ? "bg-blue-100 text-blue-700"
+                            : a.status === "damaged"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-gray-100 text-gray-700"
                           }`}
                       >
                         {a.status}
