@@ -306,57 +306,7 @@ export default function AssetHistoryPage() {
           assignment history
         </p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-4 text-left">Employee</th>
-              <th className="p-4 text-left">Type</th>
-              <th className="p-4 text-left">Status</th>
-              <th className="p-4 text-left">Assigned</th>
-              <th className="p-4 text-left">Returned</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loadingAsset ? (
-              <tr>
-                <td colSpan="5" className="p-6 text-center">
-                  Loading...
-                </td>
-              </tr>
-            ) : assetHistory.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="p-6 text-center text-gray-500">
-                  No asset history found
-                </td>
-              </tr>
-            ) : (
-              assetHistory.map((h) => (
-                <tr key={h._id} className="border-t hover:bg-gray-50">
-                  <td className="p-4">
-                    {h.employee?.staffCode} - {h.employee?.name}
-                  </td>
-
-                  <td className="p-4">{h.assetType}</td>
-
-                  <td className="p-4">{statusBadge(h)}</td>
-
-                  <td className="p-4">
-                    {new Date(h.assignedDate).toLocaleString()}
-                  </td>
-
-                  <td className="p-4">
-                    {h.returnedDate
-                      ? new Date(h.returnedDate).toLocaleString()
-                      : "Active"}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+    
       {/* FILTERS */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border mb-6">
 
