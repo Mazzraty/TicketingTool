@@ -104,24 +104,35 @@ export default function AdminEmployeeMaster() {
       </div>
       {/* HEADER */}
       <div className="bg-white p-4 rounded-xl shadow mb-4">
-        <h1 className="text-xl font-bold">Employee Master</h1>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-        <input
-          className="border p-2 mt-3 w-64 rounded"
-          placeholder="Search employee..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-        />
+          {/* Left Side */}
+          <div>
+            <h1 className="text-xl font-bold">Employee Master</h1>
+
+            <input
+              className="border p-2 mt-3 w-64 rounded"
+              placeholder="Search employee..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+
+          {/* Right Side */}
+          <button
+            onClick={() =>
+              (window.location.href = "/admin/assets/upload-excel")
+            }
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-[#0a6ed1] text-white hover:bg-[#085caf] transition whitespace-nowrap"
+          >
+            Upload Employees
+          </button>
+
+        </div>
       </div>
-      <button
-        onClick={() => window.location.href = "/admin/assets/upload-excel"}
-        className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-      >
-        Upload Employees
-      </button>
       {/* ADD EMPLOYEE */}
       <div className="bg-white p-4 rounded-xl shadow mb-4">
         <h2 className="font-bold mb-3">➕ Add Employee</h2>
