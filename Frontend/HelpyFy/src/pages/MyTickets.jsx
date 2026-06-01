@@ -41,29 +41,69 @@ export default function MyTickets() {
   };
 
   /* ================= AUTO REVIEW ON RESOLVE ================= */
-  useEffect(() => {
-    const unresolved = tickets.find(
-      (t) => t.status === "Resolved" && !t.review
-    );
+  const submitReview = async () => {
+    try {
+      if (!rating) {
+        return toast.error("Please select rating");
+      }
 
-    if (unresolved) {
-      setSelectedTicket(unresolved);
+      await api.put(
+        `/tickets/${selectedTicket._id}/review`,
+        {
+          rating,
+          review: comment,
+        }
+      );
+
+      await api.put(
+        `/tickets/${selectedTicket._id}/confirm`
+      );
+
+      toast.success(
+        "Ticket confirmed and closed successfully"
+      );
+
+      setReviewModal(false);
+      setSelectedTicket(null);
       setRating(0);
       setComment("");
-      setReviewModal(true);
-    }
-  }, [tickets]);
 
-  /* ================= REOPEN ================= */
-  const reopenTicket = async (id) => {
-    try {
-      await api.put(`/tickets/${id}/reopen`);
-      toast.success("Ticket reopened");
       load();
-    } catch {
-      toast.error("Reopen failed");
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message ||
+        "Failed to submit feedback"
+      );
     }
   };
+
+  /* ================= REOPEN ================= */
+  {
+    t.status === "Resolved" && (
+      <div className="flex gap-2 justify-end">
+
+        <button
+          onClick={() => {
+            setSelectedTicket(t);
+            setRating(0);
+            setComment("");
+            setReviewModal(true);
+          }}
+          className="px-3 py-1 text-xs bg-green-600 text-white rounded"
+        >
+          Confirm
+        </button>
+
+        <button
+          onClick={() => reopenTicket(t._id)}
+          className="px-3 py-1 text-xs bg-orange-50 text-orange-700 rounded"
+        >
+          Reopen
+        </button>
+
+      </div>
+    )
+  }
 
   /* ================= EDIT ================= */
   const openEdit = (ticket) => {
@@ -169,8 +209,8 @@ export default function MyTickets() {
           onMouseLeave={() => setHoverRating(0)}
           onClick={() => setRating(s)}
           className={`cursor-pointer ${(hoverRating || rating) >= s
-              ? "text-yellow-400"
-              : "text-gray-300"
+            ? "text-yellow-400"
+            : "text-gray-300"
             }`}
         >
           ★
@@ -333,34 +373,55 @@ export default function MyTickets() {
 
       {/* ================= AUTO REVIEW MODAL ================= */}
       {reviewModal && selectedTicket && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[400px]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
 
-            <h2 className="text-center font-semibold mb-2">
-              Ticket Resolved
+          <div className="bg-white rounded-xl w-[450px] p-6">
+
+            <h2 className="text-xl font-semibold text-center">
+              Confirm Resolution
             </h2>
 
-            <p className="text-xs text-gray-500 text-center mb-3">
-              Please confirm resolution and give feedback
+            <p className="text-sm text-gray-500 text-center mt-2">
+              Are you satisfied with the solution?
             </p>
 
-            <Stars />
+            <div className="mt-5">
+              <Stars />
+            </div>
 
             <textarea
-              className="w-full border p-2 mt-3"
+              className="w-full border rounded-lg p-3 mt-4"
+              rows={4}
+              placeholder="Write your feedback..."
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Write feedback..."
+              onChange={(e) =>
+                setComment(e.target.value)
+              }
             />
 
-            <button
-              onClick={submitReview}
-              className="bg-green-600 text-white w-full py-2 mt-3 rounded"
-            >
-              Confirm & Submit
-            </button>
+            <div className="flex gap-3 mt-5">
+
+              <button
+                onClick={() => {
+                  setReviewModal(false);
+                  setSelectedTicket(null);
+                }}
+                className="flex-1 py-2 bg-gray-200 rounded-lg"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={submitReview}
+                className="flex-1 py-2 bg-green-600 text-white rounded-lg"
+              >
+                Confirm & Close
+              </button>
+
+            </div>
 
           </div>
+
         </div>
       )}
 
