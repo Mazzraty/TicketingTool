@@ -70,8 +70,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
             <div className="space-y-2">
               <NavItem to="/" icon="📊" label="Dashboard" />
-              <NavItem to="/tickets" icon="🎫" label="My Tickets" />
               <NavItem to="/create" icon="➕" label="Create Ticket" />
+              <NavItem to="/tickets" icon="🎫" label="My Tickets" />
             </div>
           </div>
         )}
@@ -102,7 +102,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 />
 
                 <NavItem
-                  to="/admin/assets/fiori"
+                  to="/admin/assets"
                   icon="📦"
                   label="Asset Management"
                 />
