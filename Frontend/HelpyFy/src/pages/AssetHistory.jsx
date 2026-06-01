@@ -92,10 +92,10 @@ export default function AssetHistoryPage() {
           Array.isArray(assetRes.data)
             ? assetRes.data
             : Array.isArray(
-                assetRes.data?.assets
-              )
-            ? assetRes.data.assets
-            : []
+              assetRes.data?.assets
+            )
+              ? assetRes.data.assets
+              : []
         );
       } catch (err) {
         console.error(err);
@@ -225,14 +225,14 @@ export default function AssetHistoryPage() {
 
         h.assignedDate
           ? new Date(
-              h.assignedDate
-            ).toLocaleString()
+            h.assignedDate
+          ).toLocaleString()
           : "-",
 
         h.returnedDate
           ? new Date(
-              h.returnedDate
-            ).toLocaleString()
+            h.returnedDate
+          ).toLocaleString()
           : "Active",
       ]),
     });
@@ -260,8 +260,7 @@ export default function AssetHistoryPage() {
       ],
 
       body: assetHistory.map((h) => [
-        `${h.employee?.staffCode || "-"} - ${
-          h.employee?.name || "-"
+        `${h.employee?.staffCode || "-"} - ${h.employee?.name || "-"
         }`,
 
         h.assetType || "-",
@@ -270,14 +269,14 @@ export default function AssetHistoryPage() {
 
         h.assignedDate
           ? new Date(
-              h.assignedDate
-            ).toLocaleString()
+            h.assignedDate
+          ).toLocaleString()
           : "-",
 
         h.returnedDate
           ? new Date(
-              h.returnedDate
-            ).toLocaleString()
+            h.returnedDate
+          ).toLocaleString()
           : "Active",
       ]),
     });
@@ -288,14 +287,14 @@ export default function AssetHistoryPage() {
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       {/* ================= BACK NAVIGATION ================= */}
-<div className="mb-4">
-  <button
-    onClick={() => window.history.back()}
-    className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition shadow-sm text-sm font-semibold"
-  >
-    ← Back
-  </button>
-</div>
+      <div className="mb-4">
+        <button
+          onClick={() => window.history.back()}
+          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition shadow-sm text-sm font-semibold"
+        >
+          ← Back
+        </button>
+      </div>
       {/* HEADER */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-800">
@@ -307,7 +306,57 @@ export default function AssetHistoryPage() {
           assignment history
         </p>
       </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-4 text-left">Employee</th>
+              <th className="p-4 text-left">Type</th>
+              <th className="p-4 text-left">Status</th>
+              <th className="p-4 text-left">Assigned</th>
+              <th className="p-4 text-left">Returned</th>
+            </tr>
+          </thead>
 
+          <tbody>
+            {loadingAsset ? (
+              <tr>
+                <td colSpan="5" className="p-6 text-center">
+                  Loading...
+                </td>
+              </tr>
+            ) : assetHistory.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="p-6 text-center text-gray-500">
+                  No asset history found
+                </td>
+              </tr>
+            ) : (
+              assetHistory.map((h) => (
+                <tr key={h._id} className="border-t hover:bg-gray-50">
+                  <td className="p-4">
+                    {h.employee?.staffCode} - {h.employee?.name}
+                  </td>
+
+                  <td className="p-4">{h.assetType}</td>
+
+                  <td className="p-4">{statusBadge(h)}</td>
+
+                  <td className="p-4">
+                    {new Date(h.assignedDate).toLocaleString()}
+                  </td>
+
+                  <td className="p-4">
+                    {h.returnedDate
+                      ? new Date(h.returnedDate).toLocaleString()
+                      : "Active"}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
       {/* FILTERS */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border mb-6">
 
@@ -345,7 +394,7 @@ export default function AssetHistoryPage() {
             {showEmployeeDropdown &&
               employeeSearch &&
               filteredEmployees.length >
-                0 && (
+              0 && (
                 <div className="absolute z-50 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-60 overflow-y-auto">
 
                   {filteredEmployees.map(
@@ -423,7 +472,7 @@ export default function AssetHistoryPage() {
             {showAssetDropdown &&
               assetSearch &&
               filteredAssets.length >
-                0 && (
+              0 && (
                 <div className="absolute z-50 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-60 overflow-y-auto">
 
                   {filteredAssets.map(
@@ -609,8 +658,8 @@ export default function AssetHistoryPage() {
                     <td className="p-4">
                       {h.returnedDate
                         ? new Date(
-                            h.returnedDate
-                          ).toLocaleString()
+                          h.returnedDate
+                        ).toLocaleString()
                         : "Active"}
                     </td>
                   </tr>
@@ -625,6 +674,7 @@ export default function AssetHistoryPage() {
       </div>
 
       {/* ASSET HISTORY */}
+      {/* ASSET HISTORY */}
       <div className="bg-white rounded-2xl shadow-sm border p-6">
 
         <div className="flex justify-between items-center mb-5">
@@ -635,8 +685,7 @@ export default function AssetHistoryPage() {
             </h2>
 
             <p className="text-sm text-gray-500 mt-1">
-              Assignment records by
-              asset
+              Assignment records by asset
             </p>
           </div>
 
@@ -648,9 +697,99 @@ export default function AssetHistoryPage() {
           </button>
         </div>
 
-        
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-4 text-left font-semibold">
+                  Employee
+                </th>
+
+                <th className="p-4 text-left font-semibold">
+                  Type
+                </th>
+
+                <th className="p-4 text-left font-semibold">
+                  Status
+                </th>
+
+                <th className="p-4 text-left font-semibold">
+                  Assigned
+                </th>
+
+                <th className="p-4 text-left font-semibold">
+                  Returned
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {loadingAsset ? (
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="p-6 text-center"
+                  >
+                    Loading...
+                  </td>
+                </tr>
+              ) : assetHistory.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="p-6 text-center text-gray-500"
+                  >
+                    No asset history found
+                  </td>
+                </tr>
+              ) : (
+                assetHistory.map((h) => (
+                  <tr
+                    key={h._id}
+                    className="border-t hover:bg-gray-50"
+                  >
+                    <td className="p-4">
+                      {h.employee?.staffCode || "-"} -{" "}
+                      {h.employee?.name || "-"}
+                    </td>
+
+                    <td className="p-4">
+                      {h.assetType || "-"}
+                    </td>
+
+                    <td className="p-4">
+                      {statusBadge(h)}
+                    </td>
+
+                    <td className="p-4">
+                      {h.assignedDate
+                        ? new Date(
+                          h.assignedDate
+                        ).toLocaleString()
+                        : "-"}
+                    </td>
+
+                    <td className="p-4">
+                      {h.returnedDate
+                        ? new Date(
+                          h.returnedDate
+                        ).toLocaleString()
+                        : "Active"}
+                    </td>
+                  </tr>
+                ))
+              )}
+
+            </tbody>
+
+          </table>
+        </div>
+
       </div>
 
     </div>
   );
 }
+
