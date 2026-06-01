@@ -72,6 +72,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <NavItem to="/" icon="📊" label="Dashboard" />
               <NavItem to="/create" icon="➕" label="Create Ticket" />
               <NavItem to="/tickets" icon="🎫" label="My Tickets" />
+              <NavItem to="/my-assets" icon="📦" label="My Assets" />
             </div>
           </div>
         )}

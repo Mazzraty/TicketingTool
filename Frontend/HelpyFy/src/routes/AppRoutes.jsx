@@ -8,7 +8,7 @@ import Register from "../pages/Register.jsx";
 import Dashboard from "../pages/Dashboard.jsx";
 import CreateTicket from "../pages/CreateTicket.jsx";
 import MyTickets from "../pages/MyTickets.jsx";
-
+import UserAssetPage from "../pages/UserAssetPage.jsx";
 // ADMIN
 import AdminTickets from "../pages/AdminTickets.jsx";
 import AdminEmployeeMaster from "../pages/AdminEmployeeMaster.jsx";
@@ -18,12 +18,15 @@ import AssetExcelUpload from "../pages/AssetUpload.jsx";
 import AdminSoftwareDashboard from "../pages/AdminSoftwareDashboard.jsx";
 import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";
 import PrinterUpload from "../pages/PrinterUpload.jsx";
+import LaptopUpload from "../pages/LaptopUpload.jsx";
+import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
 import AdminLayout from "../layouts/AdminLayout.jsx";
-import LaptopUpload from "../pages/LaptopUpload.jsx";
-import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
+
+
+
 
 
 export default function AppRoutes() {
@@ -56,6 +59,10 @@ export default function AppRoutes() {
           <Route
             path="/tickets"
             element={<MyTickets />}
+          />
+          <Route
+            path="/my-assets"
+            element={<UserAssetPage />}
           />
 
         </Route>
