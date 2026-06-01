@@ -284,187 +284,247 @@ export default function AssetStoreFiori() {
         </div>
 
         {/* TYPE FILTER */}
-        <div className="mb-5">
-          <p className="text-xs font-semibold text-gray-500 mb-2">
-            TYPE
-          </p>
+        {/* FILTER HEADER */}
+        <div className="bg-white border border-gray-200 rounded-3xl shadow-sm mb-8 overflow-hidden">
 
-          <div className="flex flex-wrap gap-2">
-            {["All", "Laptop", "Printer", "HHT"].map((t) => (
-              <button
-                key={t}
-                onClick={() => setFilter(t)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold border transition
-            ${filter === t
-                    ? "bg-[#0a6ed1] text-white border-[#0a6ed1] shadow-sm"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                  }`}
-              >
-                {t}
-              </button>
-            ))}
+          {/* TOP BAR */}
+          <div className="flex items-center justify-between px-6 py-5">
+
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">
+                Filters
+              </h3>
+              <p className="text-sm text-gray-500">
+                Search and refine asset data
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-5 py-2 rounded-2xl text-sm font-semibold transition
+        ${showFilters
+                  ? "bg-[#0a6ed1] text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+            >
+              {showFilters ? "Hide Filters" : "Show Filters"}
+            </button>
+
           </div>
+
+          {/* SEARCH (always visible) */}
+          <div className="px-6 pb-5">
+            <input
+              className="w-full border border-gray-300 rounded-2xl px-5 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search asset / serial / salesman..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* EXPANDABLE FILTER AREA */}
+          {showFilters && (
+            <div className="px-6 pb-6 space-y-6 border-t border-gray-100">
+
+              {/* TYPE FILTER */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 mb-2">
+                  TYPE
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  {["All", "Laptop", "Printer", "HHT"].map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setFilter(t)}
+                      className={`px-4 py-2 rounded-full text-sm font-semibold border transition
+                ${filter === t
+                          ? "bg-[#0a6ed1] text-white border-[#0a6ed1]"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                        }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* STATUS FILTER */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 mb-2">
+                  STATUS
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  {["All", "available", "assigned", "damaged"].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setStatusFilter(s)}
+                      className={`px-4 py-2 rounded-full text-sm font-semibold border transition
+                ${statusFilter === s
+                          ? "bg-green-600 text-white border-green-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                        }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* QUICK RESET */}
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setFilter("All");
+                    setStatusFilter("All");
+                  }}
+                  className="px-5 py-2 rounded-2xl text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700"
+                >
+                  Reset All Filters
+                </button>
+              </div>
+
+            </div>
+          )}
+
         </div>
 
-        {/* STATUS FILTER */}
-        <div>
-          <p className="text-xs font-semibold text-gray-500 mb-2">
-            STATUS
-          </p>
+        {/* TABLE */}
+        <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-[#f7f9fb] border-b">
+                <tr className="text-gray-700">
+                  <th className="text-left px-6 py-4 font-semibold">
+                    Asset Code
+                  </th>
 
-          <div className="flex flex-wrap gap-2">
-            {["All", "available", "assigned", "damaged"].map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold border transition
-            ${statusFilter === s
-                    ? "bg-green-600 text-white border-green-600 shadow-sm"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                  }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
+                  <th className="text-left px-6 py-4 font-semibold">
+                    Type
+                  </th>
 
-      </div>
+                  {!showHHTFields && (
+                    <>
+                      <th className="text-left px-6 py-4 font-semibold">
+                        Model
+                      </th>
 
-      {/* TABLE */}
-      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[#f7f9fb] border-b">
-              <tr className="text-gray-700">
-                <th className="text-left px-6 py-4 font-semibold">
-                  Asset Code
-                </th>
+                      <th className="text-left px-6 py-4 font-semibold">
+                        Serial
+                      </th>
+                    </>
+                  )}
 
-                <th className="text-left px-6 py-4 font-semibold">
-                  Type
-                </th>
+                  {showHHTFields && (
+                    <>
+                      <th className="text-left px-6 py-4 font-semibold">
+                        Salesman
+                      </th>
 
-                {!showHHTFields && (
-                  <>
-                    <th className="text-left px-6 py-4 font-semibold">
-                      Model
-                    </th>
+                      <th className="text-left px-6 py-4 font-semibold">
+                        Route
+                      </th>
+                    </>
+                  )}
 
-                    <th className="text-left px-6 py-4 font-semibold">
-                      Serial
-                    </th>
-                  </>
-                )}
+                  <th className="text-left px-6 py-4 font-semibold">
+                    Current User
+                  </th>
 
-                {showHHTFields && (
-                  <>
-                    <th className="text-left px-6 py-4 font-semibold">
-                      Salesman
-                    </th>
+                  <th className="text-left px-6 py-4 font-semibold">
+                    Status
+                  </th>
 
-                    <th className="text-left px-6 py-4 font-semibold">
-                      Route
-                    </th>
-                  </>
-                )}
-
-                <th className="text-left px-6 py-4 font-semibold">
-                  Current User
-                </th>
-
-                <th className="text-left px-6 py-4 font-semibold">
-                  Status
-                </th>
-
-                <th className="text-center px-6 py-4 font-semibold">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="9"
-                    className="text-center py-14 text-gray-400"
-                  >
-                    No assets found
-                  </td>
+                  <th className="text-center px-6 py-4 font-semibold">
+                    Actions
+                  </th>
                 </tr>
-              ) : (
-                filtered.map((a, index) => (
-                  <tr
-                    key={a._id}
-                    className={`border-b last:border-0 hover:bg-blue-50/40 transition ${index % 2 === 0
-                      ? "bg-white"
-                      : "bg-gray-50/40"
-                      }`}
-                  >
-                    <td className="px-6 py-4 font-semibold text-gray-800">
-                      {a.assetCode}
+              </thead>
+
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan="9"
+                      className="text-center py-14 text-gray-400"
+                    >
+                      No assets found
                     </td>
+                  </tr>
+                ) : (
+                  filtered.map((a, index) => (
+                    <tr
+                      key={a._id}
+                      className={`border-b last:border-0 hover:bg-blue-50/40 transition ${index % 2 === 0
+                        ? "bg-white"
+                        : "bg-gray-50/40"
+                        }`}
+                    >
+                      <td className="px-6 py-4 font-semibold text-gray-800">
+                        {a.assetCode}
+                      </td>
 
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${a.type === "Laptop"
-                          ? "bg-blue-100 text-blue-700"
-                          : a.type === "Printer"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-purple-100 text-purple-700"
-                          }`}
-                      >
-                        {a.type}
-                      </span>
-                    </td>
-
-                    {!showHHTFields && (
-                      <>
-                        <td className="px-6 py-4 text-gray-700">
-                          {a.model || "-"}
-                        </td>
-
-                        <td className="px-6 py-4 text-gray-700">
-                          {a.serialNumber || "-"}
-                        </td>
-                      </>
-                    )}
-
-                    {showHHTFields && (
-                      <>
-                        <td className="px-6 py-4 text-gray-700">
-                          {a.salesmanName || "-"}
-                        </td>
-
-                        <td className="px-6 py-4 text-gray-700">
-                          {a.route || "-"}
-                        </td>
-                      </>
-                    )}
-
-                    <td className="px-6 py-4 text-gray-700 font-medium">
-                      {getCurrentUser(a)}
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold ${a.status === "available"
-                          ? "bg-green-100 text-green-700"
-                          : a.status === "assigned"
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${a.type === "Laptop"
                             ? "bg-blue-100 text-blue-700"
-                            : a.status === "damaged"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-gray-100 text-gray-700"
-                          }`}
-                      >
-                        {a.status}
-                      </span>
-                    </td>
+                            : a.type === "Printer"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-purple-100 text-purple-700"
+                            }`}
+                        >
+                          {a.type}
+                        </span>
+                      </td>
 
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        {/* <button
+                      {!showHHTFields && (
+                        <>
+                          <td className="px-6 py-4 text-gray-700">
+                            {a.model || "-"}
+                          </td>
+
+                          <td className="px-6 py-4 text-gray-700">
+                            {a.serialNumber || "-"}
+                          </td>
+                        </>
+                      )}
+
+                      {showHHTFields && (
+                        <>
+                          <td className="px-6 py-4 text-gray-700">
+                            {a.salesmanName || "-"}
+                          </td>
+
+                          <td className="px-6 py-4 text-gray-700">
+                            {a.route || "-"}
+                          </td>
+                        </>
+                      )}
+
+                      <td className="px-6 py-4 text-gray-700 font-medium">
+                        {getCurrentUser(a)}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-4 py-1.5 rounded-full text-xs font-bold ${a.status === "available"
+                            ? "bg-green-100 text-green-700"
+                            : a.status === "assigned"
+                              ? "bg-blue-100 text-blue-700"
+                              : a.status === "damaged"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                        >
+                          {a.status}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* <button
                           onClick={() =>
                             window.open(
                               `/admin/assets/history?code=${a.assetCode}`
@@ -475,122 +535,160 @@ export default function AssetStoreFiori() {
                           History
                         </button> */}
 
-                        <button
-                          onClick={() => openEdit(a)}
-                          className="min-w-[85px] h-9 rounded-lg bg-white hover:bg-[#f5f7fa] text-[#0a6ed1] text-xs font-semibold border border-[#0a6ed1] shadow-sm transition-all"
-                        >
-                          Edit
-                        </button>
+                          <button
+                            onClick={() => openEdit(a)}
+                            className="min-w-[85px] h-9 rounded-lg bg-white hover:bg-[#f5f7fa] text-[#0a6ed1] text-xs font-semibold border border-[#0a6ed1] shadow-sm transition-all"
+                          >
+                            Edit
+                          </button>
 
-                        <button
-                          onClick={() =>
-                            deleteAsset(a._id)
-                          }
-                          className="min-w-[85px] h-9 rounded-lg bg-white hover:bg-red-50 text-red-600 text-xs font-semibold border border-red-200 shadow-sm transition-all"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                          <button
+                            onClick={() =>
+                              deleteAsset(a._id)
+                            }
+                            className="min-w-[85px] h-9 rounded-lg bg-white hover:bg-red-50 text-red-600 text-xs font-semibold border border-red-200 shadow-sm transition-all"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* ================= EDIT MODAL ================= */}
-      {editOpen && selected && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
-            {/* HEADER */}
-            <div className="bg-[#0a6ed1] px-6 py-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-white">
-                  Edit Asset
-                </h2>
+        {/* ================= EDIT MODAL ================= */}
+        {editOpen && selected && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+              {/* HEADER */}
+              <div className="bg-[#0a6ed1] px-6 py-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">
+                    Edit Asset
+                  </h2>
 
-                <p className="text-blue-100 text-sm">
-                  Update asset information
-                </p>
+                  <p className="text-blue-100 text-sm">
+                    Update asset information
+                  </p>
+                </div>
+
+                <button
+                  onClick={() =>
+                    setEditOpen(false)
+                  }
+                  className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 text-white transition"
+                >
+                  ✕
+                </button>
               </div>
 
-              <button
-                onClick={() =>
-                  setEditOpen(false)
-                }
-                className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 text-white transition"
-              >
-                ✕
-              </button>
-            </div>
+              {/* BODY */}
+              <div className="p-6 max-h-[75vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-            {/* BODY */}
-            <div className="p-6 max-h-[75vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700 block mb-2">
+                      Asset Code
+                    </label>
 
-                <div>
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">
-                    Asset Code
-                  </label>
+                    <input
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.assetCode || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          assetCode: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
 
-                  <input
-                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                    value={selected.assetCode || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        assetCode: e.target.value,
-                      })
-                    }
-                  />
-                </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700 block mb-2">
+                      Type
+                    </label>
 
-                <div>
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">
-                    Type
-                  </label>
+                    <select
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.type || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          type: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="Laptop">
+                        Laptop
+                      </option>
 
-                  <select
-                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                    value={selected.type || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        type: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="Laptop">
-                      Laptop
-                    </option>
+                      <option value="Printer">
+                        Printer
+                      </option>
 
-                    <option value="Printer">
-                      Printer
-                    </option>
+                      <option value="HHT">
+                        HHT
+                      </option>
+                    </select>
+                  </div>
 
-                    <option value="HHT">
-                      HHT
-                    </option>
-                  </select>
-                </div>
+                  {(selected.type === "Laptop" ||
+                    selected.type === "Printer") && (
+                      <>
+                        <div>
+                          <label className="text-sm font-semibold text-gray-700 block mb-2">
+                            Model
+                          </label>
 
-                {(selected.type === "Laptop" ||
-                  selected.type === "Printer") && (
+                          <input
+                            className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                            value={selected.model || ""}
+                            onChange={(e) =>
+                              setSelected({
+                                ...selected,
+                                model: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-semibold text-gray-700 block mb-2">
+                            Serial Number
+                          </label>
+
+                          <input
+                            className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                            value={selected.serialNumber || ""}
+                            onChange={(e) =>
+                              setSelected({
+                                ...selected,
+                                serialNumber: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                      </>
+                    )}
+
+                  {selected.type === "Printer" && (
                     <>
                       <div>
                         <label className="text-sm font-semibold text-gray-700 block mb-2">
-                          Model
+                          Route
                         </label>
 
                         <input
                           className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                          value={selected.model || ""}
+                          value={selected.route || ""}
                           onChange={(e) =>
                             setSelected({
                               ...selected,
-                              model: e.target.value,
+                              route: e.target.value,
                             })
                           }
                         />
@@ -598,16 +696,50 @@ export default function AssetStoreFiori() {
 
                       <div>
                         <label className="text-sm font-semibold text-gray-700 block mb-2">
-                          Serial Number
+                          Supervisor
                         </label>
 
                         <input
                           className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                          value={selected.serialNumber || ""}
+                          value={selected.supervisor || ""}
                           onChange={(e) =>
                             setSelected({
                               ...selected,
-                              serialNumber: e.target.value,
+                              supervisor: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 block mb-2">
+                          Salesman Code
+                        </label>
+
+                        <input
+                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          value={selected.salesmanCode || ""}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              salesmanCode: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 block mb-2">
+                          Salesman Name
+                        </label>
+
+                        <input
+                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          value={selected.salesmanName || ""}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              salesmanName: e.target.value,
                             })
                           }
                         />
@@ -615,222 +747,150 @@ export default function AssetStoreFiori() {
                     </>
                   )}
 
-                {selected.type === "Printer" && (
-                  <>
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 block mb-2">
-                        Route
-                      </label>
+                  {selected.type === "HHT" && (
+                    <>
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 block mb-2">
+                          Salesman Name
+                        </label>
 
-                      <input
-                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                        value={selected.route || ""}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            route: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                        <input
+                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          value={selected.salesmanName || ""}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              salesmanName: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
 
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 block mb-2">
-                        Supervisor
-                      </label>
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 block mb-2">
+                          Route
+                        </label>
 
-                      <input
-                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                        value={selected.supervisor || ""}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            supervisor: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                        <input
+                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          value={selected.route || ""}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              route: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
 
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 block mb-2">
-                        Salesman Code
-                      </label>
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 block mb-2">
+                          IMEI
+                        </label>
 
-                      <input
-                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                        value={selected.salesmanCode || ""}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            salesmanCode: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                        <input
+                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          value={selected.imei || ""}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              imei: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
 
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 block mb-2">
-                        Salesman Name
-                      </label>
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 block mb-2">
+                          SIM Number
+                        </label>
 
-                      <input
-                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                        value={selected.salesmanName || ""}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            salesmanName: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </>
-                )}
+                        <input
+                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          value={selected.simNumber || ""}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              simNumber: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
 
-                {selected.type === "HHT" && (
-                  <>
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 block mb-2">
-                        Salesman Name
-                      </label>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-semibold text-gray-700 block mb-2">
+                      Status
+                    </label>
 
-                      <input
-                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                        value={selected.salesmanName || ""}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            salesmanName: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                    <select
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.status || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          status: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="available">
+                        Available
+                      </option>
 
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 block mb-2">
-                        Route
-                      </label>
+                      <option value="assigned">
+                        Assigned
+                      </option>
 
-                      <input
-                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                        value={selected.route || ""}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            route: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                      <option value="damaged">
+                        Damaged
+                      </option>
+                    </select>
+                  </div>
 
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 block mb-2">
-                        IMEI
-                      </label>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-semibold text-gray-700 block mb-2">
+                      Notes
+                    </label>
 
-                      <input
-                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                        value={selected.imei || ""}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            imei: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                    <textarea
+                      rows="4"
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.notes || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          notes: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
 
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 block mb-2">
-                        SIM Number
-                      </label>
+                </div>
 
-                      <input
-                        className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                        value={selected.simNumber || ""}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            simNumber: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="md:col-span-2">
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">
-                    Status
-                  </label>
-
-                  <select
-                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                    value={selected.status || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        status: e.target.value,
-                      })
-                    }
+                {/* FOOTER */}
+                <div className="flex gap-4 mt-8">
+                  <button
+                    onClick={updateAsset}
+                    className="flex-1 h-12 rounded-2xl bg-[#0a6ed1] hover:bg-[#085caf] text-white font-semibold shadow-sm transition"
                   >
-                    <option value="available">
-                      Available
-                    </option>
+                    Save Changes
+                  </button>
 
-                    <option value="assigned">
-                      Assigned
-                    </option>
-
-                    <option value="damaged">
-                      Damaged
-                    </option>
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">
-                    Notes
-                  </label>
-
-                  <textarea
-                    rows="4"
-                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                    value={selected.notes || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        notes: e.target.value,
-                      })
+                  <button
+                    onClick={() =>
+                      setEditOpen(false)
                     }
-                  />
+                    className="flex-1 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold transition"
+                  >
+                    Cancel
+                  </button>
                 </div>
 
               </div>
-
-              {/* FOOTER */}
-              <div className="flex gap-4 mt-8">
-                <button
-                  onClick={updateAsset}
-                  className="flex-1 h-12 rounded-2xl bg-[#0a6ed1] hover:bg-[#085caf] text-white font-semibold shadow-sm transition"
-                >
-                  Save Changes
-                </button>
-
-                <button
-                  onClick={() =>
-                    setEditOpen(false)
-                  }
-                  className="flex-1 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold transition"
-                >
-                  Cancel
-                </button>
-              </div>
-
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+      );
 }
