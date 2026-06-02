@@ -12,16 +12,36 @@ export const askAI = async (req, res) => {
       });
     }
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-    });
+    const models = [
+      "gemini-2.5-flash",
+      "gemini-2.5-pro",
+    ];
 
-    const result = await model.generateContent(message);
-    const text = result.response.text();
+    let reply = null;
 
-    res.json({
-      reply: text,
-    });
+    for (const modelName of models) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+        });
+
+        const result = await model.generateContent(message);
+        reply = result.response.text();
+
+        console.log(`Success using ${modelName}`);
+        break;
+      } catch (err) {
+        console.log(`Failed: ${modelName}`, err.status);
+      }
+    }
+
+    if (!reply) {
+      return res.status(503).json({
+        error: "Gemini service is busy. Please try again in a few moments.",
+      });
+    }
+
+    res.json({ reply });
   } catch (error) {
     console.error("AI ERROR:", error);
 
