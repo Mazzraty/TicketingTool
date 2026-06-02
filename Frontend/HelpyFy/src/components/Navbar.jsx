@@ -11,7 +11,8 @@ export default function Navbar() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notifications] = useState(2);
   const { user, logout } = useAuth();
-
+  const [notifications, setNotifications] = useState([]);
+  const [open, setOpen] = useState(false);
   const role = (user?.role || "guest").toLowerCase();
 
   const handleLogout = () => {
@@ -34,7 +35,14 @@ export default function Navbar() {
     return () =>
       document.removeEventListener("mousedown", handleClick);
   }, []);
+  const loadNotifications = async () => {
+    const res = await api.get("/notifications");
+    setNotifications(res.data.data || []);
+  };
 
+  useEffect(() => {
+    loadNotifications();
+  }, []);
   const navItems = useMemo(() => {
     if (role === "admin") {
       return [
@@ -128,16 +136,51 @@ export default function Navbar() {
           </button>
 
           {/* NOTIFICATIONS */}
-          <button className="relative flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 transition">
+          <div className="relative">
+            <button
+              onClick={() => setOpen(!open)}
+              className="relative text-xl"
+            >
+              🔔
 
-            🔔
+              {notifications.filter(n => !n.isRead).length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs px-1 rounded-full">
+                  {notifications.filter(n => !n.isRead).length}
+                </span>
+              )}
+            </button>
 
-            {notifications > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
-                {notifications}
-              </span>
+            {open && (
+              <div className="absolute right-0 mt-2 w-80 bg-white shadow-lg border rounded-lg z-50">
+
+                <div className="p-2 font-semibold border-b">
+                  Notifications
+                </div>
+
+                <div className="max-h-96 overflow-y-auto">
+                  {notifications.map((n) => (
+                    <div
+                      key={n._id}
+                      className={`p-3 border-b hover:bg-gray-50 ${!n.isRead ? "bg-blue-50" : ""
+                        }`}
+                      onClick={async () => {
+                        await api.put(`/notifications/${n._id}/read`);
+                        loadNotifications();
+                      }}
+                    >
+                      <div className="font-medium text-sm">
+                        {n.title}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {n.message}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
             )}
-          </button>
+          </div>
 
           {/* ROLE */}
           <div className="hidden md:flex items-center px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold capitalize border border-gray-200">
@@ -231,11 +274,10 @@ export default function Navbar() {
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileMenu(false)}
-                className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                  location.pathname === item.path
-                    ? "bg-[#0a6ed1] text-white"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
+                className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${location.pathname === item.path
+                  ? "bg-[#0a6ed1] text-white"
+                  : "text-gray-700 hover:bg-gray-100"
+                  }`}
               >
                 {item.label}
               </Link>
