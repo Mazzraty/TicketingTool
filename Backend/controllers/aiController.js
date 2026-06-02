@@ -1,12 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-/**
- * 🤖 ERP AI ASSISTANT CONTROLLER (Gemini)
- * Used for HelpyFy helpdesk system
- */
 export const askAI = async (req, res) => {
   try {
-    const { message } = req.body;
+    console.log("AI REQUEST HIT:", req.body);
+
+    const message = req.body?.message;
 
     if (!message) {
       return res.status(400).json({
@@ -14,14 +12,12 @@ export const askAI = async (req, res) => {
       });
     }
 
-    // 🔐 Check API key
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({
-        message: "Gemini API key missing in environment",
+        message: "GEMINI_API_KEY missing in environment",
       });
     }
 
-    // 🤖 Initialize AI
     const genAI = new GoogleGenerativeAI(
       process.env.GEMINI_API_KEY
     );
@@ -30,27 +26,13 @@ export const askAI = async (req, res) => {
       model: "gemini-1.5-flash",
     });
 
-    // 🧠 ERP SYSTEM PROMPT (IMPORTANT)
     const prompt = `
-You are an ERP AI assistant for an IT Helpdesk system called HelpyFy.
+You are an ERP assistant for HelpyFy IT system.
 
-You help users with:
-- IT tickets
-- Asset management (laptops, printers, devices)
-- Employee queries
-- System navigation help
-
-Rules:
-- Be short and professional
-- ERP style response (like SAP assistant)
-- If unsure, ask clarification
-- Do not generate harmful content
-
-User Question:
+User question:
 ${message}
 `;
 
-    // ⚡ Generate response
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
@@ -61,11 +43,11 @@ ${message}
     });
 
   } catch (err) {
-    console.error("🔥 AI CONTROLLER ERROR:", err);
+    console.error("🔥 AI ERROR:", err);
 
     return res.status(500).json({
       success: false,
-      message: err.message || "AI service failed",
+      message: err.message,
     });
   }
 };
