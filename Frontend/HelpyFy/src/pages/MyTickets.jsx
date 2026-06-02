@@ -148,21 +148,7 @@ export default function MyTickets() {
     }
   };
 
-  /* ================= REVIEW ================= */
-  const submitReview = async () => {
-    try {
-      await api.put(`/tickets/${selectedTicket._id}/review`, {
-        rating,
-        review: comment,
-      });
 
-      toast.success("Confirmation submitted");
-      setReviewModal(false);
-      load();
-    } catch {
-      toast.error("Review failed");
-    }
-  };
 
   /* ================= FORMAT ================= */
   const formatDate = (date) => {
