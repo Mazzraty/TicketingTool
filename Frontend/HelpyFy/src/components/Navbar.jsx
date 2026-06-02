@@ -7,7 +7,7 @@ export default function Navbar() {
   const location = useLocation();
   const dropdownRef = useRef(null);
 
-  const [open, setOpen] = useState(false);
+
   const [mobileMenu, setMobileMenu] = useState(false);
   const { user, logout } = useAuth();
   const role = (user?.role || "guest").toLowerCase();
