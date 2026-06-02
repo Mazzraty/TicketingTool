@@ -192,12 +192,7 @@ export const updateStatus = async (req, res) => {
     }
 
     await ticket.save();
-      await Notification.create({
-      userId: ticket.userId,
-      title: "Ticket Status Updated",
-      message: `Your ticket "${ticket.title}" is now ${status}`,
-      type: "status",
-    });
+
     res.json({
       success: true,
       message: "Status updated",
