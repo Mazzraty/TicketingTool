@@ -352,9 +352,13 @@ export const getAssetHistory = async (req, res) => {
 
 export const getMyAssets = async (req, res) => {
   try {
+    console.log("USER =>", req.user);
+
     const employee = await EmployeeMaster.findOne({
       staffCode: req.user.employeeId,
     });
+
+    console.log("EMPLOYEE =>", employee);
 
     if (!employee) {
       return res.status(404).json({
@@ -372,8 +376,6 @@ export const getMyAssets = async (req, res) => {
     res.json(assets);
   } catch (err) {
     console.error(err);
-    res.status(500).json({
-      msg: err.message,
-    });
+    res.status(500).json({ msg: err.message });
   }
 };
