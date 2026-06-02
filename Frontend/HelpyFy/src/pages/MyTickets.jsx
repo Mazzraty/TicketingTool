@@ -287,12 +287,26 @@ export default function MyTickets() {
                       )}
 
                       {t.status === "Resolved" && (
-                        <button
-                          onClick={() => reopenTicket(t._id)}
-                          className="px-3 py-1 text-xs bg-orange-50 text-orange-700 rounded"
-                        >
-                          Reopen
-                        </button>
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedTicket(t);
+                              setRating(0);
+                              setComment("");
+                              setReviewModal(true);
+                            }}
+                            className="px-3 py-1 text-xs bg-green-600 text-white rounded"
+                          >
+                            Confirm
+                          </button>
+
+                          <button
+                            onClick={() => reopenTicket(t._id)}
+                            className="px-3 py-1 text-xs bg-orange-50 text-orange-700 rounded"
+                          >
+                            Reopen
+                          </button>
+                        </>
                       )}
 
                     </div>
