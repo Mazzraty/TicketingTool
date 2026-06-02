@@ -78,33 +78,46 @@ export default function MyTickets() {
   };
 
   /* ================= REOPEN ================= */
-  {
-    t.status === "Resolved" && (
-      <div className="flex gap-2 justify-end">
+  // {
+  //   t.status === "Resolved" && (
+  //     <div className="flex gap-2 justify-end">
 
-        <button
-          onClick={() => {
-            setSelectedTicket(t);
-            setRating(0);
-            setComment("");
-            setReviewModal(true);
-          }}
-          className="px-3 py-1 text-xs bg-green-600 text-white rounded"
-        >
-          Confirm
-        </button>
+  //       <button
+  //         onClick={() => {
+  //           setSelectedTicket(t);
+  //           setRating(0);
+  //           setComment("");
+  //           setReviewModal(true);
+  //         }}
+  //         className="px-3 py-1 text-xs bg-green-600 text-white rounded"
+  //       >
+  //         Confirm
+  //       </button>
 
-        <button
-          onClick={() => reopenTicket(t._id)}
-          className="px-3 py-1 text-xs bg-orange-50 text-orange-700 rounded"
-        >
-          Reopen
-        </button>
+  //       <button
+  //         onClick={() => reopenTicket(t._id)}
+  //         className="px-3 py-1 text-xs bg-orange-50 text-orange-700 rounded"
+  //       >
+  //         Reopen
+  //       </button>
 
-      </div>
-    )
+  //     </div>
+  //   )
+  // }
+
+  const reopenTicket = async (id) => {
+  try {
+    await api.put(`/tickets/${id}/reopen`);
+
+    toast.success("Ticket reopened");
+    load();
+  } catch (err) {
+    toast.error(
+      err.response?.data?.message ||
+      "Failed to reopen ticket"
+    );
   }
-
+};
   /* ================= EDIT ================= */
   const openEdit = (ticket) => {
     setEditData({ ...ticket });
