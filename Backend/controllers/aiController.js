@@ -14,7 +14,7 @@ export const askAI = async (req, res) => {
 
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({
-        message: "GEMINI_API_KEY missing in environment",
+        message: "GEMINI_API_KEY missing",
       });
     }
 
@@ -22,15 +22,18 @@ export const askAI = async (req, res) => {
       process.env.GEMINI_API_KEY
     );
 
+    // ✅ FIXED MODEL HERE
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-1.5-pro",
     });
 
     const prompt = `
-You are an ERP assistant for HelpyFy IT system.
+You are an ERP AI assistant for HelpyFy system.
 
-User question:
+User query:
 ${message}
+
+Respond in short SAP-style ERP format.
 `;
 
     const result = await model.generateContent(prompt);
