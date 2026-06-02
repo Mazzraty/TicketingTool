@@ -9,6 +9,7 @@ import Dashboard from "../pages/Dashboard.jsx";
 import CreateTicket from "../pages/CreateTicket.jsx";
 import MyTickets from "../pages/MyTickets.jsx";
 import UserAssetPage from "../pages/UserAssetPage.jsx";
+import UserProfile from "../pages/UserProfile.jsx";
 // ADMIN
 import AdminTickets from "../pages/AdminTickets.jsx";
 import AdminEmployeeMaster from "../pages/AdminEmployeeMaster.jsx";
@@ -63,6 +64,10 @@ export default function AppRoutes() {
           <Route
             path="/my-assets"
             element={<UserAssetPage />}
+          />
+          <Route
+            path="/profile"
+            element={<UserProfile />}
           />
 
         </Route>
