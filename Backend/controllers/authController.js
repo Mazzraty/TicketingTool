@@ -188,20 +188,14 @@ export const getMyProfile = async (req, res) => {
     const user = await User.findById(req.user.id).select("-password");
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found",
+      });
     }
 
-    const employee = await EmployeeMaster.findOne({
-      staffCode: user.employeeId,
-    });
-
-    res.json({
-      user,
-      employee: employee || null, // 🔥 important safety
-    });
-
+    res.json(user);
   } catch (err) {
-    console.error("ME API ERROR:", err);
+    console.error(err);
     res.status(500).json({
       message: err.message,
     });
