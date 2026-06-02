@@ -7,22 +7,25 @@ export const askAI = async (req, res) => {
     const { message } = req.body;
 
     if (!message) {
-      return res.status(400).json({ error: "Message is required" });
+      return res.status(400).json({
+        error: "Message is required",
+      });
     }
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash", // ✅ FIX HERE
+      model: "gemini-2.5-flash",
     });
 
     const result = await model.generateContent(message);
-    const response = await result.response;
-    const text = response.text();
+    const text = result.response.text();
 
-    return res.json({ reply: text });
-
+    res.json({
+      reply: text,
+    });
   } catch (error) {
     console.error("AI ERROR:", error);
-    return res.status(500).json({
+
+    res.status(500).json({
       error: "AI service failed",
       details: error.message,
     });
