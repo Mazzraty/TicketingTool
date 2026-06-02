@@ -1,56 +1,30 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 export const askAI = async (req, res) => {
   try {
-    console.log("AI REQUEST HIT:", req.body);
-
-    const message = req.body?.message;
+    const { message } = req.body;
 
     if (!message) {
-      return res.status(400).json({
-        message: "Message is required",
-      });
+      return res.status(400).json({ error: "Message is required" });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({
-        message: "GEMINI_API_KEY missing",
-      });
-    }
-
-    const genAI = new GoogleGenerativeAI(
-      process.env.GEMINI_API_KEY
-    );
-
-    // ✅ FIXED MODEL HERE
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro",
+      model: "gemini-1.5-flash", // ✅ FIX HERE
     });
 
-    const prompt = `
-You are an ERP AI assistant for HelpyFy system.
-
-User query:
-${message}
-
-Respond in short SAP-style ERP format.
-`;
-
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent(message);
     const response = await result.response;
     const text = response.text();
 
-    return res.json({
-      success: true,
-      reply: text,
-    });
+    return res.json({ reply: text });
 
-  } catch (err) {
-    console.error("🔥 AI ERROR:", err);
-
+  } catch (error) {
+    console.error("AI ERROR:", error);
     return res.status(500).json({
-      success: false,
-      message: err.message,
+      error: "AI service failed",
+      details: error.message,
     });
   }
 };
