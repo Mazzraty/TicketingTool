@@ -2,7 +2,7 @@ import User from "../models/userShema.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js";
-import  {otpEmail} from "../utils/otpEmail.js";
+import { otpEmail } from "../utils/otpEmail.js";
 
 /* =========================
    REGISTER
@@ -71,7 +71,12 @@ export const login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      {
+        id: user._id,
+        role: user.role,
+        email: user.email,
+        employeeId: user.employeeId,   // ✅ ADD THIS
+      },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
