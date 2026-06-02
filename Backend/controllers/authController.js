@@ -188,17 +188,21 @@ export const getMyProfile = async (req, res) => {
     const user = await User.findById(req.user.id).select("-password");
 
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(user);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      message: err.message,
+    // 🔥 fetch employee data using employeeId
+    const employee = await EmployeeMaster.findOne({
+      staffCode: user.employeeId,
     });
+
+    res.json({
+      user,
+      employee,   // ✅ attach HR data
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
