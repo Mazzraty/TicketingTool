@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
+import AIAssistant from "../components/AIAssistant";
 import { Outlet } from "react-router-dom";
 
 export default function MainLayout() {
@@ -8,6 +9,7 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-[#f5f6f7]">
+
       {/* NAVBAR */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
         <Navbar />
@@ -15,6 +17,7 @@ export default function MainLayout() {
 
       {/* BODY */}
       <div className="flex pt-16">
+
         {/* SIDEBAR */}
         <aside
           className={`fixed left-0 top-16 h-[calc(100vh-64px)] z-40 transition-all duration-300 ${
@@ -35,7 +38,12 @@ export default function MainLayout() {
         >
           <Outlet />
         </main>
+
       </div>
+
+      {/* 🔥 AI ASSISTANT (GLOBAL FLOATING WIDGET) */}
+      <AIAssistant />
+
     </div>
   );
 }
