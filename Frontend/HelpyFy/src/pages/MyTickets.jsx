@@ -106,18 +106,18 @@ export default function MyTickets() {
   // }
 
   const reopenTicket = async (id) => {
-  try {
-    await api.put(`/tickets/${id}/reopen`);
+    try {
+      await api.put(`/tickets/${id}/reopen`);
 
-    toast.success("Ticket reopened");
-    load();
-  } catch (err) {
-    toast.error(
-      err.response?.data?.message ||
-      "Failed to reopen ticket"
-    );
-  }
-};
+      toast.success("Ticket reopened");
+      load();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message ||
+        "Failed to reopen ticket"
+      );
+    }
+  };
   /* ================= EDIT ================= */
   const openEdit = (ticket) => {
     setEditData({ ...ticket });
@@ -282,8 +282,8 @@ export default function MyTickets() {
                   </td>
 
                   <td className="text-center text-xs">
-                    {t.status === "Resolved"
-                      ? formatDate(t.resolvedAt)
+                    {(t.status === "Resolved" || t.status === "Closed")
+                      ? formatDate(t.closedAt || t.resolvedAt)
                       : "-"}
                   </td>
 
