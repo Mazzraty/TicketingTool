@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
-import AIAssistant from "../components/AIAssistant";
+import AIAssistant from "../components/AIAssitant";
 import { Outlet } from "react-router-dom";
 
 export default function MainLayout() {
