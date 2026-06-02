@@ -81,7 +81,7 @@ export const createTicket = async (req, res) => {
 export const getUserTickets = async (req, res) => {
   try {
     const page = Number(req.query.page) || 1;
-    const limit = 5;
+    const limit = 10; // changed from 5
 
     const tickets = await Ticket.find({ userId: req.user.id })
       .sort({ createdAt: -1 })
@@ -95,10 +95,15 @@ export const getUserTickets = async (req, res) => {
     res.json({
       success: true,
       data: tickets,
+      total,
+      page,
       totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 

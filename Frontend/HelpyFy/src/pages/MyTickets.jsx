@@ -22,7 +22,8 @@ export default function MyTickets() {
   const [comment, setComment] = useState("");
 
   const [image, setImage] = useState(null);
-
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   /* ================= LOAD ================= */
   useEffect(() => {
     load();
@@ -31,8 +32,11 @@ export default function MyTickets() {
   const load = async () => {
     try {
       setLoading(true);
+
       const res = await api.get(`/tickets/my?page=${page}`);
+
       setTickets(res.data.data || []);
+      setTotalPages(res.data.totalPages || 1);
     } catch {
       toast.error("Failed to load tickets");
     } finally {
@@ -328,8 +332,38 @@ export default function MyTickets() {
                 </tr>
               ))}
             </tbody>
+            <div className="flex justify-center items-center gap-2 p-4 border-t">
+              <button
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Previous
+              </button>
 
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i + 1)}
+                  className={`w-8 h-8 rounded ${page === i + 1
+                    ? "bg-blue-600 text-white"
+                    : "border"
+                    }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+
+              <button
+                disabled={page === totalPages}
+                onClick={() => setPage(page + 1)}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
           </table>
+
         )}
       </div>
 

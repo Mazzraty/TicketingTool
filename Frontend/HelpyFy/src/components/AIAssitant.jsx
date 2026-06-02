@@ -111,7 +111,7 @@ export default function AIAssistant() {
       {/* HEADER */}
       <div className="bg-[#0a6ed1] text-white px-4 py-3 flex items-center justify-between">
         <div className="font-semibold">
-          🤖 HelpyFy AI Assistant
+          🤖 AI Assistant
         </div>
 
         <div className="flex items-center gap-2">
@@ -144,7 +144,7 @@ export default function AIAssistant() {
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
         {chat.length === 0 && (
           <div className="text-center text-gray-500 mt-10">
-            Ask me anything about HelpyFy, IT support, assets, tickets, or general questions.
+            Ask me anything , IT support, assets, tickets, or general questions.
           </div>
         )}
 
