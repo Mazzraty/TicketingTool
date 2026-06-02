@@ -8,7 +8,7 @@ export default function MyTickets() {
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [page] = useState(1);
+
 
   /* ================= MODALS ================= */
   const [reviewModal, setReviewModal] = useState(false);
