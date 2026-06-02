@@ -9,11 +9,12 @@ export default function Navbar() {
 
   const [open, setOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [notifications] = useState(2);
   const { user, logout } = useAuth();
-  const [notifications, setNotifications] = useState([]);
-  const [open, setOpen] = useState(false);
   const role = (user?.role || "guest").toLowerCase();
+  const [notifications, setNotifications] = useState([]);
+const [open, setOpen] = useState(false);
+
+const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const handleLogout = () => {
     logout();
