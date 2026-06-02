@@ -245,125 +245,133 @@ export default function MyTickets() {
             Loading tickets...
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <>
+            {/* TABLE */}
+            <table className="w-full text-sm">
 
-            <thead className="bg-gray-50 text-xs text-gray-600 uppercase">
-              <tr>
-                <th className="p-4 text-left">Title</th>
-                <th className="text-center">Status</th>
-                <th className="text-center">Priority</th>
-                <th className="text-center">Created</th>
-                <th className="text-center">Closed</th>
-                <th className="text-right p-4">Actions</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-gray-100">
-              {tickets.map((t) => (
-                <tr key={t._id} className="hover:bg-gray-50">
-
-                  <td className="p-4">
-                    <div className="font-medium">{t.title}</div>
-                    <div className="text-xs text-gray-500 truncate max-w-[300px]">
-                      {t.description}
-                    </div>
-                  </td>
-
-                  <td className="text-center">
-                    <span className={statusBadge(t.status)}>
-                      {t.status}
-                    </span>
-                  </td>
-
-                  <td className="text-center">
-                    <span className={priorityBadge(t.priority)}>
-                      {t.priority}
-                    </span>
-                  </td>
-
-                  <td className="text-center text-xs">
-                    {formatDate(t.createdAt)}
-                  </td>
-
-                  <td className="text-center text-xs">
-                    {(t.status === "Resolved" || t.status === "Closed")
-                      ? formatDate(t.closedAt || t.resolvedAt)
-                      : "-"}
-                  </td>
-
-                  <td className="p-4 text-right">
-                    <div className="flex justify-end gap-2">
-
-                      {(t.status === "Open" || t.status === "Reopened") && (
-                        <button
-                          onClick={() => openEdit(t)}
-                          className="px-3 py-1 text-xs border rounded"
-                        >
-                          Edit
-                        </button>
-                      )}
-
-                      {t.status === "Resolved" && (
-                        <>
-                          <button
-                            onClick={() => {
-                              setSelectedTicket(t);
-                              setRating(0);
-                              setComment("");
-                              setReviewModal(true);
-                            }}
-                            className="px-3 py-1 text-xs bg-green-600 text-white rounded"
-                          >
-                            Confirm
-                          </button>
-
-                          <button
-                            onClick={() => reopenTicket(t._id)}
-                            className="px-3 py-1 text-xs bg-orange-50 text-orange-700 rounded"
-                          >
-                            Reopen
-                          </button>
-                        </>
-                      )}
-
-                    </div>
-                  </td>
-
+              <thead className="bg-gray-50 text-xs text-gray-600 uppercase">
+                <tr>
+                  <th className="p-4 text-left">Title</th>
+                  <th className="text-center">Status</th>
+                  <th className="text-center">Priority</th>
+                  <th className="text-center">Created</th>
+                  <th className="text-center">Closed</th>
+                  <th className="text-right p-4">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-            <div className="flex justify-center items-center gap-2 p-4 border-t">
+              </thead>
+
+              <tbody className="divide-y divide-gray-100">
+                {tickets.map((t) => (
+                  <tr key={t._id} className="hover:bg-gray-50">
+
+                    <td className="p-4">
+                      <div className="font-medium">{t.title}</div>
+                      <div className="text-xs text-gray-500 truncate max-w-[300px]">
+                        {t.description}
+                      </div>
+                    </td>
+
+                    <td className="text-center">
+                      <span className={statusBadge(t.status)}>
+                        {t.status}
+                      </span>
+                    </td>
+
+                    <td className="text-center">
+                      <span className={priorityBadge(t.priority)}>
+                        {t.priority}
+                      </span>
+                    </td>
+
+                    <td className="text-center text-xs">
+                      {formatDate(t.createdAt)}
+                    </td>
+
+                    <td className="text-center text-xs">
+                      {(t.status === "Resolved" || t.status === "Closed")
+                        ? formatDate(t.closedAt || t.resolvedAt)
+                        : "-"}
+                    </td>
+
+                    <td className="p-4 text-right">
+                      <div className="flex justify-end gap-2">
+
+                        {(t.status === "Open" || t.status === "Reopened") && (
+                          <button
+                            onClick={() => openEdit(t)}
+                            className="px-3 py-1 text-xs border rounded"
+                          >
+                            Edit
+                          </button>
+                        )}
+
+                        {t.status === "Resolved" && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedTicket(t);
+                                setRating(0);
+                                setComment("");
+                                setReviewModal(true);
+                              }}
+                              className="px-3 py-1 text-xs bg-green-600 text-white rounded"
+                            >
+                              Confirm
+                            </button>
+
+                            <button
+                              onClick={() => reopenTicket(t._id)}
+                              className="px-3 py-1 text-xs bg-orange-50 text-orange-700 rounded"
+                            >
+                              Reopen
+                            </button>
+                          </>
+                        )}
+
+                      </div>
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* PAGINATION (FIXED DESIGN) */}
+            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+
               <button
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
-                className="px-3 py-1 border rounded disabled:opacity-50"
+                className="px-4 py-1 text-sm border rounded disabled:opacity-40"
               >
                 Previous
               </button>
 
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPage(i + 1)}
-                  className={`w-8 h-8 rounded ${page === i + 1
-                    ? "bg-blue-600 text-white"
-                    : "border"
-                    }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              <div className="flex gap-1">
+                {[...Array(totalPages)].map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPage(i + 1)}
+                    className={`w-8 h-8 text-sm rounded ${page === i + 1
+                        ? "bg-black text-white"
+                        : "border bg-white"
+                      }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
 
               <button
                 disabled={page === totalPages}
                 onClick={() => setPage(page + 1)}
-                className="px-3 py-1 border rounded disabled:opacity-50"
+                className="px-4 py-1 text-sm border rounded disabled:opacity-40"
               >
                 Next
               </button>
-            </div>
-          </table>
 
+            </div>
+          </>
         )}
       </div>
 
