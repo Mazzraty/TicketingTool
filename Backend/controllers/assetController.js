@@ -375,7 +375,10 @@ export const getMyAssets = async (req, res) => {
 
     res.json(assets);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: err.message });
-  }
+  console.log("STATUS:", err.response?.status);
+  console.log("DATA:", err.response?.data);
+  console.error(err);
+
+  toast.error("Failed to load assets");
+}
 };
