@@ -13,9 +13,10 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const role = (user?.role || "guest").toLowerCase();
   const [notifications, setNotifications] = useState([]);
-const [open, setOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const handleLogout = () => {
     logout();
@@ -28,7 +29,8 @@ const unreadCount = notifications.filter(n => !n.isRead).length;
         dropdownRef.current &&
         !dropdownRef.current.contains(e.target)
       ) {
-        setOpen(false);
+        setNotificationOpen(false);
+        setUserMenuOpen(false);
       }
     };
 
@@ -140,7 +142,7 @@ const unreadCount = notifications.filter(n => !n.isRead).length;
           {/* NOTIFICATIONS */}
           <div className="relative">
             <button
-              onClick={() => setOpen(!open)}
+              onClick={() => setNotificationOpen(!notificationOpen)}
               className="relative text-xl"
             >
               🔔
@@ -152,7 +154,7 @@ const unreadCount = notifications.filter(n => !n.isRead).length;
               )}
             </button>
 
-            {open && (
+            {notificationOpen && (
               <div className="absolute right-0 mt-2 w-80 bg-white shadow-lg border rounded-lg z-50">
 
                 <div className="p-2 font-semibold border-b">
@@ -191,14 +193,14 @@ const unreadCount = notifications.filter(n => !n.isRead).length;
 
           {/* USER */}
           <button
-            onClick={() => setOpen(!open)}
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
             className="w-10 h-10 rounded-full bg-[#0a6ed1] text-white flex items-center justify-center font-semibold shadow-sm hover:opacity-90 transition"
           >
             {user?.name?.charAt(0).toUpperCase() || "U"}
           </button>
 
           {/* DROPDOWN */}
-          {open && (
+          {userMenuOpen && (
             <div className="absolute right-0 top-14 w-72 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
 
               {/* HEADER */}
