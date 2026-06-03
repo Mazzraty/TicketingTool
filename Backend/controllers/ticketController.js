@@ -3,7 +3,7 @@ import User from "../models/userShema.js";
 import sendEmail from "../utils/sendEmail.js";
 import { ticketAdminEmail } from "../utils/ticketAdminEmail.js";
 import { ticketUserEmail } from "../utils/ticketUserEmail.js";
-import notifcationSchema from "../models/notifcationSchema.js";
+import Notification from "../models/notifcationSchema.js";
 /* ======================================================
    ✅ CREATE TICKET
 ====================================================== */
@@ -60,6 +60,16 @@ export const createTicket = async (req, res) => {
       subject: "Ticket Created Successfully",
       html: ticketUserEmail(ticket),
     });
+
+    // Create notification for admins
+    for (const admin of admins) {
+      await Notification.create({
+        userId: admin._id,
+        title: "New Ticket Created",
+        message: `User ${user.name} created a new ${priority} priority ticket: "${title}"`,
+        type: "ticket",
+      });
+    }
 
     if (global.io) {
       global.io.emit("newTicket", ticket);
@@ -182,6 +192,7 @@ export const updateStatus = async (req, res) => {
 
     if (status === "In Progress") ticket.inProgressAt = new Date();
     if (status === "Resolved") ticket.resolvedAt = new Date();
+    
     if (status === "Closed") ticket.closedAt = new Date();
 
     if (status === "Open") {
@@ -317,7 +328,18 @@ export const confirmResolution = async (req, res) => {
     ticket.closedAt = new Date();
 
     await ticket.save();
+// Create notification for admins
+    const admins = await User.find({ role: "admin" });
+    for (const admin of admins) {
+      await Notification.create({
+        userId: admin._id,
+        title: "Ticket Closed by User",
+        message: `User confirmed resolution for ticket: "${ticket.title}"`,
+        type: "status",
+      });
+    }
 
+    
     res.json({
       success: true,
       message: "Ticket confirmed",
@@ -347,6 +369,17 @@ export const reopenTicket = async (req, res) => {
         success: false,
         message: "Unauthorized",
       });
+    // Create notification for admins
+    const admins = await User.find({ role: "admin" });
+    for (const admin of admins) {
+      await Notification.create({
+        userId: admin._id,
+        title: "Ticket Reopened",
+        message: `User reopened ticket: "${ticket.title}"`,
+        type: "status",
+      });
+    }
+
     }
 
     ticket.status = "Open";
