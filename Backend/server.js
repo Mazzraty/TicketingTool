@@ -16,6 +16,7 @@ import assetRoutes from "./routes/assetRoutes.js";
 import softwareRoutes from "./routes/softwareRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import aiRoutes from "./routes/aiRotes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 // 🔗 Connect DB
 connectDB();
 
@@ -79,6 +80,7 @@ app.use("/api/assets", assetRoutes);
 app.use("/api/software", softwareRoutes);
 app.use("/api/dashboard",dashboardRoutes );
 app.use("/api/ai", aiRoutes);
+app.use("/api/notifications", notificationRoutes);
 /* =========================
    ❌ 404 HANDLER
 ========================= */
