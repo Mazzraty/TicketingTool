@@ -204,11 +204,7 @@ export default function AssetHistoryPage() {
   const exportEmpPDF = () => {
     const doc = new jsPDF();
 
-    doc.text(
-      "Employee Asset History",
-      14,
-      10
-    );
+    doc.text("Employee Asset History", 14, 10);
 
     autoTable(doc, {
       head: [
@@ -218,26 +214,39 @@ export default function AssetHistoryPage() {
           "Status",
           "Assigned",
           "Returned",
+          "Accessories",
         ],
       ],
 
-      body: empHistory.map((h) => [
-        h.asset?.assetCode || "-",
-        h.assetType || "-",
-        h.status || "-",
+      body: empHistory.map((h) => {
+        const acc = getAccessories(h);
 
-        h.assignedDate
-          ? new Date(
-            h.assignedDate
-          ).toLocaleString()
-          : "-",
+        const accessoriesText =
+          h.assetType?.toLowerCase() === "laptop"
+            ? [
+              acc.charger && "Charger",
+              acc.mouse && "Mouse",
+              acc.laptopBag && "Laptop Bag",
+              acc.keyboard && "Keyboard",
+              acc.headset && "Headset",
+            ]
+              .filter(Boolean)
+              .join(", ")
+            : "-";
 
-        h.returnedDate
-          ? new Date(
-            h.returnedDate
-          ).toLocaleString()
-          : "Active",
-      ]),
+        return [
+          h.asset?.assetCode || "-",
+          h.assetType || "-",
+          h.status || "-",
+          h.assignedDate
+            ? new Date(h.assignedDate).toLocaleString()
+            : "-",
+          h.returnedDate
+            ? new Date(h.returnedDate).toLocaleString()
+            : "Active",
+          accessoriesText,
+        ];
+      }),
     });
 
     doc.save("employee-history.pdf");
