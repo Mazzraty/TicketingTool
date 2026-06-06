@@ -306,7 +306,7 @@ export default function AssetHistoryPage() {
           assignment history
         </p>
       </div>
-    
+
       {/* FILTERS */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border mb-6">
 
@@ -550,7 +550,9 @@ export default function AssetHistoryPage() {
                 <th className="p-4 text-left font-semibold">
                   Assigned
                 </th>
-
+                <th className="p-4 text-left font-semibold">
+                  Accessories
+                </th>
                 <th className="p-4 text-left font-semibold">
                   Returned
                 </th>
@@ -612,6 +614,19 @@ export default function AssetHistoryPage() {
                         ).toLocaleString()
                         : "Active"}
                     </td>
+                    <td className="p-4 text-sm">
+                      {h.assetType === "Laptop" ? (
+                        <>
+                          {h.accessories?.charger && "🔌 Charger "}
+                          {h.accessories?.mouse && "🖱 Mouse "}
+                          {h.accessories?.laptopBag && "🎒 Bag "}
+                          {h.accessories?.keyboard && "⌨ Keyboard "}
+                          {h.accessories?.headset && "🎧 Headset "}
+                        </>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
@@ -667,7 +682,9 @@ export default function AssetHistoryPage() {
                 <th className="p-4 text-left font-semibold">
                   Assigned
                 </th>
-
+                <th className="p-4 text-left font-semibold">
+                  Accessories
+                </th>
                 <th className="p-4 text-left font-semibold">
                   Returned
                 </th>
@@ -727,6 +744,19 @@ export default function AssetHistoryPage() {
                           h.returnedDate
                         ).toLocaleString()
                         : "Active"}
+                    </td>
+                    <td className="p-4 text-sm">
+                      {h.assetType === "Laptop" ? (
+                        <>
+                          {h.accessories?.charger && "🔌 Charger "}
+                          {h.accessories?.mouse && "🖱 Mouse "}
+                          {h.accessories?.laptopBag && "🎒 Bag "}
+                          {h.accessories?.keyboard && "⌨ Keyboard "}
+                          {h.accessories?.headset && "🎧 Headset "}
+                        </>
+                      ) : (
+                        "-"
+                      )}
                     </td>
                   </tr>
                 ))
