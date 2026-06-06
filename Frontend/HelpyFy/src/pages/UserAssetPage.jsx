@@ -3,8 +3,10 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useAuth } from "../auth/AuthContext"; // adjust path
 
 export default function UserAssetPage() {
+  const { user } = useAuth();
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,11 +43,11 @@ export default function UserAssetPage() {
     const acc = getAccessories(item);
     const list = [];
 
-    if (acc.charger)    list.push("🔌 Charger");
-    if (acc.mouse)      list.push("🖱 Mouse");
-    if (acc.laptopBag)  list.push("🎒 Bag");
-    if (acc.keyboard)   list.push("⌨ Keyboard");
-    if (acc.headset)    list.push("🎧 Headset");
+    if (acc.charger) list.push("🔌 Charger");
+    if (acc.mouse) list.push("🖱 Mouse");
+    if (acc.laptopBag) list.push("🎒 Bag");
+    if (acc.keyboard) list.push("⌨ Keyboard");
+    if (acc.headset) list.push("🎧 Headset");
 
     return list.length > 0 ? list.join("  ") : "-";
   };
@@ -56,11 +58,11 @@ export default function UserAssetPage() {
     const acc = getAccessories(item);
     const list = [];
 
-    if (acc.charger)    list.push("Charger");
-    if (acc.mouse)      list.push("Mouse");
-    if (acc.laptopBag)  list.push("Bag");
-    if (acc.keyboard)   list.push("Keyboard");
-    if (acc.headset)    list.push("Headset");
+    if (acc.charger) list.push("Charger");
+    if (acc.mouse) list.push("Mouse");
+    if (acc.laptopBag) list.push("Bag");
+    if (acc.keyboard) list.push("Keyboard");
+    if (acc.headset) list.push("Headset");
 
     return list.length > 0 ? list.join(", ") : "-";
   };
@@ -75,18 +77,17 @@ export default function UserAssetPage() {
     doc.text("My Assigned Assets", 14, 15);
     doc.setFontSize(10);
     doc.setTextColor(120);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+    doc.text(`Employee: ${user?.name || "-"}`, 14, 22);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
 
     autoTable(doc, {
-      startY: 28,
+      startY: 34,  // ← bumped down from 28
       head: [["Asset Code", "Type", "Model", "Assigned Date", "Accessories", "Status"]],
       body: assets.map((item) => [
         item.asset?.assetCode || "-",
         item.asset?.type || "-",
         item.asset?.model || "-",
-        item.assignedDate
-          ? new Date(item.assignedDate).toLocaleDateString()
-          : "-",
+        item.assignedDate ? new Date(item.assignedDate).toLocaleDateString() : "-",
         accessoriesText(item),
         "Active",
       ]),
@@ -96,7 +97,6 @@ export default function UserAssetPage() {
 
     doc.save("my-assets.pdf");
   };
-
   return (
     <div className="bg-white rounded-2xl shadow-sm border p-6">
 
@@ -104,7 +104,10 @@ export default function UserAssetPage() {
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-2xl font-bold mb-1">My Assigned Assets</h1>
-          <p className="text-gray-500">Assets currently assigned to you</p>
+          <p className="text-gray-500">
+            Assets currently assigned to{" "}
+            <span className="font-semibold text-gray-700">{user?.name}</span>
+          </p>
         </div>
 
         <button
