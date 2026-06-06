@@ -60,6 +60,9 @@ export default function AssetHistoryPage() {
         .includes(assetSearch.toLowerCase())
   );
 
+  const getAccessories = (h) => {
+    return h.accessories || h.asset?.accessories || {};
+  };
   /* ===================================
      LOAD EMPLOYEES + ASSETS
   =================================== */
@@ -616,17 +619,19 @@ export default function AssetHistoryPage() {
                         : "Active"}
                     </td>
                     <td className="p-4 text-sm">
-                      {h.assetType === "Laptop" ? (
-                        <>
-                          {h.accessories?.charger && "🔌 Charger "}
-                          {h.accessories?.mouse && "🖱 Mouse "}
-                          {h.accessories?.laptopBag && "🎒 Bag "}
-                          {h.accessories?.keyboard && "⌨ Keyboard "}
-                          {h.accessories?.headset && "🎧 Headset "}
-                        </>
-                      ) : (
-                        "-"
-                      )}
+                      {h.assetType?.toLowerCase() === "laptop" ? (() => {
+                        const acc = getAccessories(h);
+
+                        return (
+                          <>
+                            {acc.charger && "🔌 Charger "}
+                            {acc.mouse && "🖱 Mouse "}
+                            {acc.laptopBag && "🎒 Bag "}
+                            {acc.keyboard && "⌨ Keyboard "}
+                            {acc.headset && "🎧 Headset "}
+                          </>
+                        );
+                      })() : "-"}
                     </td>
                   </tr>
                 ))
@@ -748,17 +753,19 @@ export default function AssetHistoryPage() {
                         : "Active"}
                     </td>
                     <td className="p-4 text-sm">
-                      {h.assetType === "Laptop" ? (
-                        <>
-                          {h.accessories?.charger && "🔌 Charger "}
-                          {h.accessories?.mouse && "🖱 Mouse "}
-                          {h.accessories?.laptopBag && "🎒 Bag "}
-                          {h.accessories?.keyboard && "⌨ Keyboard "}
-                          {h.accessories?.headset && "🎧 Headset "}
-                        </>
-                      ) : (
-                        "-"
-                      )}
+                      {h.assetType?.toLowerCase() === "laptop" ? (() => {
+                        const acc = getAccessories(h);
+
+                        return (
+                          <>
+                            {acc.charger && "🔌 Charger "}
+                            {acc.mouse && "🖱 Mouse "}
+                            {acc.laptopBag && "🎒 Bag "}
+                            {acc.keyboard && "⌨ Keyboard "}
+                            {acc.headset && "🎧 Headset "}
+                          </>
+                        );
+                      })() : "-"}
                     </td>
                   </tr>
                 ))
