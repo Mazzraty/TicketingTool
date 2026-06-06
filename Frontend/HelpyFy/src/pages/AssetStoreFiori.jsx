@@ -1008,7 +1008,6 @@ export default function AssetStoreFiori() {
 
             </div>
           </div>
-          </div>
         )}
     </div>
     </div >
