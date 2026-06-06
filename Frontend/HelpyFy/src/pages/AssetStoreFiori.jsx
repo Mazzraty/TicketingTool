@@ -450,9 +450,6 @@ export default function AssetStoreFiori() {
                     Status
                   </th>
 
-                  <th className="text-left px-6 py-4 font-semibold">
-                    Accessories
-                  </th>
 
                   <th className="text-center px-6 py-4 font-semibold">
                     Actions
