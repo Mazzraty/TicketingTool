@@ -16,6 +16,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [activeField, setActiveField] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -26,30 +27,44 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!form.name || !form.email || !form.password || !form.employeeId) {
+      toast.error("All fields are required");
+      return;
+    }
+
     if (form.password !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
 
+    if (form.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
     try {
+      setLoading(true);
       await api.post("/auth/register", form);
-
       toast.success("Account created successfully");
-
       navigate("/login");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Registration failed");
+      toast.error(
+        err.response?.data?.msg ||
+        err.response?.data?.message ||
+        "Registration failed"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fieldWrapper = (fieldName, children) => (
+  const Field = ({ fieldName, children }) => (
     <div className="relative">
       <div
-        className={`absolute left-0 top-0 h-full w-[3px] rounded transition-all duration-200
-        ${activeField === fieldName ? "bg-blue-600" : "bg-transparent"}
-      `}
+        className={`absolute left-0 top-0 h-full w-[3px] rounded transition-all duration-200 ${
+          activeField === fieldName ? "bg-blue-600" : "bg-transparent"
+        }`}
       />
-
       {children}
     </div>
   );
@@ -57,26 +72,18 @@ export default function Register() {
   return (
     <div className="relative min-h-screen flex items-center justify-center p-6 overflow-hidden">
 
-      {/* BACKGROUND IMAGE */}
+      {/* BACKGROUND */}
       <div className="absolute inset-0 z-0">
-        <img
-          src={milkImage}
-          className="w-full h-full object-cover"
-          alt="background"
-        />
-
-        <div className="absolute inset-0 bg-black/60"></div>
+        <img src={milkImage} className="w-full h-full object-cover" alt="background" />
+        <div className="absolute inset-0 bg-black/60" />
       </div>
 
-      {/* FORM CONTAINER */}
+      {/* CARD */}
       <div className="relative z-10 w-full max-w-md">
-
         <div className="bg-white/95 backdrop-blur-md border border-white/30 rounded-2xl shadow-2xl p-8">
 
           {/* HEADER */}
-          <div className="mb-6 text-center">
-
-            {/* MAZZRATY LOGO */}
+          <div className="mb-7 text-center">
             <div className="flex justify-center mb-4">
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
@@ -84,25 +91,16 @@ export default function Register() {
                 alt="Mazzraty Logo"
               />
             </div>
-
-            <h1 className="text-2xl font-semibold text-gray-800">
-              Create Account
-            </h1>
-
-            <p className="text-sm text-gray-500 mt-1">
-              Enterprise Registration Portal
-            </p>
-
+            <h1 className="text-2xl font-semibold text-gray-800">Create Account</h1>
+            <p className="text-sm text-gray-500 mt-1">Enterprise Registration Portal</p>
           </div>
 
-          {/* FORM */}
-          <div className="space-y-5">
+          {/* FIELDS */}
+          <div className="space-y-4">
 
             {/* NAME + EMPLOYEE ID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-              {fieldWrapper(
-                "name",
+              <Field fieldName="name">
                 <input
                   name="name"
                   value={form.name}
@@ -112,10 +110,9 @@ export default function Register() {
                   placeholder="Full Name"
                   className="sap-input"
                 />
-              )}
+              </Field>
 
-              {fieldWrapper(
-                "employeeId",
+              <Field fieldName="employeeId">
                 <input
                   name="employeeId"
                   value={form.employeeId}
@@ -125,15 +122,14 @@ export default function Register() {
                   placeholder="Employee ID"
                   className="sap-input"
                 />
-              )}
-
+              </Field>
             </div>
 
             {/* EMAIL */}
-            {fieldWrapper(
-              "email",
+            <Field fieldName="email">
               <input
                 name="email"
+                type="email"
                 value={form.email}
                 onChange={handleChange}
                 onFocus={() => setActiveField("email")}
@@ -141,13 +137,11 @@ export default function Register() {
                 placeholder="Email Address"
                 className="sap-input"
               />
-            )}
+            </Field>
 
             {/* PASSWORD */}
-            {fieldWrapper(
-              "password",
+            <Field fieldName="password">
               <div className="relative">
-
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
@@ -156,23 +150,20 @@ export default function Register() {
                   onFocus={() => setActiveField("password")}
                   onBlur={() => setActiveField("")}
                   placeholder="Password"
-                  className="sap-input pr-20"
+                  className="sap-input pr-16"
                 />
-
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-blue-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-600 font-medium"
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
-
               </div>
-            )}
+            </Field>
 
             {/* CONFIRM PASSWORD */}
-            {fieldWrapper(
-              "confirmPassword",
+            <Field fieldName="confirmPassword">
               <input
                 type="password"
                 value={confirmPassword}
@@ -182,60 +173,68 @@ export default function Register() {
                 placeholder="Confirm Password"
                 className="sap-input"
               />
+            </Field>
+
+            {/* PASSWORD MATCH INDICATOR */}
+            {confirmPassword && (
+              <p className={`text-xs mt-1 ${
+                form.password === confirmPassword
+                  ? "text-green-600"
+                  : "text-red-500"
+              }`}>
+                {form.password === confirmPassword
+                  ? "✓ Passwords match"
+                  : "✗ Passwords do not match"}
+              </p>
             )}
 
           </div>
 
           {/* BUTTONS */}
-          <div className="mt-8 space-y-3">
-
+          <div className="mt-7 space-y-3">
             <button
               onClick={handleSubmit}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-md text-sm font-medium transition"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 rounded-md text-sm font-medium transition"
             >
-              Create Account
+              {loading ? "Creating Account..." : "Create Account"}
             </button>
 
             <button
               onClick={() => navigate("/login")}
-              className="w-full border border-gray-300 py-3 rounded-md text-sm hover:bg-gray-50 transition"
+              className="w-full border border-gray-300 py-3 rounded-md text-sm hover:bg-gray-50 transition text-gray-700"
             >
-              Already have account? Login
+              Already have an account? Login
             </button>
 
-            <p className="text-xs text-center text-gray-300 mt-4">
+            <p className="text-xs text-center text-gray-400 mt-2">
               © 2026 Mazzraty Enterprise System
             </p>
-
           </div>
 
         </div>
       </div>
 
-      {/* SAP INPUT STYLE */}
-      <style>
-        {`
-          .sap-input {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            background: #fff;
-            outline: none;
-            font-size: 14px;
-            transition: all 0.2s ease;
-          }
-
-          .sap-input:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 1px #2563eb;
-          }
-
-          .sap-input::placeholder {
-            color: #9ca3af;
-          }
-        `}
-      </style>
+      {/* STYLES */}
+      <style>{`
+        .sap-input {
+          width: 100%;
+          padding: 12px 14px;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          background: #fff;
+          outline: none;
+          font-size: 14px;
+          transition: all 0.2s ease;
+        }
+        .sap-input:focus {
+          border-color: #2563eb;
+          box-shadow: 0 0 0 1px #2563eb;
+        }
+        .sap-input::placeholder {
+          color: #9ca3af;
+        }
+      `}</style>
 
     </div>
   );
