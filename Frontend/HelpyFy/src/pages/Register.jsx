@@ -33,12 +33,10 @@ export default function Register() {
 
     try {
       await api.post("/auth/register", form);
-
       toast.success("Account created successfully");
-
       navigate("/login");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Registration failed");
+      toast.error(err.response?.data?.msg || err.response?.data?.message || "Registration failed");
     }
   };
 
