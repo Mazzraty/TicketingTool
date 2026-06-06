@@ -550,11 +550,12 @@ export default function AssetHistoryPage() {
                 <th className="p-4 text-left font-semibold">
                   Assigned
                 </th>
-                <th className="p-4 text-left font-semibold">
-                  Accessories
-                </th>
+
                 <th className="p-4 text-left font-semibold">
                   Returned
+                </th>
+                <th className="p-4 text-left font-semibold">
+                  Accessories
                 </th>
               </tr>
             </thead>
@@ -682,11 +683,12 @@ export default function AssetHistoryPage() {
                 <th className="p-4 text-left font-semibold">
                   Assigned
                 </th>
-                <th className="p-4 text-left font-semibold">
-                  Accessories
-                </th>
+
                 <th className="p-4 text-left font-semibold">
                   Returned
+                </th>
+                <th className="p-4 text-left font-semibold">
+                  Accessories
                 </th>
               </tr>
             </thead>
