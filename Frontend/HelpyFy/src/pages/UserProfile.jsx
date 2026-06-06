@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
-import { useAuth } from "../context/AuthContext"; // adjust path
 
 export default function UserProfile() {
   const [user, setUser] = useState(null);
@@ -9,7 +8,7 @@ export default function UserProfile() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [passOpen, setPassOpen] = useState(false);
-const { user } = useAuth();
+
   const [form, setForm] = useState({
     name: "",
     department: "",
