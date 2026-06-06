@@ -112,19 +112,7 @@ export default function AssetStoreFiori() {
 
   /* ================= EDIT ================= */
   const openEdit = (asset) => {
-    const updatedAsset = { ...asset };
-
-    if (updatedAsset.type === "Laptop") {
-      updatedAsset.accessories = {
-        charger: updatedAsset.accessories?.charger ?? true,
-        mouse: updatedAsset.accessories?.mouse ?? true,
-        laptopBag: updatedAsset.accessories?.laptopBag ?? true,
-        keyboard: updatedAsset.accessories?.keyboard ?? false,
-        headset: updatedAsset.accessories?.headset ?? false,
-      };
-    }
-
-    setSelected(updatedAsset);
+    setSelected(asset);
     setEditOpen(true);
   };
 
@@ -538,13 +526,7 @@ export default function AssetStoreFiori() {
                           {a.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm">
-                        {a.accessories?.charger && "🔌 Charger "}
-                        {a.accessories?.mouse && "🖱 Mouse "}
-                        {a.accessories?.laptopBag && "🎒 Bag "}
-                        {a.accessories?.keyboard && "⌨ Keyboard "}
-                        {a.accessories?.headset && "🎧 Headset "}
-                      </td>
+                       
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           {/* <button
@@ -870,146 +852,144 @@ export default function AssetStoreFiori() {
                       </option>
                     </select>
                   </div>
-                  {selected?.type === "Laptop" && (
-                    <div className="md:col-span-2">
-                      <label className="text-sm font-semibold text-gray-700 block mb-3">
-                        Accessories
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-semibold text-gray-700 block mb-3">
+                      Accessories
+                    </label>
+
+                    <div className="grid grid-cols-2 gap-3">
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected?.accessories?.charger || false}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              accessories: {
+                                ...selected.accessories,
+                                charger: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        Charger
                       </label>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected?.accessories?.mouse || false}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              accessories: {
+                                ...selected.accessories,
+                                mouse: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        Mouse
+                      </label>
 
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected?.accessories?.charger || false}
-                            onChange={(e) =>
-                              setSelected({
-                                ...selected,
-                                accessories: {
-                                  ...selected.accessories,
-                                  charger: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          Charger
-                        </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected?.accessories?.laptopBag || false}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              accessories: {
+                                ...selected.accessories,
+                                laptopBag: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        Laptop Bag
+                      </label>
 
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected?.accessories?.mouse || false}
-                            onChange={(e) =>
-                              setSelected({
-                                ...selected,
-                                accessories: {
-                                  ...selected.accessories,
-                                  mouse: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          Mouse
-                        </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected?.accessories?.keyboard || false}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              accessories: {
+                                ...selected.accessories,
+                                keyboard: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        Keyboard
+                      </label>
 
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected?.accessories?.laptopBag || false}
-                            onChange={(e) =>
-                              setSelected({
-                                ...selected,
-                                accessories: {
-                                  ...selected.accessories,
-                                  laptopBag: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          Laptop Bag
-                        </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected?.accessories?.headset || false}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              accessories: {
+                                ...selected.accessories,
+                                headset: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        Headset
+                      </label>
 
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected?.accessories?.keyboard || false}
-                            onChange={(e) =>
-                              setSelected({
-                                ...selected,
-                                accessories: {
-                                  ...selected.accessories,
-                                  keyboard: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          Keyboard
-                        </label>
-
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected?.accessories?.headset || false}
-                            onChange={(e) =>
-                              setSelected({
-                                ...selected,
-                                accessories: {
-                                  ...selected.accessories,
-                                  headset: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          Headset
-                        </label>
-
-                      </div>
                     </div>
-                  )}
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">
-                    Notes
-                  </label>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-semibold text-gray-700 block mb-2">
+                      Notes
+                    </label>
 
-                  <textarea
-                    rows="4"
-                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                    value={selected.notes || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        notes: e.target.value,
-                      })
+                    <textarea
+                      rows="4"
+                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      value={selected.notes || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          notes: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                </div>
+
+                {/* FOOTER */}
+                <div className="flex gap-4 mt-8">
+                  <button
+                    onClick={updateAsset}
+                    className="flex-1 h-12 rounded-2xl bg-[#0a6ed1] hover:bg-[#085caf] text-white font-semibold shadow-sm transition"
+                  >
+                    Save Changes
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      setEditOpen(false)
                     }
-                  />
+                    className="flex-1 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold transition"
+                  >
+                    Cancel
+                  </button>
                 </div>
 
               </div>
-
-              {/* FOOTER */}
-              <div className="flex gap-4 mt-8">
-                <button
-                  onClick={updateAsset}
-                  className="flex-1 h-12 rounded-2xl bg-[#0a6ed1] hover:bg-[#085caf] text-white font-semibold shadow-sm transition"
-                >
-                  Save Changes
-                </button>
-
-                <button
-                  onClick={() =>
-                    setEditOpen(false)
-                  }
-                  className="flex-1 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold transition"
-                >
-                  Cancel
-                </button>
-              </div>
-
             </div>
           </div>
         )}
+      </div>
     </div>
-    </div >
   );
 }
