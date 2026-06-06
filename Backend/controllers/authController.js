@@ -7,9 +7,6 @@ import { otpEmail } from "../utils/otpEmail.js";
 /* =========================
    REGISTER
 ========================= */
-/* =========================
-   REGISTER
-========================= */
 export const register = async (req, res) => {
   try {
     const {
@@ -21,34 +18,8 @@ export const register = async (req, res) => {
       department,
     } = req.body;
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = email.toLowerCase().trim(); // ← normalize
 
-    // ✅ Check if employeeId exists in EmployeeMaster
-    const employee = await EmployeeMaster.findOne({ staffCode: employeeId });
-
-    if (!employee) {
-      return res.status(400).json({
-        msg: "Employee ID not found. Please contact HR.",
-      });
-    }
-
-    // ✅ Check if employee is active
-    if (employee.status !== "active") {
-      return res.status(400).json({
-        msg: "Your employee record is inactive. Please contact HR.",
-      });
-    }
-
-    // ✅ Check if this employeeId already has an account
-    const existingEmployee = await User.findOne({ employeeId });
-
-    if (existingEmployee) {
-      return res.status(400).json({
-        msg: "An account already exists for this Employee ID.",
-      });
-    }
-
-    // ✅ Check email
     const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
@@ -60,12 +31,12 @@ export const register = async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
 
     const user = await User.create({
-      name: name || employee.name, // ← use HR name if not provided
-      email: normalizedEmail,
+      name,
+      email: normalizedEmail, // ← use normalized
       password: hash,
       employeeId,
-      position: position || employee.designation,     // ← auto-fill from HR
-      department: department || employee.department,   // ← auto-fill from HR
+      position,
+      department,
     });
 
     res.status(201).json({
@@ -81,6 +52,7 @@ export const register = async (req, res) => {
     });
   }
 };
+
 /* =========================
    LOGIN
 ========================= */
