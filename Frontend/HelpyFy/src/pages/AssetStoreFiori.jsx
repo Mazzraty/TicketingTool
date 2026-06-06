@@ -164,7 +164,7 @@ export default function AssetStoreFiori() {
   };
 
   return (
-      <div className="min-h-screen bg-[#f5f7fa] zoom-90">
+    <div className="min-h-screen bg-[#f5f7fa] zoom-90">
       {/* HEADER */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">
@@ -438,6 +438,10 @@ export default function AssetStoreFiori() {
                     Status
                   </th>
 
+                  <th className="text-left px-6 py-4 font-semibold">
+                    Accessories
+                  </th>
+
                   <th className="text-center px-6 py-4 font-semibold">
                     Actions
                   </th>
@@ -522,7 +526,13 @@ export default function AssetStoreFiori() {
                           {a.status}
                         </span>
                       </td>
-
+                      <td className="px-6 py-4 text-sm">
+                        {a.accessories?.charger && "🔌 Charger "}
+                        {a.accessories?.mouse && "🖱 Mouse "}
+                        {a.accessories?.laptopBag && "🎒 Bag "}
+                        {a.accessories?.keyboard && "⌨ Keyboard "}
+                        {a.accessories?.headset && "🎧 Headset "}
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           {/* <button
@@ -848,7 +858,100 @@ export default function AssetStoreFiori() {
                       </option>
                     </select>
                   </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-semibold text-gray-700 block mb-3">
+                      Accessories
+                    </label>
 
+                    <div className="grid grid-cols-2 gap-3">
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected?.accessories?.charger || false}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              accessories: {
+                                ...selected.accessories,
+                                charger: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        Charger
+                      </label>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected?.accessories?.mouse || false}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              accessories: {
+                                ...selected.accessories,
+                                mouse: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        Mouse
+                      </label>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected?.accessories?.laptopBag || false}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              accessories: {
+                                ...selected.accessories,
+                                laptopBag: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        Laptop Bag
+                      </label>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected?.accessories?.keyboard || false}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              accessories: {
+                                ...selected.accessories,
+                                keyboard: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        Keyboard
+                      </label>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected?.accessories?.headset || false}
+                          onChange={(e) =>
+                            setSelected({
+                              ...selected,
+                              accessories: {
+                                ...selected.accessories,
+                                headset: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        Headset
+                      </label>
+
+                    </div>
+                  </div>
                   <div className="md:col-span-2">
                     <label className="text-sm font-semibold text-gray-700 block mb-2">
                       Notes
@@ -893,6 +996,6 @@ export default function AssetStoreFiori() {
           </div>
         )}
       </div>
-      </div>
-      );
+    </div>
+  );
 }

@@ -18,15 +18,38 @@ const assetSchema = new mongoose.Schema(
     serialNumber: String,
 
     status: {
-  type: String,
-  enum: [
-    "available",
-    "assigned",
-    "damaged",
-  ],
-  default: "available",
-},
+      type: String,
+      enum: [
+        "available",
+        "assigned",
+        "damaged",
+      ],
+      default: "available",
+    },
 
+
+    accessories: {
+      charger: {
+        type: Boolean,
+        default: true,
+      },
+      mouse: {
+        type: Boolean,
+        default: true,
+      },
+      laptopBag: {
+        type: Boolean,
+        default: true,
+      },
+      keyboard: {
+        type: Boolean,
+        default: false,
+      },
+      headset: {
+        type: Boolean,
+        default: false,
+      },
+    },
     /* =========================
        PRINTER & HHT DETAILS
     ========================= */
