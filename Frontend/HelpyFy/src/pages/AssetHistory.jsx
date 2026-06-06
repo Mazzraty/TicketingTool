@@ -206,47 +206,38 @@ export default function AssetHistoryPage() {
 
     doc.text("Employee Asset History", 14, 10);
 
+    const body = empHistory.map((h) => {
+      const acc = h.accessories || h.asset?.accessories || {};
+
+      const accessoriesText =
+        h.assetType?.toLowerCase() === "laptop"
+          ? [
+            acc.charger && "Charger",
+            acc.mouse && "Mouse",
+            acc.laptopBag && "Laptop Bag",
+            acc.keyboard && "Keyboard",
+            acc.headset && "Headset",
+          ]
+            .filter(Boolean)
+            .join(", ")
+          : "-";
+
+      return [
+        h.asset?.assetCode || "-",
+        h.assetType || "-",
+        h.assignedDate
+          ? new Date(h.assignedDate).toLocaleString()
+          : "-",
+        accessoriesText,
+        h.returnedDate
+          ? new Date(h.returnedDate).toLocaleString()
+          : "Active",
+      ];
+    });
+
     autoTable(doc, {
-      head: [
-        [
-          "Asset",
-          "Type",
-          "Status",
-          "Assigned",
-          "Returned",
-          "Accessories",
-        ],
-      ],
-
-      body: empHistory.map((h) => {
-        const acc = getAccessories(h);
-
-        const accessoriesText =
-          h.assetType?.toLowerCase() === "laptop"
-            ? [
-              acc.charger && "Charger",
-              acc.mouse && "Mouse",
-              acc.laptopBag && "Laptop Bag",
-              acc.keyboard && "Keyboard",
-              acc.headset && "Headset",
-            ]
-              .filter(Boolean)
-              .join(", ")
-            : "-";
-
-        return [
-          h.asset?.assetCode || "-",
-          h.assetType || "-",
-          h.status || "-",
-          h.assignedDate
-            ? new Date(h.assignedDate).toLocaleString()
-            : "-",
-          h.returnedDate
-            ? new Date(h.returnedDate).toLocaleString()
-            : "Active",
-          accessoriesText,
-        ];
-      }),
+      head: [["Asset", "Type", "Assigned", "Accessories", "Returned"]],
+      body,
     });
 
     doc.save("employee-history.pdf");
