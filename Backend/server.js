@@ -25,12 +25,12 @@ const app = express();
 /* =========================
    🌐 CORS CONFIG
 // ========================= */
-// const allowedOrigins = [
-//   "http://localhost:5173",
-//   "http://localhost:3000",
-//   "https://ticketing-tool-nine.vercel.app",
-//   "https://ticketing-tool-80ru67aw8-mazzratys-projects.vercel.app"
-// ];
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://ticketing-tool-nine.vercel.app",
+  "https://ticketing-tool-80ru67aw8-mazzratys-projects.vercel.app"
+];
 
 app.use(
   cors({
