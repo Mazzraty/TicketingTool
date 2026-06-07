@@ -47,23 +47,15 @@ export const createTicket = async (req, res) => {
     });
 
     const user = await User.findById(req.user.id);
-    const admins = await User.find({ role: "admin" });
+    
+    // Get admin emails from .env
+    const adminEmails = process.env.ADMIN_EMAIL.split(",").map(email => email.trim());
 
     sendEmail({
-      to: admins.map((a) => a.email),
+      to: adminEmails,
       subject: "New Ticket Created",
       html: ticketAdminEmail({ ...ticket._doc, userEmail: user.email }),
     });
-
-    // Create notification for admins
-    for (const admin of admins) {
-      await Notification.create({
-        userId: admin._id,
-        title: "New Ticket Created",
-        message: `User ${user.name} created a new ${priority} priority ticket: "${title}"`,
-        type: "ticket",
-      });
-    }
 
     if (global.io) {
       global.io.emit("newTicket", ticket);
