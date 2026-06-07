@@ -55,12 +55,6 @@ export const createTicket = async (req, res) => {
       html: ticketAdminEmail({ ...ticket._doc, userEmail: user.email }),
     });
 
-    sendEmail({
-      to: user.email,
-      subject: "Ticket Created Successfully",
-      html: ticketUserEmail(ticket),
-    });
-
     // Create notification for admins
     for (const admin of admins) {
       await Notification.create({
