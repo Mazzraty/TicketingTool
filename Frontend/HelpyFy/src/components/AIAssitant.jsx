@@ -123,18 +123,6 @@ export default function AIAssistant() {
               <p className="text-xs text-gray-400 max-w-[220px]">
                 Ask about IT support, assets, tickets, or anything else.
               </p>
-              {/* Quick suggestions */}
-              <div className="flex flex-col gap-2 mt-2 w-full">
-                {["How do I reset my password?", "Check my open tickets", "Request new equipment"].map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => { setMessage(q); }}
-                    className="text-xs text-left px-3 py-2 rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50 text-gray-600 transition"
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
             </div>
           )}
 
