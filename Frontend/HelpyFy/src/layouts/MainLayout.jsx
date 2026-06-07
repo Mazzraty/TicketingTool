@@ -5,7 +5,7 @@ import AIAssistant from "../components/AIAssitant";
 import { Outlet } from "react-router-dom";
 
 export default function MainLayout() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <div className="min-h-screen bg-[#f5f6f7]">
