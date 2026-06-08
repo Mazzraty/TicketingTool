@@ -82,7 +82,7 @@ export const login = async (req, res) => {
         employeeId: user.employeeId,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "8h" }
     );
 
     res.json({
