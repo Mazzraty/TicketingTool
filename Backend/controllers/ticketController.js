@@ -3,6 +3,7 @@ import User from "../models/userShema.js";
 import sendEmail from "../utils/sendEmail.js";
 import { ticketAdminEmail } from "../utils/ticketAdminEmail.js";
 import { ticketUserEmail } from "../utils/ticketUserEmail.js";
+import { ticketResolvedEmail } from "../utils/ticketResolvedEmail.js";
 import Notification from "../models/notifcationSchema.js";
 /* ======================================================
    ✅ CREATE TICKET
@@ -189,6 +190,22 @@ export const updateStatus = async (req, res) => {
     }
 
     await ticket.save();
+
+    if (status === "Resolved") {
+      const ticketUser = await User.findById(ticket.userId);
+      if (ticketUser?.email) {
+        try {
+          await sendEmail({
+            to: ticketUser.email,
+            subject: "Your ticket has been resolved",
+            html: ticketResolvedEmail({ ...ticket._doc, userEmail: ticketUser.email }),
+          });
+        } catch (emailError) {
+          console.error("Failed to send resolved ticket email:", emailError.message);
+        }
+      }
+    }
+
     await Notification.create({
       userId: ticket.userId,
       title: "Ticket Status Updated",
