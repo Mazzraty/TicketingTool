@@ -82,12 +82,23 @@ export default function UserAssetPage() {
 
     autoTable(doc, {
       startY: 34,  // ← bumped down from 28
-      head: [["Asset Code", "Type", "Model", "Assigned Date", "Accessories", "Status"]],
+      head: [[
+        "Asset Code",
+        "Serial Number",
+        "Type",
+        "Model",
+        "Assigned Date",
+        "Accessories",
+        "Status"
+      ]],
       body: assets.map((item) => [
         item.asset?.assetCode || "-",
+        item.asset?.serialNumber || "-",
         item.asset?.type || "-",
         item.asset?.model || "-",
-        item.assignedDate ? new Date(item.assignedDate).toLocaleDateString() : "-",
+        item.assignedDate
+          ? new Date(item.assignedDate).toLocaleDateString()
+          : "-",
         accessoriesText(item),
         "Active",
       ]),
@@ -124,6 +135,7 @@ export default function UserAssetPage() {
           <thead className="bg-gray-100">
             <tr>
               <th className="p-4 text-left">Asset Code</th>
+              <th className="p-4 text-left">Serial Number</th>
               <th className="p-4 text-left">Type</th>
               <th className="p-4 text-left">Model</th>
               <th className="p-4 text-left">Assigned Date</th>
@@ -135,11 +147,11 @@ export default function UserAssetPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="6" className="p-6 text-center">Loading...</td>
+                <td colSpan="7" className="p-6 text-center">Loading...</td>
               </tr>
             ) : assets.length === 0 ? (
               <tr>
-                <td colSpan="6" className="p-6 text-center text-gray-500">
+                <td colSpan="7" className="p-6 text-center text-gray-500">
                   No assigned assets
                 </td>
               </tr>
@@ -148,7 +160,9 @@ export default function UserAssetPage() {
                 <tr key={item._id} className="border-t hover:bg-gray-50">
 
                   <td className="p-4">{item.asset?.assetCode || "-"}</td>
-
+                  <td className="p-4">
+                    {item.asset?.serialNumber || "-"}
+                  </td>
                   <td className="p-4">{item.asset?.type || "-"}</td>
 
                   <td className="p-4">{item.asset?.model || "-"}</td>
