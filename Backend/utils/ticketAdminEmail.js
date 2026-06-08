@@ -7,131 +7,55 @@ export const ticketAdminEmail = (ticket = {}) => {
   };
 
   return `
-  <div style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;">
+  <div style="background:#f4f6f8;padding:20px;font-family:Arial,sans-serif;">
 
-    <div style="max-width:650px;margin:30px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+    <div style="max-width:600px;margin:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;">
 
-      <!-- Header -->
-      <div style="background:#dc2626;padding:20px;color:white;">
-        <h2 style="margin:0;">🚨 New Support Ticket</h2>
-        <p style="margin-top:5px;font-size:14px;">
-          A new IT support request has been created
-        </p>
+      <!-- Header (simplified) -->
+      <div style="background:#dc2626;color:#fff;padding:15px;">
+        <h2 style="margin:0;font-size:18px;">New Ticket Created</h2>
       </div>
 
       <!-- Body -->
-      <div style="padding:25px;">
+      <div style="padding:20px;font-size:14px;color:#111827;">
 
-        <p style="font-size:15px;color:#111827;">
-          Hello Admin,
+        <p>Hello Admin,</p>
+
+        <p>A new support ticket has been created in HelpyFy.</p>
+
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:15px 0;"/>
+
+        <p><b>ID:</b> ${ticket._id || "-"}</p>
+        <p><b>User:</b> ${ticket.userEmail || "-"}</p>
+        <p><b>Title:</b> ${ticket.title || "-"}</p>
+        <p><b>Department:</b> ${ticket.department || "-"}</p>
+
+        <p>
+          <b>Priority:</b>
+          <span style="color:${priorityColors[ticket.priority] || "#111"};font-weight:bold;">
+            ${ticket.priority || "-"}
+          </span>
         </p>
 
-        <p style="font-size:14px;color:#4b5563;line-height:1.6;">
-          A new support ticket has been submitted in the HelpyFy system.
-          Please review the details below.
+        <p><b>Description:</b></p>
+        <p style="background:#f9fafb;padding:10px;border-radius:5px;">
+          ${ticket.description || "-"}
         </p>
 
-        <!-- Ticket Details -->
-        <div style="margin-top:25px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+        <p><b>Status:</b> Open</p>
+        <p><b>Created:</b> ${new Date().toLocaleString()}</p>
 
-          <div style="background:#f9fafb;padding:12px 18px;border-bottom:1px solid #e5e7eb;">
-            <h3 style="margin:0;font-size:16px;color:#111827;">
-              Ticket Information
-            </h3>
-          </div>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:15px 0;"/>
 
-          <div style="padding:18px;">
-
-            <p style="margin:10px 0;">
-              <b>Ticket ID:</b> ${ticket._id || "-"}
-            </p>
-
-            <p style="margin:10px 0;">
-              <b>User Email:</b> ${ticket.userEmail || "-"}
-            </p>
-
-            <p style="margin:10px 0;">
-              <b>Title:</b> ${ticket.title || "-"}
-            </p>
-
-            <p style="margin:10px 0;">
-              <b>Description:</b><br/>
-              ${ticket.description || "-"}
-            </p>
-
-            <p style="margin:10px 0;">
-              <b>Department:</b> ${ticket.department || "-"}
-            </p>
-
-            <p style="margin:10px 0;">
-              <b>Priority:</b>
-              <span style="
-                background:${priorityColors[ticket.priority] || "#6b7280"};
-                color:white;
-                padding:4px 10px;
-                border-radius:20px;
-                font-size:12px;
-                font-weight:bold;
-              ">
-                ${ticket.priority || "-"}
-              </span>
-            </p>
-
-            <p style="margin:10px 0;">
-              <b>Status:</b>
-              <span style="
-                background:#2563eb;
-                color:white;
-                padding:4px 10px;
-                border-radius:20px;
-                font-size:12px;
-                font-weight:bold;
-              ">
-                Open
-              </span>
-            </p>
-
-            <p style="margin:10px 0;">
-              <b>Created At:</b>
-              ${new Date().toLocaleString()}
-            </p>
-
-          </div>
-        </div>
-
-        <!-- Action Box -->
-        <div style="
-          margin-top:25px;
-          padding:15px;
-          background:#fef2f2;
-          border:1px solid #fecaca;
-          border-radius:10px;
-        ">
-          <p style="margin:0;font-size:14px;color:#991b1b;">
-            ⚡ Immediate attention may be required depending on ticket priority.
-          </p>
-        </div>
-
-        <!-- Footer -->
-        <div style="margin-top:25px;">
-          <p style="font-size:14px;color:#4b5563;">
-            Regards,<br/>
-            <b>HelpyFy Notification System</b>
-          </p>
-        </div>
+        <p style="font-size:13px;color:#6b7280;">
+          HelpyFy ITSM System Notification
+        </p>
 
       </div>
 
-      <!-- Bottom Footer -->
-      <div style="
-        background:#f9fafb;
-        padding:15px;
-        text-align:center;
-        font-size:12px;
-        color:#6b7280;
-        border-top:1px solid #e5e7eb;
-      ">
-        © ${new Date().getFullYear()} HelpyFy Enterprise ITSM
+      <!-- Footer -->
+      <div style="background:#f9fafb;padding:10px;text-align:center;font-size:12px;color:#6b7280;">
+        © ${new Date().getFullYear()} HelpyFy
       </div>
 
     </div>
