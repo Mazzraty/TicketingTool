@@ -70,44 +70,70 @@ export default function UserAssetPage() {
   /* ===================================
      EXPORT PDF
   =================================== */
-  const exportPDF = () => {
-    const doc = new jsPDF();
+const exportPDF = async () => {
+  const doc = new jsPDF();
 
-    doc.setFontSize(16);
-    doc.text("My Assigned Assets", 14, 15);
-    doc.setFontSize(10);
-    doc.setTextColor(120);
-    doc.text(`Employee: ${user?.name || "-"}`, 14, 22);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+  // ← load logo as base64
+  const logoUrl = "https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75";
 
-    autoTable(doc, {
-      startY: 34,  // ← bumped down from 28
-      head: [[
-        "Asset Code",
-        "Serial Number",
-        "Type",
-        "Model",
-        "Assigned Date",
-        "Accessories",
-        "Status"
-      ]],
-      body: assets.map((item) => [
-        item.asset?.assetCode || "-",
-        item.asset?.serialNumber || "-",
-        item.asset?.type || "-",
-        item.asset?.model || "-",
-        item.assignedDate
-          ? new Date(item.assignedDate).toLocaleDateString()
-          : "-",
-        accessoriesText(item),
-        "Active",
-      ]),
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [59, 130, 246] },
+  const getBase64 = (url) =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas.getContext("2d").drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => resolve(null); // if logo fails, skip it
+      img.src = url;
     });
 
-    doc.save("my-assets.pdf");
-  };
+  const logoBase64 = await getBase64(logoUrl);
+
+  // ← place logo top right
+  if (logoBase64) {
+    doc.addImage(logoBase64, "PNG", 150, 8, 46, 14); // x, y, width, height
+  }
+
+  doc.setFontSize(16);
+  doc.setTextColor(0);
+  doc.text("Assigned Assets", 14, 15);
+  doc.setFontSize(10);
+  doc.setTextColor(120);
+  doc.text(`Employee: ${user?.name || "-"}`, 14, 22);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+
+  autoTable(doc, {
+    startY: 34,
+    head: [[
+      "Asset Code",
+      "Serial Number",
+      "Type",
+      "Model",
+      "Assigned Date",
+      "Accessories",
+      "Status",
+    ]],
+    body: assets.map((item) => [
+      item.asset?.assetCode || "-",
+      item.asset?.serialNumber || "-",
+      item.asset?.type || "-",
+      item.asset?.model || "-",
+      item.assignedDate
+        ? new Date(item.assignedDate).toLocaleDateString()
+        : "-",
+      accessoriesText(item),
+      "Active",
+    ]),
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [59, 130, 246] },
+  });
+
+  doc.save("my-assets.pdf");
+};
   return (
     <div className="bg-white rounded-2xl shadow-sm border p-6">
 
