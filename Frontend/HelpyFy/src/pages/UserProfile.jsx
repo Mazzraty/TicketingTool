@@ -6,14 +6,7 @@ export default function UserProfile() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [editOpen, setEditOpen] = useState(false);
   const [passOpen, setPassOpen] = useState(false);
-
-  const [form, setForm] = useState({
-    name: "",
-    department: "",
-    position: "",
-  });
 
   const [password, setPassword] = useState({
     oldPassword: "",
@@ -28,12 +21,6 @@ export default function UserProfile() {
     try {
       const res = await api.get("/auth/me");
       setUser(res.data);
-
-      setForm({
-        name: res.data.name || "",
-        department: res.data.department || "",
-        position: res.data.position || "",
-      });
     } catch (err) {
       toast.error("Failed to load profile");
     } finally {
@@ -41,27 +28,11 @@ export default function UserProfile() {
     }
   };
 
-  /* ================= UPDATE PROFILE ================= */
-  const updateProfile = async () => {
-    try {
-      const res = await api.put("/auth/update-profile", form);
-
-      setUser(res.data.user);
-      toast.success("Profile updated");
-
-      setEditOpen(false);
-    } catch (err) {
-      toast.error("Update failed");
-    }
-  };
-
   /* ================= CHANGE PASSWORD ================= */
   const changePassword = async () => {
     try {
       await api.put("/auth/change-password", password);
-
       toast.success("Password updated");
-
       setPassOpen(false);
       setPassword({ oldPassword: "", newPassword: "" });
     } catch (err) {
@@ -76,93 +47,38 @@ export default function UserProfile() {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
 
-      {/* ================= HEADER CARD ================= */}
+      {/* HEADER */}
       <div className="bg-white shadow rounded-2xl p-6 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">
-            Employee Profile
-          </h1>
-          <p className="text-gray-500 text-sm">
-            User Management
-          </p>
+          <h1 className="text-2xl font-bold text-gray-800">Employee Profile</h1>
+          <p className="text-gray-500 text-sm">User Management</p>
         </div>
 
-        <div className="flex gap-3">
-          <button
-            onClick={() => setEditOpen(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-          >
-            Edit Profile
-          </button>
-
-          <button
-            onClick={() => setPassOpen(true)}
-            className="px-4 py-2 bg-gray-800 text-white rounded-lg"
-          >
-            Change Password
-          </button>
-        </div>
+        <button
+          onClick={() => setPassOpen(true)}
+          className="px-4 py-2 bg-gray-800 text-white rounded-lg"
+        >
+          Change Password
+        </button>
       </div>
 
-      {/* ================= PROFILE GRID ================= */}
+      {/* PROFILE GRID */}
       <div className="grid grid-cols-2 gap-6 mt-6">
-
         <Card label="Name" value={user.name} />
         <Card label="Email" value={user.email} />
         <Card label="Employee ID" value={user.employeeId} />
-        {/* <Card label="Department" value={user.department} />
-        <Card label="Position" value={user.position} /> */}
 
-        <div className="bg-white p-5 rounded-xl shadow col-span-2">
+        <div className="bg-white p-5 rounded-xl shadow">
           <p className="text-gray-500 text-sm">Role</p>
-          {/* <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
             {user.role}
-          </span> */}
+          </span>
         </div>
       </div>
 
-      {/* ================= EDIT MODAL ================= */}
-      {editOpen && (
-        <Modal title="Edit Profile" onClose={() => setEditOpen(false)}>
-
-          <Input
-            label="Name"
-            value={form.name}
-            onChange={(e) =>
-              setForm({ ...form, name: e.target.value })
-            }
-          />
-
-          {/* <Input
-            label="Department"
-            value={form.department}
-            onChange={(e) =>
-              setForm({ ...form, department: e.target.value })
-            }
-          />
-
-          <Input
-            label="Position"
-            value={form.position}
-            onChange={(e) =>
-              setForm({ ...form, position: e.target.value })
-            }
-          /> */}
-
-          <button
-            onClick={updateProfile}
-            className="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg"
-          >
-            Save Changes
-          </button>
-
-        </Modal>
-      )}
-
-      {/* ================= PASSWORD MODAL ================= */}
+      {/* PASSWORD MODAL */}
       {passOpen && (
         <Modal title="Change Password" onClose={() => setPassOpen(false)}>
-
           <Input
             label="Old Password"
             type="password"
@@ -171,7 +87,6 @@ export default function UserProfile() {
               setPassword({ ...password, oldPassword: e.target.value })
             }
           />
-
           <Input
             label="New Password"
             type="password"
@@ -180,14 +95,12 @@ export default function UserProfile() {
               setPassword({ ...password, newPassword: e.target.value })
             }
           />
-
           <button
             onClick={changePassword}
             className="w-full mt-4 bg-green-600 text-white py-2 rounded-lg"
           >
             Update Password
           </button>
-
         </Modal>
       )}
     </div>
@@ -209,15 +122,10 @@ function Modal({ title, children, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
       <div className="bg-white w-[420px] p-6 rounded-xl shadow-lg">
-
         <div className="flex justify-between mb-4">
           <h2 className="text-lg font-bold">{title}</h2>
-
-          <button onClick={onClose} className="text-gray-500">
-            ✕
-          </button>
+          <button onClick={onClose} className="text-gray-500">✕</button>
         </div>
-
         {children}
       </div>
     </div>
