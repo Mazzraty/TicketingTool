@@ -5,6 +5,8 @@ import EmployeeMaster from "../models/employeeMasterSchema.js";
 export const searchAll = async (req, res) => {
   try {
     const q = req.query.q?.trim();
+    const userId = req.query.userId; // ← present for user role
+    const isUser = !!userId;
 
     if (!q) {
       return res.json({ tickets: [], assets: [], employees: [] });
@@ -12,6 +14,19 @@ export const searchAll = async (req, res) => {
 
     const regex = new RegExp(q, "i");
 
+    // ← user: only their tickets, no assets/employees
+    if (isUser) {
+      const tickets = await Ticket.find({
+        title: regex,
+        createdBy: userId, // ← only their tickets
+      })
+        .limit(5)
+        .select("title status ticketId");
+
+      return res.json({ tickets, assets: [], employees: [] });
+    }
+
+    // ← admin: search everything
     const [tickets, assets, employees] = await Promise.all([
       Ticket.find({ title: regex })
         .limit(5)

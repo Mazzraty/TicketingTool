@@ -25,28 +25,35 @@ export default function Navbar() {
   const [searchLoading, setSearchLoading] = useState(false);
 
   // debounce search
-  useEffect(() => {
-    if (!searchQuery.trim()) {
+// debounce search
+useEffect(() => {
+  if (!searchQuery.trim()) {
+    setSearchResults(null);
+    return;
+  }
+
+  const timer = setTimeout(async () => {
+    try {
+      setSearchLoading(true);
+
+      // ← admin sees all, user sees only their data
+      const endpoint =
+        role === "admin"
+          ? `/search?q=${encodeURIComponent(searchQuery)}`
+          : `/search?q=${encodeURIComponent(searchQuery)}&userId=${user?._id}`;
+
+      const res = await api.get(endpoint);
+      setSearchResults(res.data);
+    } catch (err) {
+      console.error(err);
       setSearchResults(null);
-      return;
+    } finally {
+      setSearchLoading(false);
     }
+  }, 400);
 
-    const timer = setTimeout(async () => {
-      try {
-        setSearchLoading(true);
-        const res = await api.get(`/search?q=${encodeURIComponent(searchQuery)}`);
-        setSearchResults(res.data);
-      } catch (err) {
-        console.error(err);
-        setSearchResults(null);
-      } finally {
-        setSearchLoading(false);
-      }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
+  return () => clearTimeout(timer);
+}, [searchQuery, role]);
   // close search on outside click
   useEffect(() => {
     const handleClick = (e) => {
