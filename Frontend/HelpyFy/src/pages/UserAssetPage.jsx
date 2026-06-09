@@ -100,7 +100,7 @@ export default function UserAssetPage() {
     if (result) {
       const logoWidth = 30;
       const logoHeight = logoWidth / result.ratio;
-      doc.addImage(result.base64, "PNG", 167, 6, logoWidth, logoHeight);
+      doc.addImage(result.base64, "PNG", 167, 2, logoWidth, logoHeight);
     }
 
     doc.setFontSize(16);
