@@ -34,7 +34,10 @@ export default function Login() {
 
       toast.success("Login successful");
 
-      if (res.data.user.role === "super_admin") {
+      const adminRoles = ["company_admin", "super_admin", "it_support"];
+      const isAdminRole = adminRoles.includes(res.data.user.role);
+
+      if (isAdminRole) {
         navigate("/admin");
       } else {
         navigate("/");

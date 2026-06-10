@@ -331,8 +331,10 @@ export const confirmResolution = async (req, res) => {
     ticket.closedAt = new Date();
 
     await ticket.save();
-// Create notification for admins
-    const admins = await User.find({ role: "admin" });
+    // Create notification for admins
+    const admins = await User.find({
+      role: { $in: ["company_admin", "super_admin", "it_support"] },
+    });
     for (const admin of admins) {
       await Notification.create({
         userId: admin._id,
@@ -372,8 +374,12 @@ export const reopenTicket = async (req, res) => {
         success: false,
         message: "Unauthorized",
       });
+    }
+
     // Create notification for admins
-    const admins = await User.find({ role: "admin" });
+    const admins = await User.find({
+      role: { $in: ["company_admin", "super_admin", "it_support"] },
+    });
     for (const admin of admins) {
       await Notification.create({
         userId: admin._id,
@@ -381,8 +387,6 @@ export const reopenTicket = async (req, res) => {
         message: `User reopened ticket: "${ticket.title}"`,
         type: "status",
       });
-    }
-
     }
 
     ticket.status = "Open";

@@ -48,6 +48,8 @@ export const protect = (req, res, next) => {
 /* =========================
    👮 ADMIN ONLY
 ========================= */
+const ADMIN_ROLES = ["company_admin", "super_admin", "it_support"];
+
 export const adminOnly = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -56,7 +58,7 @@ export const adminOnly = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== "admin") {
+  if (!ADMIN_ROLES.includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: "Access denied: Admins only",
