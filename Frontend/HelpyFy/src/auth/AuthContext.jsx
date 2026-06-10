@@ -1,3 +1,30 @@
+import { createContext, useContext, useState } from "react";
+
+const AuthContext = createContext(null);
+
+const getStoredToken = () => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token") || null;
+};
+
+const getStoredRole = () => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("role") || null;
+};
+
+const getStoredUser = () => {
+  if (typeof window === "undefined") return null;
+  const stored = localStorage.getItem("user");
+  if (!stored) return null;
+
+  try {
+    return JSON.parse(stored);
+  } catch (err) {
+    console.error("Failed to parse stored user", err);
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(getStoredToken());
   const [role, setRole] = useState(getStoredRole());
@@ -45,3 +72,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);
