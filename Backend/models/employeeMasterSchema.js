@@ -2,6 +2,13 @@ import mongoose from "mongoose";
 
 const employeeSchema = new mongoose.Schema(
   {
+    // 🏢 MULTI-TENANT (NEW)
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+    },
+
     staffCode: {
       type: String,
       required: true,

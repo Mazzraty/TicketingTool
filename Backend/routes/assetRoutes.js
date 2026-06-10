@@ -1,114 +1,122 @@
 import express from "express";
 
 import {
-   createAsset,
-   getAssets,
-   assignAsset,
-   returnAsset,
-   updateAsset,
-   deleteAsset,
-   getEmployeeHistory,
-   getAssetHistory,
-   getMyAssets,
+  createAsset,
+  getAssets,
+  assignAsset,
+  returnAsset,
+  updateAsset,
+  deleteAsset,
+  getEmployeeHistory,
+  getAssetHistory,
+  getMyAssets,
 } from "../controllers/assetController.js";
 
 import {
-   protect,
-   adminOnly,
+  protect,
+  adminOnly,
+  companyCheck,
 } from "../middleware/authMiddleware.js";
 
 import {
-   bulkUploadEmployees,
+  bulkUploadEmployees,
 } from "../controllers/emplyeeController.js";
 
 const router = express.Router();
 
 /* =========================
-   USER ASSETS
+   👤 USER SIDE
 ========================= */
 router.get(
-   "/my-assets",
-   protect,
-   getMyAssets
+  "/my-assets",
+  protect,
+  companyCheck,
+  getMyAssets
 );
 
 /* =========================
-   ASSET MASTER
+   🏢 ASSET MASTER (ADMIN ONLY)
 ========================= */
 router.post(
-   "/",
-   protect,
-   adminOnly,
-   createAsset
+  "/",
+  protect,
+  adminOnly,
+  companyCheck,
+  createAsset
 );
 
 router.get(
-   "/",
-   protect,
-   adminOnly,
-   getAssets
+  "/",
+  protect,
+  adminOnly,
+  companyCheck,
+  getAssets
 );
 
 /* =========================
-   ASSIGN / RETURN
+   🔁 ASSIGN / RETURN
 ========================= */
 router.post(
-   "/assign",
-   protect,
-   adminOnly,
-   assignAsset
+  "/assign",
+  protect,
+  adminOnly,
+  companyCheck,
+  assignAsset
 );
 
 router.post(
-   "/return",
-   protect,
-   adminOnly,
-   returnAsset
+  "/return",
+  protect,
+  adminOnly,
+  companyCheck,
+  returnAsset
 );
 
 /* =========================
-   UPDATE / DELETE
+   ✏️ UPDATE / DELETE
 ========================= */
 router.put(
-   "/:id",
-   protect,
-   adminOnly,
-   updateAsset
+  "/:id",
+  protect,
+  adminOnly,
+  companyCheck,
+  updateAsset
 );
 
 router.delete(
-   "/:id",
-   protect,
-   adminOnly,
-   deleteAsset
+  "/:id",
+  protect,
+  adminOnly,
+  companyCheck,
+  deleteAsset
 );
 
 /* =========================
-   EMPLOYEE HISTORY
+   📊 HISTORY (READ ONLY)
 ========================= */
 router.get(
-   "/employee/:id",
-   protect,
-   getEmployeeHistory
+  "/employee/:id",
+  protect,
+  companyCheck,
+  getEmployeeHistory
 );
 
-/* =========================
-   ASSET HISTORY
-========================= */
 router.get(
-   "/asset/:code",
-   protect,
-   getAssetHistory
+  "/asset/:code",
+  protect,
+  companyCheck,
+  getAssetHistory
 );
 
 /* =========================
-   BULK UPLOAD
+   📦 BULK UPLOAD
 ========================= */
 router.post(
-   "/bulk-upload",
-   protect,
-   adminOnly,
-   bulkUploadEmployees
+  "/bulk-upload",
+  protect,
+  adminOnly,
+  companyCheck,
+  bulkUploadEmployees
 );
 
 export default router;

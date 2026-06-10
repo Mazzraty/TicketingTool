@@ -2,11 +2,24 @@ import EmployeeMaster from "../models/employeeMasterSchema.js";
 import Asset from "../models/assetSchema.js";
 
 /* =========================
+   HELPER: COMPANY FILTER
+========================= */
+const getCompanyFilter = (user) => {
+  if (user.role === "super_admin") return {};
+  return { companyId: user.companyId };
+};
+
+/* =========================
    GET ALL EMPLOYEES
 ========================= */
 export const getEmployees = async (req, res) => {
   try {
-    const data = await EmployeeMaster.find().sort({ createdAt: -1 });
+    const filter = getCompanyFilter(req.user);
+
+    const data = await EmployeeMaster.find(filter).sort({
+      createdAt: -1,
+    });
+
     res.json(data);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -14,11 +27,16 @@ export const getEmployees = async (req, res) => {
 };
 
 /* =========================
-   GET EMPLOYEE BY ID (Mongo ID)
+   GET EMPLOYEE BY ID
 ========================= */
 export const getEmployee = async (req, res) => {
   try {
-    const emp = await EmployeeMaster.findById(req.params.id);
+    const filter = getCompanyFilter(req.user);
+
+    const emp = await EmployeeMaster.findOne({
+      _id: req.params.id,
+      ...filter,
+    });
 
     if (!emp) {
       return res.status(404).json({ message: "Employee not found" });
@@ -31,12 +49,52 @@ export const getEmployee = async (req, res) => {
 };
 
 /* =========================
+   CREATE EMPLOYEE
+========================= */
+export const createEmployee = async (req, res) => {
+  try {
+    const { staffCode, name } = req.body;
+
+    if (!staffCode || !name) {
+      return res.status(400).json({
+        message: "staffCode and name required",
+      });
+    }
+
+    const exists = await EmployeeMaster.findOne({
+      staffCode,
+      companyId: req.user.companyId,
+    });
+
+    if (exists) {
+      return res.status(400).json({
+        message: "Employee already exists",
+      });
+    }
+
+    const emp = await EmployeeMaster.create({
+      ...req.body,
+      companyId: req.user.companyId,
+    });
+
+    res.json(emp);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* =========================
    UPDATE EMPLOYEE
 ========================= */
 export const updateEmployee = async (req, res) => {
   try {
-    const emp = await EmployeeMaster.findByIdAndUpdate(
-      req.params.id,
+    const filter = getCompanyFilter(req.user);
+
+    const emp = await EmployeeMaster.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        ...filter,
+      },
       req.body,
       { new: true }
     );
@@ -56,7 +114,12 @@ export const updateEmployee = async (req, res) => {
 ========================= */
 export const deleteEmployee = async (req, res) => {
   try {
-    const emp = await EmployeeMaster.findByIdAndDelete(req.params.id);
+    const filter = getCompanyFilter(req.user);
+
+    const emp = await EmployeeMaster.findOneAndDelete({
+      _id: req.params.id,
+      ...filter,
+    });
 
     if (!emp) {
       return res.status(404).json({ message: "Employee not found" });
@@ -69,45 +132,14 @@ export const deleteEmployee = async (req, res) => {
 };
 
 /* =========================
-   CREATE EMPLOYEE
+   BULK UPLOAD (EMPLOYEES + ASSETS)
 ========================= */
-export const createEmployee = async (req, res) => {
-  try {
-    const { staffCode, name } = req.body;
-
-    if (!staffCode || !name) {
-      return res.status(400).json({
-        message: "staffCode and name required",
-      });
-    }
-
-    const exists = await EmployeeMaster.findOne({ staffCode });
-
-    if (exists) {
-      return res.status(400).json({
-        message: "Employee already exists",
-      });
-    }
-
-    const emp = await EmployeeMaster.create(req.body);
-
-    res.json(emp);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-/* =========================
-   BULK UPLOAD EMPLOYEES
-========================= */
-
 export const bulkUploadEmployees = async (req, res) => {
   try {
     const employees = req.body.employees || [];
     const assets = req.body.assets || [];
 
-    const clean = (v) =>
-      v ? v.toString().trim() : "";
+    const clean = (v) => (v ? v.toString().trim() : "");
 
     let inserted = 0;
     let skipped = 0;
@@ -131,7 +163,10 @@ export const bulkUploadEmployees = async (req, res) => {
           continue;
         }
 
-        const exists = await EmployeeMaster.findOne({ staffCode });
+        const exists = await EmployeeMaster.findOne({
+          staffCode,
+          companyId: req.user.companyId,
+        });
 
         if (exists) {
           skipped++;
@@ -150,6 +185,7 @@ export const bulkUploadEmployees = async (req, res) => {
             ? new Date(e.dateOfJoining)
             : null,
           status: "active",
+          companyId: req.user.companyId,
         });
 
         inserted++;
@@ -160,9 +196,8 @@ export const bulkUploadEmployees = async (req, res) => {
     }
 
     /* =========================
-       ASSETS (LAPTOP / PRINTER / HHT / PC)
+       ASSETS
     ========================= */
-
     const allowedTypes = ["Laptop", "Printer", "HHT", "PC"];
 
     for (const a of assets) {
@@ -174,7 +209,10 @@ export const bulkUploadEmployees = async (req, res) => {
           continue;
         }
 
-        const exists = await Asset.findOne({ assetCode });
+        const exists = await Asset.findOne({
+          assetCode,
+          companyId: req.user.companyId,
+        });
 
         if (exists) {
           skipped++;
@@ -189,10 +227,8 @@ export const bulkUploadEmployees = async (req, res) => {
         await Asset.create({
           assetCode,
           type: a.type,
-
           model: a.model || "",
           serialNumber: a.serialNumber || "",
-
           status: "available",
 
           route: a.route || "",
@@ -202,9 +238,10 @@ export const bulkUploadEmployees = async (req, res) => {
 
           imei: a.imei || "",
           simNumber: a.simNumber || "",
-
           soti: a.soti || "",
           notes: a.notes || "",
+
+          companyId: req.user.companyId,
         });
 
         inserted++;

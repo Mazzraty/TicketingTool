@@ -3,29 +3,55 @@ import Ticket from "../models/ticketSchema.js";
 import Employee from "../models/employeeMasterSchema.js";
 import Software from "../models/softwareSchema.js";
 
+/* =========================
+   HELPER: COMPANY FILTER
+========================= */
+const getCompanyFilter = (user) => {
+  if (user.role === "super_admin") return {};
+  return { companyId: user.companyId };
+};
 
-/* ================= DASHBOARD STATS ================= */
+/* =========================
+   DASHBOARD STATS (COMPANY WISE)
+========================= */
 export const getDashboardStats = async (req, res) => {
   try {
+    const filter = getCompanyFilter(req.user);
+
     // ASSETS
-    const totalAssets = await Asset.countDocuments();
-    const laptops = await Asset.countDocuments({ type: "Laptop" });
-    const printers = await Asset.countDocuments({ type: "Printer" });
-    const hht = await Asset.countDocuments({ type: "HHT" });
+    const totalAssets = await Asset.countDocuments(filter);
+
+    const laptops = await Asset.countDocuments({
+      ...filter,
+      type: "Laptop",
+    });
+
+    const printers = await Asset.countDocuments({
+      ...filter,
+      type: "Printer",
+    });
+
+    const hht = await Asset.countDocuments({
+      ...filter,
+      type: "HHT",
+    });
 
     const assigned = await Asset.countDocuments({
+      ...filter,
       status: "assigned",
     });
 
     const available = await Asset.countDocuments({
+      ...filter,
       status: "available",
     });
 
     // EMPLOYEES
-    const employees = await Employee.countDocuments();
+    const employees = await Employee.countDocuments(filter);
 
     // TICKETS
     const openTickets = await Ticket.countDocuments({
+      ...filter,
       status: "Open",
     });
 
@@ -44,27 +70,26 @@ export const getDashboardStats = async (req, res) => {
       0
     );
 
-    const totalActiveLicenses =
-      await Software.countDocuments({
-        status: "Active",
-      });
+    const totalActiveLicenses = await Software.countDocuments({
+      ...filter,
+      status: "Active",
+    });
 
-    const expiringThisMonth =
-      await Software.countDocuments({
-        expiryDate: {
-          $gte: startMonth,
-          $lte: endMonth,
-        },
-      });
+    const expiringThisMonth = await Software.countDocuments({
+      ...filter,
+      expiryDate: {
+        $gte: startMonth,
+        $lte: endMonth,
+      },
+    });
 
-    const expiredServices =
-      await Software.countDocuments({
-        expiryDate: {
-          $lt: today,
-        },
-      });
+    const expiredServices = await Software.countDocuments({
+      ...filter,
+      expiryDate: { $lt: today },
+    });
 
-    const totalCost = await Software.aggregate([
+    const totalCostAgg = await Software.aggregate([
+      { $match: filter },
       {
         $group: {
           _id: null,
@@ -74,41 +99,35 @@ export const getDashboardStats = async (req, res) => {
     ]);
 
     res.json({
-      // Assets
       totalAssets,
       laptops,
       printers,
       hht,
       assigned,
       available,
-
-      // Employees
       employees,
-
-      // Tickets
       openTickets,
-
-      // Software
       totalActiveLicenses,
       expiringThisMonth,
       expiredServices,
-      annualSoftwareCost:
-        totalCost[0]?.total || 0,
+      annualSoftwareCost: totalCostAgg[0]?.total || 0,
     });
-
   } catch (err) {
     console.error(err);
-
     res.status(500).json({
       message: "Dashboard stats error",
     });
   }
 };
 
-/* ================= RECENT ASSETS ================= */
+/* =========================
+   RECENT ASSETS
+========================= */
 export const getRecentAssets = async (req, res) => {
   try {
-    const assets = await Asset.find()
+    const filter = getCompanyFilter(req.user);
+
+    const assets = await Asset.find(filter)
       .sort({ createdAt: -1 })
       .limit(10);
 
@@ -118,10 +137,14 @@ export const getRecentAssets = async (req, res) => {
   }
 };
 
-/* ================= RECENT TICKETS ================= */
+/* =========================
+   RECENT TICKETS
+========================= */
 export const getRecentTickets = async (req, res) => {
   try {
-    const tickets = await Ticket.find()
+    const filter = getCompanyFilter(req.user);
+
+    const tickets = await Ticket.find(filter)
       .sort({ createdAt: -1 })
       .limit(10);
 
@@ -131,9 +154,14 @@ export const getRecentTickets = async (req, res) => {
   }
 };
 
+/* =========================
+   RECENT SOFTWARE
+========================= */
 export const getRecentSoftware = async (req, res) => {
   try {
-    const software = await Software.find()
+    const filter = getCompanyFilter(req.user);
+
+    const software = await Software.find(filter)
       .sort({ createdAt: -1 })
       .limit(10);
 

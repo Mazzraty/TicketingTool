@@ -30,12 +30,19 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["user", "admin"],
+      enum: ["super_admin", "company_admin", "it_support", "user"],
       default: "user",
     },
 
+    /* 🏢 MULTI-TENANT SUPPORT (NEW) */
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      default: null,
+    },
+
     /* =====================================
-       🔐 OTP + PASSWORD RESET (ADDED)
+       🔐 OTP + PASSWORD RESET
     ===================================== */
 
     resetOtp: String,

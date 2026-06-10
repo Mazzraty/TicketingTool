@@ -2,6 +2,13 @@ import mongoose from "mongoose";
 
 const ticketSchema = new mongoose.Schema(
   {
+    // 🏢 MULTI-TENANT (NEW)
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+    },
+
     // BASIC INFO
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
@@ -45,7 +52,7 @@ const ticketSchema = new mongoose.Schema(
       required: true,
     },
 
-    // ⭐ NEW: FULL TIMELINE TRACKING
+    // ⭐ FULL TIMELINE TRACKING
     statusHistory: [
       {
         status: {

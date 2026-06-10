@@ -1,9 +1,14 @@
-// models/softwareSchema.js
-
 import mongoose from "mongoose";
 
 const softwareSchema = new mongoose.Schema(
   {
+    // 🏢 MULTI-TENANT ISOLATION (NEW)
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+    },
+
     serviceName: {
       type: String,
       required: true,
@@ -47,7 +52,4 @@ const softwareSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model(
-  "Software",
-  softwareSchema
-);
+export default mongoose.model("Software", softwareSchema);

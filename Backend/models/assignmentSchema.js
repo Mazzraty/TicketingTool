@@ -2,6 +2,13 @@ import mongoose from "mongoose";
 
 const assignmentSchema = new mongoose.Schema(
   {
+    // 🏢 MULTI-TENANT (CRITICAL)
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+    },
+
     employee: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "EmployeeMaster",
@@ -29,23 +36,14 @@ const assignmentSchema = new mongoose.Schema(
 
     // HISTORY SNAPSHOT
     assetType: String,
-
     assetCode: String,
-
     model: String,
-
     salesmanCode: String,
-
     salesmanName: String,
-
     route: String,
-
     supervisor: String,
-
     assignedBy: String,
-
     returnedBy: String,
-
     remarks: String,
   },
   {
@@ -53,7 +51,4 @@ const assignmentSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model(
-  "AssetAssignment",
-  assignmentSchema
-);
+export default mongoose.model("AssetAssignment", assignmentSchema);

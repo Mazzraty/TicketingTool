@@ -1,12 +1,11 @@
 import jwt from "jsonwebtoken";
 
-/**
- * 🔐 AUTH: Verify JWT Token
- */
+/* =========================
+   🔐 AUTH: VERIFY TOKEN
+========================= */
 export const protect = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
-  // ❌ No token
   if (!authHeader) {
     return res.status(401).json({
       success: false,
@@ -14,7 +13,6 @@ export const protect = (req, res, next) => {
     });
   }
 
-  // ❌ Invalid format
   if (!authHeader.startsWith("Bearer ")) {
     return res.status(401).json({
       success: false,
@@ -27,12 +25,15 @@ export const protect = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // ✅ Attach user to request
+    // ✅ ATTACH FULL SAAS CONTEXT (VERY IMPORTANT)
     req.user = {
       id: decoded.id,
       role: decoded.role,
-      email: decoded.email || null,
-      employeeId: decoded.employeeId
+      email: decoded.email,
+      employeeId: decoded.employeeId,
+
+      // 🔥 NEW (CRITICAL FOR SAAS)
+      companyId: decoded.companyId || null,
     };
 
     next();
@@ -44,9 +45,9 @@ export const protect = (req, res, next) => {
   }
 };
 
-/**
- * 👮 ADMIN ONLY
- */
+/* =========================
+   👮 ADMIN ONLY
+========================= */
 export const adminOnly = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -65,10 +66,9 @@ export const adminOnly = (req, res, next) => {
   next();
 };
 
-/**
- * 🧠 ROLE BASED ACCESS (NEW - SAP STYLE FLEXIBLE SECURITY)
- * Example: roleCheck("admin", "manager")
- */
+/* =========================
+   🧠 ROLE BASED ACCESS
+========================= */
 export const roleCheck = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -81,10 +81,26 @@ export const roleCheck = (...allowedRoles) => {
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `Access denied: Requires ${allowedRoles.join(" or ")} role`,
+        message: `Access denied: Requires ${allowedRoles.join(
+          " or "
+        )} role`,
       });
     }
 
     next();
   };
+};
+
+/* =========================
+   🏢 COMPANY CHECK (NEW - SAAS CORE)
+========================= */
+export const companyCheck = (req, res, next) => {
+  if (!req.user.companyId && req.user.role !== "super_admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Company access missing",
+    });
+  }
+
+  next();
 };

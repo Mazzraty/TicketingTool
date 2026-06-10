@@ -2,6 +2,13 @@ import mongoose from "mongoose";
 
 const assetSchema = new mongoose.Schema(
   {
+    // 🏢 MULTI-TENANT ISOLATION (NEW)
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+    },
+
     assetCode: {
       type: String,
       unique: true,
@@ -19,41 +26,21 @@ const assetSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: [
-        "available",
-        "assigned",
-        "damaged",
-      ],
+      enum: ["available", "assigned", "damaged"],
       default: "available",
     },
 
-
     accessories: {
-      charger: {
-        type: Boolean,
-        default: true,
-      },
-      mouse: {
-        type: Boolean,
-        default: true,
-      },
-      laptopBag: {
-        type: Boolean,
-        default: true,
-      },
-      keyboard: {
-        type: Boolean,
-        default: false,
-      },
-      headset: {
-        type: Boolean,
-        default: false,
-      },
+      charger: { type: Boolean, default: true },
+      mouse: { type: Boolean, default: true },
+      laptopBag: { type: Boolean, default: true },
+      keyboard: { type: Boolean, default: false },
+      headset: { type: Boolean, default: false },
     },
+
     /* =========================
        PRINTER & HHT DETAILS
     ========================= */
-
     route: String,
     salesmanCode: String,
     salesmanName: String,
@@ -68,16 +55,13 @@ const assetSchema = new mongoose.Schema(
     /* =========================
        NEW FIELDS
     ========================= */
-
     replacementFor: {
       type: String,
       default: "",
     },
 
     assignedDate: Date,
-
     repairDate: Date,
-
     retiredDate: Date,
 
     active: {

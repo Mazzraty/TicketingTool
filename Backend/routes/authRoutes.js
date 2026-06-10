@@ -7,22 +7,57 @@ import {
   resetPassword,
   getMyProfile,
   updateProfile,
-  changePassword
+  changePassword,
 } from "../controllers/authController.js";
 
-import { protect } from "../middleware/authMiddleware.js";
+import {
+  protect,
+  roleCheck,
+  companyCheck,
+} from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/register", register);
+/* =========================
+   AUTH (PUBLIC)
+========================= */
 router.post("/login", login);
-
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
-// PROFILE
-router.get("/me", protect, getMyProfile);
-router.put("/update-profile", protect, updateProfile);
-router.put("/change-password", protect, changePassword);
+/* =========================
+   REGISTER (ADMIN CONTROLLED)
+========================= */
+router.post(
+  "/register",
+  protect,
+  roleCheck("admin", "super_admin"),
+  companyCheck,
+  register
+);
+
+/* =========================
+   PROFILE (SECURED SAAS)
+========================= */
+router.get(
+  "/me",
+  protect,
+  companyCheck,
+  getMyProfile
+);
+
+router.put(
+  "/update-profile",
+  protect,
+  companyCheck,
+  updateProfile
+);
+
+router.put(
+  "/change-password",
+  protect,
+  companyCheck,
+  changePassword
+);
 
 export default router;

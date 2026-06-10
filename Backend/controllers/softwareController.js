@@ -1,13 +1,22 @@
-// controllers/softwareController.js
-
 import Software from "../models/softwareSchema.js";
 
 /* ==============================
-   CREATE SOFTWARE
-================================ */
+   HELPER: COMPANY FILTER
+============================== */
+const getCompanyFilter = (user) => {
+  if (user.role === "super_admin") return {};
+  return { companyId: user.companyId };
+};
+
+/* ==============================
+   ➕ CREATE SOFTWARE
+============================== */
 export const createSoftware = async (req, res) => {
   try {
-    const software = await Software.create(req.body);
+    const software = await Software.create({
+      ...req.body,
+      companyId: req.user.companyId,
+    });
 
     res.status(201).json(software);
   } catch (err) {
@@ -18,34 +27,35 @@ export const createSoftware = async (req, res) => {
 };
 
 /* ==============================
-   GET ALL SOFTWARES (PAGINATION + SEARCH ADDED)
-================================ */
+   📦 GET ALL SOFTWARES
+   (PAGINATION + SEARCH + COMPANY SAFE)
+============================== */
 export const getSoftwares = async (req, res) => {
   try {
-    // ✅ pagination + search
+    const filter = getCompanyFilter(req.user);
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search || "";
 
     const skip = (page - 1) * limit;
 
-    // ✅ search filter (safe, does not break logic)
-    const filter = search
-      ? {
-          $or: [
-            { name: { $regex: search, $options: "i" } },
-            { vendor: { $regex: search, $options: "i" } },
-            { licenseKey: { $regex: search, $options: "i" } },
-          ],
-        }
-      : {};
+    const query = {
+      ...filter,
+      ...(search && {
+        $or: [
+          { serviceName: { $regex: search, $options: "i" } },
+          { vendor: { $regex: search, $options: "i" } },
+        ],
+      }),
+    };
 
-    const softwares = await Software.find(filter)
+    const softwares = await Software.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Software.countDocuments(filter);
+    const total = await Software.countDocuments(query);
 
     res.json({
       data: softwares,
@@ -64,11 +74,16 @@ export const getSoftwares = async (req, res) => {
 };
 
 /* ==============================
-   GET SINGLE SOFTWARE
-================================ */
+   🔍 GET SINGLE SOFTWARE
+============================== */
 export const getSoftwareById = async (req, res) => {
   try {
-    const software = await Software.findById(req.params.id);
+    const filter = getCompanyFilter(req.user);
+
+    const software = await Software.findOne({
+      _id: req.params.id,
+      ...filter,
+    });
 
     if (!software) {
       return res.status(404).json({
@@ -85,12 +100,17 @@ export const getSoftwareById = async (req, res) => {
 };
 
 /* ==============================
-   UPDATE SOFTWARE
-================================ */
+   ✏️ UPDATE SOFTWARE
+============================== */
 export const updateSoftware = async (req, res) => {
   try {
-    const software = await Software.findByIdAndUpdate(
-      req.params.id,
+    const filter = getCompanyFilter(req.user);
+
+    const software = await Software.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        ...filter,
+      },
       req.body,
       { new: true }
     );
@@ -110,11 +130,16 @@ export const updateSoftware = async (req, res) => {
 };
 
 /* ==============================
-   DELETE SOFTWARE
-================================ */
+   🗑 DELETE SOFTWARE
+============================== */
 export const deleteSoftware = async (req, res) => {
   try {
-    const software = await Software.findByIdAndDelete(req.params.id);
+    const filter = getCompanyFilter(req.user);
+
+    const software = await Software.findOneAndDelete({
+      _id: req.params.id,
+      ...filter,
+    });
 
     if (!software) {
       return res.status(404).json({
@@ -133,10 +158,12 @@ export const deleteSoftware = async (req, res) => {
 };
 
 /* ==============================
-   DASHBOARD STATS
-================================ */
+   📊 DASHBOARD STATS (COMPANY WISE)
+============================== */
 export const getDashboardStats = async (req, res) => {
   try {
+    const filter = getCompanyFilter(req.user);
+
     const today = new Date();
 
     const startMonth = new Date(
@@ -152,10 +179,12 @@ export const getDashboardStats = async (req, res) => {
     );
 
     const totalActiveLicenses = await Software.countDocuments({
+      ...filter,
       status: "Active",
     });
 
     const expiringThisMonth = await Software.countDocuments({
+      ...filter,
       expiryDate: {
         $gte: startMonth,
         $lte: endMonth,
@@ -163,12 +192,12 @@ export const getDashboardStats = async (req, res) => {
     });
 
     const expiredServices = await Software.countDocuments({
-      expiryDate: {
-        $lt: today,
-      },
+      ...filter,
+      expiryDate: { $lt: today },
     });
 
-    const totalCost = await Software.aggregate([
+    const totalCostAgg = await Software.aggregate([
+      { $match: filter },
       {
         $group: {
           _id: null,
@@ -181,7 +210,7 @@ export const getDashboardStats = async (req, res) => {
       totalActiveLicenses,
       expiringThisMonth,
       expiredServices,
-      annualSoftwareCost: totalCost[0]?.total || 0,
+      annualSoftwareCost: totalCostAgg[0]?.total || 0,
     });
   } catch (err) {
     res.status(500).json({

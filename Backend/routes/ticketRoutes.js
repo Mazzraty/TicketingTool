@@ -15,29 +15,36 @@ import {
   deleteAttachment,
 } from "../controllers/ticketController.js";
 
-import { adminOnly, protect } from "../middleware/authMiddleware.js";
+import {
+  protect,
+  adminOnly,
+  companyCheck,
+} from "../middleware/authMiddleware.js";
+
 import { upload } from "../middleware/upload.js";
 
 const router = express.Router();
 
 /* ======================================================
-   🔥 IMPORTANT: ADMIN STATS (MUST BE FIRST)
+   🔥 ADMIN STATS (MUST BE FIRST)
 ====================================================== */
 router.get(
   "/stats",
   protect,
   adminOnly,
+  companyCheck,
   getTicketStats
 );
 
 /* ======================================================
-   👤 USER ROUTES
+   👤 USER ROUTES (COMPANY ISOLATED)
 ====================================================== */
 
 // CREATE TICKET
 router.post(
   "/",
   protect,
+  companyCheck,
   upload.array("files", 5),
   createTicket
 );
@@ -46,13 +53,43 @@ router.post(
 router.get(
   "/my",
   protect,
+  companyCheck,
   getUserTickets
 );
+
+// REVIEW TICKET
+router.put(
+  "/:id/review",
+  protect,
+  companyCheck,
+  addReview
+);
+
+// CONFIRM RESOLUTION
+router.put(
+  "/:id/confirm",
+  protect,
+  companyCheck,
+  confirmResolution
+);
+
+// REOPEN TICKET
+router.put(
+  "/:id/reopen",
+  protect,
+  companyCheck,
+  reopenTicket
+);
+
+/* ======================================================
+   🛠️ COMMON (USER + ADMIN SAFE)
+====================================================== */
 
 // SINGLE TICKET
 router.get(
   "/:id",
   protect,
+  companyCheck,
   getTicketById
 );
 
@@ -60,6 +97,7 @@ router.get(
 router.put(
   "/:id/edit",
   protect,
+  companyCheck,
   upload.array("files", 5),
   editTicket
 );
@@ -68,32 +106,12 @@ router.put(
 router.put(
   "/:id/delete-attachment",
   protect,
+  companyCheck,
   deleteAttachment
 );
 
-// REVIEW TICKET
-router.put(
-  "/:id/review",
-  protect,
-  addReview
-);
-
-// CONFIRM RESOLUTION (USER)
-router.put(
-  "/:id/confirm",
-  protect,
-  confirmResolution
-);
-
-// REOPEN TICKET
-router.put(
-  "/:id/reopen",
-  protect,
-  reopenTicket
-);
-
 /* ======================================================
-   🛠️ ADMIN ROUTES
+   👑 ADMIN ROUTES (COMPANY SCOPED)
 ====================================================== */
 
 // GET ALL TICKETS
@@ -101,6 +119,7 @@ router.get(
   "/",
   protect,
   adminOnly,
+  companyCheck,
   getAllTickets
 );
 
@@ -109,6 +128,7 @@ router.put(
   "/:id",
   protect,
   adminOnly,
+  companyCheck,
   updateStatus
 );
 
@@ -117,6 +137,7 @@ router.delete(
   "/:id",
   protect,
   adminOnly,
+  companyCheck,
   deleteTicket
 );
 

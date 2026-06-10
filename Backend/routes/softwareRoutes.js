@@ -1,5 +1,3 @@
-// routes/softwareRoutes.js
-
 import express from "express";
 
 import {
@@ -11,19 +9,71 @@ import {
   getDashboardStats,
 } from "../controllers/softwareController.js";
 
+import {
+  protect,
+  adminOnly,
+  companyCheck,
+} from "../middleware/authMiddleware.js";
+
 const router = express.Router();
 
-/* CRUD */
-router.post("/", createSoftware);
+/* =========================
+   SOFTWARE CRUD (ADMIN ONLY)
+   COMPANY SAFE
+========================= */
 
-router.get("/", getSoftwares);
+// CREATE
+router.post(
+  "/",
+  protect,
+  adminOnly,
+  companyCheck,
+  createSoftware
+);
 
-router.get("/dashboard", getDashboardStats);
+// GET ALL
+router.get(
+  "/",
+  protect,
+  adminOnly,
+  companyCheck,
+  getSoftwares
+);
 
-router.get("/:id", getSoftwareById);
+// DASHBOARD STATS
+router.get(
+  "/dashboard",
+  protect,
+  adminOnly,
+  companyCheck,
+  getDashboardStats
+);
 
-router.put("/:id", updateSoftware);
+// GET BY ID
+router.get(
+  "/:id",
+  protect,
+  adminOnly,
+  companyCheck,
+  getSoftwareById
+);
 
-router.delete("/:id", deleteSoftware);
+// UPDATE
+router.put(
+  "/:id",
+  protect,
+  adminOnly,
+  companyCheck,
+  updateSoftware
+);
+
+// DELETE
+router.delete(
+  "/:id",
+  protect,
+  adminOnly,
+  companyCheck,
+  deleteSoftware
+);
 
 export default router;

@@ -11,6 +11,7 @@ export default function Register() {
     email: "",
     password: "",
     employeeId: "",
+    company: "", // ✅ ADDED
   });
 
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -35,7 +36,6 @@ export default function Register() {
       await api.post("/auth/register", form);
 
       toast.success("Account created successfully");
-
       navigate("/login");
     } catch (err) {
       toast.error(err.response?.data?.message || "Registration failed");
@@ -49,7 +49,6 @@ export default function Register() {
         ${activeField === fieldName ? "bg-blue-600" : "bg-transparent"}
       `}
       />
-
       {children}
     </div>
   );
@@ -64,11 +63,10 @@ export default function Register() {
           className="w-full h-full object-cover"
           alt="background"
         />
-
         <div className="absolute inset-0 bg-black/60"></div>
       </div>
 
-      {/* FORM CONTAINER */}
+      {/* FORM */}
       <div className="relative z-10 w-full max-w-md">
 
         <div className="bg-white/95 backdrop-blur-md border border-white/30 rounded-2xl shadow-2xl p-8">
@@ -76,7 +74,6 @@ export default function Register() {
           {/* HEADER */}
           <div className="mb-6 text-center">
 
-            {/* MAZZRATY LOGO */}
             <div className="flex justify-center mb-4">
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
@@ -92,10 +89,9 @@ export default function Register() {
             <p className="text-sm text-gray-500 mt-1">
               Enterprise Registration Portal
             </p>
-
           </div>
 
-          {/* FORM */}
+          {/* FORM FIELDS */}
           <div className="space-y-5">
 
             {/* NAME + EMPLOYEE ID */}
@@ -127,6 +123,18 @@ export default function Register() {
                 />
               )}
 
+              {fieldWrapper(
+                "company",
+                <input
+                  name="company"
+                  value={form.company}
+                  onChange={handleChange}
+                  onFocus={() => setActiveField("company")}
+                  onBlur={() => setActiveField("")}
+                  placeholder="Company Name"
+                  className="sap-input"
+                />
+              )}
             </div>
 
             {/* EMAIL */}
@@ -147,7 +155,6 @@ export default function Register() {
             {fieldWrapper(
               "password",
               <div className="relative">
-
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
@@ -166,7 +173,6 @@ export default function Register() {
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
-
               </div>
             )}
 
@@ -183,7 +189,6 @@ export default function Register() {
                 className="sap-input"
               />
             )}
-
           </div>
 
           {/* BUTTONS */}
@@ -208,7 +213,6 @@ export default function Register() {
             </p>
 
           </div>
-
         </div>
       </div>
 

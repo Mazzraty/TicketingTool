@@ -3,6 +3,14 @@ import EmployeeMaster from "../models/employeeMasterSchema.js";
 import AssetAssignment from "../models/assignmentSchema.js";
 
 /* =========================
+   HELPER: COMPANY FILTER
+========================= */
+const getCompanyFilter = (user) => {
+  if (user.role === "super_admin") return {};
+  return { companyId: user.companyId };
+};
+
+/* =========================
    ➕ CREATE ASSET
 ========================= */
 export const createAsset = async (req, res) => {
@@ -12,18 +20,13 @@ export const createAsset = async (req, res) => {
       type,
       model,
       serialNumber,
-
-      // Printer fields
       route,
       salesmanCode,
       salesmanName,
       supervisor,
       soti,
-
-      // HHT fields
       imei,
       simNumber,
-
       notes,
     } = req.body;
 
@@ -31,13 +34,15 @@ export const createAsset = async (req, res) => {
       return res.status(400).json({ msg: "Asset Code required" });
     }
 
-    const exists = await Asset.findOne({ assetCode });
+    const exists = await Asset.findOne({
+      assetCode,
+      companyId: req.user.companyId,
+    });
 
     if (exists) {
       return res.status(400).json({ msg: "Asset already exists" });
     }
 
-    // BASIC VALIDATION (ERP RULES)
     if (type === "Printer" && !route) {
       return res.status(400).json({ msg: "Printer requires route" });
     }
@@ -62,6 +67,8 @@ export const createAsset = async (req, res) => {
       imei,
       simNumber,
       notes,
+
+      companyId: req.user.companyId,
     });
 
     res.status(201).json(asset);
@@ -76,31 +83,29 @@ export const createAsset = async (req, res) => {
 ========================= */
 export const getAssets = async (req, res) => {
   try {
-    const filter = {};
+    const filter = getCompanyFilter(req.user);
 
     if (req.query.type) filter.type = req.query.type;
     if (req.query.status) filter.status = req.query.status;
 
-    // 🔥 pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
     const total = await Asset.countDocuments(filter);
 
-    // 🔥 fetch only current page assets
     const assets = await Asset.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    // 🔥 only get assignments for THESE assets (important optimization)
     const assetIds = assets.map((a) => a._id);
 
     const assignments = await AssetAssignment.find({
       asset: { $in: assetIds },
       status: "active",
-    }).populate("employee", "name employeeName staffCode");
+      ...filter,
+    }).populate("employee", "name staffCode");
 
     const map = new Map();
 
@@ -124,6 +129,7 @@ export const getAssets = async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 };
+
 /* =========================
    🔥 ASSIGN ASSET
 ========================= */
@@ -131,11 +137,17 @@ export const assignAsset = async (req, res) => {
   try {
     const { employeeId, assetCode, remarks } = req.body;
 
+    const filter = getCompanyFilter(req.user);
+
     const employee = await EmployeeMaster.findOne({
       staffCode: employeeId,
+      ...filter,
     });
 
-    const asset = await Asset.findOne({ assetCode });
+    const asset = await Asset.findOne({
+      assetCode,
+      ...filter,
+    });
 
     if (!employee) {
       return res.status(404).json({ msg: "Employee not found" });
@@ -155,7 +167,6 @@ export const assignAsset = async (req, res) => {
       assignedDate: new Date(),
       status: "active",
 
-      // snapshot
       assetType: asset.type,
       assetCode: asset.assetCode,
       model: asset.model,
@@ -170,6 +181,8 @@ export const assignAsset = async (req, res) => {
 
       assignedBy: req.user?.name || "Admin",
       remarks,
+
+      companyId: req.user.companyId,
     });
 
     asset.status = "assigned";
@@ -192,7 +205,12 @@ export const returnAsset = async (req, res) => {
   try {
     const { assetCode, remarks } = req.body;
 
-    const asset = await Asset.findOne({ assetCode });
+    const filter = getCompanyFilter(req.user);
+
+    const asset = await Asset.findOne({
+      assetCode,
+      ...filter,
+    });
 
     if (!asset) {
       return res.status(404).json({ msg: "Asset not found" });
@@ -201,6 +219,7 @@ export const returnAsset = async (req, res) => {
     const assignment = await AssetAssignment.findOne({
       asset: asset._id,
       status: "active",
+      ...filter,
     });
 
     if (!assignment) {
@@ -225,31 +244,36 @@ export const returnAsset = async (req, res) => {
 };
 
 /* =========================
-   ✏️ UPDATE ASSET (SAFE)
+   ✏️ UPDATE ASSET
 ========================= */
 export const updateAsset = async (req, res) => {
   try {
-    const asset = await Asset.findById(req.params.id);
+    const filter = getCompanyFilter(req.user);
+
+    const asset = await Asset.findOne({
+      _id: req.params.id,
+      ...filter,
+    });
 
     if (!asset) {
       return res.status(404).json({ msg: "Asset not found" });
     }
 
-  const allowedFields = [
-  "assetCode",
-  "type",
-  "model",
-  "serialNumber",
-  "route",
-  "salesmanCode",
-  "salesmanName",
-  "supervisor",
-  "soti",
-  "imei",
-  "simNumber",
-  "notes",
-  "status", // ADD THIS
-];
+    const allowedFields = [
+      "assetCode",
+      "type",
+      "model",
+      "serialNumber",
+      "route",
+      "salesmanCode",
+      "salesmanName",
+      "supervisor",
+      "soti",
+      "imei",
+      "simNumber",
+      "notes",
+      "status",
+    ];
 
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
@@ -274,13 +298,16 @@ export const updateAsset = async (req, res) => {
 ========================= */
 export const deleteAsset = async (req, res) => {
   try {
-    const asset = await Asset.findById(req.params.id);
+    const filter = getCompanyFilter(req.user);
+
+    const asset = await Asset.findOneAndDelete({
+      _id: req.params.id,
+      ...filter,
+    });
 
     if (!asset) {
       return res.status(404).json({ msg: "Asset not found" });
     }
-
-    await asset.deleteOne();
 
     res.json({ msg: "Asset deleted successfully" });
   } catch (err) {
@@ -294,7 +321,12 @@ export const deleteAsset = async (req, res) => {
 ========================= */
 export const getEmployeeHistory = async (req, res) => {
   try {
-    const employee = await EmployeeMaster.findById(req.params.id);
+    const filter = getCompanyFilter(req.user);
+
+    const employee = await EmployeeMaster.findOne({
+      _id: req.params.id,
+      ...filter,
+    });
 
     if (!employee) {
       return res.status(404).json({ msg: "Employee not found" });
@@ -302,11 +334,12 @@ export const getEmployeeHistory = async (req, res) => {
 
     const history = await AssetAssignment.find({
       employee: employee._id,
+      ...filter,
     })
       .populate("asset")
       .sort({ createdAt: -1 });
 
-    return res.json(history);
+    res.json(history);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: err.message });
@@ -318,16 +351,15 @@ export const getEmployeeHistory = async (req, res) => {
 ========================= */
 export const getAssetHistory = async (req, res) => {
   try {
-    const { code } = req.params;
+    const filter = getCompanyFilter(req.user);
 
-    let asset;
+    let asset = await Asset.findOne({
+      assetCode: req.params.code,
+      ...filter,
+    });
 
-    // try assetCode first
-    asset = await Asset.findOne({ assetCode: code });
-
-    // fallback to Mongo ID
     if (!asset) {
-      asset = await Asset.findById(code);
+      asset = await Asset.findById(req.params.code);
     }
 
     if (!asset) {
@@ -336,6 +368,7 @@ export const getAssetHistory = async (req, res) => {
 
     const history = await AssetAssignment.find({
       asset: asset._id,
+      ...filter,
     })
       .populate("employee")
       .sort({ createdAt: -1 });
@@ -347,18 +380,17 @@ export const getAssetHistory = async (req, res) => {
   }
 };
 
-//User Asset History
-
-
+/* =========================
+   👤 MY ASSETS
+========================= */
 export const getMyAssets = async (req, res) => {
   try {
-    console.log("USER =>", req.user);
+    const filter = getCompanyFilter(req.user);
 
     const employee = await EmployeeMaster.findOne({
       staffCode: req.user.employeeId,
+      ...filter,
     });
-
-    console.log("EMPLOYEE =>", employee);
 
     if (!employee) {
       return res.status(404).json({
@@ -369,16 +401,14 @@ export const getMyAssets = async (req, res) => {
     const assets = await AssetAssignment.find({
       employee: employee._id,
       status: "active",
+      ...filter,
     })
       .populate("asset")
       .sort({ assignedDate: -1 });
 
     res.json(assets);
   } catch (err) {
-  console.log("STATUS:", err.response?.status);
-  console.log("DATA:", err.response?.data);
-  console.error(err);
-
-  toast.error("Failed to load assets");
-}
+    console.error(err);
+    res.status(500).json({ msg: err.message });
+  }
 };
