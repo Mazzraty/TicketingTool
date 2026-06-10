@@ -5,6 +5,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const location = useLocation();
   const { user } = useAuth();
   const role = (user?.role || "guest").toLowerCase();
+  const isAdminRole = ["company_admin", "super_admin", "it_support"].includes(role);
 
   const isActive = (path) =>
     location.pathname === path
@@ -79,7 +80,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         )}
 
         {/* ADMIN MENU */}
-        {role === "admin" && (
+        {isAdminRole && (
           <div>
 
             {!collapsed && (

@@ -12,6 +12,7 @@ export default function Navbar() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const { user, logout } = useAuth();
   const role = (user?.role || "guest").toLowerCase();
+  const isAdminRole = ["company_admin", "super_admin", "it_support"].includes(role);
   const [notifications, setNotifications] = useState([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -37,10 +38,9 @@ useEffect(() => {
       setSearchLoading(true);
 
       // ← admin sees all, user sees only their data
-      const endpoint =
-        role === "admin"
-          ? `/search?q=${encodeURIComponent(searchQuery)}`
-          : `/search?q=${encodeURIComponent(searchQuery)}&userId=${user?._id}`;
+      const endpoint = isAdminRole
+        ? `/search?q=${encodeURIComponent(searchQuery)}`
+        : `/search?q=${encodeURIComponent(searchQuery)}&userId=${user?._id}`;
 
       const res = await api.get(endpoint);
       setSearchResults(res.data);
@@ -117,7 +117,7 @@ useEffect(() => {
   }, []);
 
   const navItems = useMemo(() => {
-    if (role === "admin") {
+    if (isAdminRole) {
       return [
         { label: "Dashboard", path: "/admin/dashboard" },
         { label: "Tickets", path: "/admin/tickets" },
@@ -243,7 +243,7 @@ useEffect(() => {
                             key={t._id}
                             onClick={() =>
                               handleResultClick(
-                                role === "admin"
+                                isAdminRole
                                   ? `/admin/tickets/${t._id}`
                                   : `/tickets/${t._id}`
                               )

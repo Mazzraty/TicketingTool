@@ -1,36 +1,68 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { useAuth } from "../auth/AuthContext.jsx";
 
 import milkImage from "../assets/milk.png";
 
+const ADMIN_ROLES = ["company_admin", "super_admin", "it_support"];
+
 export default function Register() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     employeeId: "",
-    company: "",
+    position: "Employee",
+    department: "General",
+    companyId: user?.companyId || "",
   });
 
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [activeField, setActiveField] = useState("");
+  const [companies, setCompanies] = useState([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
 
-  const navigate = useNavigate();
+  const isAdmin = ADMIN_ROLES.includes(user?.role);
+  const isSuperAdmin = user?.role === "super_admin";
 
-  // ✅ COMPANY LIST
-  const companies = [
-    "Arab Qatari Co for Dairy Production WLL (AQC)",
-    "National group of agriculture and animal products (NGA)",
-    "Alasysl (ASL)",
-    "Almana Agriculture (AAG)",
-    "Khairat Mazzraty (KMZ)",
-  ];
+  useEffect(() => {
+    if (!user) return;
+    if (!isAdmin) {
+      navigate("/login");
+      return;
+    }
+
+    if (!isSuperAdmin) {
+      setForm((prev) => ({ ...prev, companyId: user.companyId || "" }));
+    }
+  }, [user, isAdmin, isSuperAdmin, navigate]);
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setLoadingCompanies(true);
+      try {
+        const res = await api.get("/companies");
+        setCompanies(res.data.companies || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingCompanies(false);
+      }
+    };
+
+    if (isSuperAdmin) {
+      fetchCompanies();
+    }
+  }, [isSuperAdmin]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -41,21 +73,26 @@ export default function Register() {
       return;
     }
 
+    if (!form.companyId) {
+      toast.error("Please select a company before creating an account.");
+      return;
+    }
+
     try {
       await api.post("/auth/register", form);
       toast.success("Account created successfully");
-      navigate("/login");
+      navigate("/admin");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Registration failed");
+      toast.error(err.response?.data?.msg || err.response?.data?.message || "Registration failed");
     }
   };
 
   const fieldWrapper = (fieldName, children) => (
     <div className="relative">
       <div
-        className={`absolute left-0 top-0 h-full w-[3px] rounded transition-all duration-200
-        ${activeField === fieldName ? "bg-blue-600" : "bg-transparent"}
-      `}
+        className={`absolute left-0 top-0 h-full w-[3px] rounded transition-all duration-200 ${
+          activeField === fieldName ? "bg-blue-600" : "bg-transparent"
+        }`}
       />
       {children}
     </div>
@@ -63,21 +100,14 @@ export default function Register() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-6 overflow-hidden">
-
-      {/* BACKGROUND */}
       <div className="absolute inset-0 z-0">
         <img src={milkImage} className="w-full h-full object-cover" alt="bg" />
         <div className="absolute inset-0 bg-black/60"></div>
       </div>
 
-      {/* FORM */}
       <div className="relative z-10 w-full max-w-md">
-
         <div className="bg-white/95 backdrop-blur-md border border-white/30 rounded-2xl shadow-2xl p-8">
-
-          {/* HEADER */}
           <div className="mb-6 text-center">
-
             <div className="flex justify-center mb-4">
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
@@ -86,21 +116,12 @@ export default function Register() {
               />
             </div>
 
-            <h1 className="text-2xl font-semibold text-gray-800">
-              Create Account
-            </h1>
-
-            <p className="text-sm text-gray-500">
-              Enterprise Registration Portal
-            </p>
+            <h1 className="text-2xl font-semibold text-gray-800">Create Account</h1>
+            <p className="text-sm text-gray-500">Company user onboarding</p>
           </div>
 
-          {/* FORM */}
           <div className="space-y-5">
-
-            {/* NAME + EMPLOYEE ID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
               {fieldWrapper(
                 "name",
                 <input
@@ -128,27 +149,31 @@ export default function Register() {
               )}
             </div>
 
-            {/* COMPANY DROPDOWN */}
-            {fieldWrapper(
-              "company",
-              <select
-                name="company"
-                value={form.company}
-                onChange={handleChange}
-                onFocus={() => setActiveField("company")}
-                onBlur={() => setActiveField("")}
-                className="sap-input"
-              >
-                <option value="">Select Company</option>
-                {companies.map((c, i) => (
-                  <option key={i} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+            {isSuperAdmin ? (
+              fieldWrapper(
+                "companyId",
+                <select
+                  name="companyId"
+                  value={form.companyId}
+                  onChange={handleChange}
+                  onFocus={() => setActiveField("companyId")}
+                  onBlur={() => setActiveField("")}
+                  className="sap-input"
+                >
+                  <option value="">Select Company</option>
+                  {companies.map((company) => (
+                    <option key={company._id} value={company._id}>
+                      {company.name} ({company.code})
+                    </option>
+                  ))}
+                </select>
+              )
+            ) : (
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                Company: {user?.companyName || "Assigned company"}
+              </div>
             )}
 
-            {/* EMAIL */}
             {fieldWrapper(
               "email",
               <input
@@ -162,7 +187,6 @@ export default function Register() {
               />
             )}
 
-            {/* PASSWORD */}
             {fieldWrapper(
               "password",
               <div className="relative">
@@ -176,7 +200,6 @@ export default function Register() {
                   placeholder="Password"
                   className="sap-input pr-20"
                 />
-
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -187,7 +210,6 @@ export default function Register() {
               </div>
             )}
 
-            {/* CONFIRM PASSWORD */}
             {fieldWrapper(
               "confirmPassword",
               <input
@@ -202,10 +224,9 @@ export default function Register() {
             )}
           </div>
 
-          {/* BUTTONS */}
           <div className="mt-8 space-y-3">
-
             <button
+              type="button"
               onClick={handleSubmit}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-md text-sm font-medium transition"
             >
@@ -213,21 +234,18 @@ export default function Register() {
             </button>
 
             <button
-              onClick={() => navigate("/login")}
+              type="button"
+              onClick={() => navigate("/admin")}
               className="w-full border border-gray-300 py-3 rounded-md text-sm hover:bg-gray-50 transition"
             >
-              Already have account? Login
+              Back to Admin Dashboard
             </button>
 
-            <p className="text-xs text-center text-gray-300 mt-4">
-              © 2026 Mazzraty Enterprise System
-            </p>
-
+            <p className="text-xs text-center text-gray-300 mt-4">© 2026 Mazzraty Enterprise System</p>
           </div>
         </div>
       </div>
 
-      {/* STYLE */}
       <style>
         {`
           .sap-input {
@@ -251,7 +269,6 @@ export default function Register() {
           }
         `}
       </style>
-
     </div>
   );
 }

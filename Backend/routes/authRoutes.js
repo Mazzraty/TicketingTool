@@ -31,7 +31,7 @@ router.post("/reset-password", resetPassword);
 router.post(
   "/register",
   protect,
-  roleCheck("admin", "super_admin"),
+  roleCheck("company_admin", "super_admin", "it_support"),
   companyCheck,
   register
 );

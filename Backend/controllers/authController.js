@@ -17,23 +17,29 @@ export const register = async (req, res) => {
       employeeId,
       position,
       department,
-      companyId, // 🏢 REQUIRED FOR SAAS
+      companyId: requestedCompanyId,
     } = req.body;
 
     const normalizedEmail = email.toLowerCase().trim();
+    const companyId =
+      req.user.role === "super_admin"
+        ? requestedCompanyId
+        : req.user.companyId;
 
-    // check duplicate email
+    if (!companyId) {
+      return res.status(400).json({
+        msg: "Company selection is required",
+      });
+    }
+
     const existingUser = await User.findOne({ email: normalizedEmail });
-
     if (existingUser) {
       return res.status(400).json({
         msg: "Email already exists",
       });
     }
 
-    // validate company exists
     const company = await Company.findById(companyId);
-
     if (!company) {
       return res.status(400).json({
         msg: "Invalid company",
@@ -49,7 +55,7 @@ export const register = async (req, res) => {
       employeeId,
       position,
       department,
-      companyId, // 🏢 IMPORTANT
+      companyId,
       role: "user",
     });
 
@@ -78,7 +84,9 @@ export const login = async (req, res) => {
 
     const normalizedEmail = (email || "").toLowerCase().trim();
 
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await User.findOne({ email: normalizedEmail }).populate(
+      "companyId"
+    );
 
     if (!user) {
       return res.status(400).json({ msg: "Invalid credentials" });
@@ -90,7 +98,6 @@ export const login = async (req, res) => {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
 
-    // SUPER ADMIN BYPASS
     if (user.role !== "super_admin" && !user.companyId) {
       return res.status(403).json({
         msg: "User not assigned to any company",
@@ -103,17 +110,23 @@ export const login = async (req, res) => {
         role: user.role,
         email: user.email,
         employeeId: user.employeeId,
-        companyId: user.companyId || null,
+        companyId: user.companyId?._id || user.companyId || null,
       },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
     );
 
+    const userData = user.toObject();
+    if (userData.companyId && typeof userData.companyId === "object") {
+      userData.companyName = userData.companyId.name;
+      userData.companyId = userData.companyId._id;
+    }
+
     res.json({
       success: true,
       token,
       user: {
-        ...user._doc,
+        ...userData,
         password: undefined,
       },
     });

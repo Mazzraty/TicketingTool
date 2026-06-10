@@ -38,7 +38,9 @@ export default function AppRoutes() {
       {/* ================= PUBLIC ================= */}
       <Route path="/login" element={<Login />} />
 
-      <Route path="/register" element={<Register />} />
+      <Route element={<ProtectedRoute role="admin" />}>
+        <Route path="/register" element={<Register />} />
+      </Route>
 
       {/* ================= USER ROUTES ================= */}
       <Route element={<ProtectedRoute role="user" />}>

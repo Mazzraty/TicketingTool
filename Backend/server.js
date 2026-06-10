@@ -10,6 +10,7 @@ import "./crons/softwareCronesExpiry.js";
 
 // routes
 import authRoutes from "./routes/authRoutes.js";
+import companyRoutes from "./routes/companyRoutes.js";
 import ticketRoutes from "./routes/ticketRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
 import assetRoutes from "./routes/assetRoutes.js";
@@ -75,6 +76,7 @@ app.get("/", (req, res) => {
    🔐 ROUTES
 ========================= */
 app.use("/api/auth", authRoutes);
+app.use("/api/companies", companyRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/assets", assetRoutes);
