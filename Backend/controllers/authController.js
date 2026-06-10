@@ -76,7 +76,7 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = (email || "").toLowerCase().trim();
 
     const user = await User.findOne({ email: normalizedEmail });
 
@@ -90,7 +90,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
 
-    // 🧠 SUPER ADMIN BYPASS
+    // SUPER ADMIN BYPASS
     if (user.role !== "super_admin" && !user.companyId) {
       return res.status(403).json({
         msg: "User not assigned to any company",
