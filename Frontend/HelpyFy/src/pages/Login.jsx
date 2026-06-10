@@ -34,10 +34,7 @@ export default function Login() {
 
       toast.success("Login successful");
 
-      const adminRoles = ["company_admin", "super_admin", "it_support"];
-      const isAdminRole = adminRoles.includes(res.data.user.role);
-
-      if (isAdminRole) {
+      if (res.data.user.role === "admin") {
         navigate("/admin");
       } else {
         navigate("/");
@@ -169,6 +166,15 @@ export default function Login() {
 
           </form>
 
+          {/* REGISTER */}
+          <div className="mt-5 text-center">
+            <span
+              onClick={() => navigate("/register")}
+              className="text-sm text-green-600 cursor-pointer hover:underline"
+            >
+              Create new account
+            </span>
+          </div>
 
         </div>
       </div>
