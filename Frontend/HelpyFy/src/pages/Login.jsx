@@ -34,7 +34,7 @@ export default function Login() {
 
       toast.success("Login successful");
 
-      if (res.data.user.role === "admin") {
+      if (res.data.user.role === "super_admin") {
         navigate("/admin");
       } else {
         navigate("/");
