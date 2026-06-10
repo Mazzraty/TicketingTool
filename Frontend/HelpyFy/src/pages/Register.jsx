@@ -11,7 +11,7 @@ export default function Register() {
     email: "",
     password: "",
     employeeId: "",
-    company: "", // ✅ ADDED
+    company: "",
   });
 
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -19,6 +19,15 @@ export default function Register() {
   const [activeField, setActiveField] = useState("");
 
   const navigate = useNavigate();
+
+  // ✅ COMPANY LIST
+  const companies = [
+    "Arab Qatari Co for Dairy Production WLL (AQC)",
+    "National group of agriculture and animal products (NGA)",
+    "Alasysl (ASL)",
+    "Almana Agriculture (AAG)",
+    "Khairat Mazzraty (KMZ)",
+  ];
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -34,7 +43,6 @@ export default function Register() {
 
     try {
       await api.post("/auth/register", form);
-
       toast.success("Account created successfully");
       navigate("/login");
     } catch (err) {
@@ -56,13 +64,9 @@ export default function Register() {
   return (
     <div className="relative min-h-screen flex items-center justify-center p-6 overflow-hidden">
 
-      {/* BACKGROUND IMAGE */}
+      {/* BACKGROUND */}
       <div className="absolute inset-0 z-0">
-        <img
-          src={milkImage}
-          className="w-full h-full object-cover"
-          alt="background"
-        />
+        <img src={milkImage} className="w-full h-full object-cover" alt="bg" />
         <div className="absolute inset-0 bg-black/60"></div>
       </div>
 
@@ -78,7 +82,7 @@ export default function Register() {
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
                 className="h-12"
-                alt="Mazzraty Logo"
+                alt="Logo"
               />
             </div>
 
@@ -86,12 +90,12 @@ export default function Register() {
               Create Account
             </h1>
 
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500">
               Enterprise Registration Portal
             </p>
           </div>
 
-          {/* FORM FIELDS */}
+          {/* FORM */}
           <div className="space-y-5">
 
             {/* NAME + EMPLOYEE ID */}
@@ -122,20 +126,27 @@ export default function Register() {
                   className="sap-input"
                 />
               )}
-
-              {fieldWrapper(
-                "company",
-                <input
-                  name="company"
-                  value={form.company}
-                  onChange={handleChange}
-                  onFocus={() => setActiveField("company")}
-                  onBlur={() => setActiveField("")}
-                  placeholder="Company Name"
-                  className="sap-input"
-                />
-              )}
             </div>
+
+            {/* COMPANY DROPDOWN */}
+            {fieldWrapper(
+              "company",
+              <select
+                name="company"
+                value={form.company}
+                onChange={handleChange}
+                onFocus={() => setActiveField("company")}
+                onBlur={() => setActiveField("")}
+                className="sap-input"
+              >
+                <option value="">Select Company</option>
+                {companies.map((c, i) => (
+                  <option key={i} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            )}
 
             {/* EMAIL */}
             {fieldWrapper(
@@ -216,7 +227,7 @@ export default function Register() {
         </div>
       </div>
 
-      {/* SAP INPUT STYLE */}
+      {/* STYLE */}
       <style>
         {`
           .sap-input {
