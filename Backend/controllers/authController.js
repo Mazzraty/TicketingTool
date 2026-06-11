@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import User from "../models/userShema.js";
 import Company from "../models/comapnySchema.js";
 import bcrypt from "bcryptjs";
@@ -17,7 +18,8 @@ export const register = async (req, res) => {
       employeeId,
       position,
       department,
-      companyId: requestedCompanyId,
+      companyId: companyIdentifier,
+      role: requestedRole,
     } = req.body;
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -27,12 +29,42 @@ export const register = async (req, res) => {
       return res.status(400).json({ msg: "Email already exists" });
     }
 
-    // // 🔥 FIX: use company code OR id safely
-    // const company = await Company.findById(requestedCompanyId);
+    let requestUser = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      try {
+        requestUser = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (err) {
+        requestUser = null;
+      }
+    }
 
-    // if (!company) {
-    //   return res.status(400).json({ msg: "Invalid company" });
-    // }
+    const isAdminRequest = requestUser && ["company_admin", "super_admin", "it_support"].includes(requestUser.role);
+    const role = isAdminRequest ? requestedRole || "user" : "user";
+
+    let company = null;
+    if (companyIdentifier) {
+      const searchCriteria = [
+        { code: companyIdentifier },
+      ];
+
+      if (mongoose.isValidObjectId(companyIdentifier)) {
+        searchCriteria.unshift({ _id: companyIdentifier });
+      }
+
+      company = await Company.findOne({
+        $or: searchCriteria,
+      });
+
+      if (!company) {
+        return res.status(400).json({ msg: "Selected company does not exist" });
+      }
+    }
+
+    if (!company && role !== "super_admin") {
+      return res.status(400).json({ msg: "Company is required for this account" });
+    }
 
     const hash = await bcrypt.hash(password, 10);
 
@@ -43,8 +75,8 @@ export const register = async (req, res) => {
       employeeId,
       position,
       department,
-      companyId: company._id,
-      role: "user",
+      role,
+      companyId: company ? company._id : null,
     });
 
     res.status(201).json({
@@ -81,12 +113,6 @@ export const login = async (req, res) => {
 
     if (!match) {
       return res.status(400).json({ msg: "Invalid credentials" });
-    }
-
-    if (user.role !== "super_admin" && !user.companyId) {
-      return res.status(403).json({
-        msg: "User not assigned to any company",
-      });
     }
 
     const token = jwt.sign(

@@ -12,7 +12,6 @@ import {
 
 import {
   protect,
-  roleCheck,
   companyCheck,
 } from "../middleware/authMiddleware.js";
 
@@ -26,15 +25,9 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
 /* =========================
-   REGISTER (ADMIN CONTROLLED)
+   REGISTER (PUBLIC + ADMIN)
 ========================= */
-router.post(
-  "/register",
-  protect,
-  roleCheck("company_admin", "super_admin", "it_support"),
-  companyCheck,
-  register
-);
+router.post("/register", register);
 
 /* =========================
    PROFILE (SECURED SAAS)

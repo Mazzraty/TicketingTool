@@ -75,7 +75,7 @@ export default function Register() {
     try {
       await api.post("/auth/register", form);
       toast.success("Account created successfully");
-      navigate("/admin");
+      navigate(isAdmin ? "/admin" : "/login");
     } catch (err) {
       toast.error(
         err.response?.data?.msg ||
