@@ -21,29 +21,17 @@ export const register = async (req, res) => {
     } = req.body;
 
     const normalizedEmail = email.toLowerCase().trim();
-    const companyId =
-      req.user.role === "super_admin"
-        ? requestedCompanyId
-        : req.user.companyId;
-
-    if (!companyId) {
-      return res.status(400).json({
-        msg: "Company selection is required",
-      });
-    }
 
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
-      return res.status(400).json({
-        msg: "Email already exists",
-      });
+      return res.status(400).json({ msg: "Email already exists" });
     }
 
-    const company = await Company.findById(companyId);
+    // 🔥 FIX: use company code OR id safely
+    const company = await Company.findById(requestedCompanyId);
+
     if (!company) {
-      return res.status(400).json({
-        msg: "Invalid company",
-      });
+      return res.status(400).json({ msg: "Invalid company" });
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -55,7 +43,7 @@ export const register = async (req, res) => {
       employeeId,
       position,
       department,
-      companyId,
+      companyId: company._id,
       role: "user",
     });
 
@@ -69,12 +57,9 @@ export const register = async (req, res) => {
     });
   } catch (err) {
     console.error("REGISTER ERROR:", err);
-    res.status(500).json({
-      msg: err.message || "Server error",
-    });
+    res.status(500).json({ msg: err.message || "Server error" });
   }
 };
-
 /* =========================
    LOGIN (MULTI-TENANT)
 ========================= */
