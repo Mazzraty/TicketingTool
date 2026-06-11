@@ -27,12 +27,12 @@ export const register = async (req, res) => {
       return res.status(400).json({ msg: "Email already exists" });
     }
 
-    // 🔥 FIX: use company code OR id safely
-    const company = await Company.findById(requestedCompanyId);
+    // // 🔥 FIX: use company code OR id safely
+    // const company = await Company.findById(requestedCompanyId);
 
-    if (!company) {
-      return res.status(400).json({ msg: "Invalid company" });
-    }
+    // if (!company) {
+    //   return res.status(400).json({ msg: "Invalid company" });
+    // }
 
     const hash = await bcrypt.hash(password, 10);
 
