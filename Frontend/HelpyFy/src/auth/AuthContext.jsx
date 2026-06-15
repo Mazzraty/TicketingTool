@@ -1,38 +1,114 @@
+import {
+  createContext,
+  useContext,
+  useState,
+} from "react";
+
+const AuthContext = createContext();
+
+/* =========================
+   LOCAL STORAGE HELPERS
+========================= */
+
+const getStoredUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    return null;
+  }
+};
+
+const getStoredToken = () => {
+  return localStorage.getItem("token");
+};
+
+const getStoredRole = () => {
+  return (
+    localStorage.getItem("role") ||
+    getStoredUser()?.role ||
+    null
+  );
+};
+
+/* =========================
+   AUTH PROVIDER
+========================= */
+
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(getStoredToken());
   const [role, setRole] = useState(getStoredRole());
   const [user, setUser] = useState(getStoredUser());
 
-  // 🏢 NEW: active company (selected by user)
-  const [activeCompany, setActiveCompany] = useState(
-    JSON.parse(localStorage.getItem("activeCompany")) || null
-  );
+  // Active selected company
+  const [activeCompany, setActiveCompany] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("activeCompany") || "null"
+      );
+    } catch {
+      return null;
+    }
+  });
 
   const companyId = activeCompany?._id || null;
   const companyName = activeCompany?.name || null;
 
-  const login = (token, decodedUser) => {
+  /* =========================
+     LOGIN
+  ========================= */
+
+  const login = (jwtToken, decodedUser) => {
     const normalizedUser = {
       ...decodedUser,
-      companies: decodedUser.companies || [], // IMPORTANT for multi-company
+      companies: decodedUser?.companies || [],
     };
 
-    const normalizedRole = normalizedUser.role || "user";
+    const normalizedRole =
+      normalizedUser?.role || "user";
 
-    localStorage.setItem("token", token);
+    localStorage.setItem("token", jwtToken);
     localStorage.setItem("role", normalizedRole);
-    localStorage.setItem("user", JSON.stringify(normalizedUser));
+    localStorage.setItem(
+      "user",
+      JSON.stringify(normalizedUser)
+    );
 
-    setToken(token);
+    setToken(jwtToken);
     setRole(normalizedRole);
     setUser(normalizedUser);
+
+    // Auto-select first company if user has one
+    if (
+      normalizedUser.companies &&
+      normalizedUser.companies.length > 0
+    ) {
+      const firstCompany = normalizedUser.companies[0];
+
+      localStorage.setItem(
+        "activeCompany",
+        JSON.stringify(firstCompany)
+      );
+
+      setActiveCompany(firstCompany);
+    }
   };
 
-  // 🏢 NEW: select company after login
+  /* =========================
+     SELECT COMPANY
+  ========================= */
+
   const selectCompany = (company) => {
-    localStorage.setItem("activeCompany", JSON.stringify(company));
+    localStorage.setItem(
+      "activeCompany",
+      JSON.stringify(company)
+    );
+
     setActiveCompany(company);
   };
+
+  /* =========================
+     LOGOUT
+  ========================= */
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -53,17 +129,33 @@ export const AuthProvider = ({ children }) => {
         role,
         user,
 
-        // 🏢 company system
+        // company access
         activeCompany,
         companyId,
         companyName,
         selectCompany,
 
+        // auth
         login,
         logout,
+
+        // setters (optional)
+        setUser,
+        setToken,
+        setRole,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
+
+/* =========================
+   CUSTOM HOOK
+========================= */
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
+
+export default AuthContext;
