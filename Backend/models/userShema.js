@@ -2,15 +2,24 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    name: String,
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
     email: {
       type: String,
       unique: true,
       required: true,
+      lowercase: true,
+      trim: true,
     },
 
-    password: String,
+    password: {
+      type: String,
+      required: true,
+    },
 
     employeeId: {
       type: String,
@@ -34,12 +43,15 @@ const userSchema = new mongoose.Schema(
       default: "user",
     },
 
-    /* 🏢 MULTI-COMPANY ACCESS */
+    /* =========================
+       MULTI COMPANY ACCESS
+    ========================= */
     companyAccess: [
       {
         companyId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Company",
+          required: true,
         },
 
         role: {
@@ -60,13 +72,11 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
-    /* =====================================
-       🔐 OTP + PASSWORD RESET
-    ===================================== */
-
+    /* =========================
+       RESET PASSWORD / OTP
+    ========================= */
     resetOtp: String,
     resetOtpExpire: Date,
-
     resetPasswordToken: String,
     resetPasswordExpire: Date,
   },
