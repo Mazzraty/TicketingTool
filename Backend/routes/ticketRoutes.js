@@ -26,13 +26,13 @@ import { upload } from "../middleware/upload.js";
 const router = express.Router();
 
 /* ======================================================
-   🔥 ADMIN STATS (MUST BE FIRST)
+   🔥 ADMIN STATS
 ====================================================== */
 router.get(
   "/stats",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getTicketStats
 );
 
@@ -118,8 +118,8 @@ router.put(
 router.get(
   "/",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getAllTickets
 );
 
@@ -127,8 +127,8 @@ router.get(
 router.put(
   "/:id",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   updateStatus
 );
 
@@ -136,8 +136,8 @@ router.put(
 router.delete(
   "/:id",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   deleteTicket
 );
 

@@ -1,40 +1,22 @@
-import { createContext, useContext, useState } from "react";
-
-const AuthContext = createContext(null);
-
-const getStoredToken = () => {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("token") || null;
-};
-
-const getStoredRole = () => {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("role") || null;
-};
-
-const getStoredUser = () => {
-  if (typeof window === "undefined") return null;
-  const stored = localStorage.getItem("user");
-  if (!stored) return null;
-
-  try {
-    return JSON.parse(stored);
-  } catch (err) {
-    console.error("Failed to parse stored user", err);
-    return null;
-  }
-};
-
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(getStoredToken());
   const [role, setRole] = useState(getStoredRole());
   const [user, setUser] = useState(getStoredUser());
 
-  const companyId = user?.companyId || null;
-  const companyName = user?.companyName || null;
+  // 🏢 NEW: active company (selected by user)
+  const [activeCompany, setActiveCompany] = useState(
+    JSON.parse(localStorage.getItem("activeCompany")) || null
+  );
+
+  const companyId = activeCompany?._id || null;
+  const companyName = activeCompany?.name || null;
 
   const login = (token, decodedUser) => {
-    const normalizedUser = { ...decodedUser };
+    const normalizedUser = {
+      ...decodedUser,
+      companies: decodedUser.companies || [], // IMPORTANT for multi-company
+    };
+
     const normalizedRole = normalizedUser.role || "user";
 
     localStorage.setItem("token", token);
@@ -46,14 +28,22 @@ export const AuthProvider = ({ children }) => {
     setUser(normalizedUser);
   };
 
+  // 🏢 NEW: select company after login
+  const selectCompany = (company) => {
+    localStorage.setItem("activeCompany", JSON.stringify(company));
+    setActiveCompany(company);
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user");
+    localStorage.removeItem("activeCompany");
 
     setToken(null);
     setRole(null);
     setUser(null);
+    setActiveCompany(null);
   };
 
   return (
@@ -62,8 +52,13 @@ export const AuthProvider = ({ children }) => {
         token,
         role,
         user,
+
+        // 🏢 company system
+        activeCompany,
         companyId,
         companyName,
+        selectCompany,
+
         login,
         logout,
       }}
@@ -72,5 +67,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-export const useAuth = () => useContext(AuthContext);

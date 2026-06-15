@@ -18,25 +18,24 @@ import {
 const router = express.Router();
 
 /* =========================
-   SOFTWARE CRUD (ADMIN ONLY)
-   COMPANY SAFE
+   SOFTWARE CRUD (COMPANY ISOLATED)
 ========================= */
 
-// CREATE
+// CREATE SOFTWARE
 router.post(
   "/",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   createSoftware
 );
 
-// GET ALL
+// GET ALL SOFTWARES
 router.get(
   "/",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getSoftwares
 );
 
@@ -44,8 +43,8 @@ router.get(
 router.get(
   "/dashboard",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getDashboardStats
 );
 
@@ -53,8 +52,8 @@ router.get(
 router.get(
   "/:id",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getSoftwareById
 );
 
@@ -62,8 +61,8 @@ router.get(
 router.put(
   "/:id",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   updateSoftware
 );
 
@@ -71,8 +70,8 @@ router.put(
 router.delete(
   "/:id",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   deleteSoftware
 );
 

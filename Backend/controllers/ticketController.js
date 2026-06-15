@@ -29,34 +29,56 @@ export const createTicket = async (req, res) => {
     };
 
     const ticket = await Ticket.create({
+      companyId: req.user.companyId,
+
       title,
       description,
       department,
       priority,
+
       attachments,
+
       userId: req.user.id,
+
       slaDue: new Date(
         Date.now() + (slaHours[priority] || 72) * 3600000
       ),
+
       status: "Open",
+
       reopened: false,
+
       review: "",
       rating: 0,
+
       resolvedAt: null,
       closedAt: null,
       reopenedAt: null,
+
+      statusHistory: [
+        {
+          status: "Open",
+          changedAt: new Date(),
+          note: "Ticket created",
+        },
+      ],
     });
 
     const user = await User.findById(req.user.id);
-    
-    // Get admin emails from .env
-    const adminEmails = process.env.ADMIN_EMAIL.split(",").map(email => email.trim());
 
-    sendEmail({
-      to: adminEmails,
-      subject: "New Ticket Created",
-      html: ticketAdminEmail({ ...ticket._doc, userEmail: user.email }),
-    });
+    const adminEmails =
+      process.env.ADMIN_EMAIL?.split(",").map((e) => e.trim()) || [];
+
+    if (adminEmails.length) {
+      await sendEmail({
+        to: adminEmails,
+        subject: "New Ticket Created",
+        html: ticketAdminEmail({
+          ...ticket._doc,
+          userEmail: user.email,
+        }),
+      });
+    }
 
     if (global.io) {
       global.io.emit("newTicket", ticket);
@@ -68,7 +90,12 @@ export const createTicket = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error("CREATE TICKET ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
@@ -107,13 +134,22 @@ export const getAllTickets = async (req, res) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
 
-    const tickets = await Ticket.find()
-      .populate("userId", "name email")
+    const filter =
+      req.user.role === "super_admin"
+        ? {}
+        : { companyId: req.user.companyId };
+
+    const tickets = await Ticket.find(filter)
+      .populate(
+        "userId",
+        "name email employeeId department position"
+      )
+      .populate("companyId", "name code")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    const total = await Ticket.countDocuments();
+    const total = await Ticket.countDocuments(filter);
 
     res.json({
       success: true,
@@ -123,7 +159,12 @@ export const getAllTickets = async (req, res) => {
       total,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
@@ -132,10 +173,9 @@ export const getAllTickets = async (req, res) => {
 ====================================================== */
 export const getTicketById = async (req, res) => {
   try {
-    const ticket = await Ticket.findById(req.params.id).populate(
-      "userId",
-      "name email"
-    );
+    const ticket = await Ticket.findById(req.params.id)
+      .populate("userId", "name email employeeId")
+      .populate("companyId", "name code");
 
     if (!ticket) {
       return res.status(404).json({
@@ -144,12 +184,28 @@ export const getTicketById = async (req, res) => {
       });
     }
 
-    res.json({ success: true, data: ticket });
+    if (
+      req.user.role !== "super_admin" &&
+      ticket.companyId._id.toString() !==
+        req.user.companyId.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: ticket,
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
-
 /* ======================================================
    ✅ UPDATE STATUS (ADMIN)
 ====================================================== */
@@ -456,18 +512,50 @@ export const addReview = async (req, res) => {
 ====================================================== */
 export const getTicketStats = async (req, res) => {
   try {
-    const total = await Ticket.countDocuments();
-    const open = await Ticket.countDocuments({ status: "Open" });
-    const inProgress = await Ticket.countDocuments({ status: "In Progress" });
-    const resolved = await Ticket.countDocuments({ status: "Resolved" });
-    const closed = await Ticket.countDocuments({ status: "Closed" });
+    const filter =
+      req.user.role === "super_admin"
+        ? {}
+        : { companyId: req.user.companyId };
+
+    const total = await Ticket.countDocuments(filter);
+
+    const open = await Ticket.countDocuments({
+      ...filter,
+      status: "Open",
+    });
+
+    const inProgress = await Ticket.countDocuments({
+      ...filter,
+      status: "In Progress",
+    });
+
+    const resolved = await Ticket.countDocuments({
+      ...filter,
+      status: "Resolved",
+    });
+
+    const closed = await Ticket.countDocuments({
+      ...filter,
+      status: "Closed",
+    });
 
     res.json({
       success: true,
-      data: { total, open, inProgress, resolved, closed },
+      data: {
+        total,
+        open,
+        inProgress,
+        resolved,
+        closed,
+      },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
@@ -476,13 +564,36 @@ export const getTicketStats = async (req, res) => {
 ====================================================== */
 export const deleteTicket = async (req, res) => {
   try {
-    await Ticket.findByIdAndDelete(req.params.id);
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    if (
+      req.user.role !== "super_admin" &&
+      ticket.companyId.toString() !==
+        req.user.companyId.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    await ticket.deleteOne();
 
     res.json({
       success: true,
-      message: "Ticket deleted",
+      message: "Ticket deleted successfully",
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };

@@ -18,52 +18,51 @@ import {
 const router = express.Router();
 
 /* =========================
-   EMPLOYEE CRUD (ADMIN ONLY)
-   COMPANY ISOLATED
+   EMPLOYEE CRUD (COMPANY ISOLATED)
 ========================= */
 
-// GET ALL
+// GET ALL EMPLOYEES
 router.get(
   "/",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getEmployees
 );
 
-// GET ONE
+// GET SINGLE EMPLOYEE
 router.get(
   "/:id",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getEmployee
 );
 
-// CREATE
+// CREATE EMPLOYEE
 router.post(
   "/",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   createEmployee
 );
 
-// UPDATE
+// UPDATE EMPLOYEE
 router.put(
   "/:id",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   updateEmployee
 );
 
-// DELETE
+// DELETE EMPLOYEE
 router.delete(
   "/:id",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   deleteEmployee
 );
 
@@ -73,8 +72,8 @@ router.delete(
 router.post(
   "/bulk-upload",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   bulkUploadEmployees
 );
 

@@ -25,14 +25,11 @@ export const protect = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // ✅ ATTACH FULL SAAS CONTEXT (VERY IMPORTANT)
     req.user = {
       id: decoded.id,
       role: decoded.role,
       email: decoded.email,
       employeeId: decoded.employeeId,
-
-      // 🔥 NEW (CRITICAL FOR SAAS)
       companyId: decoded.companyId || null,
     };
 
@@ -46,10 +43,8 @@ export const protect = (req, res, next) => {
 };
 
 /* =========================
-   👮 ADMIN ONLY
+   🔐 ADMIN ONLY
 ========================= */
-const ADMIN_ROLES = ["company_admin", "super_admin", "it_support"];
-
 export const adminOnly = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -57,6 +52,8 @@ export const adminOnly = (req, res, next) => {
       message: "Unauthorized access",
     });
   }
+
+  const ADMIN_ROLES = ["company_admin", "super_admin", "it_support"];
 
   if (!ADMIN_ROLES.includes(req.user.role)) {
     return res.status(403).json({
@@ -69,7 +66,28 @@ export const adminOnly = (req, res, next) => {
 };
 
 /* =========================
-   🧠 ROLE BASED ACCESS
+   👑 SUPER ADMIN ONLY
+========================= */
+export const isSuperAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized access",
+    });
+  }
+
+  if (req.user.role !== "super_admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied: Super admins only",
+    });
+  }
+
+  next();
+};
+
+/* =========================
+   🧠 ROLE CHECK
 ========================= */
 export const roleCheck = (...allowedRoles) => {
   return (req, res, next) => {
@@ -83,9 +101,7 @@ export const roleCheck = (...allowedRoles) => {
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `Access denied: Requires ${allowedRoles.join(
-          " or "
-        )} role`,
+        message: `Access denied`,
       });
     }
 
@@ -94,7 +110,7 @@ export const roleCheck = (...allowedRoles) => {
 };
 
 /* =========================
-   🏢 COMPANY CHECK (NEW - SAAS CORE)
+   🏢 COMPANY CHECK
 ========================= */
 export const companyCheck = (req, res, next) => {
   if (!req.user.companyId && req.user.role !== "super_admin") {

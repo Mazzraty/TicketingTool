@@ -18,7 +18,8 @@ import softwareRoutes from "./routes/softwareRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import aiRoutes from "./routes/aiRotes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
-import searchRoutes from "./routes/searchRoutes.js"; // ← with other imports
+import searchRoutes from "./routes/searchRoutes.js"; 
+import superAdminRoutes from "./routes/superAdminRoutes.js";
 // 🔗 Connect DB
 connectDB();
 
@@ -85,6 +86,7 @@ app.use("/api/dashboard",dashboardRoutes );
 app.use("/api/ai", aiRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/superadmin", superAdminRoutes);
 /* =========================
    ❌ 404 HANDLER
 ========================= */

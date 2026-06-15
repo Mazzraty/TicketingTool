@@ -16,38 +16,37 @@ import {
 const router = express.Router();
 
 /* =========================
-   DASHBOARD (ADMIN ONLY)
-   + COMPANY SAFE
+   DASHBOARD (COMPANY ISOLATED)
 ========================= */
 router.get(
   "/stats",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getDashboardStats
 );
 
 router.get(
   "/recent-assets",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getRecentAssets
 );
 
 router.get(
   "/recent-tickets",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getRecentTickets
 );
 
 router.get(
   "/recent-software",
   protect,
-  adminOnly,
   companyCheck,
+  adminOnly,
   getRecentSoftware
 );
 

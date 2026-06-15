@@ -12,7 +12,6 @@ import {
 
 import {
   protect,
-  companyCheck,
 } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -30,26 +29,23 @@ router.post("/reset-password", resetPassword);
 router.post("/register", register);
 
 /* =========================
-   PROFILE (SECURED SAAS)
+   PROFILE (GLOBAL USER DATA)
 ========================= */
 router.get(
   "/me",
   protect,
-  companyCheck,
   getMyProfile
 );
 
 router.put(
   "/update-profile",
   protect,
-  companyCheck,
   updateProfile
 );
 
 router.put(
   "/change-password",
   protect,
-  companyCheck,
   changePassword
 );
 
