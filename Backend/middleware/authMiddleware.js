@@ -1,7 +1,8 @@
 import jwt from "jsonwebtoken";
 
 /* =========================
-   🔐 AUTH: VERIFY TOKEN
+   🔐 PROTECT MIDDLEWARE
+   MULTI-COMPANY SAFE VERSION
 ========================= */
 export const protect = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -25,13 +26,22 @@ export const protect = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    // ✅ SAFE USER OBJECT
     req.user = {
       id: decoded.id,
       role: decoded.role,
       email: decoded.email,
       employeeId: decoded.employeeId,
-      companyId: decoded.companyId || null,
+
+      // IMPORTANT: multi-company support
+      companyAccess: decoded.companyAccess || [],
     };
+
+    // ✅ DERIVE ACTIVE COMPANY (CRITICAL FIX)
+    req.user.companyId =
+      req.user.companyAccess?.find((c) => c.isActive)?.companyId ||
+      req.user.companyAccess?.[0]?.companyId ||
+      null;
 
     next();
   } catch (err) {
@@ -46,14 +56,14 @@ export const protect = (req, res, next) => {
    🔐 ADMIN ONLY
 ========================= */
 export const adminOnly = (req, res, next) => {
+  const ADMIN_ROLES = ["company_admin", "super_admin", "it_support"];
+
   if (!req.user) {
     return res.status(401).json({
       success: false,
       message: "Unauthorized access",
     });
   }
-
-  const ADMIN_ROLES = ["company_admin", "super_admin", "it_support"];
 
   if (!ADMIN_ROLES.includes(req.user.role)) {
     return res.status(403).json({
@@ -101,7 +111,7 @@ export const roleCheck = (...allowedRoles) => {
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `Access denied`,
+        message: "Access denied",
       });
     }
 
@@ -113,7 +123,11 @@ export const roleCheck = (...allowedRoles) => {
    🏢 COMPANY CHECK
 ========================= */
 export const companyCheck = (req, res, next) => {
-  if (!req.user.companyId && req.user.role !== "super_admin") {
+  if (req.user.role === "super_admin") {
+    return next();
+  }
+
+  if (!req.user.companyId) {
     return res.status(403).json({
       success: false,
       message: "Company access missing",

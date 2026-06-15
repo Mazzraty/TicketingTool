@@ -101,8 +101,7 @@ export const login = async (req, res) => {
 
     const normalizedEmail = (email || "").toLowerCase().trim();
 
-    const user = await User.findOne({ email: normalizedEmail })
-      .populate("companyAccess.companyId"); // ✅ FIXED
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(400).json({ msg: "Invalid credentials" });
@@ -114,9 +113,10 @@ export const login = async (req, res) => {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
 
-    // get active company
-    const activeCompany =
-      user.companyAccess?.find((c) => c.isActive)?.companyId || null;
+    // ✅ SAFE: find active company
+    const activeCompany = user.companyAccess?.find(
+      (c) => c.isActive && c.companyId
+    )?.companyId || null;
 
     const token = jwt.sign(
       {
@@ -124,22 +124,24 @@ export const login = async (req, res) => {
         role: user.role,
         email: user.email,
         employeeId: user.employeeId,
-        companyId: activeCompany?._id || activeCompany || null,
+
+        // IMPORTANT: store ONLY ID
+        companyId: activeCompany ? activeCompany.toString() : null,
       },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
     );
 
+    // clean user object
     const userData = user.toObject();
+    delete userData.password;
 
     res.json({
       success: true,
       token,
-      user: {
-        ...userData,
-        password: undefined,
-      },
+      user: userData,
     });
+
   } catch (err) {
     console.error("LOGIN ERROR:", err);
     res.status(500).json({
