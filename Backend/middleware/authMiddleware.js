@@ -35,13 +35,12 @@ export const protect = (req, res, next) => {
 
       // IMPORTANT: multi-company support
       companyAccess: decoded.companyAccess || [],
+      companyId:
+        decoded.companyId ||
+        decoded.companyAccess?.find((c) => c.isActive)?.companyId ||
+        decoded.companyAccess?.[0]?.companyId ||
+        null,
     };
-
-    // ✅ DERIVE ACTIVE COMPANY (CRITICAL FIX)
-    req.user.companyId =
-      req.user.companyAccess?.find((c) => c.isActive)?.companyId ||
-      req.user.companyAccess?.[0]?.companyId ||
-      null;
 
     next();
   } catch (err) {
