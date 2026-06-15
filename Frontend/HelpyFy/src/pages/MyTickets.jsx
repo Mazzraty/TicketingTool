@@ -29,21 +29,23 @@ export default function MyTickets() {
     load();
   }, [page]);
 
-  const load = async () => {
-    try {
-      setLoading(true);
+const load = async () => {
+  try {
+    setLoading(true);
 
-      const res = await api.get(`/tickets/my?page=${page}`);
+    const res = await api.get("/tickets/my", {
+      params: { page },
+    });
 
-      setTickets(res.data.data || []);
-      setTotalPages(res.data.totalPages || 1);
-    } catch {
-      toast.error("Failed to load tickets");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    setTickets(res.data.data || []);
+    setTotalPages(res.data.totalPages || 1);
+  } catch (err) {
+    console.log("LOAD ERROR:", err.response?.status, err.response?.data);
+    toast.error(err.response?.data?.message || "Failed to load tickets");
+  } finally {
+    setLoading(false);
+  }
+};
   /* ================= AUTO REVIEW ON RESOLVE ================= */
   const submitReview = async () => {
     try {
