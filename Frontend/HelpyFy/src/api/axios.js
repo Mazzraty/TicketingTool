@@ -30,16 +30,18 @@ api.interceptors.response.use(
   (error) => {
     const status = error?.response?.status;
 
-    if (status === 401 || status === 403) {
-      // 🔐 Token invalid or expired → force logout
+    // 🔐 ONLY logout for invalid/expired token
+    if (status === 401) {
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("activeCompany");
 
-      // optional: redirect to login
       window.location.href = "/login";
     }
 
     return Promise.reject(error);
   }
+
 );
 
 export default api;
