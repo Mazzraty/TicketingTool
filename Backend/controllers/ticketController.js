@@ -184,15 +184,21 @@ export const getTicketById = async (req, res) => {
       });
     }
 
-    if (
-      req.user.role !== "super_admin" &&
-      ticket.companyId._id.toString() !==
-        req.user.companyId.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied",
-      });
+    if (req.user.role !== "super_admin") {
+      const ticketCompanyId =
+        ticket.companyId && ticket.companyId._id
+          ? ticket.companyId._id.toString()
+          : ticket.companyId?.toString();
+      const userCompanyId = req.user.companyId
+        ? req.user.companyId.toString()
+        : null;
+
+      if (ticketCompanyId && ticketCompanyId !== userCompanyId) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied",
+        });
+      }
     }
 
     res.json({

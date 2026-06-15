@@ -126,6 +126,10 @@ export const companyCheck = (req, res, next) => {
     return next();
   }
 
+  if (req.user.role === "user" && !req.user.companyId) {
+    return next();
+  }
+
   if (!req.user.companyId) {
     return res.status(403).json({
       success: false,
