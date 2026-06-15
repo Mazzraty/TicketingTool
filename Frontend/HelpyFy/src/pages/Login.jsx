@@ -21,31 +21,36 @@ export default function Login() {
   const { login } = useAuth();
 
   // LOGIN
-  const handleLogin = async (e) => {
-    e.preventDefault();
+const handleLogin = async (e) => {
+  e.preventDefault();
 
-    try {
-      const res = await api.post("/auth/login", {
-        email,
-        password,
-      });
+  try {
+    const res = await api.post("/auth/login", {
+      email,
+      password,
+    });
 
-      login(res.data.token, res.data.user);
+    const safeUser = {
+      ...res.data.user,
+      companyAccess: res.data.user?.companyAccess || [],
+    };
 
-      toast.success("Login successful");
+    login(res.data.token, safeUser);
 
-      const adminRoles = ["company_admin", "super_admin", "it_support"];
-      const isAdminRole = adminRoles.includes(res.data.user.role);
+    toast.success("Login successful");
 
-      if (isAdminRole) {
-        navigate("/admin");
-      } else {
-        navigate("/");
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.msg || "Login failed");
+    const adminRoles = ["company_admin", "super_admin", "it_support"];
+    const isAdminRole = adminRoles.includes(res.data.user.role);
+
+    if (isAdminRole) {
+      navigate("/admin");
+    } else {
+      navigate("/");
     }
-  };
+  } catch (err) {
+    toast.error(err.response?.data?.msg || "Login failed");
+  }
+};
 
   // SEND OTP
   const sendOtp = async () => {
