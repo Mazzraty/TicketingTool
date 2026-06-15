@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useAuth } from "../auth/AuthContext";
 
+const IDLE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
+
 export default function IdleLogout() {
   const { logout } = useAuth();
 
@@ -9,32 +11,41 @@ export default function IdleLogout() {
 
     const resetTimer = () => {
       clearTimeout(timer);
-
       timer = setTimeout(() => {
         logout();
-      }, 60 * 60 * 1000); // 1 hour
+      }, IDLE_TIMEOUT);
+    };
+
+    const handleActivity = (event) => {
+      if (event?.type === "visibilitychange" && document.hidden) {
+        return;
+      }
+      resetTimer();
     };
 
     const events = [
       "mousemove",
       "mousedown",
-      "keypress",
+      "keydown",
       "scroll",
       "touchstart",
+      "focus",
+      "visibilitychange",
     ];
 
-    events.forEach((event) =>
-      window.addEventListener(event, resetTimer)
-    );
+    events.forEach((event) => {
+      const target = event === "visibilitychange" ? document : window;
+      target.addEventListener(event, handleActivity);
+    });
 
     resetTimer();
 
     return () => {
       clearTimeout(timer);
-
-      events.forEach((event) =>
-        window.removeEventListener(event, resetTimer)
-      );
+      events.forEach((event) => {
+        const target = event === "visibilitychange" ? document : window;
+        target.removeEventListener(event, handleActivity);
+      });
     };
   }, [logout]);
 

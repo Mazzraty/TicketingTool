@@ -9,7 +9,7 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-[#f5f6f7]">
-       {/* AUTO LOGOUT AFTER 1 HOUR IDLE */}
+       {/* AUTO LOGOUT AFTER 2 HOURS OF IDLE */}
       <IdleLogout />
       {/* NAVBAR */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
