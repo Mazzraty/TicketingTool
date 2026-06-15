@@ -113,10 +113,11 @@ export const login = async (req, res) => {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
 
-    // ✅ SAFE: find active company
-    const activeCompany = user.companyAccess?.find(
-      (c) => c.isActive && c.companyId
-    )?.companyId || null;
+    // ✅ SAFE: find active company, fallback to first company if none are marked active
+    const activeCompany =
+      user.companyAccess?.find((c) => c.isActive && c.companyId)?.companyId ||
+      user.companyAccess?.[0]?.companyId ||
+      null;
 
     const token = jwt.sign(
       {

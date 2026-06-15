@@ -60,7 +60,10 @@ export const AuthProvider = ({ children }) => {
   const login = (jwtToken, decodedUser) => {
     const normalizedUser = {
       ...decodedUser,
-      companies: decodedUser?.companies || [],
+      companies:
+        decodedUser?.companies ||
+        decodedUser?.companyAccess ||
+        [],
     };
 
     const normalizedRole =
@@ -77,7 +80,7 @@ export const AuthProvider = ({ children }) => {
     setRole(normalizedRole);
     setUser(normalizedUser);
 
-    // Auto-select first company if user has one
+    // Auto-select first company if user has company list
     if (
       normalizedUser.companies &&
       normalizedUser.companies.length > 0
