@@ -138,6 +138,8 @@ export const login = async (req, res) => {
     // ✅ Get all company access for multi-company support
     const companyAccess = (user.companyAccess || []).map((c) => ({
       companyId: c.companyId.toString(),
+      companyName: c.companyName,
+      role: c.role,
       isActive: c.isActive || false,
     }));
 
@@ -211,6 +213,8 @@ export const switchCompany = async (req, res) => {
     // ✅ Generate new token with new active company
     const newCompanyAccess = user.companyAccess.map((c) => ({
       companyId: c.companyId.toString(),
+      companyName: c.companyName,
+      role: c.role,
       isActive: c.isActive,
     }));
 

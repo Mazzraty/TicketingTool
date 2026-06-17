@@ -154,10 +154,12 @@ export const verifyCompanyAccess = (req, res, next) => {
   }
 
   // ✅ Check if user has access to the requested company
+  const companyIdString = companyIdParam?.toString?.();
+
   const hasAccess =
-    req.user.companyId === companyIdParam ||
+    req.user.companyId?.toString?.() === companyIdString ||
     req.user.companyAccess?.some(
-      (c) => c.companyId === companyIdParam && c.isActive
+      (c) => c.companyId?.toString?.() === companyIdString && c.isActive
     );
 
   if (!hasAccess) {

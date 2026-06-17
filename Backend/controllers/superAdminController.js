@@ -1,4 +1,5 @@
 import User from "../models/userShema.js";
+import Company from "../models/comapnySchema.js";
 
 
 
@@ -16,6 +17,18 @@ export const assignCompanyAccess = async (req, res) => {
       });
     }
 
+    const validRoles = ["user", "company_admin", "it_support"];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        message: `Invalid role. Allowed values: ${validRoles.join(", ")}`,
+      });
+    }
+
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -30,8 +43,9 @@ export const assignCompanyAccess = async (req, res) => {
     // ➕ Add new access
     user.companyAccess.push({
       companyId,
+      companyName: company.name,
       role,
-      isActive: true,
+      isActive: user.companyAccess?.some((c) => c.isActive) ? false : true,
       assignedAt: new Date(),
       revokedAt: null,
       revokedBy: null,
