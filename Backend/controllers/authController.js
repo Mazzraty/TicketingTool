@@ -7,7 +7,7 @@ import sendEmail from "../utils/sendEmail.js";
 import { otpEmail } from "../utils/otpEmail.js";
 
 /* =========================
-   REGISTER (COMPANY-BASED)
+   REGISTER (MULTI-TENANT)
 ========================= */
 export const register = async (req, res) => {
   try {
@@ -68,6 +68,19 @@ export const register = async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
 
+    // ✅ MULTI-TENANT FORMAT: Create companyAccess array
+    const companyAccess = company
+      ? [
+          {
+            companyId: company._id,
+            companyName: company.name,
+            role: role,
+            isActive: true,
+            joinedAt: new Date(),
+          },
+        ]
+      : [];
+
     const user = await User.create({
       name,
       email: normalizedEmail,
@@ -76,7 +89,8 @@ export const register = async (req, res) => {
       position,
       department,
       role,
-      companyId: company ? company._id : null,
+      companyId: company ? company._id : null,  // Keep for backward compatibility
+      companyAccess: companyAccess,  // ✅ New multi-tenant format
     });
 
     res.status(201).json({
@@ -92,6 +106,7 @@ export const register = async (req, res) => {
     res.status(500).json({ msg: err.message || "Server error" });
   }
 };
+
 /* =========================
    LOGIN (MULTI-TENANT)
 ========================= */
@@ -113,11 +128,18 @@ export const login = async (req, res) => {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
 
-    // ✅ SAFE: find active company, fallback to first company if none are marked active
+    // ✅ Get active company from companyAccess array
     const activeCompany =
       user.companyAccess?.find((c) => c.isActive && c.companyId)?.companyId ||
       user.companyAccess?.[0]?.companyId ||
+      user.companyId ||  // Fallback for old single-company format
       null;
+
+    // ✅ Get all company access for multi-company support
+    const companyAccess = (user.companyAccess || []).map((c) => ({
+      companyId: c.companyId.toString(),
+      isActive: c.isActive || false,
+    }));
 
     const token = jwt.sign(
       {
@@ -125,9 +147,8 @@ export const login = async (req, res) => {
         role: user.role,
         email: user.email,
         employeeId: user.employeeId,
-
-        // IMPORTANT: store ONLY ID
         companyId: activeCompany ? activeCompany.toString() : null,
+        companyAccess: companyAccess,  // ✅ Include all company access
       },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
@@ -150,6 +171,138 @@ export const login = async (req, res) => {
     });
   }
 };
+
+/* =========================
+   SWITCH COMPANY (TENANT)
+========================= */
+export const switchCompany = async (req, res) => {
+  try {
+    const { companyId } = req.body;
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // ✅ Check if user has access to this company
+    const companyAccess = user.companyAccess?.find(
+      (c) => c.companyId.toString() === companyId
+    );
+
+    if (!companyAccess) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have access to this company",
+      });
+    }
+
+    // ✅ Mark all as inactive, then activate the selected one
+    user.companyAccess.forEach((c) => {
+      c.isActive = c.companyId.toString() === companyId;
+    });
+
+    user.companyId = companyId;  // Update default companyId
+    await user.save();
+
+    // ✅ Generate new token with new active company
+    const newCompanyAccess = user.companyAccess.map((c) => ({
+      companyId: c.companyId.toString(),
+      isActive: c.isActive,
+    }));
+
+    const newToken = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+        email: user.email,
+        employeeId: user.employeeId,
+        companyId: companyId,
+        companyAccess: newCompanyAccess,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "8h" }
+    );
+
+    res.json({
+      success: true,
+      message: "Company switched successfully",
+      token: newToken,
+      companyId: companyId,
+    });
+  } catch (err) {
+    console.error("SWITCH COMPANY ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* =========================
+   ADD COMPANY ACCESS
+========================= */
+export const addCompanyAccess = async (req, res) => {
+  try {
+    const { userId, companyId } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    // ✅ Check if user already has access to this company
+    const alreadyHasAccess = user.companyAccess?.some(
+      (c) => c.companyId.toString() === companyId
+    );
+
+    if (alreadyHasAccess) {
+      return res.status(400).json({
+        success: false,
+        message: "User already has access to this company",
+      });
+    }
+
+    // ✅ Add new company access
+    user.companyAccess = user.companyAccess || [];
+    user.companyAccess.push({
+      companyId: companyId,
+      companyName: company.name,
+      role: "user",
+      isActive: false,
+      joinedAt: new Date(),
+    });
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Company access added successfully",
+      companyAccess: user.companyAccess,
+    });
+  } catch (err) {
+    console.error("ADD COMPANY ACCESS ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 /* =========================
    FORGOT PASSWORD (OTP)
 ========================= */
@@ -241,7 +394,8 @@ export const getMyProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
       .select("-password")
-      .populate("companyId");
+      .populate("companyId")
+      .populate("companyAccess.companyId");  // ✅ Populate company details
 
     if (!user) {
       return res.status(404).json({

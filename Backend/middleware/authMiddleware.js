@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 
 /* =========================
    🔐 PROTECT MIDDLEWARE
-   MULTI-COMPANY SAFE VERSION
+   MULTI-TENANT SAFE VERSION
 ========================= */
 export const protect = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -26,20 +26,18 @@ export const protect = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // ✅ SAFE USER OBJECT
+    // ✅ SAFE USER OBJECT - Multi-tenant support
     req.user = {
       id: decoded.id,
       role: decoded.role,
       email: decoded.email,
       employeeId: decoded.employeeId,
-
-      // IMPORTANT: multi-company support
+      
+      // ✅ ACTIVE COMPANY (current tenant)
+      companyId: decoded.companyId || null,
+      
+      // ✅ ALL COMPANY ACCESS
       companyAccess: decoded.companyAccess || [],
-      companyId:
-        decoded.companyId ||
-        decoded.companyAccess?.find((c) => c.isActive)?.companyId ||
-        decoded.companyAccess?.[0]?.companyId ||
-        null,
     };
 
     next();
@@ -120,22 +118,67 @@ export const roleCheck = (...allowedRoles) => {
 
 /* =========================
    🏢 COMPANY CHECK
+   ✅ Multi-tenant safe
 ========================= */
 export const companyCheck = (req, res, next) => {
+  // ✅ Super admin has access to everything
   if (req.user.role === "super_admin") {
     return next();
   }
 
-  if (req.user.role === "user" && !req.user.companyId) {
-    return next();
-  }
-
+  // ✅ User must have a company assigned
   if (!req.user.companyId) {
     return res.status(403).json({
       success: false,
-      message: "Company access missing",
+      message: "Company access missing - no active company",
     });
   }
+
+  next();
+};
+
+/* =========================
+   🏢 MULTI-COMPANY CHECK
+   Verify user has access to specific company
+========================= */
+export const verifyCompanyAccess = (req, res, next) => {
+  const companyIdParam = req.params.companyId || req.body.companyId;
+
+  if (!companyIdParam) {
+    return next();  // If no company specified, skip this check
+  }
+
+  // ✅ Super admin can access any company
+  if (req.user.role === "super_admin") {
+    return next();
+  }
+
+  // ✅ Check if user has access to the requested company
+  const hasAccess =
+    req.user.companyId === companyIdParam ||
+    req.user.companyAccess?.some(
+      (c) => c.companyId === companyIdParam && c.isActive
+    );
+
+  if (!hasAccess) {
+    return res.status(403).json({
+      success: false,
+      message: "You don't have access to this company",
+    });
+  }
+
+  next();
+};
+
+/* =========================
+   🏢 TENANT ISOLATION
+   Ensure queries are scoped to user's company
+========================= */
+export const tenantIsolation = (req, res, next) => {
+  // ✅ Attach active companyId for automatic query filtering
+  req.companyFilter = req.user.role === "super_admin"
+    ? {}
+    : { companyId: req.user.companyId };
 
   next();
 };

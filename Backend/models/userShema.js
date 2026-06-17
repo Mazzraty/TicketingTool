@@ -5,47 +5,40 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      trim: true,
     },
-
     email: {
       type: String,
-      unique: true,
       required: true,
+      unique: true,
       lowercase: true,
-      trim: true,
     },
-
     password: {
       type: String,
       required: true,
     },
-
     employeeId: {
       type: String,
-      unique: true,
-      required: true,
     },
-
     position: {
       type: String,
-      default: "Employee",
     },
-
     department: {
       type: String,
-      default: "General",
     },
-
     role: {
       type: String,
-      enum: ["super_admin", "company_admin", "it_support", "user"],
+      enum: ["user", "company_admin", "super_admin", "it_support"],
       default: "user",
     },
 
-    /* =========================
-       MULTI COMPANY ACCESS
-    ========================= */
+    // ✅ MULTI-TENANT SUPPORT
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      default: null,  // For super_admin users
+    },
+
+    // ✅ COMPANY ACCESS ARRAY (Multi-tenant)
     companyAccess: [
       {
         companyId: {
@@ -53,34 +46,58 @@ const userSchema = new mongoose.Schema(
           ref: "Company",
           required: true,
         },
-
+        companyName: String,
         role: {
           type: String,
-          enum: ["company_admin", "it_support", "user"],
+          enum: ["user", "company_admin", "it_support"],
           default: "user",
         },
-
         isActive: {
           type: Boolean,
-          default: true,
+          default: false,
         },
-
-        assignedAt: {
+        joinedAt: {
           type: Date,
           default: Date.now,
         },
+        permissions: [String],  // Optional: fine-grained permissions
       },
     ],
 
-    /* =========================
-       RESET PASSWORD / OTP
-    ========================= */
+    // Password reset
     resetOtp: String,
     resetOtpExpire: Date,
-    resetPasswordToken: String,
-    resetPasswordExpire: Date,
+
+    // Profile
+    profileImage: String,
+    phone: String,
+    address: String,
+
+    // Status
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    lastLogin: Date,
   },
   { timestamps: true }
 );
+
+// ✅ Additional indexes for faster queries
+// Note: email index is created automatically by unique: true
+userSchema.index({ companyId: 1 });
+userSchema.index({ "companyAccess.companyId": 1 });
+
+// ✅ MIDDLEWARE: Before saving, ensure at least one active company
+userSchema.pre("save", function (next) {
+  if (this.companyAccess && this.companyAccess.length > 0) {
+    const hasActive = this.companyAccess.some((c) => c.isActive);
+    if (!hasActive) {
+      // Auto-activate first company if none active
+      this.companyAccess[0].isActive = true;
+    }
+  }
+  next();
+});
 
 export default mongoose.model("User", userSchema);
