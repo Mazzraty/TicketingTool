@@ -19,6 +19,17 @@ export const createTicket = async (req, res) => {
       });
     }
 
+    // 🔍 DEBUG
+    console.log("REQ USER:", req.user);
+
+    // ✅ CHECK COMPANY
+    if (!req.user.companyId) {
+      return res.status(400).json({
+        success: false,
+        message: "User has no company assigned",
+      });
+    }
+
     const attachments = req.files?.map((f) => f.path) || [];
 
     const slaHours = {
@@ -30,14 +41,11 @@ export const createTicket = async (req, res) => {
 
     const ticket = await Ticket.create({
       companyId: req.user.companyId,
-
       title,
       description,
       department,
       priority,
-
       attachments,
-
       userId: req.user.id,
 
       slaDue: new Date(
@@ -45,9 +53,7 @@ export const createTicket = async (req, res) => {
       ),
 
       status: "Open",
-
       reopened: false,
-
       review: "",
       rating: 0,
 
@@ -64,41 +70,7 @@ export const createTicket = async (req, res) => {
       ],
     });
 
-    const user = await User.findById(req.user.id);
-
-    const adminEmails =
-      process.env.ADMIN_EMAIL?.split(",").map((e) => e.trim()) || [];
-
-    if (adminEmails.length) {
-      await sendEmail({
-        to: adminEmails,
-        subject: "New Ticket Created",
-        html: ticketAdminEmail({
-          ...ticket._doc,
-          userEmail: user.email,
-        }),
-      });
-    }
-
-    if (global.io) {
-      global.io.emit("newTicket", ticket);
-    }
-
-    res.status(201).json({
-      success: true,
-      message: "Ticket created successfully",
-      data: ticket,
-    });
-  } catch (err) {
-    console.error("CREATE TICKET ERROR:", err);
-
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
+    // ...rest of your code
 /* ======================================================
    ✅ GET USER TICKETS
 ====================================================== */
