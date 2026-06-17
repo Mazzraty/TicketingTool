@@ -70,7 +70,22 @@ export const createTicket = async (req, res) => {
       ],
     });
 
-    // ...rest of your code
+    // ✅ Send success response
+    res.status(201).json({
+      success: true,
+      message: "Ticket created successfully",
+      data: ticket,
+    });
+
+  } catch (err) {
+    console.error("TICKET CREATION ERROR:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Error creating ticket",
+    });
+  }
+};
+
 /* ======================================================
    ✅ GET USER TICKETS
 ====================================================== */
