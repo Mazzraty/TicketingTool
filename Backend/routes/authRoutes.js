@@ -16,17 +16,20 @@ import {
 
 const router = express.Router();
 
+const asyncHandler = (fn) => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);
+
 /* =========================
    AUTH (PUBLIC)
 ========================= */
-router.post("/login", login);
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post("/login", asyncHandler(login));
+router.post("/forgot-password", asyncHandler(forgotPassword));
+router.post("/reset-password", asyncHandler(resetPassword));
 
 /* =========================
    REGISTER (PUBLIC + ADMIN)
 ========================= */
-router.post("/register", register);
+router.post("/register", asyncHandler(register));
 
 /* =========================
    PROFILE (GLOBAL USER DATA)

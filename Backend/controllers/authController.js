@@ -11,6 +11,8 @@ import { otpEmail } from "../utils/otpEmail.js";
 ========================= */
 export const register = async (req, res) => {
   try {
+    console.log("REGISTER REQUEST BODY:", req.body);
+
     const {
       name,
       email,
@@ -102,7 +104,7 @@ export const register = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("REGISTER ERROR:", err);
+    console.error("REGISTER ERROR:", err.stack || err);
     res.status(500).json({ msg: err.message || "Server error" });
   }
 };
