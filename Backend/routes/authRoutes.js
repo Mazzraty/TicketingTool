@@ -29,7 +29,7 @@ router.post("/reset-password", asyncHandler(resetPassword));
 /* =========================
    REGISTER (PUBLIC + ADMIN)
 ========================= */
-router.post("/register", asyncHandler(register));
+router.post("/register", register);
 
 /* =========================
    PROFILE (GLOBAL USER DATA)
