@@ -45,11 +45,7 @@ export default function Register() {
 
 const loadCompanies = async () => {
   try {
-    const res = await api.get("/companies", {
-      headers: {
-        "Cache-Control": "no-cache"
-      }
-    });
+const res = await api.get("/companies");
 
     setCompanies(res.data.companies || []);
   } catch (err) {
