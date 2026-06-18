@@ -6,7 +6,7 @@ export const getCompanies = async (req, res) => {
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
 
-    const companies = await Company.find({ isActive: true }).select(
+    const companies = await Company.find({}).select(
       "name code description location"
     );
 
