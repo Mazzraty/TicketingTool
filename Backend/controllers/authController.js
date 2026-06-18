@@ -24,16 +24,33 @@ export const register = async (req, res) => {
       role: requestedRole,
     } = req.body;
 
+    /* =========================
+       🔴 VALIDATION (IMPORTANT)
+    ========================= */
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        msg: "Name, email, and password are required",
+      });
+    }
+
     const normalizedEmail = email.toLowerCase().trim();
 
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
-      return res.status(400).json({ msg: "Email already exists" });
+      return res.status(400).json({
+        success: false,
+        msg: "Email already exists",
+      });
     }
 
+    /* =========================
+       🔐 CHECK REQUEST USER (OPTIONAL)
+    ========================= */
     let requestUser = null;
+
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
+    if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.split(" ")[1];
       try {
         requestUser = jwt.verify(token, process.env.JWT_SECRET);
@@ -42,42 +59,65 @@ export const register = async (req, res) => {
       }
     }
 
-    const isAdminRequest = requestUser && ["company_admin", "super_admin", "it_support"].includes(requestUser.role);
+    const isAdminRequest =
+      requestUser &&
+      ["company_admin", "super_admin", "it_support"].includes(requestUser.role);
+
     const role = isAdminRequest ? requestedRole || "user" : "user";
+
+    /* =========================
+       🏢 COMPANY VALIDATION
+    ========================= */
     let company = null;
 
     if (companyIdentifier) {
-      company = await Company.findById(companyIdentifier);
+      if (!mongoose.Types.ObjectId.isValid(companyIdentifier)) {
+        return res.status(400).json({
+          success: false,
+          msg: "Invalid companyId",
+        });
+      }
 
-      console.log("Selected Company ID:", companyIdentifier);
-      console.log("Company Found:", company);
+      company = await Company.findById(companyIdentifier);
 
       if (!company) {
         return res.status(400).json({
+          success: false,
           msg: "Selected company does not exist",
         });
       }
     }
 
     if (!company && role !== "super_admin") {
-      return res.status(400).json({ msg: "Company is required for this account" });
+      return res.status(400).json({
+        success: false,
+        msg: "Company is required for this account",
+      });
     }
 
+    /* =========================
+       🔑 HASH PASSWORD
+    ========================= */
     const hash = await bcrypt.hash(password, 10);
 
-    // ✅ MULTI-TENANT FORMAT: Create companyAccess array
+    /* =========================
+       🏢 MULTI-TENANT ACCESS
+    ========================= */
     const companyAccess = company
       ? [
-        {
-          companyId: company._id,
-          companyName: company.name,
-          role: role,
-          isActive: true,
-          joinedAt: new Date(),
-        },
-      ]
+          {
+            companyId: company._id,
+            companyName: company.name,
+            role,
+            isActive: true,
+            joinedAt: new Date(),
+          },
+        ]
       : [];
 
+    /* =========================
+       👤 CREATE USER
+    ========================= */
     const user = await User.create({
       name,
       email: normalizedEmail,
@@ -86,11 +126,11 @@ export const register = async (req, res) => {
       position,
       department,
       role,
-      companyId: company ? company._id : null,  // Keep for backward compatibility
-      companyAccess: companyAccess,  // ✅ New multi-tenant format
+      companyId: company ? company._id : null,
+      companyAccess,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "User registered successfully",
       user: {
@@ -99,11 +139,14 @@ export const register = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("REGISTER ERROR:", err.stack || err);
-    res.status(500).json({ msg: err.message || "Server error" });
+    console.error("REGISTER ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      msg: err.message || "Server error",
+    });
   }
 };
-
 /* =========================
    LOGIN (MULTI-TENANT)
 ========================= */
