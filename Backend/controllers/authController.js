@@ -96,12 +96,7 @@ const user = await User.create({
     success: false,
     msg: err.message,
   });
-}
-  } catch (err) {
-    console.error("REGISTER ERROR:", err.stack || err);
-    res.status(500).json({ msg: err.message || "Server error" });
-  }
-};
+}}
 
 /* =========================
    LOGIN (MULTI-TENANT)
