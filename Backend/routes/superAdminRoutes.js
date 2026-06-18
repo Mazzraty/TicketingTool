@@ -4,6 +4,7 @@ import {
   assignCompanyAccess,
   revokeCompanyAccess,
   getUserCompanyAccess,
+  getAllUsers,
 } from "../controllers/superAdminController.js";
 
 import {
@@ -14,8 +15,16 @@ import {
 const router = express.Router();
 
 /* =========================
-   🔐 SUPER ADMIN ONLY
+  🔐 SUPER ADMIN ONLY
 ========================= */
+
+// GET ALL USERS (IMPORTANT)
+router.get(
+  "/users",
+  protect,
+  isSuperAdmin,
+  getAllUsers
+);
 
 // ASSIGN COMPANY ACCESS
 router.post(
