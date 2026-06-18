@@ -89,15 +89,14 @@ userSchema.index({ companyId: 1 });
 userSchema.index({ "companyAccess.companyId": 1 });
 
 // ✅ MIDDLEWARE: Before saving, ensure at least one active company
-userSchema.pre("save", function (next) {
-  if (this.companyAccess && this.companyAccess.length > 0) {
+userSchema.pre("save", function () {
+  if (this.companyAccess?.length > 0) {
     const hasActive = this.companyAccess.some((c) => c.isActive);
+
     if (!hasActive) {
-      // Auto-activate first company if none active
       this.companyAccess[0].isActive = true;
     }
   }
-  next();
-});
+});;
 
 export default mongoose.model("User", userSchema);
