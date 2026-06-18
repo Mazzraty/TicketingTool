@@ -46,10 +46,12 @@ export default function Register() {
   const loadCompanies = async () => {
     try {
       const res = await api.get("/companies");
- console.log("Companies Response:", res.data.data);
+      console.log("Companies Response:", res.data);
 
-      if (res.data.success) {
+      if (res.data.success && Array.isArray(res.data.companies)) {
         setCompanies(res.data.companies);
+      } else {
+        console.error("Company load failed:", res.data);
       }
     } catch (err) {
       console.error(err);
