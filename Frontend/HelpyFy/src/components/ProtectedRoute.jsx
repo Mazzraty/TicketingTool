@@ -1,21 +1,14 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 
-const ADMIN_ROLES = ["company_admin", "super_admin", "it_support"];
+export default function ProtectedRoute({ allowedRoles }) {
+  const { token, role } = useAuth();
 
-export default function ProtectedRoute({ role }) {
-  const { token, role: currentRole } = useAuth();
-  const userRole = currentRole || "user";
-  const isAdminRole = ADMIN_ROLES.includes(userRole);
+  if (!token) return <Navigate to="/login" replace />;
 
-  if (!token) return <Navigate to="/login" />;
-
-  if (role === "admin" && !isAdminRole) {
-    return <Navigate to="/" />;
-  }
-
-  if (!role && isAdminRole) {
-    return <Navigate to="/admin" />;
+  // if roles are defined → check access
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;

@@ -42,7 +42,7 @@ export default function AppRoutes() {
       <Route path="/register" element={<Register />} />
 
       {/* ================= USER ROUTES ================= */}
-      <Route element={<ProtectedRoute role="user" />}>
+    <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
 
         <Route element={<Layout />}>
 
@@ -76,7 +76,7 @@ export default function AppRoutes() {
       </Route>
 
       {/* ================= ADMIN ROUTES ================= */}
-      <Route element={<ProtectedRoute role="admin" />}>
+  <Route element={<ProtectedRoute role={["super_admin", "company_admin"]} />}>
         <Route element={<AdminLayout />}>
 
           {/* DEFAULT ADMIN ENTRY */}
@@ -134,6 +134,10 @@ export default function AppRoutes() {
           <Route
             path="/admin/assets/upload-printer"
             element={<PrinterUpload />}
+          />
+          <Route
+            path="/admin/company-access"
+            element={<AdminCompanyAccess />}
           />
 
         </Route>
