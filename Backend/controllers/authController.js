@@ -44,23 +44,18 @@ export const register = async (req, res) => {
 
     const isAdminRequest = requestUser && ["company_admin", "super_admin", "it_support"].includes(requestUser.role);
     const role = isAdminRequest ? requestedRole || "user" : "user";
-
     let company = null;
+
     if (companyIdentifier) {
-      const searchCriteria = [
-        { code: companyIdentifier },
-      ];
+      company = await Company.findById(companyIdentifier);
 
-      if (mongoose.isValidObjectId(companyIdentifier)) {
-        searchCriteria.unshift({ _id: companyIdentifier });
-      }
-
-      company = await Company.findOne({
-        $or: searchCriteria,
-      });
+      console.log("Selected Company ID:", companyIdentifier);
+      console.log("Company Found:", company);
 
       if (!company) {
-        return res.status(400).json({ msg: "Selected company does not exist" });
+        return res.status(400).json({
+          msg: "Selected company does not exist",
+        });
       }
     }
 
@@ -73,14 +68,14 @@ export const register = async (req, res) => {
     // ✅ MULTI-TENANT FORMAT: Create companyAccess array
     const companyAccess = company
       ? [
-          {
-            companyId: company._id,
-            companyName: company.name,
-            role: role,
-            isActive: true,
-            joinedAt: new Date(),
-          },
-        ]
+        {
+          companyId: company._id,
+          companyName: company.name,
+          role: role,
+          isActive: true,
+          joinedAt: new Date(),
+        },
+      ]
       : [];
 
     const user = await User.create({

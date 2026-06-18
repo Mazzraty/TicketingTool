@@ -13,14 +13,9 @@ const router = express.Router();
 
 /* =========================
    🔍 GET COMPANIES
-   (SUPER ADMIN ONLY)
+   (PUBLIC FOR REGISTRATION)
 ========================= */
-router.get(
-  "/",
-  protect,
-  roleCheck("super_admin"),
-  getCompanies
-);
+router.get("/", getCompanies);
 
 /* =========================
    🏢 CREATE COMPANY
