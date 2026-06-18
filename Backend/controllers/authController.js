@@ -41,7 +41,19 @@ export const register = async (req, res) => {
         requestUser = null;
       }
     }
+const role = requestedRole || "user";
 
+let company = null;
+
+if (companyIdentifier) {
+  company = await Company.findById(companyIdentifier);
+
+  if (!company) {
+    return res.status(400).json({
+      msg: "Selected company does not exist",
+    });
+  }
+}
 
     const hash = await bcrypt.hash(password, 10);
 
