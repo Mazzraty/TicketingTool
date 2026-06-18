@@ -87,6 +87,16 @@ const user = await User.create({
         password: undefined,
       },
     });
+    } catch (err) {
+  console.error("REGISTER ERROR:");
+  console.error(err);
+  console.error(err.stack);
+
+  return res.status(500).json({
+    success: false,
+    msg: err.message,
+  });
+}
   } catch (err) {
     console.error("REGISTER ERROR:", err.stack || err);
     res.status(500).json({ msg: err.message || "Server error" });
