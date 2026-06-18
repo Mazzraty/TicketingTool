@@ -43,21 +43,20 @@ export default function Register() {
     loadCompanies();
   }, [user, isAdmin, navigate]);
 
-  const loadCompanies = async () => {
-    try {
-      const res = await api.get("/companies");
-      console.log("Companies Response:", res.data);
+const loadCompanies = async () => {
+  try {
+    const res = await api.get("/companies");
 
-      if (res.data.success && Array.isArray(res.data.companies)) {
-        setCompanies(res.data.companies);
-      } else {
-        console.error("Company load failed:", res.data);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to load companies");
-    }
-  };
+    console.log("FULL RESPONSE:", res.data);
+
+    const companyList = res.data.companies || res.data.data || [];
+
+    setCompanies(companyList);
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to load companies");
+  }
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
