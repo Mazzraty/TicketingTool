@@ -22,7 +22,7 @@ const asyncHandler = (fn) => (req, res, next) =>
 /* =========================
    AUTH (PUBLIC)
 ========================= */
-router.post("/login", asyncHandler(login));
+router.post("/login", login);
 router.post("/forgot-password", asyncHandler(forgotPassword));
 router.post("/reset-password", asyncHandler(resetPassword));
 
