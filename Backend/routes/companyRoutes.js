@@ -15,7 +15,7 @@ const router = express.Router();
    🔍 GET COMPANIES
    (PUBLIC FOR REGISTRATION)
 ========================= */
-router.get("/company", getCompanies);
+router.get("/", getCompanies);
 
 /* =========================
    🏢 CREATE COMPANY
