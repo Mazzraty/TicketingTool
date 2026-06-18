@@ -2,14 +2,22 @@ import Company from "../models/comapnySchema.js";
 
 export const getCompanies = async (req, res) => {
   try {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
     const companies = await Company.find({ isActive: true }).select(
       "name code description location"
     );
 
-    res.json({ success: true, companies });
+    return res.status(200).json({
+      success: true,
+      companies
+    });
+
   } catch (err) {
     console.error("GET COMPANIES ERROR:", err);
-    res.status(500).json({ message: err.message || "Server error" });
+    return res.status(500).json({ message: err.message });
   }
 };
 

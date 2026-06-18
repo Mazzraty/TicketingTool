@@ -45,19 +45,18 @@ export default function Register() {
 
 const loadCompanies = async () => {
   try {
-    const res = await api.get("/companies");
+    const res = await api.get("/companies", {
+      headers: {
+        "Cache-Control": "no-cache"
+      }
+    });
 
-    console.log("FULL RESPONSE:", res.data);
-
-    const companyList = res.data.companies || res.data.data || [];
-
-    setCompanies(companyList);
+    setCompanies(res.data.companies || []);
   } catch (err) {
-    console.error(err);
+    console.error("Companies error:", err);
     toast.error("Failed to load companies");
   }
 };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
 
