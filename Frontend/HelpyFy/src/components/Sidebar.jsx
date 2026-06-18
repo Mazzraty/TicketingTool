@@ -109,7 +109,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                   icon="📦"
                   label="Asset Management"
                 />
-
+                <NavItem
+                  to="/admin/company-access"
+                  icon="🏢"
+                  label="Company Access"
+                />
               </div>
 
             </div>

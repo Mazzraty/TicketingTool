@@ -21,6 +21,7 @@ import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";
 import PrinterUpload from "../pages/PrinterUpload.jsx";
 import LaptopUpload from "../pages/LaptopUpload.jsx";
 import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
+import AdminCompanyAccess from "../pages/AdminCompanyAccess.jsx"
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
