@@ -46,7 +46,7 @@ export default function Register() {
   const loadCompanies = async () => {
     try {
       const res = await api.get("/companies");
- console.log("Companies Response:", res.data);
+ console.log("Companies Response:", res.data.data);
 
       if (res.data.success) {
         setCompanies(res.data.companies);
