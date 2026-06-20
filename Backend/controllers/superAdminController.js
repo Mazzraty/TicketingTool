@@ -2,7 +2,6 @@ import User from "../models/userShema.js";
 import Company from "../models/comapnySchema.js";
 import EmployeeMaster from "../models/employeeMasterSchema.js";
 
-
 /* ======================================================
    🟢 ASSIGN COMPANY ACCESS
 ====================================================== */
@@ -18,7 +17,6 @@ export const assignCompanyAccess = async (req, res) => {
     }
 
     const company = await Company.findById(companyId);
-
     if (!company) {
       return res.status(404).json({
         message: "Company not found",
@@ -26,17 +24,18 @@ export const assignCompanyAccess = async (req, res) => {
     }
 
     const user = await User.findById(userId);
-
     if (!user) {
       return res.status(404).json({
         message: "User not found",
       });
     }
 
+    // remove existing access for same company
     user.companyAccess = user.companyAccess.filter(
       (c) => c.companyId.toString() !== companyId
     );
 
+    // add new access
     user.companyAccess.push({
       companyId,
       companyName: company.name,
@@ -47,22 +46,19 @@ export const assignCompanyAccess = async (req, res) => {
 
     await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Company access assigned successfully",
       data: user.companyAccess,
     });
   } catch (error) {
     console.error("Assign Error:", error);
-
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 };
-
-
 
 /* ======================================================
    🔴 REVOKE COMPANY ACCESS
@@ -79,9 +75,10 @@ export const revokeCompanyAccess = async (req, res) => {
     }
 
     const user = await User.findById(userId);
-
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found",
+      });
     }
 
     const access = user.companyAccess.find(
@@ -94,10 +91,9 @@ export const revokeCompanyAccess = async (req, res) => {
       });
     }
 
-    // 🚫 revoke access
     access.isActive = false;
     access.revokedAt = new Date();
-    access.revokedBy = req.user._id; // from protect middleware
+    access.revokedBy = req.user?._id || null;
 
     await user.save();
 
@@ -106,7 +102,6 @@ export const revokeCompanyAccess = async (req, res) => {
       message: "Company access revoked successfully",
       data: access,
     });
-
   } catch (error) {
     console.error("Revoke Error:", error);
     return res.status(500).json({
@@ -115,49 +110,56 @@ export const revokeCompanyAccess = async (req, res) => {
   }
 };
 
-
-
 /* ======================================================
-   🟡 GET USER COMPANY ACCESS (DEBUG / ADMIN PANEL)
+   🟡 GET EMPLOYEES WITH USER ACCESS (FIXED VERSION)
 ====================================================== */
-
-
 export const getEmployeesWithAccess = async (req, res) => {
   try {
+    // 1. Get all employees
     const employees = await EmployeeMaster.find().lean();
 
-    const staffCodes = employees.map((emp) => emp.staffCode);
+    // 2. Normalize staff codes (VERY IMPORTANT FIX)
+    const staffCodes = employees.map((emp) =>
+      String(emp.staffCode).trim()
+    );
 
+    // 3. Get users linked by staffCode
     const users = await User.find({
       staffCode: { $in: staffCodes },
     })
       .select("_id staffCode companyAccess")
       .lean();
 
+    // 4. Build fast lookup map
     const userMap = {};
 
     users.forEach((user) => {
-      userMap[user.staffCode] = user;
+      if (!user.staffCode) return;
+
+      userMap[String(user.staffCode).trim()] = user;
     });
 
+    // 5. Merge employee + user data
     const data = employees.map((emp) => {
-      const user = userMap[emp.staffCode];
+      const key = String(emp.staffCode).trim();
+      const user = userMap[key];
 
       return {
         ...emp,
         userId: user?._id || null,
         companyAccess: user?.companyAccess || [],
+        isLinked: !!user, // helpful for UI debugging
       };
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       employees: data,
     });
   } catch (err) {
     console.error("Employees Access Error:", err);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
