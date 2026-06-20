@@ -127,22 +127,31 @@ export const revokeCompanyAccess = async (req, res) => {
 ====================================================== */
 
 
-export const getAllEmployees = async (req, res) => {
+export const getEmployeesWithAccess = async (req, res) => {
   try {
-    const employees = await EmployeeMaster.find({})
-      .populate("companyId", "name")
-      .sort({ createdAt: -1 });
+    const employees = await EmployeeMaster.find();
 
-    res.status(200).json({
+    const data = await Promise.all(
+      employees.map(async (emp) => {
+        const user = await User.findOne({
+          employeeId: emp.employeeId,
+        });
+
+        return {
+          ...emp.toObject(),
+          userId: user?._id,
+          companyAccess: user?.companyAccess || [],
+        };
+      })
+    );
+
+    res.json({
       success: true,
-      employees,
+      employees: data,
     });
-  } catch (error) {
-    console.error("Get Employees Error:", error);
-
+  } catch (err) {
     res.status(500).json({
-      success: false,
-      message: error.message,
+      message: err.message,
     });
   }
 };
