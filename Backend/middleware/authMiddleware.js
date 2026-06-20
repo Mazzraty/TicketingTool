@@ -4,6 +4,11 @@ import jwt from "jsonwebtoken";
    🔐 PROTECT MIDDLEWARE
    MULTI-TENANT SAFE VERSION
 ========================= */
+
+/* =========================
+   🔐 PROTECT MIDDLEWARE
+   MULTI-TENANT SAFE VERSION (FIXED)
+========================= */
 export const protect = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -26,17 +31,22 @@ export const protect = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // ✅ SAFE USER OBJECT - Multi-tenant support
+    // ✅ FIXED USER OBJECT (STAFFCODE VERSION)
     req.user = {
       id: decoded.id,
       role: decoded.role,
       email: decoded.email,
-      employeeId: decoded.employeeId,
-      
-      // ✅ ACTIVE COMPANY (current tenant)
+
+      // ❌ OLD: employeeId
+      // employeeId: decoded.employeeId,
+
+      // ✅ NEW: staffCode
+      staffCode: decoded.staffCode || null,
+
+      // ACTIVE TENANT
       companyId: decoded.companyId || null,
-      
-      // ✅ ALL COMPANY ACCESS
+
+      // MULTI-COMPANY ACCESS
       companyAccess: decoded.companyAccess || [],
     };
 
