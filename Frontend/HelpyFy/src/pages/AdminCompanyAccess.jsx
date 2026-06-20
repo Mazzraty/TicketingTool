@@ -81,11 +81,26 @@ export default function AdminCompanyAccess() {
     }
   };
 
-  useEffect(() => {
-    loadMe();
-    loadEmployees();
-    loadCompanies();
-  }, []);
+useEffect(() => {
+  const init = async () => {
+    try {
+      const res = await api.get("/auth/me");
+
+      const role = res.data.role;
+      setUserRole(role);
+
+      loadCompanies();
+
+      if (role === "super_admin") {
+        loadEmployees();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  init();
+}, []);
 
   useEffect(() => {
     if (userRole === "it_support" && selectedCompany) {
