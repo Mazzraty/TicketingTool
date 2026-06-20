@@ -33,9 +33,9 @@ export const register = async (req, res) => {
     }
 
     // 2️⃣ FIND EMPLOYEE (🔥 THIS WAS MISSING)
-    const employee = await EmployeeMaster.findOne({
-      staffCode: String(staffCode).trim()
-    });
+   const employee = await EmployeeMaster.findOne({
+  staffCode: new RegExp(`^${String(staffCode).trim()}$`)
+});
 
     if (!employee) {
       return res.status(404).json({
