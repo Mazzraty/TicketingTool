@@ -22,7 +22,7 @@ export default function Register() {
     name: "",
     email: "",
     password: "",
-    employeeId: "",
+    staffCode: "",   // ✅ FIXED
     position: "Employee",
     department: "General",
     companyId: "",
@@ -43,16 +43,16 @@ export default function Register() {
     loadCompanies();
   }, [user, isAdmin, navigate]);
 
-const loadCompanies = async () => {
-  try {
-const res = await api.get("/companies");
+  const loadCompanies = async () => {
+    try {
+      const res = await api.get("/companies");
 
-    setCompanies(res.data.companies || []);
-  } catch (err) {
-    console.error("Companies error:", err);
-    toast.error("Failed to load companies");
-  }
-};
+      setCompanies(res.data.companies || []);
+    } catch (err) {
+      console.error("Companies error:", err);
+      toast.error("Failed to load companies");
+    }
+  };
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -93,8 +93,8 @@ const res = await api.get("/companies");
 
       toast.error(
         err.response?.data?.msg ||
-          err.response?.data?.message ||
-          "Registration failed"
+        err.response?.data?.message ||
+        "Registration failed"
       );
     }
   };
@@ -130,9 +130,9 @@ const res = await api.get("/companies");
 
             <input
               type="text"
-              name="employeeId"
-              placeholder="Employee ID"
-              value={form.employeeId}
+              name="staffCode"
+              placeholder="Staff Code"
+              value={form.staffCode}
               onChange={handleChange}
               className="sap-input"
             />
