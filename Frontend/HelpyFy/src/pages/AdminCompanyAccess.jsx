@@ -15,25 +15,22 @@ export default function AdminCompanyAccess() {
   /* =========================
      LOAD EMPLOYEES
   ========================= */
-  const loadEmployees = async () => {
-    try {
-      const res = await api.get(
-        "/superadmin/company-access/employees"
-      );
+const loadEmployees = async () => {
+  try {
+    const res = await api.get("/superadmin/employees");
 
-      const employeeOptions =
-        res.data.employees?.map((emp) => ({
-          value: emp.userId, // User _id
-          label: `${emp.name} (${emp.staffCode})`,
-          employee: emp,
-        })) || [];
+    const employeeOptions = res.data.employees.map((emp) => ({
+      value: emp.userId,
+      label: `${emp.name} (${emp.staffCode})`,
+      employee: emp,
+    }));
 
-      setEmployees(employeeOptions);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to load employees");
-    }
-  };
+    setEmployees(employeeOptions);
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to load employees");
+  }
+};
 
   /* =========================
      LOAD COMPANIES
