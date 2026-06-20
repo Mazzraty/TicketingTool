@@ -16,8 +16,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    employeeId: {
+    staffCode: {
       type: String,
+      index: true,
     },
     position: {
       type: String,
