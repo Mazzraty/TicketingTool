@@ -202,7 +202,7 @@ export default function Register() {
 
             <button
               type="button"
-              onClick={() => navigate("/admin")}
+              onClick={() => navigate("/login")}
               className="w-full border py-3 rounded-md hover:bg-gray-50"
             >
               Back to Dashboard
