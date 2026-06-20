@@ -399,7 +399,8 @@ export const getMyProfile = async (req, res) => {
     const user = await User.findById(req.user.id)
       .select("-password")
       .populate("companyId")
-      .populate("companyAccess.companyId");  // ✅ Populate company details
+      .populate("companyAccess.companyId")
+      .populate("employeeRef"); // 🔥 ADD THIS
 
     if (!user) {
       return res.status(404).json({
