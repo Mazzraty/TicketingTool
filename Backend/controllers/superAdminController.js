@@ -8,7 +8,7 @@ import EmployeeMaster from "../models/employeeMasterSchema.js";
 ====================================================== */
 export const assignCompanyAccess = async (req, res) => {
   try {
-    const { userId } = req.params; // ✅ better REST style
+    const { userId } = req.params;
     const { companyId, role } = req.body;
 
     if (!companyId || !role) {
@@ -17,52 +17,47 @@ export const assignCompanyAccess = async (req, res) => {
       });
     }
 
-    const validRoles = ["user", "company_admin", "it_support"];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({
-        message: `Invalid role. Allowed values: ${validRoles.join(", ")}`,
-      });
-    }
-
     const company = await Company.findById(companyId);
+
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      return res.status(404).json({
+        message: "Company not found",
+      });
     }
 
     const user = await User.findById(userId);
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found",
+      });
     }
 
-    // 🔁 Remove existing access for same company (clean overwrite)
     user.companyAccess = user.companyAccess.filter(
       (c) => c.companyId.toString() !== companyId
     );
 
-    // ➕ Add new access
     user.companyAccess.push({
       companyId,
       companyName: company.name,
       role,
-      isActive: user.companyAccess?.some((c) => c.isActive) ? false : true,
+      isActive: true,
       assignedAt: new Date(),
-      revokedAt: null,
-      revokedBy: null,
     });
 
     await user.save();
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: "Company access assigned successfully",
       data: user.companyAccess,
     });
-
   } catch (error) {
     console.error("Assign Error:", error);
-    return res.status(500).json({
-      message: "Server error",
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
@@ -129,28 +124,41 @@ export const revokeCompanyAccess = async (req, res) => {
 
 export const getEmployeesWithAccess = async (req, res) => {
   try {
-    const employees = await EmployeeMaster.find();
+    const employees = await EmployeeMaster.find().lean();
 
-    const data = await Promise.all(
-      employees.map(async (emp) => {
-        const user = await User.findOne({
-          employeeId: emp.employeeId,
-        });
+    const staffCodes = employees.map((emp) => emp.staffCode);
 
-        return {
-          ...emp.toObject(),
-          userId: user?._id,
-          companyAccess: user?.companyAccess || [],
-        };
-      })
-    );
+    const users = await User.find({
+      staffCode: { $in: staffCodes },
+    })
+      .select("_id staffCode companyAccess")
+      .lean();
 
-    res.json({
+    const userMap = {};
+
+    users.forEach((user) => {
+      userMap[user.staffCode] = user;
+    });
+
+    const data = employees.map((emp) => {
+      const user = userMap[emp.staffCode];
+
+      return {
+        ...emp,
+        userId: user?._id || null,
+        companyAccess: user?.companyAccess || [],
+      };
+    });
+
+    res.status(200).json({
       success: true,
       employees: data,
     });
   } catch (err) {
+    console.error("Employees Access Error:", err);
+
     res.status(500).json({
+      success: false,
       message: err.message,
     });
   }

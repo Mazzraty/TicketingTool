@@ -10,19 +10,23 @@ export default function AdminCompanyAccess() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedRole, setSelectedRole] = useState("it_support");
+  const [loading, setLoading] = useState(false);
 
   /* =========================
      LOAD EMPLOYEES
   ========================= */
   const loadEmployees = async () => {
     try {
-      const res = await api.get("/employees");
+      const res = await api.get(
+        "/superadmin/company-access/employees"
+      );
 
-      const employeeOptions = res.data.map((emp) => ({
-        value: emp.employeeId,
-        label: `${emp.employeeName || emp.name} (${emp.employeeId})`,
-        employee: emp,
-      }));
+      const employeeOptions =
+        res.data.employees?.map((emp) => ({
+          value: emp.userId, // User _id
+          label: `${emp.name} (${emp.staffCode})`,
+          employee: emp,
+        })) || [];
 
       setEmployees(employeeOptions);
     } catch (err) {
@@ -37,8 +41,10 @@ export default function AdminCompanyAccess() {
   const loadCompanies = async () => {
     try {
       const res = await api.get("/companies");
+
       setCompanies(res.data.companies || []);
     } catch (err) {
+      console.error(err);
       toast.error("Failed to load companies");
     }
   };
@@ -57,9 +63,19 @@ export default function AdminCompanyAccess() {
         return toast.error("Select Employee");
       }
 
+      if (!selectedEmployee.value) {
+        return toast.error(
+          "No user account linked to this employee"
+        );
+      }
+
       if (!selectedCompany) {
         return toast.error("Select Company");
       }
+
+      setLoading(true);
+
+      console.log("User ID:", selectedEmployee.value);
 
       await api.post(
         `/superadmin/users/${selectedEmployee.value}/assign-company`,
@@ -74,7 +90,6 @@ export default function AdminCompanyAccess() {
       setSelectedEmployee(null);
       setSelectedCompany("");
       setSelectedRole("it_support");
-
     } catch (err) {
       console.error(err);
 
@@ -82,19 +97,19 @@ export default function AdminCompanyAccess() {
         err.response?.data?.message ||
           "Failed to assign access"
       );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
-
         <h1 className="text-2xl font-bold mb-6">
           Company Access Management
         </h1>
 
-        {/* EMPLOYEE SEARCH */}
+        {/* Employee */}
         <div className="mb-4">
           <label className="block mb-2 font-medium">
             Employee
@@ -104,12 +119,12 @@ export default function AdminCompanyAccess() {
             options={employees}
             value={selectedEmployee}
             onChange={setSelectedEmployee}
-            placeholder="Search Employee Name / Employee ID"
+            placeholder="Search Employee Name / Staff Code"
             isSearchable
           />
         </div>
 
-        {/* COMPANY */}
+        {/* Company */}
         <div className="mb-4">
           <label className="block mb-2 font-medium">
             Company
@@ -137,7 +152,7 @@ export default function AdminCompanyAccess() {
           </select>
         </div>
 
-        {/* ROLE */}
+        {/* Role */}
         <div className="mb-6">
           <label className="block mb-2 font-medium">
             Role
@@ -150,7 +165,9 @@ export default function AdminCompanyAccess() {
               setSelectedRole(e.target.value)
             }
           >
-            <option value="user">User</option>
+            <option value="user">
+              User
+            </option>
 
             <option value="company_admin">
               Company Admin
@@ -162,35 +179,51 @@ export default function AdminCompanyAccess() {
           </select>
         </div>
 
-        {/* BUTTON */}
+        {/* Assign Button */}
         <button
           onClick={assignAccess}
-          className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg"
+          disabled={loading}
+          className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg disabled:opacity-50"
         >
-          Assign Company Access
+          {loading
+            ? "Assigning..."
+            : "Assign Company Access"}
         </button>
 
-        {/* PREVIEW */}
+        {/* Preview */}
         {selectedEmployee && (
           <div className="mt-6 border rounded-lg p-4 bg-gray-50">
-            <h3 className="font-semibold mb-2">
+            <h3 className="font-semibold mb-3">
               Selected Employee
             </h3>
 
             <p>
               <strong>Name:</strong>{" "}
-              {selectedEmployee.employee.employeeName ||
-                selectedEmployee.employee.name}
+              {selectedEmployee.employee.name}
             </p>
 
             <p>
-              <strong>Employee ID:</strong>{" "}
-              {selectedEmployee.employee.employeeId}
+              <strong>Staff Code:</strong>{" "}
+              {selectedEmployee.employee.staffCode}
             </p>
 
             <p>
-              <strong>Email:</strong>{" "}
-              {selectedEmployee.employee.email}
+              <strong>Department:</strong>{" "}
+              {selectedEmployee.employee.department ||
+                "-"}
+            </p>
+
+            <p>
+              <strong>Designation:</strong>{" "}
+              {selectedEmployee.employee.designation ||
+                "-"}
+            </p>
+
+            <p>
+              <strong>User Linked:</strong>{" "}
+              {selectedEmployee.value
+                ? "Yes"
+                : "No"}
             </p>
           </div>
         )}
