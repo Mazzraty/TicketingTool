@@ -10,14 +10,16 @@ export default function AdminCompanyAccess() {
     const [selectedCompany, setSelectedCompany] = useState("");
     const [selectedRole, setSelectedRole] = useState("it_support");
 
-    const loadUsers = async () => {
-        try {
-            const res = await api.get("/users");
-            setUsers(res.data.users || []);
-        } catch (err) {
-            toast.error("Failed to load users");
-        }
-    };
+ const loadUsers = async () => {
+  try {
+    const res = await api.get("/employees");
+
+    setUsers(res.data || []);
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to load employees");
+  }
+};
 
     const loadCompanies = async () => {
         try {

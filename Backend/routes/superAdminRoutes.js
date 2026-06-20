@@ -3,8 +3,7 @@ import express from "express";
 import {
   assignCompanyAccess,
   revokeCompanyAccess,
-  getUserCompanyAccess,
-  getAllUsers,
+  getAllEmployees,
 } from "../controllers/superAdminController.js";
 
 import {
@@ -18,12 +17,12 @@ const router = express.Router();
   🔐 SUPER ADMIN ONLY
 ========================= */
 
-// GET ALL USERS (IMPORTANT)
+// GET ALL EMPLOYEES (IMPORTANT)
 router.get(
-  "/users",
+  "/employees",
   protect,
   isSuperAdmin,
-  getAllUsers
+  getAllEmployees
 );
 
 // ASSIGN COMPANY ACCESS
@@ -42,12 +41,6 @@ router.post(
   revokeCompanyAccess
 );
 
-// GET USER COMPANY ACCESS
-router.get(
-  "/users/:userId/company-access",
-  protect,
-  isSuperAdmin,
-  getUserCompanyAccess
-);
+
 
 export default router;

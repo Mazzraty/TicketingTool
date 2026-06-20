@@ -1,6 +1,6 @@
 import User from "../models/userShema.js";
 import Company from "../models/comapnySchema.js";
-
+import EmployeeMaster from "../models/employeeMasterSchema.js";
 
 
 /* ======================================================
@@ -125,25 +125,24 @@ export const revokeCompanyAccess = async (req, res) => {
 /* ======================================================
    🟡 GET USER COMPANY ACCESS (DEBUG / ADMIN PANEL)
 ====================================================== */
-export const getUserCompanyAccess = async (req, res) => {
+
+
+export const getAllEmployees = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const employees = await EmployeeMaster.find({})
+      .populate("companyId", "name")
+      .sort({ createdAt: -1 });
 
-    const user = await User.findById(userId).populate("companyAccess.companyId");
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      data: user.companyAccess,
+      employees,
     });
-
   } catch (error) {
-    console.error("Get Access Error:", error);
-    return res.status(500).json({
-      message: "Server error",
+    console.error("Get Employees Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
