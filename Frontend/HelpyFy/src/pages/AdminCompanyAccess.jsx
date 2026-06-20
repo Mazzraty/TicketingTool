@@ -6,31 +6,46 @@ import toast from "react-hot-toast";
 export default function AdminCompanyAccess() {
   const [employees, setEmployees] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [users, setUsers] = useState([]);
 
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedRole, setSelectedRole] = useState("it_support");
+
   const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState(""); // 🔥 logged-in user role
+
+  /* =========================
+     LOAD LOGGED USER
+  ========================= */
+  const loadMe = async () => {
+    try {
+      const res = await api.get("/auth/me");
+      setUserRole(res.data.role);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   /* =========================
      LOAD EMPLOYEES
   ========================= */
-const loadEmployees = async () => {
-  try {
-    const res = await api.get("/superadmin/employees");
+  const loadEmployees = async () => {
+    try {
+      const res = await api.get("/superadmin/employees");
 
-    const employeeOptions = res.data.employees.map((emp) => ({
-      value: emp.userId,
-      label: `${emp.name} (${emp.staffCode})`,
-      employee: emp,
-    }));
+      const employeeOptions = res.data.employees.map((emp) => ({
+        value: emp.userId,
+        label: `${emp.name} (${emp.staffCode})`,
+        employee: emp,
+      }));
 
-    setEmployees(employeeOptions);
-  } catch (err) {
-    console.error(err);
-    toast.error("Failed to load employees");
-  }
-};
+      setEmployees(employeeOptions);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load employees");
+    }
+  };
 
   /* =========================
      LOAD COMPANIES
@@ -38,7 +53,6 @@ const loadEmployees = async () => {
   const loadCompanies = async () => {
     try {
       const res = await api.get("/companies");
-
       setCompanies(res.data.companies || []);
     } catch (err) {
       console.error(err);
@@ -46,10 +60,42 @@ const loadEmployees = async () => {
     }
   };
 
+  /* =========================
+     LOAD USERS BY COMPANY
+  ========================= */
+  const loadUsers = async (companyId) => {
+    if (!companyId) return;
+
+    try {
+      const url =
+        userRole === "super_admin"
+          ? "/users"
+          : `/users/company/${companyId}`;
+
+      const res = await api.get(url);
+
+      setUsers(res.data.users || []);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load users");
+    }
+  };
+
   useEffect(() => {
+    loadMe();
     loadEmployees();
     loadCompanies();
   }, []);
+
+  useEffect(() => {
+    if (userRole === "it_support" && selectedCompany) {
+      loadUsers(selectedCompany);
+    }
+
+    if (userRole === "super_admin") {
+      loadUsers(); // all users
+    }
+  }, [selectedCompany, userRole]);
 
   /* =========================
      ASSIGN ACCESS
@@ -60,19 +106,11 @@ const loadEmployees = async () => {
         return toast.error("Select Employee");
       }
 
-      if (!selectedEmployee.value) {
-        return toast.error(
-          "No user account linked to this employee"
-        );
-      }
-
       if (!selectedCompany) {
         return toast.error("Select Company");
       }
 
       setLoading(true);
-
-      console.log("User ID:", selectedEmployee.value);
 
       await api.post(
         `/superadmin/users/${selectedEmployee.value}/assign-company`,
@@ -87,13 +125,12 @@ const loadEmployees = async () => {
       setSelectedEmployee(null);
       setSelectedCompany("");
       setSelectedRole("it_support");
+
+      // refresh users
+      loadUsers(selectedCompany);
     } catch (err) {
       console.error(err);
-
-      toast.error(
-        err.response?.data?.message ||
-          "Failed to assign access"
-      );
+      toast.error(err.response?.data?.message || "Failed");
     } finally {
       setLoading(false);
     }
@@ -101,27 +138,13 @@ const loadEmployees = async () => {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+      <div className="max-w-5xl mx-auto bg-white rounded-xl shadow p-6">
+
         <h1 className="text-2xl font-bold mb-6">
           Company Access Management
         </h1>
 
-        {/* Employee */}
-        <div className="mb-4">
-          <label className="block mb-2 font-medium">
-            Employee
-          </label>
-
-          <Select
-            options={employees}
-            value={selectedEmployee}
-            onChange={setSelectedEmployee}
-            placeholder="Search Employee Name / Staff Code"
-            isSearchable
-          />
-        </div>
-
-        {/* Company */}
+        {/* ================= COMPANY SELECT ================= */}
         <div className="mb-4">
           <label className="block mb-2 font-medium">
             Company
@@ -134,23 +157,32 @@ const loadEmployees = async () => {
               setSelectedCompany(e.target.value)
             }
           >
-            <option value="">
-              Select Company
-            </option>
+            <option value="">Select Company</option>
 
-            {companies.map((company) => (
-              <option
-                key={company._id}
-                value={company._id}
-              >
-                {company.name}
+            {companies.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Role */}
-        <div className="mb-6">
+        {/* ================= EMPLOYEE SELECT ================= */}
+        <div className="mb-4">
+          <label className="block mb-2 font-medium">
+            Employee
+          </label>
+
+          <Select
+            options={employees}
+            value={selectedEmployee}
+            onChange={setSelectedEmployee}
+            placeholder="Search Employee"
+          />
+        </div>
+
+        {/* ================= ROLE ================= */}
+        <div className="mb-4">
           <label className="block mb-2 font-medium">
             Role
           </label>
@@ -162,68 +194,57 @@ const loadEmployees = async () => {
               setSelectedRole(e.target.value)
             }
           >
-            <option value="user">
-              User
-            </option>
-
-            <option value="company_admin">
-              Company Admin
-            </option>
-
-            <option value="it_support">
-              IT Support
-            </option>
+            <option value="user">User</option>
+            <option value="it_support">IT Support</option>
+            <option value="company_admin">Company Admin</option>
           </select>
         </div>
 
-        {/* Assign Button */}
+        {/* ================= BUTTON ================= */}
         <button
           onClick={assignAccess}
           disabled={loading}
-          className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg disabled:opacity-50"
+          className="w-full bg-green-600 text-white py-3 rounded-lg"
         >
-          {loading
-            ? "Assigning..."
-            : "Assign Company Access"}
+          {loading ? "Assigning..." : "Assign Access"}
         </button>
 
-        {/* Preview */}
-        {selectedEmployee && (
-          <div className="mt-6 border rounded-lg p-4 bg-gray-50">
-            <h3 className="font-semibold mb-3">
-              Selected Employee
-            </h3>
+        {/* ================= USERS TABLE ================= */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4">
+            Users List
+          </h2>
 
-            <p>
-              <strong>Name:</strong>{" "}
-              {selectedEmployee.employee.name}
-            </p>
+          {users.length === 0 ? (
+            <p>No users found</p>
+          ) : (
+            <table className="w-full border">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border p-2">Name</th>
+                  <th className="border p-2">Email</th>
+                  <th className="border p-2">Staff Code</th>
+                  <th className="border p-2">Role</th>
+                </tr>
+              </thead>
 
-            <p>
-              <strong>Staff Code:</strong>{" "}
-              {selectedEmployee.employee.staffCode}
-            </p>
-
-            <p>
-              <strong>Department:</strong>{" "}
-              {selectedEmployee.employee.department ||
-                "-"}
-            </p>
-
-            <p>
-              <strong>Designation:</strong>{" "}
-              {selectedEmployee.employee.designation ||
-                "-"}
-            </p>
-
-            <p>
-              <strong>User Linked:</strong>{" "}
-              {selectedEmployee.value
-                ? "Yes"
-                : "No"}
-            </p>
-          </div>
-        )}
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u._id}>
+                    <td className="border p-2">{u.name}</td>
+                    <td className="border p-2">{u.email}</td>
+                    <td className="border p-2">
+                      {u.staffCode}
+                    </td>
+                    <td className="border p-2">
+                      {u.role}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </div>
   );

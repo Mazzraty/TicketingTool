@@ -20,6 +20,7 @@ import aiRoutes from "./routes/aiRotes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import searchRoutes from "./routes/searchRoutes.js"; 
 import superAdminRoutes from "./routes/superAdminRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 // 🔗 Connect DB
 connectDB();
 
@@ -87,6 +88,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/superadmin", superAdminRoutes);
+app.use("/api/users", userRoutes);
 /* =========================
    ❌ 404 HANDLER
 ========================= */
