@@ -3,7 +3,7 @@ import express from "express";
 import {
   assignCompanyAccess,
   revokeCompanyAccess,
-  getAllEmployees,
+  getEmployeesWithAccess,
 } from "../controllers/superAdminController.js";
 
 import {
@@ -22,7 +22,7 @@ router.get(
   "/employees",
   protect,
   isSuperAdmin,
-  getAllEmployees
+  getEmployeesWithAccess
 );
 
 // ASSIGN COMPANY ACCESS
