@@ -17,7 +17,7 @@ export const register = async (req, res) => {
       name,
       email,
       password,
-      employeeId,
+      staffCode,
       position,
       department,
       companyId: companyIdentifier,
@@ -26,60 +26,69 @@ export const register = async (req, res) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
+    // 1️⃣ check user already exists
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ msg: "Email already exists" });
     }
 
-    let requestUser = null;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.split(" ")[1];
-      try {
-        requestUser = jwt.verify(token, process.env.JWT_SECRET);
-      } catch (err) {
-        requestUser = null;
+    // 2️⃣ FIND EMPLOYEE (🔥 THIS WAS MISSING)
+    const employee = await EmployeeMaster.findOne({
+      staffCode: String(staffCode).trim()
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found with this staffCode"
+      });
+    }
+
+    // 3️⃣ CHECK IF EMPLOYEE ALREADY LINKED
+    const alreadyLinked = await User.findOne({
+      staffCode: employee.staffCode
+    });
+
+    if (alreadyLinked) {
+      return res.status(400).json({
+        success: false,
+        message: "This employee is already linked to a user"
+      });
+    }
+
+    // 4️⃣ COMPANY VALIDATION
+    let company = null;
+
+    if (companyIdentifier) {
+      company = await Company.findById(companyIdentifier);
+
+      if (!company) {
+        return res.status(400).json({
+          msg: "Selected company does not exist",
+        });
       }
     }
-const role = requestedRole || "user";
 
-let company = null;
-
-if (companyIdentifier) {
-  company = await Company.findById(companyIdentifier);
-
-  if (!company) {
-    return res.status(400).json({
-      msg: "Selected company does not exist",
-    });
-  }
-}
-
+    // 5️⃣ HASH PASSWORD
     const hash = await bcrypt.hash(password, 10);
 
-    // ✅ MULTI-TENANT FORMAT: Create companyAccess array
-    const companyAccess = company
-      ? [
-        {
-          companyId: company._id,
-          companyName: company.name,
-          role: role,
-          joinedAt: new Date(),
-        },
-      ]
-      : [];
-const user = await User.create({
-  name,
-  email: normalizedEmail,
-  password: hash,
-  employeeId,
-  position,
-  department,
-  role: requestedRole || "user",
-  companyId: companyIdentifier,
-});
+    // 6️⃣ CREATE USER (LINKED PROPERLY)
+    const user = await User.create({
+      name,
+      email: normalizedEmail,
+      password: hash,
 
-    res.status(201).json({
+      // 🔥 IMPORTANT LINK
+      staffCode: employee.staffCode,
+      employeeRef: employee._id,   // (recommended future upgrade)
+
+      position,
+      department,
+      role: requestedRole || "user",
+      companyId: companyIdentifier,
+    });
+
+    return res.status(201).json({
       success: true,
       message: "User registered successfully",
       user: {
@@ -87,16 +96,16 @@ const user = await User.create({
         password: undefined,
       },
     });
-    } catch (err) {
-  console.error("REGISTER ERROR:");
-  console.error(err);
-  console.error(err.stack);
 
-  return res.status(500).json({
-    success: false,
-    msg: err.message,
-  });
-}}
+  } catch (err) {
+    console.error("REGISTER ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      msg: err.message,
+    });
+  }
+};
 
 /* =========================
    LOGIN (MULTI-TENANT)
@@ -139,9 +148,9 @@ export const login = async (req, res) => {
         id: user._id,
         role: user.role,
         email: user.email,
-        employeeId: user.employeeId,
+        staffCode: user.staffCode,   // 👈 CHANGE THIS
         companyId: activeCompany ? activeCompany.toString() : null,
-        companyAccess: companyAccess,  // ✅ Include all company access
+        companyAccess: companyAccess,
       },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
@@ -458,6 +467,25 @@ export const changePassword = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
+
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({})
+      .select("-password")
+      .populate("companyAccess.companyId")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      users,
+    });
+  } catch (err) {
+    console.error("GET USERS ERROR:", err);
     res.status(500).json({
       message: err.message,
     });

@@ -30,7 +30,11 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "company_admin", "super_admin", "it_support"],
       default: "user",
     },
-
+    employeeRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "EmployeeMaster",
+      required: false
+    },
     // ✅ MULTI-TENANT SUPPORT
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
