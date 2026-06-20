@@ -17,8 +17,7 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     staffCode: {
-      type: String,
-      index: true,
+      type: String
     },
     position: {
       type: String,
