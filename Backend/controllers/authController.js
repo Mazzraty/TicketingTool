@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js";
 import { otpEmail } from "../utils/otpEmail.js";
-
+import EmployeeMaster from "../models/employeeMasterSchema.js";
 /* =========================
    REGISTER (MULTI-TENANT)
 ========================= */
