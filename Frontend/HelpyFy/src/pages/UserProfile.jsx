@@ -66,7 +66,7 @@ export default function UserProfile() {
       <div className="grid grid-cols-2 gap-6 mt-6">
         <Card label="Name" value={user.name} />
         <Card label="Email" value={user.email} />
-        <Card label="Employee ID" value={user.employeeId} />
+        <Card label="Staff Code" value={user.staffCode} />
 
         <div className="bg-white p-5 rounded-xl shadow">
           <p className="text-gray-500 text-sm">Role</p>

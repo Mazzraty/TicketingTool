@@ -33,9 +33,9 @@ export const register = async (req, res) => {
     }
 
     // 2️⃣ FIND EMPLOYEE (🔥 THIS WAS MISSING)
-   const employee = await EmployeeMaster.findOne({
-  staffCode: new RegExp(`^${String(staffCode).trim()}$`)
-});
+    const employee = await EmployeeMaster.findOne({
+      staffCode: new RegExp(`^${String(staffCode).trim()}$`)
+    });
 
     if (!employee) {
       return res.status(404).json({
@@ -78,23 +78,27 @@ export const register = async (req, res) => {
       email: normalizedEmail,
       password: hash,
 
-      // 🔥 IMPORTANT LINK
       staffCode: employee.staffCode,
-      employeeRef: employee._id,   // (recommended future upgrade)
+      employeeRef: employee._id,
 
       position,
       department,
       role: requestedRole || "user",
       companyId: companyIdentifier,
-    });
 
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      user: {
-        ...user._doc,
-        password: undefined,
-      },
+      // ✅ ADD THIS
+      companyAccess: companyIdentifier
+        ? [
+          {
+            companyId: companyIdentifier,
+            role: requestedRole || "user",
+            department,
+            position,
+            permissions: [],
+            isActive: true,
+          },
+        ]
+        : [],
     });
 
   } catch (err) {
