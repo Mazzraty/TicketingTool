@@ -3,7 +3,7 @@ import Company from "../models/comapnySchema.js";
 import EmployeeMaster from "../models/employeeMasterSchema.js";
 
 /* ======================================================
-   🟢 ASSIGN COMPANY ACCESS
+   🟢 ASSIGN COMPANY ACCESS (FIXED)
 ====================================================== */
 export const assignCompanyAccess = async (req, res) => {
   try {
@@ -12,6 +12,7 @@ export const assignCompanyAccess = async (req, res) => {
 
     if (!companyId || !role) {
       return res.status(400).json({
+        success: false,
         message: "companyId and role are required",
       });
     }
@@ -19,6 +20,7 @@ export const assignCompanyAccess = async (req, res) => {
     const company = await Company.findById(companyId);
     if (!company) {
       return res.status(404).json({
+        success: false,
         message: "Company not found",
       });
     }
@@ -26,6 +28,7 @@ export const assignCompanyAccess = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
+        success: false,
         message: "User not found",
       });
     }
@@ -41,8 +44,12 @@ export const assignCompanyAccess = async (req, res) => {
       companyName: company.name,
       role,
       isActive: true,
-      assignedAt: new Date(),
+      joinedAt: new Date(), // ✅ FIXED (was assignedAt)
+      permissions: [],
     });
+
+    // ✅ sync active company
+    user.companyId = companyId;
 
     await user.save();
 
@@ -51,6 +58,7 @@ export const assignCompanyAccess = async (req, res) => {
       message: "Company access assigned successfully",
       data: user.companyAccess,
     });
+
   } catch (error) {
     console.error("Assign Error:", error);
     return res.status(500).json({
@@ -61,7 +69,7 @@ export const assignCompanyAccess = async (req, res) => {
 };
 
 /* ======================================================
-   🔴 REVOKE COMPANY ACCESS
+   🔴 REVOKE COMPANY ACCESS (FIXED)
 ====================================================== */
 export const revokeCompanyAccess = async (req, res) => {
   try {
@@ -70,6 +78,7 @@ export const revokeCompanyAccess = async (req, res) => {
 
     if (!companyId) {
       return res.status(400).json({
+        success: false,
         message: "companyId is required",
       });
     }
@@ -77,6 +86,7 @@ export const revokeCompanyAccess = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
+        success: false,
         message: "User not found",
       });
     }
@@ -87,13 +97,13 @@ export const revokeCompanyAccess = async (req, res) => {
 
     if (!access) {
       return res.status(404).json({
+        success: false,
         message: "Company access not found",
       });
     }
 
     access.isActive = false;
     access.revokedAt = new Date();
-    access.revokedBy = req.user?._id || null;
 
     await user.save();
 
@@ -102,53 +112,51 @@ export const revokeCompanyAccess = async (req, res) => {
       message: "Company access revoked successfully",
       data: access,
     });
+
   } catch (error) {
     console.error("Revoke Error:", error);
     return res.status(500).json({
-      message: "Server error",
+      success: false,
+      message: error.message,
     });
   }
 };
 
 /* ======================================================
-   🟡 GET EMPLOYEES WITH USER ACCESS (FIXED VERSION)
+   🟡 GET EMPLOYEES WITH USER ACCESS (OPTIMIZED)
 ====================================================== */
 export const getEmployeesWithAccess = async (req, res) => {
   try {
-    // 1. Get all employees
     const employees = await EmployeeMaster.find().lean();
 
-    // 2. Normalize staff codes (VERY IMPORTANT FIX)
     const staffCodes = employees.map((emp) =>
       String(emp.staffCode).trim()
     );
 
-    // 3. Get users linked by staffCode
     const users = await User.find({
       staffCode: { $in: staffCodes },
     })
-      .select("_id staffCode companyAccess")
+      .select("_id staffCode companyAccess companyId")
       .lean();
 
-    // 4. Build fast lookup map
-    const userMap = {};
+    const userMap = new Map();
 
     users.forEach((user) => {
       if (!user.staffCode) return;
 
-      userMap[String(user.staffCode).trim()] = user;
+      userMap.set(String(user.staffCode).trim(), user);
     });
 
-    // 5. Merge employee + user data
     const data = employees.map((emp) => {
       const key = String(emp.staffCode).trim();
-      const user = userMap[key];
+      const user = userMap.get(key);
 
       return {
         ...emp,
         userId: user?._id || null,
+        companyId: user?.companyId || null,
         companyAccess: user?.companyAccess || [],
-        isLinked: !!user, // helpful for UI debugging
+        isLinked: !!user,
       };
     });
 
@@ -156,6 +164,7 @@ export const getEmployeesWithAccess = async (req, res) => {
       success: true,
       employees: data,
     });
+
   } catch (err) {
     console.error("Employees Access Error:", err);
 
