@@ -33,7 +33,7 @@ export const assignCompanyAccess = async (req, res) => {
       });
     }
 
-    // remove existing access for same company
+    // remove old access for same company
     user.companyAccess = user.companyAccess.filter(
       (c) => c.companyId.toString() !== companyId
     );
@@ -44,19 +44,25 @@ export const assignCompanyAccess = async (req, res) => {
       companyName: company.name,
       role,
       isActive: true,
-      joinedAt: new Date(), // ✅ FIXED (was assignedAt)
+      joinedAt: new Date(),
       permissions: [],
     });
 
-    // ✅ sync active company
+    // 🔥 IMPORTANT: sync ROOT USER ROLE
+    user.role = role;
+
+    // optional but recommended
     user.companyId = companyId;
 
     await user.save();
 
     return res.status(200).json({
       success: true,
-      message: "Company access assigned successfully",
-      data: user.companyAccess,
+      message: "User role + company access updated successfully",
+      data: {
+        role: user.role,
+        companyAccess: user.companyAccess,
+      },
     });
 
   } catch (error) {
@@ -67,7 +73,6 @@ export const assignCompanyAccess = async (req, res) => {
     });
   }
 };
-
 /* ======================================================
    🔴 REVOKE COMPANY ACCESS (FIXED)
 ====================================================== */
