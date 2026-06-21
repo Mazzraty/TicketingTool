@@ -14,7 +14,7 @@ const getCompanyFilter = (user) => {
 export const createSoftware = async (req, res) => {
   try {
     let companyId = req.user.companyId;
-
+console.log("REQ BODY:", req.body);
     // Super Admin can choose company
     if (req.user.role === "super_admin") {
       companyId = req.body.companyId;
