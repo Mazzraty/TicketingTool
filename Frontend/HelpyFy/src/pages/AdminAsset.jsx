@@ -59,14 +59,6 @@ export default function AdminAssets() {
   }, []);
 
 
-  const loadCompanies = async () => {
-    try {
-      const res = await api.get("/companies");
-      setCompanies(res.data.companies || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
   /* ================= RESET ================= */
   const resetForm = () => {
     setAssetCode("");
