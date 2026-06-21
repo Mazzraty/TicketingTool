@@ -1,27 +1,29 @@
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function ITSupportEmployeeView() {
+  const { user } = useAuth();
+
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 8;
 
-  // ================= USER =================
-  const user = JSON.parse(localStorage.getItem("user"));
+  const pageSize = 10;
 
-  const allowedCompanyIds =
-    user?.companyAccess
-      ?.filter((c) => c.isActive)
-      ?.map((c) => c.companyId) || [];
+  useEffect(() => {
+    console.log("IT Support User:", user);
+  }, [user]);
 
-  // ================= LOAD =================
   const loadEmployees = async () => {
     try {
       const res = await api.get("/employees");
-      setEmployees(res.data);
-    } catch {
+
+      // Backend already filters according to JWT
+      setEmployees(res.data || []);
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to load employees");
     }
   };
@@ -30,26 +32,17 @@ export default function ITSupportEmployeeView() {
     loadEmployees();
   }, []);
 
-  // ================= FILTER (ONLY ACCESS COMPANIES) =================
-  const filteredEmployees = employees
-    .filter((e) => {
-      // 🔐 STRICT IT SUPPORT ACCESS CONTROL
-      if (allowedCompanyIds.length > 0) {
-        return allowedCompanyIds.includes(e.companyId);
-      }
-      return false; // if no access → show nothing
-    })
-    .filter(
-      (e) =>
-        e.staffCode?.toLowerCase().includes(search.toLowerCase()) ||
-        e.name?.toLowerCase().includes(search.toLowerCase()) ||
-        e.department?.toLowerCase().includes(search.toLowerCase())
-    );
+  const filteredEmployees = employees.filter(
+    (e) =>
+      e.staffCode?.toLowerCase().includes(search.toLowerCase()) ||
+      e.name?.toLowerCase().includes(search.toLowerCase()) ||
+      e.department?.toLowerCase().includes(search.toLowerCase()) ||
+      e.designation?.toLowerCase().includes(search.toLowerCase())
+  );
 
-  // ================= PAGINATION =================
   const totalPages = Math.ceil(filteredEmployees.length / pageSize);
 
-  const paginated = filteredEmployees.slice(
+  const paginatedEmployees = filteredEmployees.slice(
     (page - 1) * pageSize,
     page * pageSize
   );
@@ -57,90 +50,134 @@ export default function ITSupportEmployeeView() {
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
 
-      {/* HEADER */}
-      <div className="bg-white p-4 rounded-xl shadow mb-4">
-        <h1 className="text-xl font-bold">IT Support - Employee Access</h1>
+      {/* Header */}
+      <div className="bg-white rounded-xl shadow p-4 mb-4">
+        <h1 className="text-2xl font-bold">
+          IT Support Employee Access
+        </h1>
+
+        <p className="text-gray-500 text-sm mt-1">
+          View employees from assigned companies only
+        </p>
 
         <input
-          className="border p-2 mt-3 w-64 rounded"
+          type="text"
           placeholder="Search employee..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setPage(1);
           }}
+          className="mt-4 border rounded-lg px-3 py-2 w-full md:w-80"
         />
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white p-4 rounded-xl shadow overflow-x-auto">
-        <table className="w-full text-sm">
+      {/* Table */}
+      <div className="bg-white rounded-xl shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
 
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-2 text-left">Staff Code</th>
-              <th className="p-2 text-left">Name</th>
-              <th className="p-2 text-left">Department</th>
-              <th className="p-2 text-left">Designation</th>
-              <th className="p-2 text-left">Visa No</th>
-              <th className="p-2 text-left">Visa Expiry</th>
-              <th className="p-2 text-left">Company</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {paginated.map((emp) => (
-              <tr key={emp._id} className="border-t">
-
-                <td className="p-2">{emp.staffCode}</td>
-                <td className="p-2">{emp.name}</td>
-                <td className="p-2">{emp.department}</td>
-                <td className="p-2">{emp.designation}</td>
-                <td className="p-2">{emp.visaNo}</td>
-                <td className="p-2">
-                  {emp.visaExpiryDate
-                    ? new Date(emp.visaExpiryDate).toLocaleDateString()
-                    : "-"}
-                </td>
-
-                <td className="p-2">
-                  {emp.companyId?.name || "-"}
-                </td>
-
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="text-left p-3">Staff Code</th>
+                <th className="text-left p-3">Name</th>
+                <th className="text-left p-3">Department</th>
+                <th className="text-left p-3">Designation</th>
+                <th className="text-left p-3">Visa No</th>
+                <th className="text-left p-3">Visa Expiry</th>
+                <th className="text-left p-3">Status</th>
               </tr>
-            ))}
-          </tbody>
+            </thead>
 
-        </table>
+            <tbody>
+              {paginatedEmployees.length > 0 ? (
+                paginatedEmployees.map((emp) => (
+                  <tr
+                    key={emp._id}
+                    className="border-t hover:bg-gray-50"
+                  >
+                    <td className="p-3">{emp.staffCode}</td>
+                    <td className="p-3">{emp.name}</td>
+                    <td className="p-3">{emp.department || "-"}</td>
+                    <td className="p-3">{emp.designation || "-"}</td>
+                    <td className="p-3">{emp.visaNo || "-"}</td>
+                    <td className="p-3">
+                      {emp.visaExpiryDate
+                        ? new Date(
+                            emp.visaExpiryDate
+                          ).toLocaleDateString()
+                        : "-"}
+                    </td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-1 rounded text-xs ${
+                          emp.status === "active"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {emp.status || "active"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan="7"
+                    className="text-center p-6 text-gray-500"
+                  >
+                    No employees found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+
+          </table>
+        </div>
       </div>
 
-      {/* PAGINATION */}
-      <div className="flex justify-between mt-4 bg-white p-3 rounded-xl shadow">
-
+      {/* Pagination */}
+      <div className="bg-white rounded-xl shadow p-3 mt-4 flex justify-between items-center">
         <div className="text-sm text-gray-600">
           Page <b>{page}</b> of <b>{totalPages || 1}</b>
         </div>
 
         <div className="flex gap-2">
 
-          <button onClick={() => setPage(1)} disabled={page === 1}>
+          <button
+            onClick={() => setPage(1)}
+            disabled={page === 1}
+            className="border px-3 py-1 rounded disabled:opacity-40"
+          >
             ⏮
           </button>
 
-          <button onClick={() => setPage(page - 1)} disabled={page === 1}>
+          <button
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+            className="border px-3 py-1 rounded disabled:opacity-40"
+          >
             ◀
           </button>
 
-          <button onClick={() => setPage(page + 1)} disabled={page === totalPages}>
+          <button
+            onClick={() => setPage(page + 1)}
+            disabled={page === totalPages || totalPages === 0}
+            className="border px-3 py-1 rounded disabled:opacity-40"
+          >
             ▶
           </button>
 
-          <button onClick={() => setPage(totalPages)} disabled={page === totalPages}>
+          <button
+            onClick={() => setPage(totalPages)}
+            disabled={page === totalPages || totalPages === 0}
+            className="border px-3 py-1 rounded disabled:opacity-40"
+          >
             ⏭
           </button>
 
         </div>
-
       </div>
 
     </div>
