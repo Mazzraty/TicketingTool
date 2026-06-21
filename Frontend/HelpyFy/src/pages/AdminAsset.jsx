@@ -24,29 +24,49 @@ export default function AdminAssets() {
   const [selectedEmployee, setSelectedEmployee] = useState("");
 
   const [open, setOpen] = useState(null);
+  const user = JSON.parse(localStorage.getItem("user"));
 
+  const [companies, setCompanies] = useState([]);
+  const [companyId, setCompanyId] = useState("");
   /* ================= LOAD EMPLOYEES ================= */
+  const fetchEmployees = async () => {
+    try {
+      const res = await api.get("/employees");
+
+      setEmployees(
+        Array.isArray(res.data)
+          ? res.data
+          : res.data.employees || []
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load employees");
+    }
+  };
+
+  const loadCompanies = async () => {
+    try {
+      const res = await api.get("/companies");
+      setCompanies(res.data.companies || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        const res = await api.get("/employees");
-
-        console.log("Employees Loaded:", res.data.length);
-
-        setEmployees(
-          Array.isArray(res.data)
-            ? res.data
-            : res.data.employees || []
-        );
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to load employees");
-      }
-    };
-
     fetchEmployees();
+    loadCompanies();
   }, []);
 
+
+  const loadCompanies = async () => {
+    try {
+      const res = await api.get("/companies");
+      setCompanies(res.data.companies || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
   /* ================= RESET ================= */
   const resetForm = () => {
     setAssetCode("");
@@ -73,6 +93,13 @@ export default function AdminAssets() {
         return toast.error("Asset Code & Type required");
       }
 
+      if (
+        user?.role === "super_admin" &&
+        !companyId
+      ) {
+        return toast.error("Select Company");
+      }
+
       await api.post("/assets", {
         assetCode,
         type,
@@ -86,15 +113,20 @@ export default function AdminAssets() {
         imei,
         simNumber,
         notes,
+        companyId, // 🔥 send selected company
       });
 
       toast.success("Asset Added");
+
       resetForm();
+      setCompanyId("");
     } catch (err) {
       console.error(err);
 
       toast.error(
-        err.response?.data?.msg || "Error adding asset"
+        err.response?.data?.message ||
+        err.response?.data?.msg ||
+        "Error adding asset"
       );
     }
   };
@@ -182,7 +214,21 @@ export default function AdminAssets() {
 
         {open === "add" && (
           <div className="p-5 grid md:grid-cols-3 gap-3 bg-gray-50">
+            {user?.role === "super_admin" && (
+              <select
+                className="border p-2 rounded"
+                value={companyId}
+                onChange={(e) => setCompanyId(e.target.value)}
+              >
+                <option value="">Select Company</option>
 
+                {companies.map((company) => (
+                  <option key={company._id} value={company._id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <input
               className="border p-2 rounded"
               placeholder="Asset Code"

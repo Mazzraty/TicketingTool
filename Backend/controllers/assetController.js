@@ -28,27 +28,48 @@ export const createAsset = async (req, res) => {
       imei,
       simNumber,
       notes,
+      companyId, // <-- NEW
     } = req.body;
 
     if (!assetCode) {
-      return res.status(400).json({ msg: "Asset Code required" });
+      return res.status(400).json({
+        msg: "Asset Code required",
+      });
+    }
+
+    // SUPER ADMIN MUST SELECT COMPANY
+    const selectedCompanyId =
+      req.user.role === "super_admin"
+        ? companyId
+        : req.user.companyId;
+
+    if (!selectedCompanyId) {
+      return res.status(400).json({
+        msg: "Company is required",
+      });
     }
 
     const exists = await Asset.findOne({
       assetCode,
-      companyId: req.user.companyId,
+      companyId: selectedCompanyId,
     });
 
     if (exists) {
-      return res.status(400).json({ msg: "Asset already exists" });
+      return res.status(400).json({
+        msg: "Asset already exists",
+      });
     }
 
     if (type === "Printer" && !route) {
-      return res.status(400).json({ msg: "Printer requires route" });
+      return res.status(400).json({
+        msg: "Printer requires route",
+      });
     }
 
     if (type === "HHT" && !imei) {
-      return res.status(400).json({ msg: "HHT requires IMEI" });
+      return res.status(400).json({
+        msg: "HHT requires IMEI",
+      });
     }
 
     const asset = await Asset.create({
@@ -68,16 +89,19 @@ export const createAsset = async (req, res) => {
       simNumber,
       notes,
 
-      companyId: req.user.companyId,
+      companyId: selectedCompanyId, // <-- IMPORTANT
     });
 
     res.status(201).json(asset);
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: err.message });
+
+    res.status(500).json({
+      msg: err.message,
+    });
   }
 };
-
 /* =========================
    📦 GET ALL ASSETS
 ========================= */
