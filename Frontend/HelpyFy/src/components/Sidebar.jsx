@@ -80,42 +80,105 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         )}
 
         {/* ADMIN MENU */}
-        {isAdminRole && (
+        {/* ADMIN MENU */}
+        {role === "super_admin" && (
           <div>
-
             {!collapsed && (
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-2 mb-3">
-                Admin Panel
+                Super Admin
               </p>
             )}
 
             <div className="space-y-2">
-              <div className="space-y-2">
+              <NavItem
+                to="/admin/dashboard"
+                icon="🛠"
+                label="Dashboard"
+              />
 
-                <NavItem
-                  to="/admin"
-                  icon="🛠"
-                  label="Admin Dashboard"
-                />
+              <NavItem
+                to="/admin/employees"
+                icon="👨‍💼"
+                label="Employees"
+              />
 
-                <NavItem
-                  to="/admin/employees"
-                  icon="👨‍💼"
-                  label="Employees"
-                />
+              <NavItem
+                to="/admin/assets"
+                icon="📦"
+                label="Asset Management"
+              />
 
-                <NavItem
-                  to="/admin/assets"
-                  icon="📦"
-                  label="Asset Management"
-                />
-                <NavItem
-                  to="/admin/company-access"
-                  icon="🏢"
-                  label="Company Access"
-                />
-              </div>
+              <NavItem
+                to="/admin/company-access"
+                icon="🏢"
+                label="Company Access"
+              />
 
+              <NavItem
+                to="/admin/tickets"
+                icon="🎫"
+                label="All Tickets"
+              />
+            </div>
+          </div>
+        )}
+
+        {role === "it_support" && (
+          <div>
+            {!collapsed && (
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-2 mb-3">
+                IT Support
+              </p>
+            )}
+
+            <div className="space-y-2">
+              <NavItem
+                to="/admin/dashboard"
+                icon="📊"
+                label="Dashboard"
+              />
+
+              <NavItem
+                to="/admin/it-support-users"
+                icon="👥"
+                label="Company Users"
+              />
+
+              <NavItem
+                to="/admin/tickets"
+                icon="🎫"
+                label="Company Tickets"
+              />
+            </div>
+          </div>
+        )}
+
+        {role === "company_admin" && (
+          <div>
+            {!collapsed && (
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-2 mb-3">
+                Company Admin
+              </p>
+            )}
+
+            <div className="space-y-2">
+              <NavItem
+                to="/admin/dashboard"
+                icon="📊"
+                label="Dashboard"
+              />
+
+              <NavItem
+                to="/admin/assets"
+                icon="📦"
+                label="Assets"
+              />
+
+              <NavItem
+                to="/admin/tickets"
+                icon="🎫"
+                label="Tickets"
+              />
             </div>
           </div>
         )}

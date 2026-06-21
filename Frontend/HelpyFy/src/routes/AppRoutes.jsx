@@ -22,6 +22,7 @@ import PrinterUpload from "../pages/PrinterUpload.jsx";
 import LaptopUpload from "../pages/LaptopUpload.jsx";
 import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
 import AdminCompanyAccess from "../pages/AdminCompanyAccess.jsx"
+import ITSupportUsers from "../pages/ITSupportUsers.jsx";
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
@@ -42,7 +43,7 @@ export default function AppRoutes() {
       <Route path="/register" element={<Register />} />
 
       {/* ================= USER ROUTES ================= */}
-    <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
 
         <Route element={<Layout />}>
 
@@ -76,7 +77,13 @@ export default function AppRoutes() {
       </Route>
 
       {/* ================= ADMIN ROUTES ================= */}
-  <Route element={<ProtectedRoute role={["super_admin", "company_admin"]} />}>
+      <Route
+        element={
+          <ProtectedRoute
+            role={["super_admin", "company_admin", "it_support"]}
+          />
+        }
+      >
         <Route element={<AdminLayout />}>
 
           {/* DEFAULT ADMIN ENTRY */}
@@ -138,6 +145,10 @@ export default function AppRoutes() {
           <Route
             path="/admin/company-access"
             element={<AdminCompanyAccess />}
+          />
+          <Route
+            path="/admin/it-support-users"
+            element={<ITSupportUsers />}
           />
 
         </Route>
