@@ -65,31 +65,30 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (
-      !form.name ||
-      !form.email ||
-      !form.password ||
-      !form.companyId
-    ) {
-      toast.error("Please fill all required fields");
-      return;
+    if (!form.name || !form.email || !form.password || !form.companyId) {
+      return toast.error("Please fill all required fields");
     }
 
     if (form.password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
+      return toast.error("Passwords do not match");
     }
 
     try {
       console.log("Submitting:", form);
 
-      await api.post("/auth/register", form);
+      const res = await api.post("/auth/register", form);
+
+      console.log("REGISTER SUCCESS:", res.data);
 
       toast.success("Account created successfully");
 
-      navigate("/admin");
+      setTimeout(() => {
+        navigate("/login");
+      }, 300);
+
     } catch (err) {
-      console.error(err);
+      console.log("REGISTER ERROR:", err);
+      console.log("RESPONSE:", err.response);
 
       toast.error(
         err.response?.data?.msg ||
