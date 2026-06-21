@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
-
+import { useAuth } from "../auth/AuthContext";
 export default function AdminSoftwareDashboard() {
   const [softwares, setSoftwares] = useState([]);
   const [search, setSearch] = useState("");
@@ -15,10 +15,13 @@ export default function AdminSoftwareDashboard() {
 
   const [editModal, setEditModal] = useState(false);
   const [editData, setEditData] = useState(null);
+  const { user } = useAuth();
 
+  const [companies, setCompanies] = useState([]);
   const [form, setForm] = useState({
     serviceName: "",
     vendor: "",
+    companyId: "",
     durationMonths: "",
     amount: "",
     purchaseDate: "",
@@ -31,7 +34,17 @@ export default function AdminSoftwareDashboard() {
   ========================= */
   useEffect(() => {
     fetchSoftwares();
+    loadCompanies();
   }, []);
+
+  const loadCompanies = async () => {
+    try {
+      const res = await api.get("/companies");
+      setCompanies(res.data.companies || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchSoftwares = async () => {
     try {
@@ -54,6 +67,7 @@ export default function AdminSoftwareDashboard() {
       const payload = {
         serviceName: form.serviceName,
         vendor: form.vendor,
+        companyId: form.companyId,
         durationMonths: Number(form.durationMonths) || 0,
         amount: Number(form.amount) || 0,
         purchaseDate: form.purchaseDate || null,
@@ -68,6 +82,7 @@ export default function AdminSoftwareDashboard() {
       setForm({
         serviceName: "",
         vendor: "",
+        companyId: "",
         durationMonths: "",
         amount: "",
         purchaseDate: "",
@@ -459,18 +474,30 @@ export default function AdminSoftwareDashboard() {
                 required
               />
 
-              <input
-                className="border p-3 rounded-lg"
-                placeholder="Vendor"
-                value={form.vendor}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    vendor: e.target.value,
-                  })
-                }
-                required
-              />
+              {user?.role === "super_admin" && (
+                <select
+                  className="border p-3 rounded-lg"
+                  value={form.companyId}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      companyId: e.target.value,
+                    })
+                  }
+                  required
+                >
+                  <option value="">Select Company</option>
+
+                  {companies.map((company) => (
+                    <option
+                      key={company._id}
+                      value={company._id}
+                    >
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+              )}
 
               <input
                 type="number"

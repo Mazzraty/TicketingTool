@@ -13,19 +13,39 @@ const getCompanyFilter = (user) => {
 ============================== */
 export const createSoftware = async (req, res) => {
   try {
+    let companyId = req.user.companyId;
+
+    // Super Admin can choose company
+    if (req.user.role === "super_admin") {
+      companyId = req.body.companyId;
+    }
+
+    if (!companyId) {
+      return res.status(400).json({
+        message: "Please select company",
+      });
+    }
+
     const software = await Software.create({
-      ...req.body,
-      companyId: req.user.companyId,
+      serviceName: req.body.serviceName,
+      vendor: req.body.vendor,
+      durationMonths: req.body.durationMonths,
+      amount: req.body.amount,
+      purchaseDate: req.body.purchaseDate,
+      expiryDate: req.body.expiryDate,
+      status: req.body.status || "Active",
+      companyId,
     });
 
     res.status(201).json(software);
   } catch (err) {
+    console.error("Create Software Error:", err);
+
     res.status(500).json({
       message: err.message,
     });
   }
 };
-
 /* ==============================
    📦 GET ALL SOFTWARES
    (PAGINATION + SEARCH + COMPANY SAFE)
