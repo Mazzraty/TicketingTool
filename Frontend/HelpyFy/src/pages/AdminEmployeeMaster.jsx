@@ -6,11 +6,9 @@ export default function AdminEmployeeMaster() {
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState("");
 
-  // pagination
   const [page, setPage] = useState(1);
   const pageSize = 8;
 
-  // edit
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({});
 
@@ -23,7 +21,17 @@ export default function AdminEmployeeMaster() {
     visaExpiryDate: "",
   });
 
-  // LOAD EMPLOYEES
+  // ================= USER INFO =================
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  const isSuperAdmin = user?.role === "super_admin";
+
+  const allowedCompanyIds =
+    user?.companyAccess
+      ?.filter((c) => c.isActive)
+      ?.map((c) => c.companyId) || [];
+
+  // ================= LOAD EMPLOYEES =================
   const loadEmployees = async () => {
     try {
       const res = await api.get("/employees");
@@ -37,7 +45,7 @@ export default function AdminEmployeeMaster() {
     loadEmployees();
   }, []);
 
-  // ADD EMPLOYEE
+  // ================= ADD EMPLOYEE =================
   const addEmployee = async () => {
     try {
       if (!newEmployee.staffCode || !newEmployee.name) {
@@ -63,7 +71,7 @@ export default function AdminEmployeeMaster() {
     }
   };
 
-  // EDIT SAVE
+  // ================= EDIT SAVE =================
   const saveEdit = async (id) => {
     try {
       await api.put(`/employees/${id}`, editForm);
@@ -75,15 +83,23 @@ export default function AdminEmployeeMaster() {
     }
   };
 
-  // FILTER
-  const filteredEmployees = employees.filter(
-    (e) =>
-      e.staffCode?.toLowerCase().includes(search.toLowerCase()) ||
-      e.name?.toLowerCase().includes(search.toLowerCase()) ||
-      e.department?.toLowerCase().includes(search.toLowerCase())
-  );
+  // ================= COMPANY FILTER + SEARCH =================
+  const filteredEmployees = employees
+    .filter((e) => {
+      // 🔐 Company restriction (only non-super admin)
+      if (!isSuperAdmin && allowedCompanyIds.length > 0) {
+        return allowedCompanyIds.includes(e.companyId);
+      }
+      return true;
+    })
+    .filter(
+      (e) =>
+        e.staffCode?.toLowerCase().includes(search.toLowerCase()) ||
+        e.name?.toLowerCase().includes(search.toLowerCase()) ||
+        e.department?.toLowerCase().includes(search.toLowerCase())
+    );
 
-  // PAGINATION LOGIC
+  // ================= PAGINATION =================
   const totalPages = Math.ceil(filteredEmployees.length / pageSize);
 
   const paginated = filteredEmployees.slice(
@@ -93,20 +109,21 @@ export default function AdminEmployeeMaster() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      {/* ================= BACK NAVIGATION ================= */}
+
+      {/* BACK */}
       <div className="mb-4">
         <button
           onClick={() => window.history.back()}
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition shadow-sm text-sm font-semibold"
+          className="px-4 py-2 rounded-2xl bg-white border shadow text-sm font-semibold"
         >
           ← Back
         </button>
       </div>
+
       {/* HEADER */}
       <div className="bg-white p-4 rounded-xl shadow mb-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col md:flex-row justify-between gap-4">
 
-          {/* Left Side */}
           <div>
             <h1 className="text-xl font-bold">Employee Master</h1>
 
@@ -121,18 +138,15 @@ export default function AdminEmployeeMaster() {
             />
           </div>
 
-          {/* Right Side */}
           <button
-            onClick={() =>
-              (window.location.href = "/admin/assets/upload-excel")
-            }
-            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-[#0a6ed1] text-white hover:bg-[#085caf] transition whitespace-nowrap"
+            onClick={() => (window.location.href = "/admin/assets/upload-excel")}
+            className="px-5 py-2 rounded-2xl bg-blue-600 text-white text-sm font-semibold"
           >
             Upload Employees
           </button>
-
         </div>
       </div>
+
       {/* ADD EMPLOYEE */}
       <div className="bg-white p-4 rounded-xl shadow mb-4">
         <h2 className="font-bold mb-3">➕ Add Employee</h2>
@@ -208,7 +222,6 @@ export default function AdminEmployeeMaster() {
 
       {/* TABLE */}
       <div className="bg-white p-4 rounded-xl shadow overflow-x-auto">
-
         <table className="w-full text-sm">
 
           <thead className="bg-gray-100">
@@ -257,62 +270,48 @@ export default function AdminEmployeeMaster() {
         </table>
       </div>
 
-      {/* PAGINATION (MODERN UI) */}
+      {/* PAGINATION */}
       <div className="flex items-center justify-between mt-4 bg-white p-3 rounded-xl shadow">
 
         <div className="text-sm text-gray-600">
           Page <b>{page}</b> of <b>{totalPages || 1}</b>
         </div>
 
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex gap-1 flex-wrap">
 
-          <button
-            onClick={() => setPage(1)}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded disabled:opacity-40"
-          >
+          <button onClick={() => setPage(1)} disabled={page === 1}>
             ⏮
           </button>
 
-          <button
-            onClick={() => setPage(page - 1)}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded disabled:opacity-40"
-          >
+          <button onClick={() => setPage(page - 1)} disabled={page === 1}>
             ◀
           </button>
 
           {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((p) => p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2))
+            .filter(
+              (p) =>
+                p === 1 ||
+                p === totalPages ||
+                (p >= page - 2 && p <= page + 2)
+            )
             .map((p, i, arr) => (
               <div key={p} className="flex items-center">
-                {i > 0 && arr[i - 1] !== p - 1 && (
-                  <span className="px-2">...</span>
-                )}
+                {i > 0 && arr[i - 1] !== p - 1 && <span>...</span>}
 
                 <button
                   onClick={() => setPage(p)}
-                  className={`px-3 py-1 rounded border ${page === p ? "bg-blue-600 text-white" : "hover:bg-gray-100"
-                    }`}
+                  className={page === p ? "bg-blue-600 text-white px-3" : "px-3"}
                 >
                   {p}
                 </button>
               </div>
             ))}
 
-          <button
-            onClick={() => setPage(page + 1)}
-            disabled={page === totalPages}
-            className="px-3 py-1 border rounded disabled:opacity-40"
-          >
+          <button onClick={() => setPage(page + 1)} disabled={page === totalPages}>
             ▶
           </button>
 
-          <button
-            onClick={() => setPage(totalPages)}
-            disabled={page === totalPages}
-            className="px-3 py-1 border rounded disabled:opacity-40"
-          >
+          <button onClick={() => setPage(totalPages)} disabled={page === totalPages}>
             ⏭
           </button>
 
@@ -333,7 +332,6 @@ export default function AdminEmployeeMaster() {
               onChange={(e) =>
                 setEditForm({ ...editForm, staffCode: e.target.value })
               }
-              placeholder="Staff Code"
             />
 
             <input
@@ -342,7 +340,6 @@ export default function AdminEmployeeMaster() {
               onChange={(e) =>
                 setEditForm({ ...editForm, name: e.target.value })
               }
-              placeholder="Name"
             />
 
             <input
@@ -351,7 +348,6 @@ export default function AdminEmployeeMaster() {
               onChange={(e) =>
                 setEditForm({ ...editForm, department: e.target.value })
               }
-              placeholder="Department"
             />
 
             <input
@@ -360,21 +356,20 @@ export default function AdminEmployeeMaster() {
               onChange={(e) =>
                 setEditForm({ ...editForm, designation: e.target.value })
               }
-              placeholder="Designation"
             />
 
             <div className="flex gap-2 mt-3">
 
               <button
                 onClick={() => saveEdit(editId)}
-                className="bg-green-600 text-white px-3 py-1 rounded flex-1"
+                className="bg-green-600 text-white flex-1"
               >
                 Save
               </button>
 
               <button
                 onClick={() => setEditId(null)}
-                className="bg-gray-300 px-3 py-1 rounded flex-1"
+                className="bg-gray-300 flex-1"
               >
                 Cancel
               </button>
@@ -382,7 +377,6 @@ export default function AdminEmployeeMaster() {
             </div>
 
           </div>
-
         </div>
       )}
 
