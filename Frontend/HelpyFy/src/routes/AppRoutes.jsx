@@ -22,7 +22,7 @@ import PrinterUpload from "../pages/PrinterUpload.jsx";
 import LaptopUpload from "../pages/LaptopUpload.jsx";
 import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
 import AdminCompanyAccess from "../pages/AdminCompanyAccess.jsx"
-import ITSupportUsers from "../pages/ItSupportUsers.jsx"
+import ITSupportUsers from "../pages/itSupport/ItSupportUsers.jsx"
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
