@@ -111,7 +111,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <NavItem
                 to="/admin/company-access"
                 icon="🏢"
-                label="Company Access"
+                label="Users"
               />
 
               <NavItem
