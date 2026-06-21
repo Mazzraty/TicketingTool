@@ -51,6 +51,7 @@ export const getSoftwares = async (req, res) => {
     };
 
     const softwares = await Software.find(query)
+      .populate("companyId", "name")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

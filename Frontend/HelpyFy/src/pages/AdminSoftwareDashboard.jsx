@@ -324,6 +324,10 @@ export default function AdminSoftwareDashboard() {
                 </th>
 
                 <th className="text-left px-4 py-3">
+                  Company
+                </th>
+
+                <th className="text-left px-4 py-3">
                   Duration
                 </th>
 
@@ -364,6 +368,12 @@ export default function AdminSoftwareDashboard() {
                   </td>
 
                   <td className="px-4 py-3">
+                    <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
+                      {s.companyId?.name || "-"}
+                    </span>
+                  </td>
+
+                  <td className="px-4 py-3">
                     {s.durationMonths} Months
                   </td>
 
@@ -373,24 +383,20 @@ export default function AdminSoftwareDashboard() {
 
                   <td className="px-4 py-3">
                     {s.purchaseDate
-                      ? new Date(
-                        s.purchaseDate
-                      ).toLocaleDateString()
+                      ? new Date(s.purchaseDate).toLocaleDateString()
                       : "-"}
                   </td>
 
                   <td className="px-4 py-3">
                     {s.expiryDate
-                      ? new Date(
-                        s.expiryDate
-                      ).toLocaleDateString()
+                      ? new Date(s.expiryDate).toLocaleDateString()
                       : "-"}
                   </td>
 
                   <td className="px-4 py-3">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold
-                      ${s.status === "Active"
+      ${s.status === "Active"
                           ? "bg-green-100 text-green-700"
                           : s.status === "Expired"
                             ? "bg-red-100 text-red-700"
