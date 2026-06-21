@@ -473,7 +473,18 @@ export default function AdminSoftwareDashboard() {
                 }
                 required
               />
-
+              <input
+                className="border p-3 rounded-lg"
+                placeholder="Vendor Name"
+                value={form.vendor}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    vendor: e.target.value,
+                  })
+                }
+                required
+              />
               {user?.role === "super_admin" && (
                 <select
                   className="border p-3 rounded-lg"
