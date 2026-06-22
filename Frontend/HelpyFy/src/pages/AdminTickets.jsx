@@ -240,6 +240,7 @@ export default function AdminTickets() {
                   <tr>
                     <th className="p-3 text-left">Title</th>
                     <th className="p-3 text-left">User</th>
+                    <th className="p-3 text-left">Company</th>
                     <th className="p-3 text-center">Priority</th>
                     <th className="p-3 text-center">Status</th>
                     <th className="p-3 text-center">Opened Date & Time</th>
@@ -260,7 +261,9 @@ export default function AdminTickets() {
                       <td className="p-3 font-semibold">{t.title}</td>
 
                       <td className="p-3">{t.userId?.email}</td>
-
+                      <td className="p-3">
+                        {t.companyId?.name || "-"}
+                      </td>
                       <td className="p-3 text-center">
                         <span className={`px-2 py-1 text-xs rounded ${priorityColor(t.priority)}`}>
                           {t.priority}
