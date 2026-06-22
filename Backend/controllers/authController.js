@@ -91,6 +91,7 @@ export const register = async (req, res) => {
         ? [
           {
             companyId: companyIdentifier,
+            companyName: company?.name || "",
             role: requestedRole || "user",
             department,
             position,
@@ -99,6 +100,20 @@ export const register = async (req, res) => {
           },
         ]
         : [],
+    });
+
+    return res.status(201).json({
+      success: true,
+      msg: "User created successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        staffCode: user.staffCode,
+        role: user.role,
+        companyId: user.companyId,
+        companyAccess: user.companyAccess,
+      },
     });
 
   } catch (err) {
