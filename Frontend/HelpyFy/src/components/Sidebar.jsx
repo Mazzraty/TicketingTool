@@ -149,11 +149,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 icon="🎫"
                 label="Company Tickets"
               />
-              <NavItem
+              {/* <NavItem
                 to="/admin/it-support/employees"
                 icon="👨‍💼"
                 label="Company Employees"
-              />
+              /> */}
             </div>
           </div>
         )}
