@@ -33,6 +33,26 @@ export default function HHTUpload() {
       return acc;
     }, {});
 
+  const getValue = (row, ...keys) =>
+    keys.reduce((value, key) => {
+      if (value) return value;
+      return clean(row[key]);
+    }, "");
+
+  const parseSalesman = (value) => {
+    const text = clean(value);
+    if (!text) return { code: "", name: "" };
+
+    const match = text.match(/^([^\-]+)\s*-\s*(.+)$/);
+    if (match) {
+      const code = clean(match[1]);
+      const name = clean(match[2]);
+      return { code, name: code ? name : text.replace(/^\-\s*/, "") };
+    }
+
+    return { code: "", name: text };
+  };
+
   // ================= LOAD COMPANIES =================
   useEffect(() => {
     const loadCompanies = async () => {
@@ -72,17 +92,29 @@ export default function HHTUpload() {
 
       const formatted = json
         .map((r) => normalizeRow(r))
-        .map((r) => ({
-          type: "HHT",
-          assetCode: clean(r.assetcode),
-          salesmanCode: clean(r.salesmancode),
-          salesmanName: clean(r.salesmanname),
-          route: clean(r.route),
-          imei: clean(r.imei),
-          simNumber: clean(r.simnumber),
-          supervisor: clean(r.supervisor),
-          notes: clean(r.notes),
-        }));
+        .map((r) => {
+          const salesman = parseSalesman(
+            getValue(r, "salesman", "salesmanname", "salesman_name", "salesmanname")
+          );
+
+          return {
+            type: "HHT",
+            assetCode: getValue(
+              r,
+              "assetcode",
+              "assetcode",
+              "asset_code",
+              "assetcode"
+            ),
+            salesmanCode: salesman.code,
+            salesmanName: salesman.name,
+            route: getValue(r, "route", "route"),
+            imei: getValue(r, "imei", "imei"),
+            simNumber: getValue(r, "simnumber", "simnumber", "sim_number"),
+            supervisor: getValue(r, "supervisor", "supervisor"),
+            notes: getValue(r, "notes", "notes"),
+          };
+        });
 
       setRows(formatted);
     };
