@@ -226,6 +226,7 @@ export default function AdminEmployeeMaster() {
 
           <thead className="bg-gray-100">
             <tr>
+              <th className="p-2 text-left">Company</th>
               <th className="p-2 text-left">Staff Code</th>
               <th className="p-2 text-left">Name</th>
               <th className="p-2 text-left">Department</th>
@@ -239,6 +240,13 @@ export default function AdminEmployeeMaster() {
           <tbody>
             {paginated.map((emp) => (
               <tr key={emp._id} className="border-t">
+
+                <td className="p-2">
+                  {emp.company?.name ||
+                    emp.companyName ||
+                    emp.company ||
+                    "-"}
+                </td>
 
                 <td className="p-2">{emp.staffCode}</td>
                 <td className="p-2">{emp.name}</td>
