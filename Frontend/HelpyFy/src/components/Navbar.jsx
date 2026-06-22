@@ -238,7 +238,7 @@ useEffect(() => {
                             🎫 Tickets
                           </p>
                         </div>
-                        {searchResults.tickets.map((t) => (
+                        {(Array.isArray(searchResults.tickets) ? searchResults.tickets : []).map((t) => (
                           <div
                             key={t._id}
                             onClick={() =>
@@ -269,7 +269,7 @@ useEffect(() => {
                             💻 Assets
                           </p>
                         </div>
-                        {searchResults.assets.map((a) => (
+                        {(Array.isArray(searchResults.assets) ? searchResults.assets : []).map((a) => (
                           <div
                             key={a._id}
                             onClick={() =>
@@ -296,7 +296,7 @@ useEffect(() => {
                             👤 Employees
                           </p>
                         </div>
-                        {searchResults.employees.map((e) => (
+                        {(Array.isArray(searchResults.employees) ? searchResults.employees : []).map((e) => (
                           <div
                             key={e._id}
                             onClick={() =>
