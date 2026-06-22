@@ -17,6 +17,22 @@ export default function HHTUpload() {
 
   const clean = (v) => (v ? v.toString().trim() : "");
 
+  const normalizeKey = (key) =>
+    key
+      ? key
+          .toString()
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "")
+          .replace(/[-_]/g, "")
+      : "";
+
+  const normalizeRow = (row) =>
+    Object.keys(row).reduce((acc, key) => {
+      acc[normalizeKey(key)] = row[key];
+      return acc;
+    }, {});
+
   // ================= LOAD COMPANIES =================
   useEffect(() => {
     const loadCompanies = async () => {
@@ -54,17 +70,19 @@ export default function HHTUpload() {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet);
 
-      const formatted = json.map((r) => ({
-        type: "HHT",
-        assetCode: clean(r.assetCode),
-        salesmanCode: clean(r.salesmanCode),
-        salesmanName: clean(r.salesmanName),
-        route: clean(r.route),
-        imei: clean(r.imei),
-        simNumber: clean(r.simNumber),
-        supervisor: clean(r.supervisor),
-        notes: clean(r.notes),
-      }));
+      const formatted = json
+        .map((r) => normalizeRow(r))
+        .map((r) => ({
+          type: "HHT",
+          assetCode: clean(r.assetcode),
+          salesmanCode: clean(r.salesmancode),
+          salesmanName: clean(r.salesmanname),
+          route: clean(r.route),
+          imei: clean(r.imei),
+          simNumber: clean(r.simnumber),
+          supervisor: clean(r.supervisor),
+          notes: clean(r.notes),
+        }));
 
       setRows(formatted);
     };

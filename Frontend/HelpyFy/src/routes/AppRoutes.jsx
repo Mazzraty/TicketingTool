@@ -19,6 +19,7 @@ import AssetExcelUpload from "../pages/AssetUpload.jsx";
 import AdminSoftwareDashboard from "../pages/AdminSoftwareDashboard.jsx";
 import AssetStoreFiori from "../pages/AssetStoreFiori.jsx";
 import PrinterUpload from "../pages/PrinterUpload.jsx";
+import HhtUpload from "../pages/HhtUpload.jsx";
 import LaptopUpload from "../pages/LaptopUpload.jsx";
 import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
 import AdminCompanyAccess from "../pages/AdminCompanyAccess.jsx"
@@ -81,7 +82,7 @@ export default function AppRoutes() {
       <Route
         element={
           <ProtectedRoute
-            role={["super_admin", "company_admin", "it_support"]}
+            allowedRoles={["super_admin", "company_admin", "it_support"]}
           />
         }
       >
@@ -144,6 +145,10 @@ export default function AppRoutes() {
             element={<PrinterUpload />}
           />
           <Route
+            path="/admin/assets/upload-hht"
+            element={<HhtUpload />}
+          />
+          <Route
             path="/admin/company-access"
             element={<AdminCompanyAccess />}
           />
@@ -152,7 +157,7 @@ export default function AppRoutes() {
             element={<ITSupportUsers />}
           />
           <Route
-            path="/admin/it-support-employees"
+            path="/admin/it-support/employees"
             element={<ITSupportEmployeeView />}
           />
 
