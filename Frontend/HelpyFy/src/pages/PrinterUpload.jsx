@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -8,7 +8,30 @@ export default function PrinterUpload() {
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState("");
 
+  // 🔥 NEW: company selection
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState("");
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isSuperAdmin = user?.role === "super_admin";
+
   const clean = (v) => (v ? v.toString().trim() : "");
+
+  // ================= LOAD COMPANIES (ONLY SUPER ADMIN)
+  useEffect(() => {
+    const loadCompanies = async () => {
+      try {
+        const res = await api.get("/companies");
+        setCompanies(res.data || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    if (isSuperAdmin) {
+      loadCompanies();
+    }
+  }, [isSuperAdmin]);
 
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -49,9 +72,26 @@ export default function PrinterUpload() {
         (r) => r.assetCode && r.serialNumber
       );
 
-      const res = await api.post("/assets/bulk-upload", {
+      if (!valid.length) {
+        toast.error("No valid rows");
+        return;
+      }
+
+      // 🔥 FINAL COMPANY LOGIC
+      const payload = {
         assets: valid,
-      });
+      };
+
+      // super admin MUST select company
+      if (isSuperAdmin) {
+        if (!selectedCompany) {
+          toast.error("Please select company");
+          return;
+        }
+        payload.companyId = selectedCompany;
+      }
+
+      const res = await api.post("/assets/bulk-upload", payload);
 
       toast.success(`Inserted: ${res.data.inserted}`);
       setRows([]);
@@ -92,6 +132,28 @@ export default function PrinterUpload() {
         </button>
       </div>
 
+      {/* 🔥 COMPANY SELECT (ONLY SUPER ADMIN) */}
+      {isSuperAdmin && (
+        <div className="mb-4 bg-white p-3 rounded-xl border">
+          <label className="text-sm font-semibold text-gray-600">
+            Select Company
+          </label>
+
+          <select
+            className="w-full mt-2 p-2 border rounded"
+            value={selectedCompany}
+            onChange={(e) => setSelectedCompany(e.target.value)}
+          >
+            <option value="">-- Choose Company --</option>
+            {companies.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* UPLOAD CARD */}
       <div className="bg-white border rounded-2xl p-6 shadow-sm">
 
@@ -125,22 +187,22 @@ export default function PrinterUpload() {
         {rows.length > 0 && (
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="bg-gray-50 p-4 rounded-xl border text-center">
-              <p className="text-xs text-gray-500">Total Rows</p>
-              <p className="text-xl font-bold">{rows.length}</p>
+              Total Rows
+              <div className="text-xl font-bold">{rows.length}</div>
             </div>
 
             <div className="bg-green-50 p-4 rounded-xl border text-center">
-              <p className="text-xs text-green-600">Valid</p>
-              <p className="text-xl font-bold text-green-700">
+              Valid
+              <div className="text-xl font-bold text-green-700">
                 {validCount}
-              </p>
+              </div>
             </div>
 
             <div className="bg-red-50 p-4 rounded-xl border text-center">
-              <p className="text-xs text-red-500">Invalid</p>
-              <p className="text-xl font-bold text-red-600">
+              Invalid
+              <div className="text-xl font-bold text-red-600">
                 {invalidCount}
-              </p>
+              </div>
             </div>
           </div>
         )}
@@ -163,10 +225,7 @@ export default function PrinterUpload() {
 
               <tbody>
                 {rows.map((r, i) => (
-                  <tr
-                    key={i}
-                    className="border-t hover:bg-gray-50"
-                  >
+                  <tr key={i} className="border-t hover:bg-gray-50">
                     <td className="p-3">{r.assetCode}</td>
                     <td className="p-3">{r.model}</td>
                     <td className="p-3">{r.serialNumber}</td>
