@@ -213,7 +213,10 @@ export const assignAsset = async (req, res) => {
       assignedBy: req.user?.name || "Admin",
       remarks,
 
-      companyId: req.user.companyId,
+      companyId:
+        asset.companyId ||
+        employee.companyId ||
+        req.user.companyId,
     });
 
     asset.status = "assigned";
