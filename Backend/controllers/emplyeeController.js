@@ -1,5 +1,6 @@
 import EmployeeMaster from "../models/employeeMasterSchema.js";
 import Asset from "../models/assetSchema.js";
+import Company from "../models/comapnySchema.js";
 
 /* =========================
    HELPER: COMPANY FILTER
@@ -71,10 +72,10 @@ export const createEmployee = async (req, res) => {
         message: "Employee already exists",
       });
     }
-
     const emp = await EmployeeMaster.create({
       ...req.body,
       companyId: req.user.companyId,
+      company: req.user.companyName || "",
     });
 
     res.json(emp);
@@ -185,7 +186,9 @@ export const bulkUploadEmployees = async (req, res) => {
             ? new Date(e.dateOfJoining)
             : null,
           status: "active",
+
           companyId: req.user.companyId,
+          company: req.user.companyName || "",
         });
 
         inserted++;

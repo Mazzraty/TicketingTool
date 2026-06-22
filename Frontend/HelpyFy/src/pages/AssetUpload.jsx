@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
    SCHEMAS (SAP STYLE)
 ========================= */
 const ALLOWED_EMPLOYEE_FIELDS = [
+  "company",
   "staffCode",
   "name",
   "department",
@@ -15,27 +16,6 @@ const ALLOWED_EMPLOYEE_FIELDS = [
   "placeOfWork",
   "visaNo",
   "dateOfJoining",
-];
-
-const ALLOWED_HHT_FIELDS = [
-  "assetCode",
-  "model",
-  "imei",
-  "simNumber",
-  "salesmanCode",
-  "salesmanName",
-  "supervisor",
-  "route",
-];
-
-const ALLOWED_PRINTER_FIELDS = [
-  "assetCode",
-  "model",
-  "serialNumber",
-  "salesmanCode",
-  "salesmanName",
-  "supervisor",
-  "route",
 ];
 
 export default function EmployeeExcelUpload() {
@@ -68,9 +48,6 @@ export default function EmployeeExcelUpload() {
     return matches / len;
   };
 
-  /* =========================
-     SMART MAPPER
-  ========================= */
   const fuzzyMapRow = (row, allowedFields) => {
     const cleaned = {};
     const rowKeys = Object.keys(row);
@@ -93,35 +70,6 @@ export default function EmployeeExcelUpload() {
     return cleaned;
   };
 
-  /* =========================
-     DETECT TYPE
-  ========================= */
-  const detectType = (row) => {
-    const keys = Object.keys(row).map((k) =>
-      k.toLowerCase().replace(/[-_\s]/g, "")
-    );
-
-    if (
-      keys.includes("imei") ||
-      keys.includes("simnumber") ||
-      keys.includes("salesmancode")
-    ) {
-      return "HHT";
-    }
-
-    if (
-      keys.includes("printerserial") ||
-      keys.includes("printermodel")
-    ) {
-      return "Printer";
-    }
-
-    return "Employee";
-  };
-
-  /* =========================
-     FILE HANDLER
-  ========================= */
   const handleFile = (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
@@ -149,61 +97,29 @@ export default function EmployeeExcelUpload() {
           return;
         }
 
-        const detected = detectType(json[0]);
-        setFileType(detected);
+        setFileType("Employee");
 
-        if (detected === "Employee") {
-          const formatted = json.map((r) => {
-            const row = fuzzyMapRow(r, ALLOWED_EMPLOYEE_FIELDS);
-            return {
-              type: "Employee",
-              staffCode: clean(row.staffCode),
-              name: clean(row.name),
-              department: clean(row.department),
-              designation: clean(row.designation),
-              division: clean(row.division),
-              placeOfWork: clean(row.placeOfWork),
-              visaNo: clean(row.visaNo),
-              dateOfJoining: clean(row.dateOfJoining),
-            };
-          });
-          setRows(formatted);
-        }
+        const formatted = json.map((r) => {
+          const row = fuzzyMapRow(
+            r,
+            ALLOWED_EMPLOYEE_FIELDS
+          );
 
-        if (detected === "HHT") {
-          const formatted = json.map((r) => {
-            const row = fuzzyMapRow(r, ALLOWED_HHT_FIELDS);
-            return {
-              type: "HHT",
-              assetCode: clean(row.assetCode),
-              model: clean(row.model),
-              imei: clean(row.imei),
-              simNumber: clean(row.simNumber),
-              salesmanCode: clean(row.salesmanCode),
-              salesmanName: clean(row.salesmanName),
-              supervisor: clean(row.supervisor),
-              route: clean(row.route),
-            };
-          });
-          setRows(formatted);
-        }
+          return {
+            type: "Employee",
+            company: clean(row.company),
+            staffCode: clean(row.staffCode),
+            name: clean(row.name),
+            department: clean(row.department),
+            designation: clean(row.designation),
+            division: clean(row.division),
+            placeOfWork: clean(row.placeOfWork),
+            visaNo: clean(row.visaNo),
+            dateOfJoining: clean(row.dateOfJoining),
+          };
+        });
 
-        if (detected === "Printer") {
-          const formatted = json.map((r) => {
-            const row = fuzzyMapRow(r, ALLOWED_PRINTER_FIELDS);
-            return {
-              type: "Printer",
-              assetCode: clean(row.assetCode),
-              model: clean(row.model),
-              serialNumber: clean(row.serialNumber),
-              salesmanCode: clean(row.salesmanCode),
-              salesmanName: clean(row.salesmanName),
-              supervisor: clean(row.supervisor),
-              route: clean(row.route),
-            };
-          });
-          setRows(formatted);
-        }
+        setRows(formatted);
       } catch (err) {
         console.error(err);
         toast.error("Invalid Excel file");
@@ -213,22 +129,13 @@ export default function EmployeeExcelUpload() {
     reader.readAsArrayBuffer(selectedFile);
   };
 
-  /* =========================
-     VALIDATION
-  ========================= */
   const isValid = (r) => {
-    if (r.type === "Employee") return r.staffCode && r.name;
-    if (r.type === "HHT") return r.assetCode && r.imei;
-    if (r.type === "Printer") return r.assetCode && r.serialNumber;
-    return false;
+    return r.staffCode && r.name;
   };
 
   const validCount = rows.filter(isValid).length;
   const invalidCount = rows.length - validCount;
 
-  /* =========================
-     UPLOAD
-  ========================= */
   const uploadExcel = async () => {
     try {
       setLoading(true);
@@ -236,37 +143,35 @@ export default function EmployeeExcelUpload() {
       const valid = rows.filter(isValid);
 
       if (!valid.length) {
-        toast.error("No valid rows found");
+        toast.error("No valid employees found");
         return;
       }
 
-      if (fileType === "Employee") {
-        const res = await api.post("/employees/bulk-upload", {
+      const res = await api.post(
+        "/employees/bulk-upload",
+        {
           employees: valid,
-        });
+        }
+      );
 
-        toast.success(`Employees Inserted: ${res.data.inserted}`);
-      } else {
-        const res = await api.post("/assets/bulk-upload", {
-          assets: valid,
-        });
-
-        toast.success(`Assets Inserted: ${res.data.inserted}`);
-      }
+      toast.success(
+        `Employees Inserted: ${res.data.inserted}`
+      );
 
       setRows([]);
       setFile(null);
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Upload failed");
+
+      toast.error(
+        err.response?.data?.message ||
+        "Upload failed"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  /* =========================
-     UI (PRINTER STYLE ONLY)
-  ========================= */
   return (
     <div className="min-h-screen bg-[#f4f6f9] p-6">
 
@@ -274,10 +179,11 @@ export default function EmployeeExcelUpload() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
-            Smart Excel Upload
+            Employee Excel Upload
           </h1>
+
           <p className="text-sm text-gray-500">
-            Employee / Printer / HHT Asset Upload
+            Bulk Employee Upload
           </p>
         </div>
 
@@ -361,9 +267,8 @@ export default function EmployeeExcelUpload() {
                 {rows.map((r, i) => (
                   <tr
                     key={i}
-                    className={`border-t ${
-                      isValid(r) ? "" : "bg-red-100"
-                    }`}
+                    className={`border-t ${isValid(r) ? "" : "bg-red-100"
+                      }`}
                   >
                     {Object.values(r).map((v, j) => (
                       <td key={j} className="p-3 border">
@@ -386,7 +291,7 @@ export default function EmployeeExcelUpload() {
               disabled={loading}
               className="px-6 py-2 rounded-xl bg-[#0a6ed1] text-white font-semibold hover:bg-[#085caf] disabled:opacity-50"
             >
-              {loading ? "Uploading..." : `Upload ${fileType}`}
+              {loading ? "Uploading..." : "Upload Employees"}
             </button>
           </div>
         )}
