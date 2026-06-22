@@ -83,6 +83,7 @@ export default function HHTUpload() {
 
       if (!valid.length) {
         toast.error("No valid rows");
+        setLoading(false);
         return;
       }
 
@@ -93,6 +94,7 @@ export default function HHTUpload() {
       if (isSuperAdmin) {
         if (!selectedCompany) {
           toast.error("Please select company");
+          setLoading(false);
           return;
         }
         payload.companyId = selectedCompany;
