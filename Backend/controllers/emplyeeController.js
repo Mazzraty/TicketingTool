@@ -140,6 +140,20 @@ export const bulkUploadEmployees = async (req, res) => {
     const employees = req.body.employees || [];
     const assets = req.body.assets || [];
 
+    const targetCompanyId = req.body.companyId || req.user.companyId;
+    if (!targetCompanyId) {
+      return res.status(400).json({
+        success: false,
+        message: "Target company is required",
+      });
+    }
+
+    let targetCompanyName = req.user.companyName || "";
+    if (req.user.role === "super_admin" && req.body.companyId) {
+      const company = await Company.findById(req.body.companyId).select("name");
+      targetCompanyName = company?.name || targetCompanyName;
+    }
+
     const clean = (v) => (v ? v.toString().trim() : "");
 
     let inserted = 0;
@@ -166,7 +180,7 @@ export const bulkUploadEmployees = async (req, res) => {
 
         const exists = await EmployeeMaster.findOne({
           staffCode,
-          companyId: req.user.companyId,
+          companyId: targetCompanyId,
         });
 
         if (exists) {
@@ -187,8 +201,8 @@ export const bulkUploadEmployees = async (req, res) => {
             : null,
           status: "active",
 
-          companyId: req.user.companyId,
-          company: req.user.companyName || "",
+          companyId: targetCompanyId,
+          company: targetCompanyName,
         });
 
         inserted++;
@@ -214,7 +228,7 @@ export const bulkUploadEmployees = async (req, res) => {
 
         const exists = await Asset.findOne({
           assetCode,
-          companyId: req.user.companyId,
+          companyId: targetCompanyId,
         });
 
         if (exists) {
@@ -244,7 +258,7 @@ export const bulkUploadEmployees = async (req, res) => {
           soti: a.soti || "",
           notes: a.notes || "",
 
-          companyId: req.user.companyId,
+          companyId: targetCompanyId,
         });
 
         inserted++;

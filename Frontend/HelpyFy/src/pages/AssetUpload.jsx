@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
+import { useAuth } from "../auth/AuthContext";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
@@ -19,10 +20,13 @@ const ALLOWED_EMPLOYEE_FIELDS = [
 ];
 
 export default function EmployeeExcelUpload() {
+  const { user, companyId: activeCompanyId } = useAuth();
   const [rows, setRows] = useState([]);
   const [fileType, setFileType] = useState("");
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [companies, setCompanies] = useState([]);
+  const [companyId, setCompanyId] = useState(activeCompanyId || "");
 
   /* =========================
      CLEAN VALUE
@@ -69,6 +73,25 @@ export default function EmployeeExcelUpload() {
 
     return cleaned;
   };
+
+  useEffect(() => {
+    setCompanyId(activeCompanyId || "");
+  }, [activeCompanyId]);
+
+  useEffect(() => {
+    if (user?.role !== "super_admin") return;
+
+    const loadCompanies = async () => {
+      try {
+        const res = await api.get("/companies");
+        setCompanies(res.data.companies || []);
+      } catch (err) {
+        console.error("Failed to load companies", err);
+      }
+    };
+
+    loadCompanies();
+  }, [user?.role]);
 
   const handleFile = (e) => {
     const selectedFile = e.target.files[0];
@@ -140,6 +163,11 @@ export default function EmployeeExcelUpload() {
     try {
       setLoading(true);
 
+      if (user?.role === "super_admin" && !companyId) {
+        toast.error("Select the target company before uploading");
+        return;
+      }
+
       const valid = rows.filter(isValid);
 
       if (!valid.length) {
@@ -147,11 +175,17 @@ export default function EmployeeExcelUpload() {
         return;
       }
 
+      const payload = {
+        employees: valid,
+      };
+
+      if (companyId) {
+        payload.companyId = companyId;
+      }
+
       const res = await api.post(
         "/employees/bulk-upload",
-        {
-          employees: valid,
-        }
+        payload
       );
 
       toast.success(
@@ -197,6 +231,26 @@ export default function EmployeeExcelUpload() {
 
       {/* CARD */}
       <div className="bg-white border rounded-2xl p-6 shadow-sm">
+
+        {user?.role === "super_admin" && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Target Company
+            </label>
+            <select
+              value={companyId}
+              onChange={(e) => setCompanyId(e.target.value)}
+              className="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3"
+            >
+              <option value="">Select company</option>
+              {companies.map((company) => (
+                <option key={company._id} value={company._id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* DROP ZONE */}
         <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 cursor-pointer hover:bg-gray-50 transition">
