@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -8,7 +8,27 @@ export default function LaptopUpload() {
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState("");
 
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState("");
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isSuperAdmin = user?.role === "super_admin";
+
   const clean = (v) => (v ? v.toString().trim() : "");
+
+  // load companies for super admin
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await api.get("/companies");
+        setCompanies(res.data || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    if (isSuperAdmin) load();
+  }, [isSuperAdmin]);
 
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -47,9 +67,18 @@ export default function LaptopUpload() {
         (r) => r.assetCode && r.serialNumber
       );
 
-      const res = await api.post("/assets/bulk-upload", {
-        assets: valid,
-      });
+      const payload = { assets: valid };
+
+      if (isSuperAdmin) {
+        if (!selectedCompany) {
+          toast.error("Please select company");
+          setLoading(false);
+          return;
+        }
+        payload.companyId = selectedCompany;
+      }
+
+      const res = await api.post("/assets/bulk-upload", payload);
 
       toast.success(`Inserted: ${res.data.inserted}`);
 
@@ -71,6 +100,28 @@ export default function LaptopUpload() {
 
   return (
     <div className="min-h-screen bg-[#f4f6f9] p-6">
+
+      {/* 🔥 COMPANY SELECT (ONLY SUPER ADMIN) */}
+      {isSuperAdmin && (
+        <div className="mb-4 bg-white p-3 rounded-xl border">
+          <label className="text-sm font-semibold text-gray-600">
+            Select Company
+          </label>
+
+          <select
+            className="w-full mt-2 p-2 border rounded"
+            value={selectedCompany}
+            onChange={(e) => setSelectedCompany(e.target.value)}
+          >
+            <option value="">-- Choose Company --</option>
+            {companies.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* HEADER (PRINTER STYLE) */}
       <div className="flex justify-between items-center mb-6">
