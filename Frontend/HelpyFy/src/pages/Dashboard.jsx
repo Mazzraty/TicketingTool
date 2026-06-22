@@ -13,7 +13,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [])
 
   const load = async () => {
     try {
