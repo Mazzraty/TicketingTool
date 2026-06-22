@@ -222,7 +222,12 @@ export default function AssetStoreFiori() {
           >
             Upload Laptop
           </button>
-
+           <button
+            onClick={() => window.location.href = "/admin/assets/upload-hht"}
+            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+          >
+            Upload HHT
+          </button>
         </div>
 
       </div>
