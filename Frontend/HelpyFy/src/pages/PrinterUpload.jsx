@@ -22,7 +22,11 @@ export default function PrinterUpload() {
     const loadCompanies = async () => {
       try {
         const res = await api.get("/companies");
-        setCompanies(res.data || []);
+        const payload = res.data;
+        const list = Array.isArray(payload)
+          ? payload
+          : payload?.companies || [];
+        setCompanies(list);
       } catch (err) {
         console.error(err);
       }
