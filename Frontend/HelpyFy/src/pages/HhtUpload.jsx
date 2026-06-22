@@ -94,7 +94,7 @@ export default function HHTUpload() {
         .map((r) => normalizeRow(r))
         .map((r) => {
           const salesman = parseSalesman(
-            getValue(r, "salesman", "salesmanname", "salesman_name", "salesmanname")
+            getValue(r, "salesman", "salesmanname", "salesman_name", "name")
           );
 
           return {
@@ -102,17 +102,15 @@ export default function HHTUpload() {
             assetCode: getValue(
               r,
               "assetcode",
-              "assetcode",
-              "asset_code",
-              "assetcode"
+              "asset_code"
             ),
             salesmanCode: salesman.code,
             salesmanName: salesman.name,
-            route: getValue(r, "route", "route"),
-            imei: getValue(r, "imei", "imei"),
-            simNumber: getValue(r, "simnumber", "simnumber", "sim_number"),
-            supervisor: getValue(r, "supervisor", "supervisor"),
-            notes: getValue(r, "notes", "notes"),
+            route: getValue(r, "route"),
+            imei: getValue(r, "imei"),
+            simNumber: getValue(r, "simnumber", "sim", "sim_number"),
+            supervisor: getValue(r, "supervisor"),
+            notes: getValue(r, "notes"),
           };
         });
 
@@ -128,7 +126,7 @@ export default function HHTUpload() {
       setLoading(true);
 
       const valid = rows.filter(
-        (r) => r.assetCode && r.imei
+        (r) => r.assetCode && (r.imei != null && r.imei !== "")
       );
 
       if (!valid.length) {
@@ -165,7 +163,7 @@ export default function HHTUpload() {
   };
 
   const validCount = rows.filter(
-    (r) => r.assetCode && r.imei
+    (r) => r.assetCode && (r.imei != null && r.imei !== "")
   ).length;
 
   const invalidCount = rows.length - validCount;
