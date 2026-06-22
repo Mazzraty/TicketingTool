@@ -15,7 +15,7 @@ export default function HHTUpload() {
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
 
-  const clean = (v) => (v ? v.toString().trim() : "");
+  const clean = (v) => (v != null && v !== "") ? v.toString().trim() : "";
 
   const normalizeKey = (key) =>
     key
