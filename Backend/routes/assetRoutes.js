@@ -30,7 +30,6 @@ const router = express.Router();
 router.get(
   "/my-assets",
   protect,
-  companyCheck,
   getMyAssets
 );
 
