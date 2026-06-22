@@ -72,10 +72,17 @@ export const createEmployee = async (req, res) => {
         message: "Employee already exists",
       });
     }
+    const companyName =
+      req.user.companyName ||
+      req.user.companyAccess?.find(
+        (c) => c.companyId?.toString?.() === req.user.companyId?.toString?.()
+      )?.companyName ||
+      "";
+
     const emp = await EmployeeMaster.create({
       ...req.body,
       companyId: req.user.companyId,
-      company: req.user.companyName || "",
+      company: companyName,
     });
 
     res.json(emp);

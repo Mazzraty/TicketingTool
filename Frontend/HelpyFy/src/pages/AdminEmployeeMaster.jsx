@@ -242,7 +242,10 @@ export default function AdminEmployeeMaster() {
               <tr key={emp._id} className="border-t">
 
                 <td className="p-2">
-                  {emp.companyId?.name || "-"}
+                  {emp.company?.name ||
+                    emp.companyName ||
+                    emp.company ||
+                    "-"}
                 </td>
 
                 <td className="p-2">{emp.staffCode}</td>

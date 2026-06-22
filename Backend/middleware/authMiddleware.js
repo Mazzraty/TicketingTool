@@ -32,6 +32,11 @@ export const protect = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // ✅ FIXED USER OBJECT (STAFFCODE VERSION)
+    const activeCompany =
+      decoded.companyAccess?.find((c) => c.isActive && c.companyId) ||
+      decoded.companyAccess?.[0] ||
+      null;
+
     req.user = {
       id: decoded.id,
       role: decoded.role,
@@ -45,6 +50,7 @@ export const protect = (req, res, next) => {
 
       // ACTIVE TENANT
       companyId: decoded.companyId || null,
+      companyName: activeCompany?.companyName || null,
 
       // MULTI-COMPANY ACCESS
       companyAccess: decoded.companyAccess || [],

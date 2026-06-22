@@ -242,7 +242,7 @@ export const switchCompany = async (req, res) => {
         id: user._id,
         role: user.role,
         email: user.email,
-        employeeId: user.employeeId,
+        staffCode: user.staffCode,
         companyId: companyId,
         companyAccess: newCompanyAccess,
       },
