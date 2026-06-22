@@ -66,10 +66,17 @@ export const createAsset = async (req, res) => {
       });
     }
 
-    if (type === "HHT" && !imei) {
-      return res.status(400).json({
-        msg: "HHT requires IMEI",
-      });
+    if (type === "HHT") {
+      if (!imei) {
+        return res.status(400).json({
+          msg: "HHT requires IMEI",
+        });
+      }
+      if (!model || !serialNumber) {
+        return res.status(400).json({
+          msg: "HHT requires model and serial number",
+        });
+      }
     }
 
     const asset = await Asset.create({

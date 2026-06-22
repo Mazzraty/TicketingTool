@@ -248,6 +248,12 @@ export const bulkUploadEmployees = async (req, res) => {
           continue;
         }
 
+        if (a.type === "HHT" && (!a.model || !a.serialNumber)) {
+          skipped++;
+          failedRows.push({ row: a, reason: "HHT requires model and serial number" });
+          continue;
+        }
+
         await Asset.create({
           assetCode,
           type: a.type,

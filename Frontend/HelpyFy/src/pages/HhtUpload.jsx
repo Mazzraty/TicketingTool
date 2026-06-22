@@ -104,6 +104,8 @@ export default function HHTUpload() {
               "assetcode",
               "asset_code"
             ),
+            model: getValue(r, "model"),
+            serialNumber: getValue(r, "serialnumber", "serial_number"),
             salesmanCode: salesman.code,
             salesmanName: salesman.name,
             route: getValue(r, "route"),
@@ -126,7 +128,11 @@ export default function HHTUpload() {
       setLoading(true);
 
       const valid = rows.filter(
-        (r) => r.assetCode && (r.imei != null && r.imei !== "")
+        (r) =>
+          r.assetCode &&
+          (r.imei != null && r.imei !== "") &&
+          r.model &&
+          r.serialNumber
       );
 
       if (!valid.length) {
@@ -163,7 +169,11 @@ export default function HHTUpload() {
   };
 
   const validCount = rows.filter(
-    (r) => r.assetCode && (r.imei != null && r.imei !== "")
+    (r) =>
+      r.assetCode &&
+      (r.imei != null && r.imei !== "") &&
+      r.model &&
+      r.serialNumber
   ).length;
 
   const invalidCount = rows.length - validCount;
@@ -271,6 +281,8 @@ export default function HHTUpload() {
               <thead className="bg-gray-100 text-xs uppercase">
                 <tr>
                   <th className="p-3 text-left">Asset Code</th>
+                  <th className="p-3 text-left">Model</th>
+                  <th className="p-3 text-left">Serial</th>
                   <th className="p-3 text-left">Salesman</th>
                   <th className="p-3 text-left">Route</th>
                   <th className="p-3 text-left">IMEI</th>
@@ -284,11 +296,11 @@ export default function HHTUpload() {
                   <tr key={i} className="border-t hover:bg-gray-50">
 
                     <td className="p-3">{r.assetCode}</td>
-
+                    <td className="p-3">{r.model}</td>
+                    <td className="p-3">{r.serialNumber}</td>
                     <td className="p-3">
                       {r.salesmanCode} - {r.salesmanName}
                     </td>
-
                     <td className="p-3">{r.route}</td>
                     <td className="p-3">{r.imei}</td>
                     <td className="p-3">{r.simNumber}</td>
