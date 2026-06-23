@@ -2,13 +2,27 @@ import { useEffect, useState } from "react";
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import {
+  Plus,
+  Edit,
+  RotateCw,
+  Check,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  AlertCircle,
+  Calendar,
+  Clock,
+  MessageSquare,
+} from "lucide-react";
 
 export default function MyTickets() {
   const navigate = useNavigate();
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const [expandedTicket, setExpandedTicket] = useState(null);
 
   /* ================= MODALS ================= */
   const [reviewModal, setReviewModal] = useState(false);
@@ -24,50 +38,45 @@ export default function MyTickets() {
   const [image, setImage] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
   /* ================= LOAD ================= */
   useEffect(() => {
     load();
   }, [page]);
 
-const load = async () => {
-  try {
-    setLoading(true);
+  const load = async () => {
+    try {
+      setLoading(true);
 
-    const res = await api.get("/tickets/my", {
-      params: { page },
-    });
+      const res = await api.get("/tickets/my", {
+        params: { page },
+      });
 
-    setTickets(res.data.data || []);
-    setTotalPages(res.data.totalPages || 1);
-  } catch (err) {
-    console.log("LOAD ERROR:", err.response?.status, err.response?.data);
-    toast.error(err.response?.data?.message || "Failed to load tickets");
-  } finally {
-    setLoading(false);
-  }
-};
-  /* ================= AUTO REVIEW ON RESOLVE ================= */
+      setTickets(res.data.data || []);
+      setTotalPages(res.data.totalPages || 1);
+    } catch (err) {
+      console.log("LOAD ERROR:", err.response?.status, err.response?.data);
+      toast.error(err.response?.data?.message || "Failed to load tickets");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= SUBMIT REVIEW ================= */
   const submitReview = async () => {
     try {
       if (!rating) {
-        return toast.error("Please select rating");
+        return toast.error("Please select a rating");
       }
 
-      await api.put(
-        `/tickets/${selectedTicket._id}/review`,
-        {
-          rating,
-          review: comment,
-        }
-      );
+      await api.put(`/tickets/${selectedTicket._id}/review`, {
+        rating,
+        review: comment,
+      });
 
-      await api.put(
-        `/tickets/${selectedTicket._id}/confirm`
-      );
+      await api.put(`/tickets/${selectedTicket._id}/confirm`);
 
-      toast.success(
-        "Ticket confirmed and closed successfully"
-      );
+      toast.success("Ticket confirmed and closed successfully");
 
       setReviewModal(false);
       setSelectedTicket(null);
@@ -76,54 +85,21 @@ const load = async () => {
 
       load();
     } catch (err) {
-      toast.error(
-        err.response?.data?.message ||
-        "Failed to submit feedback"
-      );
+      toast.error(err.response?.data?.message || "Failed to submit feedback");
     }
   };
 
   /* ================= REOPEN ================= */
-  // {
-  //   t.status === "Resolved" && (
-  //     <div className="flex gap-2 justify-end">
-
-  //       <button
-  //         onClick={() => {
-  //           setSelectedTicket(t);
-  //           setRating(0);
-  //           setComment("");
-  //           setReviewModal(true);
-  //         }}
-  //         className="px-3 py-1 text-xs bg-green-600 text-white rounded"
-  //       >
-  //         Confirm
-  //       </button>
-
-  //       <button
-  //         onClick={() => reopenTicket(t._id)}
-  //         className="px-3 py-1 text-xs bg-orange-50 text-orange-700 rounded"
-  //       >
-  //         Reopen
-  //       </button>
-
-  //     </div>
-  //   )
-  // }
-
   const reopenTicket = async (id) => {
     try {
       await api.put(`/tickets/${id}/reopen`);
-
       toast.success("Ticket reopened");
       load();
     } catch (err) {
-      toast.error(
-        err.response?.data?.message ||
-        "Failed to reopen ticket"
-      );
+      toast.error(err.response?.data?.message || "Failed to reopen ticket");
     }
   };
+
   /* ================= EDIT ================= */
   const openEdit = (ticket) => {
     setEditData({ ...ticket });
@@ -141,36 +117,35 @@ const load = async () => {
       formData.append("department", editData.department);
 
       if (image) {
-        formData.append("files", image); // <-- change image to files
+        formData.append("files", image);
       }
 
-      await api.put(
-        `/tickets/${editData._id}/edit`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      await api.put(`/tickets/${editData._id}/edit`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-      toast.success("Ticket updated");
+      toast.success("Ticket updated successfully");
       setEditModal(false);
+      setEditData(null);
       load();
     } catch (err) {
-      console.log(err.response?.status);
-      console.log(err.response?.data);
-
-      toast.error(
-        err.response?.data?.message || "Update failed"
-      );
+      toast.error(err.response?.data?.message || "Update failed");
     }
   };
 
-
-
   /* ================= FORMAT ================= */
   const formatDate = (date) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const formatDateTime = (date) => {
     if (!date) return "-";
     return new Date(date).toLocaleString("en-GB", {
       day: "2-digit",
@@ -182,306 +157,521 @@ const load = async () => {
   };
 
   /* ================= BADGES ================= */
-  const statusBadge = (status) => {
-    const base = "px-2 py-1 text-[11px] rounded font-medium";
-    switch (status) {
-      case "Open":
-        return `${base} bg-blue-50 text-blue-700`;
-      case "In Progress":
-        return `${base} bg-yellow-50 text-yellow-700`;
-      case "Resolved":
-        return `${base} bg-green-50 text-green-700`;
-      case "Reopened":
-        return `${base} bg-purple-50 text-purple-700`;
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case "open":
+        return "bg-blue-100 text-blue-800";
+      case "in progress":
+        return "bg-yellow-100 text-yellow-800";
+      case "resolved":
+        return "bg-green-100 text-green-800";
+      case "reopened":
+        return "bg-purple-100 text-purple-800";
+      case "closed":
+        return "bg-gray-100 text-gray-800";
       default:
-        return `${base} bg-gray-100 text-gray-600`;
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const priorityBadge = (p) => {
-    const base = "px-2 py-1 text-[11px] rounded font-medium";
-    if (p === "High") return `${base} bg-red-50 text-red-600`;
-    if (p === "Medium") return `${base} bg-yellow-50 text-yellow-700`;
-    return `${base} bg-blue-50 text-blue-700`;
+  const getPriorityColor = (priority) => {
+    switch (priority?.toLowerCase()) {
+      case "critical":
+        return "bg-red-100 text-red-800";
+      case "high":
+        return "bg-orange-100 text-orange-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
-  const Stars = () => (
-    <div className="flex justify-center gap-1 text-2xl">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <span
-          key={s}
-          onMouseEnter={() => setHoverRating(s)}
-          onMouseLeave={() => setHoverRating(0)}
-          onClick={() => setRating(s)}
-          className={`cursor-pointer ${(hoverRating || rating) >= s
-            ? "text-yellow-400"
-            : "text-gray-300"
-            }`}
+  const StarRating = ({ rating, onRate, interactive = true }) => (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          disabled={!interactive}
+          onMouseEnter={() => interactive && setHoverRating(star)}
+          onMouseLeave={() => interactive && setHoverRating(0)}
+          onClick={() => interactive && onRate(star)}
+          className={`transition ${
+            interactive ? "cursor-pointer" : "cursor-default"
+          }`}
         >
-          ★
-        </span>
+          <Star
+            className={`w-5 h-5 ${
+              (interactive ? hoverRating : rating) >= star
+                ? "fill-yellow-400 text-yellow-400"
+                : "text-gray-300"
+            }`}
+          />
+        </button>
       ))}
     </div>
   );
 
+  const Button = ({
+    variant = "primary",
+    size = "sm",
+    icon: Icon,
+    children,
+    onClick,
+    disabled,
+    className = "",
+  }) => {
+    const baseStyles =
+      "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 cursor-pointer";
+
+    const sizes = {
+      sm: "px-3 py-1.5 text-xs",
+      md: "px-4 py-2 text-sm",
+      lg: "px-6 py-3 text-base",
+    };
+
+    const variants = {
+      primary:
+        "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 active:scale-95",
+      secondary:
+        "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 active:scale-95",
+      danger:
+        "bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 active:scale-95",
+      success:
+        "bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 active:scale-95",
+      ghost:
+        "text-gray-700 hover:bg-gray-100 disabled:opacity-50 active:scale-95",
+    };
+
+    return (
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`${baseStyles} ${sizes[size]} ${variants[variant]} ${className}`}
+      >
+        {Icon && <Icon className="w-4 h-4" />}
+        {children}
+      </button>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-
+    <div className="min-h-screen bg-gray-50">
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6 bg-white p-5 rounded-xl border shadow-sm">
-        <h1 className="text-lg font-semibold">My Tickets</h1>
-
-        <button
-          onClick={() => navigate("/create")}
-          className="bg-black text-white px-4 py-2 rounded-lg text-sm"
-        >
-          + New Ticket
-        </button>
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">My Tickets</h1>
+              <p className="mt-1 text-sm text-gray-600">
+                Track and manage your support requests
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="md"
+              icon={Plus}
+              onClick={() => navigate("/create")}
+            >
+              New Ticket
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* LOADING STATE */}
         {loading ? (
-          <div className="p-10 text-center text-gray-500">
-            Loading tickets...
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-600 font-medium">Loading your tickets...</p>
+          </div>
+        ) : tickets.length === 0 ? (
+          /* EMPTY STATE */
+          <div className="rounded-lg border border-gray-200 bg-white p-16 text-center shadow-sm">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <MessageSquare className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="mt-4 text-lg font-semibold text-gray-900">
+              No tickets yet
+            </h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Create your first support request to get started
+            </p>
+            <Button
+              variant="primary"
+              size="md"
+              icon={Plus}
+              onClick={() => navigate("/create")}
+              className="mt-6"
+            >
+              Create Ticket
+            </Button>
           </div>
         ) : (
-          <>
-            {/* TABLE */}
-            <table className="w-full text-sm">
-
-              <thead className="bg-gray-50 text-xs text-gray-600 uppercase">
-                <tr>
-                  <th className="p-4 text-left">Title</th>
-                  <th className="text-center">Status</th>
-                  <th className="text-center">Priority</th>
-                  <th className="text-center">Created</th>
-                  <th className="text-center">Closed</th>
-                  <th className="text-right p-4">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-gray-100">
-                {tickets.map((t) => (
-                  <tr key={t._id} className="hover:bg-gray-50">
-
-                    <td className="p-4">
-                      <div className="font-medium">{t.title}</div>
-                      <div className="text-xs text-gray-500 truncate max-w-[300px]">
-                        {t.description}
-                      </div>
-                    </td>
-
-                    <td className="text-center">
-                      <span className={statusBadge(t.status)}>
-                        {t.status}
-                      </span>
-                    </td>
-
-                    <td className="text-center">
-                      <span className={priorityBadge(t.priority)}>
-                        {t.priority}
-                      </span>
-                    </td>
-
-                    <td className="text-center text-xs">
-                      {formatDate(t.createdAt)}
-                    </td>
-
-                    <td className="text-center text-xs">
-                      {(t.status === "Resolved" || t.status === "Closed")
-                        ? formatDate(t.closedAt || t.resolvedAt)
-                        : "-"}
-                    </td>
-
-                    <td className="p-4 text-right">
-                      <div className="flex justify-end gap-2">
-
-                        {(t.status === "Open" || t.status === "Reopened") && (
-                          <button
-                            onClick={() => openEdit(t)}
-                            className="px-3 py-1 text-xs border rounded"
-                          >
-                            Edit
-                          </button>
-                        )}
-
-                        {t.status === "Resolved" && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setSelectedTicket(t);
-                                setRating(0);
-                                setComment("");
-                                setReviewModal(true);
-                              }}
-                              className="px-3 py-1 text-xs bg-green-600 text-white rounded"
-                            >
-                              Confirm
-                            </button>
-
-                            <button
-                              onClick={() => reopenTicket(t._id)}
-                              className="px-3 py-1 text-xs bg-orange-50 text-orange-700 rounded"
-                            >
-                              Reopen
-                            </button>
-                          </>
-                        )}
-
-                      </div>
-                    </td>
-
+          /* TABLE */
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Ticket
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Priority
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Created
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
 
-            {/* PAGINATION (FIXED DESIGN) */}
-            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                <tbody className="divide-y divide-gray-200">
+                  {tickets.map((ticket) => (
+                    <tr
+                      key={ticket._id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      {/* TITLE & DESCRIPTION */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 truncate">
+                              {ticket.title}
+                            </p>
+                            <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                              {ticket.description}
+                            </p>
+                            {ticket.department && (
+                              <p className="mt-2 text-xs text-gray-500">
+                                {ticket.department}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
 
-              <button
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-                className="px-4 py-1 text-sm border rounded disabled:opacity-40"
-              >
-                Previous
-              </button>
+                      {/* STATUS */}
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+                            ticket.status
+                          )}`}
+                        >
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              ticket.status === "Open"
+                                ? "bg-blue-500"
+                                : ticket.status === "In Progress"
+                                ? "bg-yellow-500 animate-pulse"
+                                : ticket.status === "Resolved"
+                                ? "bg-green-500"
+                                : "bg-gray-500"
+                            }`}
+                          ></div>
+                          {ticket.status}
+                        </span>
+                      </td>
 
-              <div className="flex gap-1">
-                {[...Array(totalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPage(i + 1)}
-                    className={`w-8 h-8 text-sm rounded ${page === i + 1
-                        ? "bg-black text-white"
-                        : "border bg-white"
-                      }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
+                      {/* PRIORITY */}
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${getPriorityColor(
+                            ticket.priority
+                          )}`}
+                        >
+                          {ticket.priority}
+                        </span>
+                      </td>
+
+                      {/* CREATED DATE */}
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          {formatDate(ticket.createdAt)}
+                        </div>
+                      </td>
+
+                      {/* ACTIONS */}
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {(ticket.status === "Open" ||
+                            ticket.status === "Reopened") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={Edit}
+                              onClick={() => openEdit(ticket)}
+                            >
+                              Edit
+                            </Button>
+                          )}
+
+                          {ticket.status === "Resolved" && (
+                            <>
+                              <Button
+                                variant="success"
+                                size="sm"
+                                icon={Check}
+                                onClick={() => {
+                                  setSelectedTicket(ticket);
+                                  setRating(0);
+                                  setComment("");
+                                  setReviewModal(true);
+                                }}
+                              >
+                                Confirm
+                              </Button>
+
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                icon={RotateCw}
+                                onClick={() => reopenTicket(ticket._id)}
+                              >
+                                Reopen
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* PAGINATION */}
+            <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Page <span className="font-medium">{page}</span> of{" "}
+                <span className="font-medium">{totalPages}</span>
               </div>
 
-              <button
-                disabled={page === totalPages}
-                onClick={() => setPage(page + 1)}
-                className="px-4 py-1 text-sm border rounded disabled:opacity-40"
-              >
-                Next
-              </button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={ChevronLeft}
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
 
+                <div className="flex items-center gap-1">
+                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        className={`w-8 h-8 rounded-lg font-medium transition ${
+                          page === pageNum
+                            ? "bg-blue-600 text-white"
+                            : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={ChevronRight}
+                  onClick={() => setPage(page + 1)}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-          </>
+          </div>
         )}
       </div>
 
       {/* ================= EDIT MODAL ================= */}
       {editModal && editData && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[450px]">
-
-            <h2 className="text-center font-semibold mb-3">
-              Edit Ticket
-            </h2>
-
-            <input
-              className="w-full border p-2 mb-2"
-              value={editData.title}
-              onChange={(e) =>
-                setEditData({ ...editData, title: e.target.value })
-              }
-            />
-
-            <textarea
-              className="w-full border p-2 mb-2"
-              value={editData.description}
-              onChange={(e) =>
-                setEditData({ ...editData, description: e.target.value })
-              }
-            />
-
-            <input
-              type="file"
-              className="w-full border p-2 mb-2"
-              onChange={(e) => setImage(e.target.files[0])}
-            />
-
-            <div className="flex gap-2">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            {/* HEADER */}
+            <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Edit Ticket
+              </h2>
               <button
-                onClick={() => setEditModal(false)}
-                className="w-1/2 bg-gray-200 py-2 rounded"
+                onClick={() => {
+                  setEditModal(false);
+                  setEditData(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition"
               >
-                Cancel
-              </button>
-
-              <button
-                onClick={updateTicket}
-                className="w-1/2 bg-blue-600 text-white py-2 rounded"
-              >
-                Update
+                <X className="w-5 h-5" />
               </button>
             </div>
 
+            {/* CONTENT */}
+            <div className="px-6 py-6 space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  value={editData.title}
+                  onChange={(e) =>
+                    setEditData({ ...editData, title: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Description
+                </label>
+                <textarea
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
+                  rows={4}
+                  value={editData.description}
+                  onChange={(e) =>
+                    setEditData({ ...editData, description: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Attachment
+                </label>
+                <input
+                  type="file"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  onChange={(e) => setImage(e.target.files?.[0] || null)}
+                />
+                {image && (
+                  <p className="mt-2 text-sm text-green-600 flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    {image.name}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div className="border-t border-gray-200 px-6 py-4 flex gap-3 justify-end">
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={() => {
+                  setEditModal(false);
+                  setEditData(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                icon={Check}
+                onClick={updateTicket}
+              >
+                Update
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ================= AUTO REVIEW MODAL ================= */}
+      {/* ================= REVIEW MODAL ================= */}
       {reviewModal && selectedTicket && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-
-          <div className="bg-white rounded-xl w-[450px] p-6">
-
-            <h2 className="text-xl font-semibold text-center">
-              Confirm Resolution
-            </h2>
-
-            <p className="text-sm text-gray-500 text-center mt-2">
-              Are you satisfied with the solution?
-            </p>
-
-            <div className="mt-5">
-              <Stars />
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            {/* HEADER */}
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Confirm Resolution
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                {selectedTicket.title}
+              </p>
             </div>
 
-            <textarea
-              className="w-full border rounded-lg p-3 mt-4"
-              rows={4}
-              placeholder="Write your feedback..."
-              value={comment}
-              onChange={(e) =>
-                setComment(e.target.value)
-              }
-            />
+            {/* CONTENT */}
+            <div className="px-6 py-6 space-y-6">
+              <div>
+                <p className="text-sm font-semibold text-gray-900 mb-4">
+                  How satisfied are you with this resolution?
+                </p>
+                <StarRating
+                  rating={rating}
+                  onRate={setRating}
+                  interactive={true}
+                />
+              </div>
 
-            <div className="flex gap-3 mt-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Feedback (optional)
+                </label>
+                <textarea
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
+                  rows={4}
+                  placeholder="Share your experience..."
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+              </div>
 
-              <button
+              {rating > 0 && (
+                <div className="flex items-center gap-2 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <Check className="w-5 h-5 text-green-600" />
+                  <p className="text-sm text-green-800">
+                    You rated this ticket{" "}
+                    <span className="font-semibold">{rating}/5 stars</span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* FOOTER */}
+            <div className="border-t border-gray-200 px-6 py-4 flex gap-3 justify-end">
+              <Button
+                variant="ghost"
+                size="md"
                 onClick={() => {
                   setReviewModal(false);
                   setSelectedTicket(null);
                 }}
-                className="flex-1 py-2 bg-gray-200 rounded-lg"
               >
                 Cancel
-              </button>
-
-              <button
+              </Button>
+              <Button
+                variant="success"
+                size="md"
+                icon={Check}
                 onClick={submitReview}
-                className="flex-1 py-2 bg-green-600 text-white rounded-lg"
+                disabled={!rating}
               >
                 Confirm & Close
-              </button>
-
+              </Button>
             </div>
-
           </div>
-
         </div>
       )}
-
     </div>
   );
 }
