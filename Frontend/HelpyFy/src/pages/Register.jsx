@@ -108,7 +108,7 @@ export default function Register() {
 
       {/* Main Content */}
       <div className="relative z-10 w-full flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl border border-white/30 p-8">
+        <div className="w-full max-w-2xl bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl border border-white/30 p-6">
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
