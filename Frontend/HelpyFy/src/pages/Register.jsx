@@ -108,10 +108,11 @@ export default function Register() {
 
       {/* Main Content */}
       <div className="relative z-10 w-full flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl border border-white/30 p-6">
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
+        <div className="w-full max-w-3xl bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl border border-white/30 p-8">
+
+          {/* Header */}
+          <div className="text-center mb-6">
+            <div className="flex justify-center mb-5">
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
                 alt="Mazzraty"
@@ -119,11 +120,11 @@ export default function Register() {
               />
             </div>
 
-            <h2 className="text-3xl font-bold text-gray-900">
+            <h2 className="text-4xl font-bold text-gray-900">
               Create Account
             </h2>
 
-            <p className="text-gray-500 text-sm mt-2">
+            <p className="text-gray-500 text-sm mt-1">
               Register a new enterprise user
             </p>
           </div>
@@ -134,7 +135,7 @@ export default function Register() {
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
             {/* Full Name */}
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
               <input
                 type="text"
                 name="name"
@@ -146,7 +147,7 @@ export default function Register() {
             </div>
 
             {/* Staff Code */}
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
               <input
                 type="text"
                 name="staffCode"
@@ -158,7 +159,7 @@ export default function Register() {
             </div>
 
             {/* Company */}
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
               <select
                 name="companyId"
                 value={form.companyId}
@@ -176,7 +177,7 @@ export default function Register() {
             </div>
 
             {/* Email */}
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
               <input
                 type="email"
                 name="email"
@@ -188,7 +189,7 @@ export default function Register() {
             </div>
 
             {/* Password */}
-            <div className="relative bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <div className="relative bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
@@ -201,14 +202,14 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-xs"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-green-600 text-xs font-medium"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
 
             {/* Confirm Password */}
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
               <input
                 type="password"
                 placeholder="Confirm Password"
@@ -219,7 +220,7 @@ export default function Register() {
             </div>
 
             {/* Button */}
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 mt-2">
               <button
                 type="submit"
                 className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 transition-all duration-300 text-white py-3 rounded-xl font-semibold shadow-lg"
@@ -230,7 +231,7 @@ export default function Register() {
           </form>
 
           {/* Login Link */}
-          <div className="mt-5 text-center">
+          <div className="mt-6 text-center">
             <span
               onClick={() => navigate("/login")}
               className="text-sm text-green-600 cursor-pointer hover:underline"
