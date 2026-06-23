@@ -27,9 +27,14 @@ export default function CreateTicket() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
-    // Clear error for this field when user starts typing
+    
+    // Only clear error if one exists (avoid unnecessary re-renders)
     if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
+      setErrors((prevErrors) => {
+        const newErrors = { ...prevErrors };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
@@ -172,7 +177,7 @@ export default function CreateTicket() {
 
   const FormField = ({ label, name, error, required, children, hint }) => (
     <div className="space-y-2">
-      <label className="block text-sm font-semibold text-gray-900">
+      <label htmlFor={name} className="block text-sm font-semibold text-gray-900">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
@@ -224,6 +229,7 @@ export default function CreateTicket() {
                 hint="Be concise and descriptive (5-100 characters)"
               >
                 <input
+                  id="title"
                   type="text"
                   name="title"
                   value={form.title}
@@ -251,6 +257,7 @@ export default function CreateTicket() {
                 hint="Provide detailed information about the issue (10-1000 characters)"
               >
                 <textarea
+                  id="description"
                   name="description"
                   value={form.description}
                   onChange={handleChange}
@@ -305,6 +312,7 @@ export default function CreateTicket() {
                 hint="Which department does this issue affect?"
               >
                 <select
+                  id="department"
                   name="department"
                   value={form.department}
                   onChange={handleChange}
