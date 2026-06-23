@@ -113,6 +113,13 @@ export default function Register() {
       {/* Form Card */}
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8">
+          <div className="flex justify-center mb-4">
+            <img
+              src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+              className="h-12"
+              alt="logo"
+            />
+          </div>
           <h1 className="text-2xl font-semibold text-center mb-6">
             Create Account
           </h1>
