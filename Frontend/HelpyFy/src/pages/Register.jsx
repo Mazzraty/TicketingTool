@@ -88,8 +88,8 @@ export default function Register() {
 
       toast.error(
         err.response?.data?.msg ||
-          err.response?.data?.message ||
-          "Registration failed"
+        err.response?.data?.message ||
+        "Registration failed"
       );
     }
   };
@@ -108,7 +108,7 @@ export default function Register() {
 
       {/* Main Content */}
       <div className="relative z-10 w-full flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl border border-white/30 p-8">
+        <div className="w-full max-w-4xl bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl border border-white/30 p-8">
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
@@ -129,9 +129,12 @@ export default function Register() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name */}
-            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            {/* Full Name */}
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
               <input
                 type="text"
                 name="name"
@@ -143,7 +146,7 @@ export default function Register() {
             </div>
 
             {/* Staff Code */}
-            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
               <input
                 type="text"
                 name="staffCode"
@@ -155,7 +158,7 @@ export default function Register() {
             </div>
 
             {/* Company */}
-            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
               <select
                 name="companyId"
                 value={form.companyId}
@@ -173,7 +176,7 @@ export default function Register() {
             </div>
 
             {/* Email */}
-            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
               <input
                 type="email"
                 name="email"
@@ -185,7 +188,7 @@ export default function Register() {
             </div>
 
             {/* Password */}
-            <div className="relative bg-gray-50 p-4 rounded-2xl border border-gray-200">
+            <div className="relative bg-gray-50 p-3 rounded-xl border border-gray-200">
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
@@ -198,14 +201,14 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-green-600 text-sm"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-xs"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
 
             {/* Confirm Password */}
-            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
               <input
                 type="password"
                 placeholder="Confirm Password"
@@ -215,13 +218,15 @@ export default function Register() {
               />
             </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 transition-all duration-300 text-white py-3 rounded-2xl font-semibold shadow-lg"
-            >
-              Create Account
-            </button>
+            {/* Button */}
+            <div className="md:col-span-2">
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 transition-all duration-300 text-white py-3 rounded-xl font-semibold shadow-lg"
+              >
+                Create Account
+              </button>
+            </div>
           </form>
 
           {/* Login Link */}
