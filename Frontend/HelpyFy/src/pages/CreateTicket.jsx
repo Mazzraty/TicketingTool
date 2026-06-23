@@ -10,7 +10,24 @@ import {
   X,
   CheckCircle,
 } from "lucide-react";
-
+  const FormField = ({ label, name, error, required, children, hint }) => (
+    <div className="space-y-2">
+      <label htmlFor={name} className="block text-sm font-semibold text-gray-900">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      {children}
+      {hint && !error && (
+        <p className="text-xs text-gray-500">{hint}</p>
+      )}
+      {error && (
+        <p className="text-xs text-red-600 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
 export default function CreateTicket() {
   const [form, setForm] = useState({
     title: "",
@@ -175,24 +192,7 @@ export default function CreateTicket() {
     }
   };
 
-  const FormField = ({ label, name, error, required, children, hint }) => (
-    <div className="space-y-2">
-      <label htmlFor={name} className="block text-sm font-semibold text-gray-900">
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      {children}
-      {hint && !error && (
-        <p className="text-xs text-gray-500">{hint}</p>
-      )}
-      {error && (
-        <p className="text-xs text-red-600 flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" />
-          {error}
-        </p>
-      )}
-    </div>
-  );
+
 
   return (
     <div className="min-h-screen bg-gray-50">
