@@ -99,125 +99,156 @@ export default function Register() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-6 overflow-hidden">
-      {/* Background */}
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* BACKGROUND IMAGE */}
       <div className="absolute inset-0 z-0">
         <img
           src={milkImage}
-          alt="background"
+          alt="Milk Background"
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black/60"></div>
       </div>
 
-      {/* Form Card */}
-      <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8">
-          <div className="flex justify-center mb-4">
-            <img
-              src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
-              className="h-12"
-              alt="logo"
-            />
+      {/* MAIN CONTENT */}
+      <div className="relative z-10 w-full flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl border border-white/30 p-8">
+
+          {/* HEADER */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <img
+                src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+                className="h-12"
+                alt="logo"
+              />
+            </div>
+
+            <h2 className="text-3xl font-bold text-gray-900">
+              Create Account
+            </h2>
+
+            <p className="text-gray-500 text-sm mt-2">
+              Register a new enterprise user
+            </p>
           </div>
-          <h1 className="text-2xl font-semibold text-center mb-6">
-            Create Account
-          </h1>
 
+          {/* FORM */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="text"
-              name="name"
-              placeholder="Full Name"
-              value={form.name}
-              onChange={handleChange}
-              className="sap-input"
-            />
 
-            <input
-              type="text"
-              name="staffCode"
-              placeholder="Staff Code"
-              value={form.staffCode}
-              onChange={handleChange}
-              className="sap-input"
-            />
+            {/* NAME */}
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+              <input
+                type="text"
+                name="name"
+                placeholder="Full Name"
+                value={form.name}
+                onChange={handleChange}
+                className="w-full bg-transparent outline-none text-sm"
+              />
+            </div>
 
-            <select
-              name="companyId"
-              value={form.companyId}
-              onChange={handleChange}
-              className="sap-input"
-            >
-              <option value="">Select Company</option>
+            {/* STAFF CODE */}
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+              <input
+                type="text"
+                name="staffCode"
+                placeholder="Staff Code"
+                value={form.staffCode}
+                onChange={handleChange}
+                className="w-full bg-transparent outline-none text-sm"
+              />
+            </div>
 
-              {companies.map((company) => (
-                <option
-                  key={company._id}
-                  value={company._id}
-                >
-                  {company.name}
-                </option>
-              ))}
-            </select>
+            {/* COMPANY */}
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+              <select
+                name="companyId"
+                value={form.companyId}
+                onChange={handleChange}
+                className="w-full bg-transparent outline-none text-sm"
+              >
+                <option value="">Select Company</option>
 
-            <input
-              type="email"
-              name="email"
-              placeholder="Email Address"
-              value={form.email}
-              onChange={handleChange}
-              className="sap-input"
-            />
+                {companies.map((company) => (
+                  <option
+                    key={company._id}
+                    value={company._id}
+                  >
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <div className="relative">
+            {/* EMAIL */}
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+              <input
+                type="email"
+                name="email"
+                placeholder="Email Address"
+                value={form.email}
+                onChange={handleChange}
+                className="w-full bg-transparent outline-none text-sm"
+              />
+            </div>
+
+            {/* PASSWORD */}
+            <div className="relative bg-gray-50 p-4 rounded-2xl border border-gray-200">
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Password"
                 value={form.password}
                 onChange={handleChange}
-                className="sap-input pr-20"
+                className="w-full bg-transparent outline-none text-sm pr-16"
               />
 
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 text-sm"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-green-600 text-sm"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
 
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) =>
-                setConfirmPassword(e.target.value)
-              }
-              className="sap-input"
-            />
+            {/* CONFIRM PASSWORD */}
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+              <input
+                type="password"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full bg-transparent outline-none text-sm"
+              />
+            </div>
 
+            {/* REGISTER BUTTON */}
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-md font-medium"
+              className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 transition-all duration-300 text-white py-3 rounded-2xl font-semibold shadow-lg"
             >
               Create Account
             </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="w-full border py-3 rounded-md hover:bg-gray-50"
-            >
-              Back to Dashboard
-            </button>
           </form>
+
+          {/* LOGIN LINK */}
+          <div className="mt-5 text-center">
+            <span
+              onClick={() => navigate("/login")}
+              className="text-sm text-green-600 cursor-pointer hover:underline"
+            >
+              Already have an account? Sign In
+            </span>
+          </div>
+
         </div>
       </div>
+    </div>
+  );
 
-      <style>{`
+  <style>{`
         .sap-input {
           width: 100%;
           padding: 12px 14px;
@@ -234,6 +265,6 @@ export default function Register() {
           box-shadow: 0 0 0 1px #2563eb;
         }
       `}</style>
-    </div>
+    </div >
   );
 }
