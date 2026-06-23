@@ -22,7 +22,7 @@ export default function Register() {
     name: "",
     email: "",
     password: "",
-    staffCode: "",   // ✅ FIXED
+    staffCode: "",
     position: "Employee",
     department: "General",
     companyId: "",
@@ -46,13 +46,13 @@ export default function Register() {
   const loadCompanies = async () => {
     try {
       const res = await api.get("/companies");
-
       setCompanies(res.data.companies || []);
     } catch (err) {
       console.error("Companies error:", err);
       toast.error("Failed to load companies");
     }
   };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -74,8 +74,6 @@ export default function Register() {
     }
 
     try {
-      console.log("Submitting:", form);
-
       const res = await api.post("/auth/register", form);
 
       console.log("REGISTER SUCCESS:", res.data);
@@ -84,23 +82,21 @@ export default function Register() {
 
       setTimeout(() => {
         navigate("/login");
-      }, 300);
-
+      }, 500);
     } catch (err) {
       console.log("REGISTER ERROR:", err);
-      console.log("RESPONSE:", err.response);
 
       toast.error(
         err.response?.data?.msg ||
-        err.response?.data?.message ||
-        "Registration failed"
+          err.response?.data?.message ||
+          "Registration failed"
       );
     }
   };
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* BACKGROUND IMAGE */}
+      {/* Background */}
       <div className="absolute inset-0 z-0">
         <img
           src={milkImage}
@@ -110,17 +106,16 @@ export default function Register() {
         <div className="absolute inset-0 bg-black/60"></div>
       </div>
 
-      {/* MAIN CONTENT */}
+      {/* Main Content */}
       <div className="relative z-10 w-full flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl border border-white/30 p-8">
-
-          {/* HEADER */}
+          {/* Logo */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+                alt="Mazzraty"
                 className="h-12"
-                alt="logo"
               />
             </div>
 
@@ -133,10 +128,9 @@ export default function Register() {
             </p>
           </div>
 
-          {/* FORM */}
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-
-            {/* NAME */}
+            {/* Name */}
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
               <input
                 type="text"
@@ -148,7 +142,7 @@ export default function Register() {
               />
             </div>
 
-            {/* STAFF CODE */}
+            {/* Staff Code */}
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
               <input
                 type="text"
@@ -160,7 +154,7 @@ export default function Register() {
               />
             </div>
 
-            {/* COMPANY */}
+            {/* Company */}
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
               <select
                 name="companyId"
@@ -171,17 +165,14 @@ export default function Register() {
                 <option value="">Select Company</option>
 
                 {companies.map((company) => (
-                  <option
-                    key={company._id}
-                    value={company._id}
-                  >
+                  <option key={company._id} value={company._id}>
                     {company.name}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* EMAIL */}
+            {/* Email */}
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
               <input
                 type="email"
@@ -193,7 +184,7 @@ export default function Register() {
               />
             </div>
 
-            {/* PASSWORD */}
+            {/* Password */}
             <div className="relative bg-gray-50 p-4 rounded-2xl border border-gray-200">
               <input
                 type={showPassword ? "text" : "password"}
@@ -213,7 +204,7 @@ export default function Register() {
               </button>
             </div>
 
-            {/* CONFIRM PASSWORD */}
+            {/* Confirm Password */}
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
               <input
                 type="password"
@@ -224,7 +215,7 @@ export default function Register() {
               />
             </div>
 
-            {/* REGISTER BUTTON */}
+            {/* Submit */}
             <button
               type="submit"
               className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 transition-all duration-300 text-white py-3 rounded-2xl font-semibold shadow-lg"
@@ -233,7 +224,7 @@ export default function Register() {
             </button>
           </form>
 
-          {/* LOGIN LINK */}
+          {/* Login Link */}
           <div className="mt-5 text-center">
             <span
               onClick={() => navigate("/login")}
@@ -242,29 +233,8 @@ export default function Register() {
               Already have an account? Sign In
             </span>
           </div>
-
         </div>
       </div>
     </div>
-  );
-
-  <style>{`
-        .sap-input {
-          width: 100%;
-          padding: 12px 14px;
-          border: 1px solid #e5e7eb;
-          border-radius: 6px;
-          background: #fff;
-          outline: none;
-          font-size: 14px;
-          transition: all 0.2s ease;
-        }
-
-        .sap-input:focus {
-          border-color: #2563eb;
-          box-shadow: 0 0 0 1px #2563eb;
-        }
-      `}</style>
-    </div >
   );
 }
