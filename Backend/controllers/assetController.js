@@ -422,7 +422,7 @@ export const getMyAssets = async (req, res) => {
     const filter = getCompanyFilter(req.user);
 
     const employee = await EmployeeMaster.findOne({
-      staffCode: req.user.employeeId,
+      staffCode: req.user.staffCode,
       ...filter,
     });
 
