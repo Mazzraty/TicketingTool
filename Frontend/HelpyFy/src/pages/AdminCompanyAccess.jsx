@@ -89,19 +89,43 @@ export default function AdminCompanyAccess() {
       setSelectedCompany("");
       setSelectedRole("it_support");
 
-      loadEmployees();
+      await loadEmployees();
     } catch (err) {
       console.error(err);
 
       toast.error(
         err.response?.data?.message ||
-          "Failed to assign access"
+        "Failed to assign access"
       );
     } finally {
       setLoading(false);
     }
   };
+  const revokeAccess = async (companyId) => {
+    try {
+      if (!selectedEmployee?.value) {
+        return toast.error("Select Employee");
+      }
 
+      await api.post(
+        `/superadmin/users/${selectedEmployee.value}/revoke-company`,
+        {
+          companyId,
+        }
+      );
+
+      toast.success("Access revoked successfully");
+
+      await loadEmployees();
+    } catch (err) {
+      console.error(err);
+
+      toast.error(
+        err.response?.data?.message ||
+        "Failed to revoke access"
+      );
+    }
+  };
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <div className="max-w-5xl mx-auto bg-white rounded-xl shadow p-6">
@@ -222,6 +246,62 @@ export default function AdminCompanyAccess() {
               <strong>User Linked:</strong>{" "}
               {selectedEmployee.value ? "Yes" : "No"}
             </p>
+
+            <hr className="my-4" />
+
+            <h4 className="font-semibold mb-3">
+              Company Access
+            </h4>
+
+            {!selectedEmployee.employee.companyAccess ||
+              selectedEmployee.employee.companyAccess.length === 0 ? (
+              <p className="text-gray-500">
+                No company access assigned
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {selectedEmployee.employee.companyAccess.map(
+                  (access, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between items-center border rounded-lg p-3 bg-white"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {access.companyName}
+                        </p>
+
+                        <p className="text-sm text-gray-600">
+                          Role: {access.role}
+                        </p>
+
+                        <p
+                          className={`text-xs mt-1 ${access.isActive
+                              ? "text-green-600"
+                              : "text-red-600"
+                            }`}
+                        >
+                          {access.isActive
+                            ? "Active"
+                            : "Revoked"}
+                        </p>
+                      </div>
+
+                      {access.isActive && (
+                        <button
+                          onClick={() =>
+                            revokeAccess(access.companyId)
+                          }
+                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
+                        >
+                          Revoke
+                        </button>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
