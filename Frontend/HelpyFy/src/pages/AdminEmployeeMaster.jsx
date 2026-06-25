@@ -12,17 +12,15 @@ import {
   ArrowLeft,
   Users,
   Building2,
-  Briefcase,
-  FileText,
   Calendar,
 } from "lucide-react";
 
-export default function AdminEmployeeMasterPro() {
+export default function AdminEmployeeMaster() {
   const [employees, setEmployees] = useState([]);
-  const [companies, setCompanies] = useState([]);
   const [search, setSearch] = useState("");
+
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 8;
 
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -35,15 +33,17 @@ export default function AdminEmployeeMasterPro() {
     designation: "",
     visaNo: "",
     visaExpiryDate: "",
-    companyId: "",
   });
 
   // ================= USER INFO =================
   const user = JSON.parse(localStorage.getItem("user"));
+
   const isSuperAdmin = user?.role === "super_admin";
+
   const allowedCompanyIds =
-    user?.companyAccess?.filter((c) => c.isActive)?.map((c) => c.companyId) || [];
-  const companyOptions = user?.companyAccess?.filter((c) => c.isActive) || [];
+    user?.companyAccess
+      ?.filter((c) => c.isActive)
+      ?.map((c) => c.companyId) || [];
 
   // ================= LOAD EMPLOYEES =================
   const loadEmployees = async () => {
@@ -65,12 +65,10 @@ export default function AdminEmployeeMasterPro() {
       if (!newEmployee.staffCode || !newEmployee.name) {
         return toast.error("Staff Code & Name required");
       }
-      if (!newEmployee.companyId) {
-        return toast.error("Please select a company");
-      }
 
       await api.post("/employees", newEmployee);
-      toast.success("Employee Added Successfully");
+
+      toast.success("Employee Added");
 
       setNewEmployee({
         staffCode: "",
@@ -79,7 +77,6 @@ export default function AdminEmployeeMasterPro() {
         designation: "",
         visaNo: "",
         visaExpiryDate: "",
-        companyId: "",
       });
 
       setShowAddForm(false);
@@ -89,11 +86,11 @@ export default function AdminEmployeeMasterPro() {
     }
   };
 
-  // ================= SAVE EDIT =================
+  // ================= EDIT SAVE =================
   const saveEdit = async (id) => {
     try {
       await api.put(`/employees/${id}`, editForm);
-      toast.success("Employee Updated Successfully");
+      toast.success("Employee Updated");
       setEditId(null);
       loadEmployees();
     } catch {
@@ -101,9 +98,10 @@ export default function AdminEmployeeMasterPro() {
     }
   };
 
-  // ================= FILTER & SEARCH =================
+  // ================= COMPANY FILTER + SEARCH =================
   const filteredEmployees = employees
     .filter((e) => {
+      // 🔐 Company restriction (only non-super admin)
       if (!isSuperAdmin && allowedCompanyIds.length > 0) {
         return allowedCompanyIds.includes(e.companyId);
       }
@@ -118,42 +116,10 @@ export default function AdminEmployeeMasterPro() {
 
   // ================= PAGINATION =================
   const totalPages = Math.ceil(filteredEmployees.length / pageSize);
+
   const paginated = filteredEmployees.slice(
     (page - 1) * pageSize,
     page * pageSize
-  );
-
-  // ================= FORM INPUT COMPONENT =================
-  const FormInput = ({ label, type = "text", placeholder, value, onChange }) => (
-    <div className="flex flex-col">
-      <label className="text-sm font-semibold text-gray-700 mb-2">{label}</label>
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-      />
-    </div>
-  );
-
-  // ================= FORM SELECT COMPONENT =================
-  const FormSelect = ({ label, options, value, onChange, placeholder = "Select..." }) => (
-    <div className="flex flex-col">
-      <label className="text-sm font-semibold text-gray-700 mb-2">{label}</label>
-      <select
-        value={value}
-        onChange={onChange}
-        className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white cursor-pointer"
-      >
-        <option value="">{placeholder}</option>
-        {options.map((opt) => (
-          <option key={opt.id} value={opt.id}>
-            {opt.name}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 
   // ================= STATUS BADGE =================
@@ -186,7 +152,6 @@ export default function AdminEmployeeMasterPro() {
     );
   };
 
-  // ================= RENDER =================
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {/* HEADER */}
@@ -196,13 +161,12 @@ export default function AdminEmployeeMasterPro() {
             <button
               onClick={() => window.history.back()}
               className="p-2 hover:bg-gray-100 rounded-lg transition"
-              title="Go back"
             >
               <ArrowLeft size={20} className="text-gray-600" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Employee Management</h1>
-              <p className="text-sm text-gray-500 mt-1">Manage staff information and visa details</p>
+              <h1 className="text-2xl font-bold text-gray-900">Employee Master</h1>
+              <p className="text-sm text-gray-500 mt-1">Manage and organize your workforce</p>
             </div>
           </div>
         </div>
@@ -246,7 +210,7 @@ export default function AdminEmployeeMasterPro() {
         </div>
 
         {/* STATS CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-start justify-between">
               <div>
@@ -272,25 +236,113 @@ export default function AdminEmployeeMasterPro() {
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium mb-1">Visa Expiring Soon</p>
-                <h3 className="text-3xl font-bold text-gray-900">
-                  {employees.filter((e) => {
-                    const days = Math.floor(
-                      (new Date(e.visaExpiryDate) - new Date()) / (1000 * 60 * 60 * 24)
-                    );
-                    return days >= 0 && days < 30;
-                  }).length}
-                </h3>
+        {/* ADD EMPLOYEE FORM - Collapsible */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="w-full px-6 py-4 flex items-center gap-3 hover:bg-gray-50 transition border-b border-gray-100"
+          >
+            <Plus size={20} className="text-blue-600" />
+            <span className="font-semibold text-gray-900">Add New Employee</span>
+          </button>
+
+          {showAddForm && (
+            <div className="p-6">
+              <div className="grid md:grid-cols-3 gap-4 mb-4">
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold text-gray-700 mb-2">Staff Code *</label>
+                  <input
+                    className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    placeholder="Enter staff code"
+                    value={newEmployee.staffCode}
+                    onChange={(e) =>
+                      setNewEmployee({ ...newEmployee, staffCode: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold text-gray-700 mb-2">Name *</label>
+                  <input
+                    className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    placeholder="Enter full name"
+                    value={newEmployee.name}
+                    onChange={(e) =>
+                      setNewEmployee({ ...newEmployee, name: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold text-gray-700 mb-2">Department</label>
+                  <input
+                    className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    placeholder="Enter department"
+                    value={newEmployee.department}
+                    onChange={(e) =>
+                      setNewEmployee({ ...newEmployee, department: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold text-gray-700 mb-2">Designation</label>
+                  <input
+                    className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    placeholder="Enter designation"
+                    value={newEmployee.designation}
+                    onChange={(e) =>
+                      setNewEmployee({ ...newEmployee, designation: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold text-gray-700 mb-2">Visa No</label>
+                  <input
+                    className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    placeholder="Enter visa number"
+                    value={newEmployee.visaNo}
+                    onChange={(e) =>
+                      setNewEmployee({ ...newEmployee, visaNo: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold text-gray-700 mb-2">Visa Expiry Date</label>
+                  <input
+                    type="date"
+                    className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    value={newEmployee.visaExpiryDate}
+                    onChange={(e) =>
+                      setNewEmployee({
+                        ...newEmployee,
+                        visaExpiryDate: e.target.value,
+                      })
+                    }
+                  />
+                </div>
               </div>
-              <div className="p-3 bg-amber-100 rounded-lg">
-                <Calendar size={20} className="text-amber-600" />
+
+              <div className="flex gap-3 pt-4 border-t border-gray-100">
+                <button
+                  onClick={addEmployee}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
+                >
+                  Save Employee
+                </button>
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* TABLE */}
@@ -332,10 +384,8 @@ export default function AdminEmployeeMasterPro() {
                 ) : (
                   paginated.map((emp) => (
                     <tr key={emp._id} className="border-b border-gray-100 hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        <span className="font-medium">
-                          {emp.company?.name || emp.companyName || emp.company || "—"}
-                        </span>
+                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                        {emp.company?.name || emp.companyName || emp.company || "—"}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 font-semibold">
                         {emp.staffCode}
@@ -374,8 +424,8 @@ export default function AdminEmployeeMasterPro() {
           {/* PAGINATION */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
             <div className="text-sm text-gray-600">
-              Showing <span className="font-semibold">{paginated.length}</span> of{" "}
-              <span className="font-semibold">{filteredEmployees.length}</span> employees
+              Page <span className="font-semibold">{page}</span> of{" "}
+              <span className="font-semibold">{totalPages || 1}</span>
             </div>
 
             <div className="flex items-center gap-1">
@@ -383,12 +433,13 @@ export default function AdminEmployeeMasterPro() {
                 onClick={() => setPage(1)}
                 disabled={page === 1}
                 className="p-2 text-gray-600 hover:bg-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
+                title="First page"
               >
                 ⏮
               </button>
 
               <button
-                onClick={() => setPage(Math.max(1, page - 1))}
+                onClick={() => setPage(page - 1)}
                 disabled={page === 1}
                 className="p-2 text-gray-600 hover:bg-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
@@ -396,12 +447,18 @@ export default function AdminEmployeeMasterPro() {
               </button>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2))
+                .filter(
+                  (p) =>
+                    p === 1 ||
+                    p === totalPages ||
+                    (p >= page - 2 && p <= page + 2)
+                )
                 .map((p, i, arr) => (
                   <div key={p} className="flex items-center gap-1">
                     {i > 0 && arr[i - 1] !== p - 1 && (
                       <span className="text-gray-400 px-2">...</span>
                     )}
+
                     <button
                       onClick={() => setPage(p)}
                       className={`px-3 py-2 rounded-lg font-medium transition ${
@@ -416,7 +473,7 @@ export default function AdminEmployeeMasterPro() {
                 ))}
 
               <button
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
+                onClick={() => setPage(page + 1)}
                 disabled={page === totalPages}
                 className="p-2 text-gray-600 hover:bg-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
@@ -427,6 +484,7 @@ export default function AdminEmployeeMasterPro() {
                 onClick={() => setPage(totalPages)}
                 disabled={page === totalPages}
                 className="p-2 text-gray-600 hover:bg-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
+                title="Last page"
               >
                 ⏭
               </button>
@@ -435,118 +493,10 @@ export default function AdminEmployeeMasterPro() {
         </div>
       </div>
 
-      {/* ADD EMPLOYEE MODAL */}
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl shadow-xl">
-            {/* MODAL HEADER */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Plus size={20} className="text-blue-600" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900">Add New Employee</h2>
-              </div>
-              <button
-                onClick={() => setShowAddForm(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <X size={20} className="text-gray-600" />
-              </button>
-            </div>
-
-            {/* MODAL CONTENT */}
-            <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
-              <div className="grid md:grid-cols-2 gap-5">
-                <FormSelect
-                  label="Company *"
-                  placeholder="Select a company"
-                  options={companyOptions.map((c) => ({
-                    id: c.companyId,
-                    name: c.companyName || "Unknown",
-                  }))}
-                  value={newEmployee.companyId}
-                  onChange={(e) =>
-                    setNewEmployee({ ...newEmployee, companyId: e.target.value })
-                  }
-                />
-                <FormInput
-                  label="Staff Code *"
-                  placeholder="Enter staff code"
-                  value={newEmployee.staffCode}
-                  onChange={(e) =>
-                    setNewEmployee({ ...newEmployee, staffCode: e.target.value })
-                  }
-                />
-                <FormInput
-                  label="Name *"
-                  placeholder="Enter full name"
-                  value={newEmployee.name}
-                  onChange={(e) =>
-                    setNewEmployee({ ...newEmployee, name: e.target.value })
-                  }
-                />
-                <FormInput
-                  label="Department"
-                  placeholder="Enter department"
-                  value={newEmployee.department}
-                  onChange={(e) =>
-                    setNewEmployee({ ...newEmployee, department: e.target.value })
-                  }
-                />
-                <FormInput
-                  label="Designation"
-                  placeholder="Enter designation"
-                  value={newEmployee.designation}
-                  onChange={(e) =>
-                    setNewEmployee({ ...newEmployee, designation: e.target.value })
-                  }
-                />
-                <FormInput
-                  label="Visa No"
-                  placeholder="Enter visa number"
-                  value={newEmployee.visaNo}
-                  onChange={(e) =>
-                    setNewEmployee({ ...newEmployee, visaNo: e.target.value })
-                  }
-                />
-                <FormInput
-                  label="Visa Expiry Date"
-                  type="date"
-                  value={newEmployee.visaExpiryDate}
-                  onChange={(e) =>
-                    setNewEmployee({
-                      ...newEmployee,
-                      visaExpiryDate: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            {/* MODAL FOOTER */}
-            <div className="flex gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
-              <button
-                onClick={() => setShowAddForm(false)}
-                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={addEmployee}
-                className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
-              >
-                Save Employee
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* EDIT MODAL */}
       {editId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl shadow-xl">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
             {/* MODAL HEADER */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
@@ -564,61 +514,47 @@ export default function AdminEmployeeMasterPro() {
             </div>
 
             {/* MODAL CONTENT */}
-            <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
-              <div className="grid md:grid-cols-2 gap-5">
-                <FormSelect
-                  label="Company"
-                  placeholder="Select a company"
-                  options={companyOptions.map((c) => ({
-                    id: c.companyId,
-                    name: c.companyName || "Unknown",
-                  }))}
-                  value={editForm.companyId || ""}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, companyId: e.target.value })
-                  }
-                />
-                <FormInput
-                  label="Staff Code"
+            <div className="p-6 space-y-4">
+              <div className="flex flex-col">
+                <label className="text-sm font-semibold text-gray-700 mb-2">Staff Code</label>
+                <input
+                  className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   value={editForm.staffCode || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, staffCode: e.target.value })
                   }
                 />
-                <FormInput
-                  label="Name"
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-sm font-semibold text-gray-700 mb-2">Name</label>
+                <input
+                  className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   value={editForm.name || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, name: e.target.value })
                   }
                 />
-                <FormInput
-                  label="Department"
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-sm font-semibold text-gray-700 mb-2">Department</label>
+                <input
+                  className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   value={editForm.department || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, department: e.target.value })
                   }
                 />
-                <FormInput
-                  label="Designation"
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-sm font-semibold text-gray-700 mb-2">Designation</label>
+                <input
+                  className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   value={editForm.designation || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, designation: e.target.value })
-                  }
-                />
-                <FormInput
-                  label="Visa No"
-                  value={editForm.visaNo || ""}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, visaNo: e.target.value })
-                  }
-                />
-                <FormInput
-                  label="Visa Expiry Date"
-                  type="date"
-                  value={editForm.visaExpiryDate?.split("T")[0] || ""}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, visaExpiryDate: e.target.value })
                   }
                 />
               </div>
