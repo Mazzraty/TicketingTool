@@ -333,12 +333,12 @@ export default function AssetStoreFiori() {
             className="px-5 py-3 rounded-2xl text-sm font-semibold bg-green-600 hover:bg-green-700 text-white transition"
           >
             Export Excel
-          </button>
+          </button>   
           <button
             onClick={() => {
               setSearch("");
               setFilter("All");
-              setStatusFilter("All");
+              setStatusFilter("All")
             }}
             className="px-5 py-3 rounded-2xl text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
           >
