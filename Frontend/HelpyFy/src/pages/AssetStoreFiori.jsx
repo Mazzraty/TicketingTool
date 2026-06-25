@@ -368,23 +368,38 @@ export default function AssetStoreFiori() {
               </div>
 
               {/* STATUS FILTER */}
+              {/* STATUS FILTER */}
               <div>
                 <p className="text-xs font-semibold text-gray-500 mb-2">
                   STATUS
                 </p>
 
                 <div className="flex flex-wrap gap-2">
-                  {["All", "available", "assigned", "damaged"].map((s) => (
+                  {[
+                    "All",
+                    "available",
+                    "assigned",
+                    "damaged",
+                    "printer_for_service",
+                    "under_service",
+                  ].map((s) => (
                     <button
                       key={s}
                       onClick={() => setStatusFilter(s)}
                       className={`px-4 py-2 rounded-full text-sm font-semibold border transition
-                ${statusFilter === s
+        ${statusFilter === s
                           ? "bg-green-600 text-white border-green-600"
                           : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                         }`}
                     >
-                      {s}
+                      {{
+                        All: "All",
+                        available: "Available",
+                        assigned: "Assigned",
+                        damaged: "Damaged",
+                        printer_for_service: "Printer for Service",
+                        under_service: "Under Service",
+                      }[s]}
                     </button>
                   ))}
                 </div>
