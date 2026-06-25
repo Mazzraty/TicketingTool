@@ -52,9 +52,12 @@ export const getEmployee = async (req, res) => {
 /* =========================
    CREATE EMPLOYEE
 ========================= */
+/* =========================
+   CREATE EMPLOYEE
+========================= */
 export const createEmployee = async (req, res) => {
   try {
-    const { staffCode, name } = req.body;
+    const { staffCode, name, companyId: bodyCompanyId } = req.body;
 
     if (!staffCode || !name) {
       return res.status(400).json({
@@ -62,9 +65,21 @@ export const createEmployee = async (req, res) => {
       });
     }
 
+    // ✅ Use companyId from body for super_admin, or from user for regular admin
+    const targetCompanyId = 
+      req.user.role === "super_admin" 
+        ? bodyCompanyId 
+        : req.user.companyId;
+
+    if (!targetCompanyId) {
+      return res.status(400).json({
+        message: "Company ID is required",
+      });
+    }
+
     const exists = await EmployeeMaster.findOne({
       staffCode,
-      companyId: req.user.companyId,
+      companyId: targetCompanyId,
     });
 
     if (exists) {
@@ -72,16 +87,17 @@ export const createEmployee = async (req, res) => {
         message: "Employee already exists",
       });
     }
-    const companyName =
-      req.user.companyName ||
-      req.user.companyAccess?.find(
-        (c) => c.companyId?.toString?.() === req.user.companyId?.toString?.()
-      )?.companyName ||
-      "";
+
+    // ✅ Get company name
+    let companyName = req.user.companyName || "";
+    if (req.user.role === "super_admin" && bodyCompanyId) {
+      const company = await Company.findById(bodyCompanyId).select("name");
+      companyName = company?.name || "";
+    }
 
     const emp = await EmployeeMaster.create({
       ...req.body,
-      companyId: req.user.companyId,
+      companyId: targetCompanyId,
       company: companyName,
     });
 
@@ -90,7 +106,6 @@ export const createEmployee = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 /* =========================
    UPDATE EMPLOYEE
 ========================= */
