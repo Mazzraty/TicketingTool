@@ -33,6 +33,7 @@ export default function AdminEmployeeMaster() {
     designation: "",
     visaNo: "",
     visaExpiryDate: "",
+    companyId: "",
   });
 
   // ================= USER INFO =================
@@ -65,6 +66,9 @@ export default function AdminEmployeeMaster() {
       if (!newEmployee.staffCode || !newEmployee.name) {
         return toast.error("Staff Code & Name required");
       }
+      if (!newEmployee.companyId) {
+        return toast.error("Please select a company");
+      }
 
       await api.post("/employees", newEmployee);
 
@@ -77,6 +81,7 @@ export default function AdminEmployeeMaster() {
         designation: "",
         visaNo: "",
         visaExpiryDate: "",
+        companyId: "",
       });
 
       setShowAddForm(false);
@@ -251,6 +256,24 @@ export default function AdminEmployeeMaster() {
           {showAddForm && (
             <div className="p-6">
               <div className="grid md:grid-cols-3 gap-4 mb-4">
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold text-gray-700 mb-2">Company *</label>
+                  <select
+                    className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white cursor-pointer"
+                    value={newEmployee.companyId}
+                    onChange={(e) =>
+                      setNewEmployee({ ...newEmployee, companyId: e.target.value })
+                    }
+                  >
+                    <option value="">Select a company</option>
+                    {user?.companyAccess?.filter((c) => c.isActive)?.map((c) => (
+                      <option key={c.companyId} value={c.companyId}>
+                        {c.companyName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="flex flex-col">
                   <label className="text-sm font-semibold text-gray-700 mb-2">Staff Code *</label>
                   <input
@@ -515,6 +538,24 @@ export default function AdminEmployeeMaster() {
 
             {/* MODAL CONTENT */}
             <div className="p-6 space-y-4">
+              <div className="flex flex-col">
+                <label className="text-sm font-semibold text-gray-700 mb-2">Company</label>
+                <select
+                  className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white cursor-pointer"
+                  value={editForm.companyId || ""}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, companyId: e.target.value })
+                  }
+                >
+                  <option value="">Select a company</option>
+                  {user?.companyAccess?.filter((c) => c.isActive)?.map((c) => (
+                    <option key={c.companyId} value={c.companyId}>
+                      {c.companyName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex flex-col">
                 <label className="text-sm font-semibold text-gray-700 mb-2">Staff Code</label>
                 <input
