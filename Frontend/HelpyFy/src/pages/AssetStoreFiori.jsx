@@ -174,7 +174,46 @@ export default function AssetStoreFiori() {
       );
     }
   };
+  const exportToExcel = () => {
+    const exportData = filtered.map((a) => ({
+      AssetCode: a.assetCode,
+      Type: a.type,
+      Model: a.model,
+      SerialNumber: a.serialNumber,
+      CurrentUser: getCurrentUser(a),
+      Status:
+        {
+          available: "Available",
+          assigned: "Assigned",
+          damaged: "Damaged",
+          printer_for_service: "Printer for Service",
+          under_service: "Under Service",
+        }[a.status] || a.status,
 
+      SalesmanName: a.salesmanName || "",
+      SalesmanCode: a.salesmanCode || "",
+      Route: a.route || "",
+      Supervisor: a.supervisor || "",
+      IMEI: a.imei || "",
+      SIMNumber: a.simNumber || "",
+      Notes: a.notes || "",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Assets"
+    );
+
+    XLSX.writeFile(
+      workbook,
+      `Assets_${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+  };
   return (
     <div className="min-h-screen bg-[#f5f7fa] zoom-90">
       {/* HEADER */}
@@ -289,6 +328,12 @@ export default function AssetStoreFiori() {
           />
 
           {/* QUICK RESET */}
+          <button
+            onClick={exportToExcel}
+            className="px-5 py-3 rounded-2xl text-sm font-semibold bg-green-600 hover:bg-green-700 text-white transition"
+          >
+            Export Excel
+          </button>
           <button
             onClick={() => {
               setSearch("");
