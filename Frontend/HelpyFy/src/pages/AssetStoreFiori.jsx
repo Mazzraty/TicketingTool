@@ -186,7 +186,7 @@ export default function AssetStoreFiori() {
           available: "Available",
           assigned: "Assigned",
           damaged: "Damaged",
-          printer_for_service: "Printer for Service",
+          printer_for_service: "for Service",
           under_service: "Under Service",
         }[a.status] || a.status,
 
@@ -442,7 +442,7 @@ export default function AssetStoreFiori() {
                         available: "Available",
                         assigned: "Assigned",
                         damaged: "Damaged",
-                        printer_for_service: "Printer for Service",
+                        printer_for_service: "for Service",
                         under_service: "Under Service",
                       }[s]}
                     </button>
@@ -601,7 +601,7 @@ export default function AssetStoreFiori() {
                             available: "Available",
                             assigned: "Assigned",
                             damaged: "Damaged",
-                            printer_for_service: "Printer for Service",
+                            printer_for_service: "for Service",
                             under_service: "Under Service",
                           }[a.status] || a.status}
                         </span>
