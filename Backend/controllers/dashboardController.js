@@ -18,7 +18,6 @@ export const getDashboardStats = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user);
 
-    // ASSETS
     const totalAssets = await Asset.countDocuments(filter);
 
     const laptops = await Asset.countDocuments({
@@ -36,26 +35,38 @@ export const getDashboardStats = async (req, res) => {
       type: "HHT",
     });
 
-    const assigned = await Asset.countDocuments({
-      ...filter,
-      status: "assigned",
-    });
-
     const available = await Asset.countDocuments({
       ...filter,
       status: "available",
     });
 
-    // EMPLOYEES
+    const assigned = await Asset.countDocuments({
+      ...filter,
+      status: "assigned",
+    });
+
+    const damaged = await Asset.countDocuments({
+      ...filter,
+      status: "damaged",
+    });
+
+    const printerForService = await Asset.countDocuments({
+      ...filter,
+      status: "printer_for_service",
+    });
+
+    const underService = await Asset.countDocuments({
+      ...filter,
+      status: "under_service",
+    });
+
     const employees = await Employee.countDocuments(filter);
 
-    // TICKETS
     const openTickets = await Ticket.countDocuments({
       ...filter,
       status: "Open",
     });
 
-    // SOFTWARE
     const today = new Date();
 
     const startMonth = new Date(
@@ -103,8 +114,13 @@ export const getDashboardStats = async (req, res) => {
       laptops,
       printers,
       hht,
-      assigned,
+
       available,
+      assigned,
+      damaged,
+      printerForService,
+      underService,
+
       employees,
       openTickets,
       totalActiveLicenses,
@@ -119,7 +135,6 @@ export const getDashboardStats = async (req, res) => {
     });
   }
 };
-
 /* =========================
    RECENT ASSETS
 ========================= */
