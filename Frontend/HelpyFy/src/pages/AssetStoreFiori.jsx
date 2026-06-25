@@ -222,7 +222,7 @@ export default function AssetStoreFiori() {
           >
             Upload Laptop
           </button>
-           <button
+          <button
             onClick={() => window.location.href = "/admin/assets/upload-hht"}
             className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
           >
@@ -528,16 +528,22 @@ export default function AssetStoreFiori() {
 
                       <td className="px-6 py-4">
                         <span
-                          className={`px-4 py-1.5 rounded-full text-xs font-bold ${a.status === "available"
-                            ? "bg-green-100 text-green-700"
-                            : a.status === "assigned"
-                              ? "bg-blue-100 text-blue-700"
-                              : a.status === "damaged"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-gray-100 text-gray-700"
+                          className={`px-4 py-1.5 rounded-full text-xs font-bold ${{
+                            available: "bg-green-100 text-green-700",
+                            assigned: "bg-blue-100 text-blue-700",
+                            damaged: "bg-red-100 text-red-700",
+                            printer_for_service: "bg-yellow-100 text-yellow-700",
+                            under_service: "bg-orange-100 text-orange-700",
+                          }[a.status] || "bg-gray-100 text-gray-700"
                             }`}
                         >
-                          {a.status}
+                          {{
+                            available: "Available",
+                            assigned: "Assigned",
+                            damaged: "Damaged",
+                            printer_for_service: "Printer for Service",
+                            under_service: "Under Service",
+                          }[a.status] || a.status}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -863,6 +869,14 @@ export default function AssetStoreFiori() {
                       <option value="damaged">
                         Damaged
                       </option>
+
+                      <option value="printer_for_service">
+                        Printer for Service
+                      </option>
+
+                      <option value="under_service">
+                        Under Service
+                      </option>
                     </select>
                   </div>
                   {selected?.type === "Laptop" && (
@@ -1005,7 +1019,7 @@ export default function AssetStoreFiori() {
           </div>
 
         )}
-    </div>
+      </div>
     </div >
   );
 }
