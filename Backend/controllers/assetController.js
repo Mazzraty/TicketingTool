@@ -419,19 +419,67 @@ export const getAssetHistory = async (req, res) => {
 ========================= */
 export const getMyAssets = async (req, res) => {
   try {
+    // ✅ STEP 1: Log user info for debugging
+    console.log("📋 User Info:", {
+      userId: req.user._id,
+      staffCode: req.user.staffCode,
+      email: req.user.email,
+      company: req.user.companyId,
+    });
+ 
+    // ✅ STEP 2: Get company filter
     const filter = getCompanyFilter(req.user);
-
-    const employee = await EmployeeMaster.findOne({
+    console.log("📍 Company Filter:", filter);
+ 
+    // ✅ STEP 3: Try to find employee - WITH BETTER ERROR HANDLING
+    // First try with staffCode
+    let employee = await EmployeeMaster.findOne({
       staffCode: req.user.staffCode,
       ...filter,
     });
-
-    if (!employee) {
-      return res.status(404).json({
-        msg: "Employee record not found",
+ 
+    // If not found by staffCode, try by userId
+    if (!employee && req.user._id) {
+      console.log("⚠️ Employee not found by staffCode, trying by userId...");
+      employee = await EmployeeMaster.findOne({
+        userId: req.user._id,
+        ...filter,
       });
     }
-
+ 
+    // If still not found, try finding ANY employee for this user
+    if (!employee && req.user._id) {
+      console.log("⚠️ Employee not found in current company, searching globally...");
+      employee = await EmployeeMaster.findOne({
+        userId: req.user._id,
+      });
+    }
+ 
+    // ✅ STEP 4: Return detailed error if employee not found
+    if (!employee) {
+      console.error("❌ Employee not found for user:", {
+        userId: req.user._id,
+        staffCode: req.user.staffCode,
+        filter,
+      });
+ 
+      return res.status(404).json({
+        msg: "Employee record not found",
+        details: {
+          userId: req.user._id,
+          staffCode: req.user.staffCode,
+          hint: "Please contact your administrator to create your employee record",
+        },
+      });
+    }
+ 
+    console.log("✅ Employee found:", {
+      employeeId: employee._id,
+      name: employee.name,
+      staffCode: employee.staffCode,
+    });
+ 
+    // ✅ STEP 5: Get assets for this employee
     const assets = await AssetAssignment.find({
       employee: employee._id,
       status: "active",
@@ -439,10 +487,16 @@ export const getMyAssets = async (req, res) => {
     })
       .populate("asset")
       .sort({ assignedDate: -1 });
-
+ 
+    console.log(`✅ Found ${assets.length} assets for employee`);
+ 
+    // ✅ STEP 6: Return assets
     res.json(assets);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: err.message });
+    console.error("❌ Error in getMyAssets:", err.message);
+    res.status(500).json({
+      msg: err.message,
+      error: process.env.NODE_ENV === "development" ? err.stack : undefined,
+    });
   }
 };
