@@ -374,9 +374,8 @@ export default function AdminAssets() {
               <Select
                 options={employees.map((e) => ({
                   value: e.staffCode,
-                  label: `${e.name} (${e.staffCode}) - ${e.companyId?.name || "No Company"}`,
+                  label: `${e.name} (${e.staffCode})`,
                 }))}
-
 
                 value={
                   selectedEmployee
