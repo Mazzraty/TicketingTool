@@ -422,12 +422,16 @@ export const getMyAssets = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user);
 
-    const employee = await EmployeeMaster.findOne({
-        staffCode: req.user.staffCode,
-        ...filter,
-    });
+    const staffCode = String(req.user.staffCode || "").trim();
 
-      let resolvedEmployee = employee;
+    // Try case-insensitive staffCode lookup first
+    let resolvedEmployee = null;
+    if (staffCode) {
+      resolvedEmployee = await EmployeeMaster.findOne({
+        staffCode: new RegExp(`^${staffCode}$`, "i"),
+        ...filter,
+      });
+    }
 
       // Fallback: some users may be linked via `employeeRef` instead of having `staffCode` in the token
       if (!resolvedEmployee) {
@@ -447,8 +451,9 @@ export const getMyAssets = async (req, res) => {
       }
 
       if (!resolvedEmployee) {
+        console.debug("getMyAssets: staffCode", staffCode, "userId", req.user.id);
         return res.status(404).json({
-          msg: "Employee record not found",
+          msg: "Employee record not found for this user (staffCode or linked employeeRef missing)",
         });
       }
 
