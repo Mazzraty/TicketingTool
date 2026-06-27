@@ -15,8 +15,6 @@ import {
   Smartphone,
   Headphones,
   Zap,
-  RefreshCw,
-  Info,
 } from "lucide-react";
 
 export default function UserAssetPage() {
@@ -25,7 +23,6 @@ export default function UserAssetPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [exporting, setExporting] = useState(false);
-  const [debugInfo, setDebugInfo] = useState(null);
 
   useEffect(() => {
     loadAssets();
@@ -35,58 +32,22 @@ export default function UserAssetPage() {
     try {
       setLoading(true);
       setError(null);
-      setDebugInfo(null);
-      
-      console.log("📍 Current User:", {
-        name: user?.name,
-        email: user?.email,
-        staffCode: user?.staffCode,
-        userId: user?._id,
-      });
-
       console.log("📍 Fetching assets from: /assets/my-assets");
-      const res = await api.get("/assets/my-assets");
       
+      const res = await api.get("/assets/my-assets");
       console.log("✅ Assets loaded:", res.data);
-      setAssets(Array.isArray(res.data) ? res.data : res.data.assets || []);
+      
+      setAssets(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("❌ Error loading assets:", err);
-
-      // Detailed error logging
-      const errorDetails = {
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        message: err.response?.data?.message || err.response?.data?.msg,
-        url: err.config?.url,
-        method: err.config?.method,
-        userInfo: {
-          name: user?.name,
-          email: user?.email,
-          staffCode: user?.staffCode,
-        },
-      };
-
-      console.error("📋 Error Details:", errorDetails);
-      setDebugInfo(errorDetails);
-
-      // Determine error message based on status
-      let errorMsg = "Failed to load assets";
-
-      if (err.response?.status === 404) {
-        errorMsg =
-          "Employee record not found. Please contact your administrator.";
-      } else if (err.response?.status === 401) {
-        errorMsg = "Unauthorized. Please log in again.";
-      } else if (err.response?.status === 403) {
-        errorMsg = "You don't have permission to view assets.";
-      } else {
-        errorMsg =
-          err.response?.data?.message ||
-          err.response?.data?.msg ||
-          err.message ||
-          "Failed to load assets";
-      }
-
+      
+      // Extract detailed error message
+      const errorMsg = 
+        err.response?.data?.msg || 
+        err.response?.data?.message || 
+        err.message || 
+        "Failed to load assets";
+      
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -134,15 +95,13 @@ export default function UserAssetPage() {
   const getAssetIcon = (type) => {
     if (!type) return <Package size={18} />;
     const typeStr = type.toLowerCase();
-
+    
     if (typeStr.includes("laptop")) return <Laptop size={18} />;
     if (typeStr.includes("monitor")) return <Monitor size={18} />;
     if (typeStr.includes("phone")) return <Smartphone size={18} />;
-    if (typeStr.includes("headset") || typeStr.includes("audio"))
-      return <Headphones size={18} />;
-    if (typeStr.includes("power") || typeStr.includes("charger"))
-      return <Zap size={18} />;
-
+    if (typeStr.includes("headset") || typeStr.includes("audio")) return <Headphones size={18} />;
+    if (typeStr.includes("power") || typeStr.includes("charger")) return <Zap size={18} />;
+    
     return <Package size={18} />;
   };
 
@@ -251,15 +210,16 @@ export default function UserAssetPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
+
         {/* HEADER */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex-1">
+            <div>
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg">
-                  <Package size={24} className="text-white" />
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0a6ed1] to-[#0856a8] flex items-center justify-center">
+                  <Package size={20} className="text-white" />
                 </div>
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
@@ -267,144 +227,85 @@ export default function UserAssetPage() {
                   </h1>
                 </div>
               </div>
-              <p className="text-sm text-gray-600 ml-15">
+              <p className="text-sm text-gray-600">
                 Assets currently assigned to{" "}
                 <span className="font-semibold text-gray-900">{user?.name}</span>
               </p>
             </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={loadAssets}
-                disabled={loading}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all disabled:opacity-50"
-                title="Refresh assets"
-              >
-                <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-              </button>
-
-              <button
-                onClick={exportPDF}
-                disabled={exporting || assets.length === 0}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {exporting ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Download size={18} />
-                    Export PDF
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              onClick={exportPDF}
+              disabled={exporting || assets.length === 0}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#0a6ed1] to-[#0856a8] text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {exporting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download size={18} />
+                  Export PDF
+                </>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* ERROR STATE - WITH DEBUG INFO */}
+        {/* ERROR STATE */}
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
-            <div className="flex items-start gap-4">
-              <AlertCircle size={24} className="text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="font-bold text-red-900 text-lg mb-2">
-                  Unable to Load Assets
-                </h3>
-                <p className="text-red-800 mb-4">{error}</p>
-
-                {/* Debug Info (Development Helper) */}
-                {debugInfo && (
-                  <details className="mb-4 p-3 bg-red-100 rounded-lg cursor-pointer">
-                    <summary className="font-semibold text-red-900 flex items-center gap-2">
-                      <Info size={16} />
-                      Debug Information
-                    </summary>
-                    <pre className="mt-3 text-xs text-red-800 overflow-auto bg-white p-2 rounded border border-red-300">
-                      {JSON.stringify(debugInfo, null, 2)}
-                    </pre>
-                  </details>
-                )}
-
-                <div className="space-y-2 mb-4 p-4 bg-white rounded-lg border border-red-200">
-                  <p className="font-semibold text-gray-900">Troubleshooting Steps:</p>
-                  <ul className="text-sm text-gray-700 space-y-2 ml-4">
-                    <li>
-                      ✓ Ensure your employee record exists in the system
-                    </li>
-                    <li>
-                      ✓ Verify your staff code is correctly set in the database
-                    </li>
-                    <li>
-                      ✓ Check that assets have been assigned to you by an administrator
-                    </li>
-                    <li>
-                      ✓ Try refreshing the page or logging out and back in
-                    </li>
-                  </ul>
-                </div>
-
-                <button
-                  onClick={loadAssets}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
-                >
-                  Try Again
-                </button>
-              </div>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6 flex items-start gap-3">
+            <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-red-900 mb-1">Failed to Load Assets</h3>
+              <p className="text-sm text-red-800 mb-3">{error}</p>
+              <button
+                onClick={loadAssets}
+                className="text-sm font-medium text-red-700 hover:text-red-800 underline"
+              >
+                Try Again
+              </button>
             </div>
           </div>
         )}
 
         {/* LOADING STATE */}
         {loading && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12">
             <div className="flex flex-col items-center justify-center gap-4">
-              <div className="w-12 h-12 rounded-full border-4 border-gray-200 border-t-blue-600 animate-spin"></div>
-              <div className="text-center">
-                <p className="text-gray-900 font-semibold">Loading your assets...</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Please wait while we fetch your assigned equipment
-                </p>
-              </div>
+              <div className="w-12 h-12 rounded-full border-4 border-gray-200 border-t-[#0a6ed1] animate-spin"></div>
+              <p className="text-gray-600 font-medium">Loading your assets...</p>
             </div>
           </div>
         )}
 
         {/* EMPTY STATE */}
         {!loading && !error && assets.length === 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12">
             <div className="flex flex-col items-center justify-center gap-4">
               <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-                <Package size={32} className="text-blue-600" />
+                <Package size={32} className="text-[#0a6ed1]" />
               </div>
-              <div className="text-center">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No Assets Assigned
-                </h3>
-                <p className="text-gray-600 max-w-md">
-                  You don't have any assets assigned yet. Contact your
-                  administrator if you think this is incorrect.
-                </p>
-              </div>
+              <h3 className="text-xl font-semibold text-gray-900">No Assets Assigned</h3>
+              <p className="text-gray-600 text-center max-w-md">
+                You don't have any assets assigned yet. Contact your administrator if you think this is incorrect.
+              </p>
             </div>
           </div>
         )}
 
         {/* ASSETS TABLE */}
         {!loading && assets.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            
             {/* MOBILE VIEW */}
             <div className="md:hidden divide-y divide-gray-200">
               {assets.map((item) => (
-                <div
-                  key={item._id}
-                  className="p-4 hover:bg-gray-50 transition-colors"
-                >
+                <div key={item._id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 text-[#0a6ed1]">
                         {getAssetIcon(item.asset?.type)}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -456,7 +357,7 @@ export default function UserAssetPage() {
             {/* DESKTOP TABLE */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Asset Code
@@ -486,11 +387,11 @@ export default function UserAssetPage() {
                   {assets.map((item) => (
                     <tr
                       key={item._id}
-                      className="hover:bg-blue-50 transition-colors"
+                      className="hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-[#0a6ed1]">
                             {getAssetIcon(item.asset?.type)}
                           </div>
                           <span className="font-semibold text-gray-900">
@@ -502,7 +403,7 @@ export default function UserAssetPage() {
                         {item.asset?.serialNumber || "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-sm font-medium border border-blue-200">
+                        <span className="px-3 py-1 rounded-full bg-blue-50 text-[#0a6ed1] text-sm font-medium">
                           {item.asset?.type || "-"}
                         </span>
                       </td>
@@ -513,16 +414,13 @@ export default function UserAssetPage() {
                         {new Date(item.assignedDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          title={getAccessoriesLabel(item)}
-                          className="text-lg cursor-help"
-                        >
+                        <span title={getAccessoriesLabel(item)} className="text-lg">
                           {renderAccessories(item)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold border border-green-200">
-                          <div className="w-2 h-2 rounded-full bg-green-600"></div>
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                          <ChevronRight size={14} />
                           Active
                         </span>
                       </td>
@@ -546,9 +444,7 @@ export default function UserAssetPage() {
             <SummaryCard
               icon={<Laptop size={20} />}
               label="Laptops"
-              value={assets.filter(
-                (a) => a.asset?.type?.toLowerCase() === "laptop"
-              ).length}
+              value={assets.filter((a) => a.asset?.type?.toLowerCase() === "laptop").length}
               color="purple"
             />
             <SummaryCard
@@ -559,6 +455,7 @@ export default function UserAssetPage() {
             />
           </div>
         )}
+
       </div>
     </div>
   );
@@ -567,20 +464,20 @@ export default function UserAssetPage() {
 /* ================= SUMMARY CARD ================= */
 function SummaryCard({ icon, label, value, color }) {
   const colorClasses = {
-    blue: "bg-blue-100 text-blue-600",
-    purple: "bg-purple-100 text-purple-600",
-    green: "bg-green-100 text-green-600",
+    blue: "bg-blue-100 text-[#0a6ed1]",
+    purple: "bg-purple-100 text-purple-700",
+    green: "bg-green-100 text-green-700",
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <div className="flex items-center gap-3 mb-3">
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
           {icon}
         </div>
         <p className="text-sm text-gray-600 font-medium">{label}</p>
       </div>
-      <p className="text-3xl font-bold text-gray-900">{value}</p>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
     </div>
   );
 }
