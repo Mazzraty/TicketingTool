@@ -199,16 +199,14 @@ export default function MyTickets() {
           onMouseEnter={() => interactive && setHoverRating(star)}
           onMouseLeave={() => interactive && setHoverRating(0)}
           onClick={() => interactive && onRate(star)}
-          className={`transition ${
-            interactive ? "cursor-pointer" : "cursor-default"
-          }`}
+          className={`transition ${interactive ? "cursor-pointer" : "cursor-default"
+            }`}
         >
           <Star
-            className={`w-5 h-5 ${
-              (interactive ? hoverRating : rating) >= star
-                ? "fill-yellow-400 text-yellow-400"
-                : "text-gray-300"
-            }`}
+            className={`w-5 h-5 ${(interactive ? hoverRating : rating) >= star
+              ? "fill-yellow-400 text-yellow-400"
+              : "text-gray-300"
+              }`}
           />
         </button>
       ))}
@@ -330,6 +328,9 @@ export default function MyTickets() {
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Created
                     </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Closed
+                    </th>
                     <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Actions
                     </th>
@@ -369,15 +370,14 @@ export default function MyTickets() {
                           )}`}
                         >
                           <div
-                            className={`w-2 h-2 rounded-full ${
-                              ticket.status === "Open"
-                                ? "bg-blue-500"
-                                : ticket.status === "In Progress"
+                            className={`w-2 h-2 rounded-full ${ticket.status === "Open"
+                              ? "bg-blue-500"
+                              : ticket.status === "In Progress"
                                 ? "bg-yellow-500 animate-pulse"
                                 : ticket.status === "Resolved"
-                                ? "bg-green-500"
-                                : "bg-gray-500"
-                            }`}
+                                  ? "bg-green-500"
+                                  : "bg-gray-500"
+                              }`}
                           ></div>
                           {ticket.status}
                         </span>
@@ -401,21 +401,26 @@ export default function MyTickets() {
                           {formatDate(ticket.createdAt)}
                         </div>
                       </td>
-
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          {ticket.closedAt ? formatDateTime(ticket.closedAt) : "-"}
+                        </div>
+                      </td>
                       {/* ACTIONS */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {(ticket.status === "Open" ||
                             ticket.status === "Reopened") && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              icon={Edit}
-                              onClick={() => openEdit(ticket)}
-                            >
-                              Edit
-                            </Button>
-                          )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                icon={Edit}
+                                onClick={() => openEdit(ticket)}
+                              >
+                                Edit
+                              </Button>
+                            )}
 
                           {ticket.status === "Resolved" && (
                             <>
@@ -476,11 +481,10 @@ export default function MyTickets() {
                       <button
                         key={pageNum}
                         onClick={() => setPage(pageNum)}
-                        className={`w-8 h-8 rounded-lg font-medium transition ${
-                          page === pageNum
-                            ? "bg-blue-600 text-white"
-                            : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
-                        }`}
+                        className={`w-8 h-8 rounded-lg font-medium transition ${page === pageNum
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
+                          }`}
                       >
                         {pageNum}
                       </button>
