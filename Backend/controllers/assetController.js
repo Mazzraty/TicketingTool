@@ -1,6 +1,5 @@
 import Asset from "../models/assetSchema.js";
 import EmployeeMaster from "../models/employeeMasterSchema.js";
-import User from "../models/userShema.js";
 import AssetAssignment from "../models/assignmentSchema.js";
 
 /* =========================
@@ -422,43 +421,19 @@ export const getMyAssets = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user);
 
-    const staffCode = String(req.user.staffCode || "").trim();
+    const employee = await EmployeeMaster.findOne({
+      staffCode: req.user.staffCode,
+      ...filter,
+    });
 
-    // Try case-insensitive staffCode lookup first
-    let resolvedEmployee = null;
-    if (staffCode) {
-      resolvedEmployee = await EmployeeMaster.findOne({
-        staffCode: new RegExp(`^${staffCode}$`, "i"),
-        ...filter,
+    if (!employee) {
+      return res.status(404).json({
+        msg: "Employee record not found",
       });
     }
 
-      // Fallback: some users may be linked via `employeeRef` instead of having `staffCode` in the token
-      if (!resolvedEmployee) {
-        try {
-          const userRecord = await User.findById(req.user.id).select("employeeRef");
-          if (userRecord && userRecord.employeeRef) {
-            const empByRef = await EmployeeMaster.findOne({
-              _id: userRecord.employeeRef,
-              ...filter,
-            });
-
-            if (empByRef) resolvedEmployee = empByRef;
-          }
-        } catch (e) {
-          console.error("Error resolving employee by user.employeeRef:", e.message);
-        }
-      }
-
-      if (!resolvedEmployee) {
-        console.debug("getMyAssets: staffCode", staffCode, "userId", req.user.id);
-        return res.status(404).json({
-          msg: "Employee record not found for this user (staffCode or linked employeeRef missing)",
-        });
-      }
-
     const assets = await AssetAssignment.find({
-      employee: resolvedEmployee._id,
+      employee: employee._id,
       status: "active",
       ...filter,
     })
