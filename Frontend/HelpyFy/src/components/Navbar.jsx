@@ -158,7 +158,7 @@ export default function Navbar() {
         <div className="flex items-center gap-8 flex-shrink-0">
 
           {/* LOGO */}
-          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0a6ed1] to-[#0856a8] flex items-center justify-center p-1.5 shadow-sm">
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
@@ -166,13 +166,14 @@ export default function Navbar() {
                 className="object-contain w-full h-full"
               />
             </div>
+
             <div className="hidden sm:block leading-tight">
               <h1 className="text-[15px] font-bold text-gray-900">Mazzraty</h1>
               <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
                 IT Service
               </p>
             </div>
-          </Link>
+          </div>
 
           {/* DESKTOP NAV */}
           <nav className="hidden lg:flex items-center gap-1">
@@ -384,9 +385,8 @@ export default function Navbar() {
                     notifications.map((n) => (
                       <div
                         key={n._id}
-                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                          !n.isRead ? "bg-blue-50" : ""
-                        }`}
+                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${!n.isRead ? "bg-blue-50" : ""
+                          }`}
                         onClick={async () => {
                           await api.put(`/notifications/${n._id}/read`);
                           loadNotifications();
@@ -498,11 +498,10 @@ export default function Navbar() {
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileMenu(false)}
-                className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  location.pathname === item.path
+                className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${location.pathname === item.path
                     ? "bg-[#0a6ed1] text-white shadow-sm"
                     : "text-gray-700 hover:bg-gray-100"
-                }`}
+                  }`}
               >
                 {item.label}
               </Link>
