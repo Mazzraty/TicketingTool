@@ -1,5 +1,6 @@
 import Asset from "../models/assetSchema.js";
 import EmployeeMaster from "../models/employeeMasterSchema.js";
+import User from "../models/userShema.js";
 import AssetAssignment from "../models/assignmentSchema.js";
 
 /* =========================
@@ -422,18 +423,37 @@ export const getMyAssets = async (req, res) => {
     const filter = getCompanyFilter(req.user);
 
     const employee = await EmployeeMaster.findOne({
-      staffCode: req.user.staffCode,
-      ...filter,
+        staffCode: req.user.staffCode,
+        ...filter,
     });
 
-    if (!employee) {
-      return res.status(404).json({
-        msg: "Employee record not found",
-      });
-    }
+      let resolvedEmployee = employee;
+
+      // Fallback: some users may be linked via `employeeRef` instead of having `staffCode` in the token
+      if (!resolvedEmployee) {
+        try {
+          const userRecord = await User.findById(req.user.id).select("employeeRef");
+          if (userRecord && userRecord.employeeRef) {
+            const empByRef = await EmployeeMaster.findOne({
+              _id: userRecord.employeeRef,
+              ...filter,
+            });
+
+            if (empByRef) resolvedEmployee = empByRef;
+          }
+        } catch (e) {
+          console.error("Error resolving employee by user.employeeRef:", e.message);
+        }
+      }
+
+      if (!resolvedEmployee) {
+        return res.status(404).json({
+          msg: "Employee record not found",
+        });
+      }
 
     const assets = await AssetAssignment.find({
-      employee: employee._id,
+      employee: resolvedEmployee._id,
       status: "active",
       ...filter,
     })
