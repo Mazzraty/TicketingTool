@@ -214,282 +214,265 @@ export default function AssetStoreFiori() {
       `Assets_${new Date().toISOString().slice(0, 10)}.xlsx`
     );
   };
+
+  /* ================= UI HELPERS (styling only, no logic) ================= */
+  const STATUS_LABELS = {
+    All: "All",
+    available: "Available",
+    assigned: "Assigned",
+    damaged: "Damaged",
+    printer_for_service: "for Service",
+    under_service: "Under Service",
+  };
+
+  const STATUS_BADGE = {
+    available: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+    assigned: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+    damaged: "bg-red-50 text-red-700 ring-1 ring-red-200",
+    printer_for_service: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+    under_service: "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
+  };
+
+  const TYPE_BADGE = {
+    Laptop: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+    Printer: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+    HHT: "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
+  };
+
+  const navLink = (label, href, active = false) => (
+    <button
+      key={label}
+      onClick={() => (window.location.href = href)}
+      className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition ${
+        active
+          ? "bg-[#0a6ed1] text-white shadow-sm shadow-blue-600/30"
+          : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  const inputClass =
+    "border border-gray-200 bg-white rounded-2xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition";
+
+  const modalInput =
+    "w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition";
+
+  const modalLabel = "text-xs font-semibold text-gray-500 tracking-wide block mb-1.5";
+
   return (
-    <div className="min-h-screen bg-[#f5f7fa] zoom-90">
-      {/* HEADER */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Asset Details
-        </h1>
+    <div className="min-h-screen bg-[#f5f7fa]">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6">
 
-        <p className="text-gray-500 mt-1">
-          Asset Management Dashboard
-        </p>
-      </div>
-      {/* ================= NAVIGATION ================= */}
-      {/* ================= STICKY NAVIGATION ================= */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm mb-6">
-
-        <div className="px-4 py-3 flex flex-wrap gap-3 items-center">
-
-          <button
-            onClick={() => window.location.href = "/admin/assets"}
-            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-[#0a6ed1] text-white shadow-sm hover:bg-[#085caf] transition"
-          >
-            Assets Assign
-          </button>
-
-          <button
-            onClick={() => window.location.href = "/admin/assets/history"}
-            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-          >
-            Asset History
-          </button>
-
-
-
-          <button
-            onClick={() => window.location.href = "/admin/assets/upload-printer"}
-            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-          >
-            Upload Printer
-          </button>
-
-          <button
-            onClick={() => window.location.href = "/admin/assets/upload-laptop"}
-            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-          >
-            Upload Laptop
-          </button>
-          <button
-            onClick={() => window.location.href = "/admin/assets/upload-hht"}
-            className="px-5 py-2 rounded-2xl text-sm font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-          >
-            Upload HHT
-          </button>
-        </div>
-
-      </div>
-      {/* KPI */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-        <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-500 text-sm">
-            Total Assets
+        {/* HEADER */}
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
+            Asset Details
+          </h1>
+          <p className="text-gray-500 mt-1 text-sm">
+            Asset Management Dashboard
           </p>
-
-          <h2 className="text-4xl font-bold mt-3 text-gray-800">
-            {total}
-          </h2>
         </div>
 
-        <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-500 text-sm">
-            Laptops
-          </p>
-
-          <h2 className="text-4xl font-bold mt-3 text-blue-600">
-            {laptop}
-          </h2>
+        {/* ================= STICKY NAVIGATION ================= */}
+        <div className="sticky top-0 z-40 bg-white/90 backdrop-blur border border-gray-200 rounded-2xl shadow-sm mb-6">
+          <div className="px-4 py-3 flex flex-wrap gap-2 items-center">
+            {navLink("Assets Assign", "/admin/assets", true)}
+            {navLink("Asset History", "/admin/assets/history")}
+            {navLink("Upload Printer", "/admin/assets/upload-printer")}
+            {navLink("Upload Laptop", "/admin/assets/upload-laptop")}
+            {navLink("Upload HHT", "/admin/assets/upload-hht")}
+          </div>
         </div>
 
-        <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-500 text-sm">
-            Printers
-          </p>
-
-          <h2 className="text-4xl font-bold mt-3 text-green-600">
-            {printer}
-          </h2>
-        </div>
-
-        <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-500 text-sm">
-            HHT Devices
-          </p>
-
-          <h2 className="text-4xl font-bold mt-3 text-purple-600">
-            {hht}
-          </h2>
-        </div>
-      </div>
-
-      {/* FILTER */}
-      {/* FILTER - SAP STYLE */}
-      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6 mb-8">
-
-        {/* SEARCH ROW */}
-        <div className="flex flex-col lg:flex-row gap-4 items-center mb-5">
-
-          <input
-            className="flex-1 border border-gray-300 rounded-2xl px-5 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Search asset / serial / salesman..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          {/* QUICK RESET */}
-          <button
-            onClick={exportToExcel}
-            className="px-5 py-3 rounded-2xl text-sm font-semibold bg-green-600 hover:bg-green-700 text-white transition"
-          >
-            Export Excel
-          </button>   
-          <button
-            onClick={() => {
-              setSearch("");
-              setFilter("All");
-              setStatusFilter("All")
-            }}
-            className="px-5 py-3 rounded-2xl text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
-          >
-            Reset Filters
-          </button>
-        </div>
-
-        {/* TYPE FILTER */}
-        {/* FILTER HEADER */}
-        <div className="bg-white border border-gray-200 rounded-3xl shadow-sm mb-8 overflow-hidden">
-
-          {/* TOP BAR */}
-          <div className="flex items-center justify-between px-6 py-5">
-
+        {/* KPI */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+            <span className="w-11 h-11 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center text-lg">
+              📊
+            </span>
             <div>
-              <h3 className="text-lg font-bold text-gray-800">
-                Filters
-              </h3>
-              <p className="text-sm text-gray-500">
-                Search and refine asset data
-              </p>
+              <p className="text-gray-500 text-xs font-medium">Total Assets</p>
+              <h2 className="text-2xl md:text-3xl font-bold mt-0.5 text-gray-900">
+                {total}
+              </h2>
             </div>
-
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`px-5 py-2 rounded-2xl text-sm font-semibold transition
-        ${showFilters
-                  ? "bg-[#0a6ed1] text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-            >
-              {showFilters ? "Hide Filters" : "Show Filters"}
-            </button>
-
           </div>
 
-          {/* SEARCH (always visible) */}
-          <div className="px-6 pb-5">
-            <input
-              className="w-full border border-gray-300 rounded-2xl px-5 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search asset / serial / salesman..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+            <span className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+              💻
+            </span>
+            <div>
+              <p className="text-gray-500 text-xs font-medium">Laptops</p>
+              <h2 className="text-2xl md:text-3xl font-bold mt-0.5 text-blue-600">
+                {laptop}
+              </h2>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+            <span className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+              🖨️
+            </span>
+            <div>
+              <p className="text-gray-500 text-xs font-medium">Printers</p>
+              <h2 className="text-2xl md:text-3xl font-bold mt-0.5 text-emerald-600">
+                {printer}
+              </h2>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+            <span className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg">
+              📟
+            </span>
+            <div>
+              <p className="text-gray-500 text-xs font-medium">HHT Devices</p>
+              <h2 className="text-2xl md:text-3xl font-bold mt-0.5 text-purple-600">
+                {hht}
+              </h2>
+            </div>
+          </div>
+        </div>
+
+        {/* ================= SEARCH + FILTERS (single consolidated card) ================= */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-6 overflow-hidden">
+
+          {/* TOP BAR: search + actions */}
+          <div className="px-6 py-5 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
+            <div className="relative flex-1">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                🔍
+              </span>
+              <input
+                className={`${inputClass} w-full pl-10`}
+                placeholder="Search asset / serial / salesman..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 py-2.5 rounded-2xl text-sm font-semibold transition ${
+                  showFilters
+                    ? "bg-[#0a6ed1] text-white shadow-sm shadow-blue-600/30"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {showFilters ? "Hide Filters" : "Show Filters"}
+              </button>
+
+              <button
+                onClick={exportToExcel}
+                className="px-4 py-2.5 rounded-2xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm shadow-emerald-600/20"
+              >
+                Export Excel
+              </button>
+
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setFilter("All");
+                  setStatusFilter("All");
+                }}
+                className="px-4 py-2.5 rounded-2xl text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+              >
+                Reset Filters
+              </button>
+            </div>
           </div>
 
           {/* EXPANDABLE FILTER AREA */}
-          {showFilters && (
-            <div className="px-6 pb-6 space-y-6 border-t border-gray-100">
+          <div
+            className={`grid transition-all duration-300 ease-in-out ${
+              showFilters ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+            }`}
+          >
+            <div className="overflow-hidden">
+              <div className="px-6 pb-6 pt-1 space-y-5 border-t border-gray-100">
 
-              {/* TYPE FILTER */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 mb-2">
-                  TYPE
-                </p>
+                {/* TYPE FILTER */}
+                <div className="pt-4">
+                  <p className="text-xs font-semibold text-gray-400 tracking-wide mb-2">
+                    TYPE
+                  </p>
 
-                <div className="flex flex-wrap gap-2">
-                  {["All", "Laptop", "Printer", "HHT"].map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setFilter(t)}
-                      className={`px-4 py-2 rounded-full text-sm font-semibold border transition
-                ${filter === t
-                          ? "bg-[#0a6ed1] text-white border-[#0a6ed1]"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                  <div className="flex flex-wrap gap-2">
+                    {["All", "Laptop", "Printer", "HHT"].map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setFilter(t)}
+                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition ${
+                          filter === t
+                            ? "bg-[#0a6ed1] text-white border-[#0a6ed1] shadow-sm shadow-blue-600/20"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                         }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* STATUS FILTER */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 tracking-wide mb-2">
+                    STATUS
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "All",
+                      "available",
+                      "assigned",
+                      "damaged",
+                      "printer_for_service",
+                      "under_service",
+                    ].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setStatusFilter(s)}
+                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition ${
+                          statusFilter === s
+                            ? "bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        {STATUS_LABELS[s]}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-
-              {/* STATUS FILTER */}
-              {/* STATUS FILTER */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 mb-2">
-                  STATUS
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "All",
-                    "available",
-                    "assigned",
-                    "damaged",
-                    "printer_for_service",
-                    "under_service",
-                  ].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setStatusFilter(s)}
-                      className={`px-4 py-2 rounded-full text-sm font-semibold border transition
-        ${statusFilter === s
-                          ? "bg-green-600 text-white border-green-600"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                        }`}
-                    >
-                      {{
-                        All: "All",
-                        available: "Available",
-                        assigned: "Assigned",
-                        damaged: "Damaged",
-                        printer_for_service: "for Service",
-                        under_service: "Under Service",
-                      }[s]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* QUICK RESET */}
-              <div className="pt-2">
-                <button
-                  onClick={() => {
-                    setSearch("");
-                    setFilter("All");
-                    setStatusFilter("All");
-                  }}
-                  className="px-5 py-2 rounded-2xl text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700"
-                >
-                  Reset All Filters
-                </button>
-              </div>
-
             </div>
-          )}
-
+          </div>
         </div>
 
-        {/* TABLE */}
-        <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+        {/* ================= TABLE ================= */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-[#f7f9fb] border-b">
-                <tr className="text-gray-700">
-                  <th className="text-left px-6 py-4 font-semibold">
+              <thead className="bg-[#f7f9fb] border-b border-gray-200">
+                <tr className="text-gray-500">
+                  <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
                     Asset Code
                   </th>
 
-                  <th className="text-left px-6 py-4 font-semibold">
+                  <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
                     Type
                   </th>
 
                   {!showHHTFields && (
                     <>
-                      <th className="text-left px-6 py-4 font-semibold">
+                      <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
                         Model
                       </th>
 
-                      <th className="text-left px-6 py-4 font-semibold">
+                      <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
                         Serial
                       </th>
                     </>
@@ -497,26 +480,25 @@ export default function AssetStoreFiori() {
 
                   {showHHTFields && (
                     <>
-                      <th className="text-left px-6 py-4 font-semibold">
+                      <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
                         Salesman
                       </th>
 
-                      <th className="text-left px-6 py-4 font-semibold">
+                      <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
                         Route
                       </th>
                     </>
                   )}
 
-                  <th className="text-left px-6 py-4 font-semibold">
+                  <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
                     Current User
                   </th>
 
-                  <th className="text-left px-6 py-4 font-semibold">
+                  <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
                     Status
                   </th>
 
-
-                  <th className="text-center px-6 py-4 font-semibold">
+                  <th className="text-center px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
                     Actions
                   </th>
                 </tr>
@@ -525,34 +507,31 @@ export default function AssetStoreFiori() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan="9"
-                      className="text-center py-14 text-gray-400"
-                    >
-                      No assets found
+                    <td colSpan="9" className="text-center py-16">
+                      <div className="flex flex-col items-center gap-2 text-gray-400">
+                        <span className="text-3xl">🗂️</span>
+                        <p className="text-sm font-medium">No assets found</p>
+                        <p className="text-xs">Try adjusting your search or filters</p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
                   filtered.map((a, index) => (
                     <tr
                       key={a._id}
-                      className={`border-b last:border-0 hover:bg-blue-50/40 transition ${index % 2 === 0
-                        ? "bg-white"
-                        : "bg-gray-50/40"
-                        }`}
+                      className={`border-b border-gray-100 last:border-0 hover:bg-blue-50/40 transition ${
+                        index % 2 === 0 ? "bg-white" : "bg-gray-50/40"
+                      }`}
                     >
-                      <td className="px-6 py-4 font-semibold text-gray-800">
+                      <td className="px-6 py-3.5 font-semibold text-gray-900">
                         {a.assetCode}
                       </td>
 
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-3.5">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${a.type === "Laptop"
-                            ? "bg-blue-100 text-blue-700"
-                            : a.type === "Printer"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-purple-100 text-purple-700"
-                            }`}
+                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            TYPE_BADGE[a.type] || "bg-gray-100 text-gray-700"
+                          }`}
                         >
                           {a.type}
                         </span>
@@ -560,11 +539,11 @@ export default function AssetStoreFiori() {
 
                       {!showHHTFields && (
                         <>
-                          <td className="px-6 py-4 text-gray-700">
+                          <td className="px-6 py-3.5 text-gray-600">
                             {a.model || "-"}
                           </td>
 
-                          <td className="px-6 py-4 text-gray-700">
+                          <td className="px-6 py-3.5 text-gray-600">
                             {a.serialNumber || "-"}
                           </td>
                         </>
@@ -572,65 +551,42 @@ export default function AssetStoreFiori() {
 
                       {showHHTFields && (
                         <>
-                          <td className="px-6 py-4 text-gray-700">
+                          <td className="px-6 py-3.5 text-gray-600">
                             {a.salesmanName || "-"}
                           </td>
 
-                          <td className="px-6 py-4 text-gray-700">
+                          <td className="px-6 py-3.5 text-gray-600">
                             {a.route || "-"}
                           </td>
                         </>
                       )}
 
-                      <td className="px-6 py-4 text-gray-700 font-medium">
+                      <td className="px-6 py-3.5 text-gray-700 font-medium">
                         {getCurrentUser(a)}
                       </td>
 
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-3.5">
                         <span
-                          className={`px-4 py-1.5 rounded-full text-xs font-bold ${{
-                            available: "bg-green-100 text-green-700",
-                            assigned: "bg-blue-100 text-blue-700",
-                            damaged: "bg-red-100 text-red-700",
-                            printer_for_service: "bg-yellow-100 text-yellow-700",
-                            under_service: "bg-orange-100 text-orange-700",
-                          }[a.status] || "bg-gray-100 text-gray-700"
-                            }`}
+                          className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            STATUS_BADGE[a.status] || "bg-gray-100 text-gray-700"
+                          }`}
                         >
-                          {{
-                            available: "Available",
-                            assigned: "Assigned",
-                            damaged: "Damaged",
-                            printer_for_service: "for Service",
-                            under_service: "Under Service",
-                          }[a.status] || a.status}
+                          {STATUS_LABELS[a.status] || a.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          {/* <button
-                          onClick={() =>
-                            window.open(
-                              `/admin/assets/history?code=${a.assetCode}`
-                            )
-                          }
-                          className="min-w-[85px] h-9 rounded-lg bg-[#0a6ed1] hover:bg-[#085caf] text-white text-xs font-semibold border border-[#0a6ed1] shadow-sm transition-all"
-                        >
-                          History
-                        </button> */}
 
+                      <td className="px-6 py-3.5">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => openEdit(a)}
-                            className="min-w-[85px] h-9 rounded-lg bg-white hover:bg-[#f5f7fa] text-[#0a6ed1] text-xs font-semibold border border-[#0a6ed1] shadow-sm transition-all"
+                            className="min-w-[76px] h-8 rounded-lg bg-white hover:bg-blue-50 text-[#0a6ed1] text-xs font-semibold border border-blue-200 transition"
                           >
                             Edit
                           </button>
 
                           <button
-                            onClick={() =>
-                              deleteAsset(a._id)
-                            }
-                            className="min-w-[85px] h-9 rounded-lg bg-white hover:bg-red-50 text-red-600 text-xs font-semibold border border-red-200 shadow-sm transition-all"
+                            onClick={() => deleteAsset(a._id)}
+                            className="min-w-[76px] h-8 rounded-lg bg-white hover:bg-red-50 text-red-600 text-xs font-semibold border border-red-200 transition"
                           >
                             Delete
                           </button>
@@ -642,45 +598,45 @@ export default function AssetStoreFiori() {
               </tbody>
             </table>
           </div>
+
+          {filtered.length > 0 && (
+            <div className="px-6 py-3 border-t border-gray-100 text-xs text-gray-400">
+              Showing {filtered.length} of {total} assets
+            </div>
+          )}
         </div>
 
         {/* ================= EDIT MODAL ================= */}
         {editOpen && selected && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] flex flex-col">
               {/* HEADER */}
-              <div className="bg-[#0a6ed1] px-6 py-4 flex items-center justify-between">
+              <div className="bg-[#0a6ed1] px-6 py-4 flex items-center justify-between shrink-0">
                 <div>
-                  <h2 className="text-xl font-bold text-white">
+                  <h2 className="text-lg font-bold text-white">
                     Edit Asset
                   </h2>
-
-                  <p className="text-blue-100 text-sm">
+                  <p className="text-blue-100 text-xs">
                     Update asset information
                   </p>
                 </div>
 
                 <button
-                  onClick={() =>
-                    setEditOpen(false)
-                  }
-                  className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 text-white transition"
+                  onClick={() => setEditOpen(false)}
+                  className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 text-white transition flex items-center justify-center"
                 >
                   ✕
                 </button>
               </div>
 
               {/* BODY */}
-              <div className="p-6 max-h-[75vh] overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="p-6 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                   <div>
-                    <label className="text-sm font-semibold text-gray-700 block mb-2">
-                      Asset Code
-                    </label>
-
+                    <label className={modalLabel}>Asset Code</label>
                     <input
-                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      className={modalInput}
                       value={selected.assetCode || ""}
                       onChange={(e) =>
                         setSelected({
@@ -692,12 +648,9 @@ export default function AssetStoreFiori() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-semibold text-gray-700 block mb-2">
-                      Type
-                    </label>
-
+                    <label className={modalLabel}>Type</label>
                     <select
-                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      className={modalInput}
                       value={selected.type || ""}
                       onChange={(e) =>
                         setSelected({
@@ -706,17 +659,9 @@ export default function AssetStoreFiori() {
                         })
                       }
                     >
-                      <option value="Laptop">
-                        Laptop
-                      </option>
-
-                      <option value="Printer">
-                        Printer
-                      </option>
-
-                      <option value="HHT">
-                        HHT
-                      </option>
+                      <option value="Laptop">Laptop</option>
+                      <option value="Printer">Printer</option>
+                      <option value="HHT">HHT</option>
                     </select>
                   </div>
 
@@ -724,12 +669,9 @@ export default function AssetStoreFiori() {
                     selected.type === "Printer") && (
                       <>
                         <div>
-                          <label className="text-sm font-semibold text-gray-700 block mb-2">
-                            Model
-                          </label>
-
+                          <label className={modalLabel}>Model</label>
                           <input
-                            className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                            className={modalInput}
                             value={selected.model || ""}
                             onChange={(e) =>
                               setSelected({
@@ -741,12 +683,9 @@ export default function AssetStoreFiori() {
                         </div>
 
                         <div>
-                          <label className="text-sm font-semibold text-gray-700 block mb-2">
-                            Serial Number
-                          </label>
-
+                          <label className={modalLabel}>Serial Number</label>
                           <input
-                            className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                            className={modalInput}
                             value={selected.serialNumber || ""}
                             onChange={(e) =>
                               setSelected({
@@ -762,12 +701,9 @@ export default function AssetStoreFiori() {
                   {selected.type === "Printer" && (
                     <>
                       <div>
-                        <label className="text-sm font-semibold text-gray-700 block mb-2">
-                          Route
-                        </label>
-
+                        <label className={modalLabel}>Route</label>
                         <input
-                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          className={modalInput}
                           value={selected.route || ""}
                           onChange={(e) =>
                             setSelected({
@@ -779,12 +715,9 @@ export default function AssetStoreFiori() {
                       </div>
 
                       <div>
-                        <label className="text-sm font-semibold text-gray-700 block mb-2">
-                          Supervisor
-                        </label>
-
+                        <label className={modalLabel}>Supervisor</label>
                         <input
-                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          className={modalInput}
                           value={selected.supervisor || ""}
                           onChange={(e) =>
                             setSelected({
@@ -796,12 +729,9 @@ export default function AssetStoreFiori() {
                       </div>
 
                       <div>
-                        <label className="text-sm font-semibold text-gray-700 block mb-2">
-                          Salesman Code
-                        </label>
-
+                        <label className={modalLabel}>Salesman Code</label>
                         <input
-                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          className={modalInput}
                           value={selected.salesmanCode || ""}
                           onChange={(e) =>
                             setSelected({
@@ -813,12 +743,9 @@ export default function AssetStoreFiori() {
                       </div>
 
                       <div>
-                        <label className="text-sm font-semibold text-gray-700 block mb-2">
-                          Salesman Name
-                        </label>
-
+                        <label className={modalLabel}>Salesman Name</label>
                         <input
-                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          className={modalInput}
                           value={selected.salesmanName || ""}
                           onChange={(e) =>
                             setSelected({
@@ -834,12 +761,9 @@ export default function AssetStoreFiori() {
                   {selected.type === "HHT" && (
                     <>
                       <div>
-                        <label className="text-sm font-semibold text-gray-700 block mb-2">
-                          Salesman Name
-                        </label>
-
+                        <label className={modalLabel}>Salesman Name</label>
                         <input
-                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          className={modalInput}
                           value={selected.salesmanName || ""}
                           onChange={(e) =>
                             setSelected({
@@ -851,12 +775,9 @@ export default function AssetStoreFiori() {
                       </div>
 
                       <div>
-                        <label className="text-sm font-semibold text-gray-700 block mb-2">
-                          Route
-                        </label>
-
+                        <label className={modalLabel}>Route</label>
                         <input
-                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          className={modalInput}
                           value={selected.route || ""}
                           onChange={(e) =>
                             setSelected({
@@ -868,12 +789,9 @@ export default function AssetStoreFiori() {
                       </div>
 
                       <div>
-                        <label className="text-sm font-semibold text-gray-700 block mb-2">
-                          IMEI
-                        </label>
-
+                        <label className={modalLabel}>IMEI</label>
                         <input
-                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          className={modalInput}
                           value={selected.imei || ""}
                           onChange={(e) =>
                             setSelected({
@@ -885,12 +803,9 @@ export default function AssetStoreFiori() {
                       </div>
 
                       <div>
-                        <label className="text-sm font-semibold text-gray-700 block mb-2">
-                          SIM Number
-                        </label>
-
+                        <label className={modalLabel}>SIM Number</label>
                         <input
-                          className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                          className={modalInput}
                           value={selected.simNumber || ""}
                           onChange={(e) =>
                             setSelected({
@@ -904,12 +819,9 @@ export default function AssetStoreFiori() {
                   )}
 
                   <div className="md:col-span-2">
-                    <label className="text-sm font-semibold text-gray-700 block mb-2">
-                      Status
-                    </label>
-
+                    <label className={modalLabel}>Status</label>
                     <select
-                      className="w-full border border-gray-300 rounded-2xl px-4 py-3"
+                      className={modalInput}
                       value={selected.status || ""}
                       onChange={(e) =>
                         setSelected({
@@ -918,168 +830,92 @@ export default function AssetStoreFiori() {
                         })
                       }
                     >
-                      <option value="available">
-                        Available
-                      </option>
-
-                      <option value="assigned">
-                        Assigned
-                      </option>
-
-                      <option value="damaged">
-                        Damaged
-                      </option>
-
+                      <option value="available">Available</option>
+                      <option value="assigned">Assigned</option>
+                      <option value="damaged">Damaged</option>
                       <option value="printer_for_service">
                         Printer for Service
                       </option>
-
-                      <option value="under_service">
-                        Under Service
-                      </option>
+                      <option value="under_service">Under Service</option>
                     </select>
                   </div>
+
                   {selected?.type === "Laptop" && (
                     <div className="md:col-span-2">
-                      <label className="text-sm font-semibold text-gray-700 block mb-3">
+                      <label className={modalLabel + " mb-2"}>
                         Accessories
                       </label>
 
-                      <div className="grid grid-cols-2 gap-3">
-
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected?.accessories?.charger || false}
-                            onChange={(e) =>
-                              setSelected({
-                                ...selected,
-                                accessories: {
-                                  ...selected.accessories,
-                                  charger: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          Charger
-                        </label>
-
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected?.accessories?.mouse || false}
-                            onChange={(e) =>
-                              setSelected({
-                                ...selected,
-                                accessories: {
-                                  ...selected.accessories,
-                                  mouse: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          Mouse
-                        </label>
-
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected?.accessories?.laptopBag || false}
-                            onChange={(e) =>
-                              setSelected({
-                                ...selected,
-                                accessories: {
-                                  ...selected.accessories,
-                                  laptopBag: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          Laptop Bag
-                        </label>
-
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected?.accessories?.keyboard || false}
-                            onChange={(e) =>
-                              setSelected({
-                                ...selected,
-                                accessories: {
-                                  ...selected.accessories,
-                                  keyboard: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          Keyboard
-                        </label>
-
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected?.accessories?.headset || false}
-                            onChange={(e) =>
-                              setSelected({
-                                ...selected,
-                                accessories: {
-                                  ...selected.accessories,
-                                  headset: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          Headset
-                        </label>
-
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {[
+                          ["charger", "Charger"],
+                          ["mouse", "Mouse"],
+                          ["laptopBag", "Laptop Bag"],
+                          ["keyboard", "Keyboard"],
+                          ["headset", "Headset"],
+                        ].map(([key, label]) => (
+                          <label
+                            key={key}
+                            className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 cursor-pointer hover:bg-gray-100 transition"
+                          >
+                            <input
+                              type="checkbox"
+                              className="accent-[#0a6ed1]"
+                              checked={selected?.accessories?.[key] || false}
+                              onChange={(e) =>
+                                setSelected({
+                                  ...selected,
+                                  accessories: {
+                                    ...selected.accessories,
+                                    [key]: e.target.checked,
+                                  },
+                                })
+                              }
+                            />
+                            {label}
+                          </label>
+                        ))}
                       </div>
                     </div>
                   )}
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">
-                    Notes
-                  </label>
 
-                  <textarea
-                    rows="4"
-                    className="w-full border border-gray-300 rounded-2xl px-4 py-3"
-                    value={selected.notes || ""}
-                    onChange={(e) =>
-                      setSelected({
-                        ...selected,
-                        notes: e.target.value,
-                      })
-                    }
-                  />
+                  <div className="md:col-span-2">
+                    <label className={modalLabel}>Notes</label>
+                    <textarea
+                      rows="4"
+                      className={modalInput}
+                      value={selected.notes || ""}
+                      onChange={(e) =>
+                        setSelected({
+                          ...selected,
+                          notes: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
-
               </div>
 
               {/* FOOTER */}
-              <div className="flex gap-4 mt-8">
+              <div className="flex gap-3 p-6 pt-0 shrink-0">
                 <button
                   onClick={updateAsset}
-                  className="flex-1 h-12 rounded-2xl bg-[#0a6ed1] hover:bg-[#085caf] text-white font-semibold shadow-sm transition"
+                  className="flex-1 h-11 rounded-xl bg-[#0a6ed1] hover:bg-[#085caf] text-white font-semibold shadow-sm shadow-blue-600/20 transition"
                 >
                   Save Changes
                 </button>
 
                 <button
-                  onClick={() =>
-                    setEditOpen(false)
-                  }
-                  className="flex-1 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold transition"
+                  onClick={() => setEditOpen(false)}
+                  className="flex-1 h-11 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold transition"
                 >
                   Cancel
                 </button>
               </div>
-
             </div>
           </div>
-
         )}
       </div>
-    </div >
+    </div>
   );
 }
