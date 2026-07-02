@@ -30,7 +30,7 @@ const assetSchema = new mongoose.Schema(
     "available",
     "assigned",
     "damaged",
-    "printer_for_service",
+    "for_service",
     "under_service",
   ],
   default: "available",
