@@ -17,7 +17,7 @@ const inputClass =
 
 const selectClass = inputClass + " appearance-none";
 
-const Section = ({ id, icon, title, subtitle, children }) => {
+const Section = ({ id, icon, title, subtitle, children, open, setOpen }) => {
   const isOpen = open === id;
   return (
     <div className="bg-white border border-gray-200 rounded-2xl mb-4 shadow-sm overflow-hidden transition-shadow hover:shadow-md">
@@ -414,7 +414,7 @@ export default function AdminAssets() {
           open={open}
           setOpen={setOpen}
           icon="📦"
-          title="Add Asset"
+          title="Assign Asset"
         >
           <div className="grid md:grid-cols-3 gap-4 pt-4">
             <Field label="Employee" className="md:col-span-2">
