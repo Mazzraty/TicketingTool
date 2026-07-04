@@ -10,6 +10,11 @@ export default function AdminTickets() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ✅ RESOLUTION MODAL STATE
+  const [statusModal, setStatusModal] = useState(null); // { ticket, targetStatus }
+  const [resolutionNote, setResolutionNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   const initialStats = {
     total: 0,
     open: 0,
@@ -58,15 +63,56 @@ export default function AdminTickets() {
     }
   };
 
-  const updateStatus = async (id, status) => {
+  /* ================= STATUS CHANGE ENTRY POINT =================
+     Open / In Progress -> instant update
+     Resolved / Closed   -> requires a resolution note via modal
+  ================================================================ */
+  const handleStatusChange = (ticket, targetStatus) => {
+    if (targetStatus === "Resolved" || targetStatus === "Closed") {
+      setResolutionNote(ticket.resolutionNote || "");
+      setStatusModal({ ticket, targetStatus });
+      return;
+    }
+    updateStatus(ticket._id, targetStatus);
+  };
+
+  const updateStatus = async (id, status, extra = {}) => {
     try {
-      await api.put(`/tickets/${id}`, { status });
-      toast.success("Status updated");
+      const payload = { status, ...extra };
+
+      if (status === "Resolved") {
+        payload.resolvedAt = new Date().toISOString();
+      }
+      if (status === "Closed") {
+        payload.closedAt = new Date().toISOString();
+      }
+
+      await api.put(`/tickets/${id}`, payload);
+      toast.success(`Ticket marked as ${status}`);
       load(page);
       loadStats();
     } catch {
       toast.error("Update failed");
     }
+  };
+
+  const confirmStatusModal = async () => {
+    if (!resolutionNote.trim()) {
+      return toast.error("Please add a resolution note before continuing");
+    }
+
+    setSubmitting(true);
+    await updateStatus(statusModal.ticket._id, statusModal.targetStatus, {
+      resolutionNote: resolutionNote.trim(),
+    });
+    setSubmitting(false);
+    setStatusModal(null);
+    setResolutionNote("");
+  };
+
+  const cancelStatusModal = () => {
+    setStatusModal(null);
+    setResolutionNote("");
   };
 
   const filtered = tickets.filter((t) => {
@@ -84,6 +130,20 @@ export default function AdminTickets() {
     if (p === "Medium") return "bg-yellow-100 text-yellow-700";
     if (p === "Low") return "bg-blue-100 text-blue-700";
     return "bg-gray-100 text-gray-600";
+  };
+
+  // ✅ STATUS SELECT COLORING (visual clarity for a "professional" feel)
+  const statusSelectClass = (s) => {
+    const base =
+      "border text-xs p-1.5 rounded-md font-medium outline-none cursor-pointer";
+    if (s === "Open") return `${base} bg-blue-50 text-blue-700 border-blue-200`;
+    if (s === "In Progress")
+      return `${base} bg-yellow-50 text-yellow-700 border-yellow-200`;
+    if (s === "Resolved")
+      return `${base} bg-emerald-50 text-emerald-700 border-emerald-200`;
+    if (s === "Closed")
+      return `${base} bg-gray-100 text-gray-600 border-gray-200`;
+    return base;
   };
 
   const formatDateTime = (date) =>
@@ -137,7 +197,7 @@ export default function AdminTickets() {
 
       {/* ================= SIDE PANEL ================= */}
       {selected && (
-        <div className="w-[380px] bg-white border-l p-5 flex flex-col gap-4">
+        <div className="w-[380px] bg-white border-l p-5 flex flex-col gap-4 overflow-y-auto">
 
           <div className="flex justify-between items-center border-b pb-2">
             <h2 className="font-bold text-lg">Ticket Preview</h2>
@@ -159,6 +219,18 @@ export default function AdminTickets() {
             <p><b>Opened:</b> {formatDateTime(selected.createdAt)}</p>
             <p><b>Resolved:</b> {formatDateTime(selected.resolvedAt)}</p>
             <p><b>Closed:</b> {formatDateTime(selected.closedAt)}</p>
+          </div>
+
+          {/* ✅ RESOLUTION NOTE */}
+          <div>
+            <p className="font-semibold text-xs mb-1">Resolution Note</p>
+            {selected.resolutionNote ? (
+              <div className="bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs p-2.5 rounded">
+                {selected.resolutionNote}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">Not resolved yet</p>
+            )}
           </div>
 
           {/* ✅ ATTACHMENTS SIDE PANEL */}
@@ -272,15 +344,23 @@ export default function AdminTickets() {
 
                       <td className="p-3 text-center">
                         <select
-                          className="border text-xs p-1 rounded"
+                          className={statusSelectClass(t.status)}
                           value={t.status}
-                          onChange={(e) => updateStatus(t._id, e.target.value)}
+                          onChange={(e) => handleStatusChange(t, e.target.value)}
                         >
                           <option>Open</option>
                           <option>In Progress</option>
                           <option>Resolved</option>
                           <option>Closed</option>
                         </select>
+                        {t.resolutionNote && (
+                          <p
+                            className="text-[10px] text-gray-400 mt-1 max-w-[140px] mx-auto truncate"
+                            title={t.resolutionNote}
+                          >
+                            📝 {t.resolutionNote}
+                          </p>
+                        )}
                       </td>
 
                       <td className="p-3 text-center text-xs">
@@ -341,6 +421,48 @@ export default function AdminTickets() {
         </div>
 
       </div>
+
+      {/* ================= RESOLVE / CLOSE MODAL ================= */}
+      {statusModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-5">
+            <h3 className="font-bold text-base mb-1">
+              Mark as {statusModal.targetStatus}
+            </h3>
+            <p className="text-xs text-gray-500 mb-4">
+              "{statusModal.ticket.title}" — add a resolution note before
+              continuing. This helps keep a clear record of how the issue was
+              handled.
+            </p>
+
+            <textarea
+              className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition resize-none"
+              rows={4}
+              placeholder="e.g. Replaced faulty router, tested connection with user, confirmed working."
+              value={resolutionNote}
+              onChange={(e) => setResolutionNote(e.target.value)}
+              autoFocus
+            />
+
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={cancelStatusModal}
+                disabled={submitting}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmStatusModal}
+                disabled={submitting}
+                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition disabled:opacity-60"
+              >
+                {submitting ? "Saving..." : `Confirm ${statusModal.targetStatus}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
