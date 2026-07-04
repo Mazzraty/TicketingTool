@@ -2,7 +2,61 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import Select from "react-select";
+/* ================= UI HELPERS (styling only, no logic) ================= */
+const Field = ({ label, className = "", children }) => (
+  <div className={`flex flex-col gap-1.5 ${className}`}>
+    <label className="text-xs font-medium text-gray-500 tracking-wide">
+      {label}
+    </label>
+    {children}
+  </div>
+);
 
+const inputClass =
+  "border border-gray-200 bg-white p-2.5 rounded-lg text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition";
+
+const selectClass = inputClass + " appearance-none";
+
+const Section = ({ id, icon, title, subtitle, children }) => {
+  const isOpen = open === id;
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl mb-4 shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+      <button
+        onClick={() => setOpen(isOpen ? null : id)}
+        className="w-full flex items-center justify-between px-5 py-4 group"
+      >
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 text-base">
+            {icon}
+          </span>
+          <div className="text-left">
+            <p className="font-semibold text-gray-900 text-sm">{title}</p>
+            {subtitle && (
+              <p className="text-xs text-gray-400">{subtitle}</p>
+            )}
+          </div>
+        </div>
+        <span
+          className={`w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 text-sm transition-transform duration-200 ${isOpen ? "rotate-45 border-blue-300 text-blue-600" : ""
+            }`}
+        >
+          +
+        </span>
+      </button>
+
+      <div
+        className={`grid transition-all duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+      >
+        <div className="overflow-hidden">
+          <div className="p-5 pt-1 bg-gray-50/60 border-t border-gray-100">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 export default function AdminAssets() {
   const [assetCode, setAssetCode] = useState("");
   const [type, setType] = useState("");
@@ -174,63 +228,7 @@ export default function AdminAssets() {
     }
   };
 
-  /* ================= UI HELPERS (styling only, no logic) ================= */
-  const Field = ({ label, className = "", children }) => (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <label className="text-xs font-medium text-gray-500 tracking-wide">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
 
-  const inputClass =
-    "border border-gray-200 bg-white p-2.5 rounded-lg text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition";
-
-  const selectClass = inputClass + " appearance-none";
-
-  const Section = ({ id, icon, title, subtitle, children }) => {
-    const isOpen = open === id;
-    return (
-      <div className="bg-white border border-gray-200 rounded-2xl mb-4 shadow-sm overflow-hidden transition-shadow hover:shadow-md">
-        <button
-          onClick={() => setOpen(isOpen ? null : id)}
-          className="w-full flex items-center justify-between px-5 py-4 group"
-        >
-          <div className="flex items-center gap-3">
-            <span className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 text-base">
-              {icon}
-            </span>
-            <div className="text-left">
-              <p className="font-semibold text-gray-900 text-sm">{title}</p>
-              {subtitle && (
-                <p className="text-xs text-gray-400">{subtitle}</p>
-              )}
-            </div>
-          </div>
-          <span
-            className={`w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 text-sm transition-transform duration-200 ${
-              isOpen ? "rotate-45 border-blue-300 text-blue-600" : ""
-            }`}
-          >
-            +
-          </span>
-        </button>
-
-        <div
-          className={`grid transition-all duration-300 ease-in-out ${
-            isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-          }`}
-        >
-          <div className="overflow-hidden">
-            <div className="p-5 pt-1 bg-gray-50/60 border-t border-gray-100">
-              {children}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="p-6 md:p-8 bg-[#f4f6f9] min-h-screen">
@@ -256,9 +254,10 @@ export default function AdminAssets() {
         {/* ================= ADD ASSET ================= */}
         <Section
           id="add"
+          open={open}
+          setOpen={setOpen}
           icon="📦"
           title="Add Asset"
-          subtitle="Register a new laptop, printer, or HHT device"
         >
           <div className="grid md:grid-cols-3 gap-4 pt-4">
             {user?.role === "super_admin" && (
@@ -412,9 +411,10 @@ export default function AdminAssets() {
         {/* ================= ASSIGN ================= */}
         <Section
           id="assign"
-          icon="👤"
-          title="Assign Asset"
-          subtitle="Hand a registered asset to an employee"
+          open={open}
+          setOpen={setOpen}
+          icon="📦"
+          title="Add Asset"
         >
           <div className="grid md:grid-cols-3 gap-4 pt-4">
             <Field label="Employee" className="md:col-span-2">
@@ -426,9 +426,9 @@ export default function AdminAssets() {
                 value={
                   selectedEmployee
                     ? {
-                        value: selectedEmployee,
-                        label: selectedEmployee,
-                      }
+                      value: selectedEmployee,
+                      label: selectedEmployee,
+                    }
                     : null
                 }
                 onChange={(selected) =>
@@ -474,6 +474,8 @@ export default function AdminAssets() {
         {/* ================= RETURN ================= */}
         <Section
           id="return"
+          open={open}
+          setOpen={setOpen}
           icon="↩️"
           title="Return Asset"
           subtitle="Mark an asset as returned to stock"
