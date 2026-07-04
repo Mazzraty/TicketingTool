@@ -4,9 +4,67 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import { useAuth } from "../auth/AuthContext";
+import {
+  ArrowLeft,
+  Plus,
+  Search,
+  Building2,
+  Calendar,
+  CalendarClock,
+  Banknote,
+  Layers,
+  CheckCircle2,
+  XCircle,
+  RefreshCcw,
+  Pencil,
+  Trash2,
+  X,
+  PackageSearch,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+} from "lucide-react";
+
+const STATUS_STYLES = {
+  Active: {
+    pill: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  Expired: {
+    pill: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+    dot: "bg-rose-500",
+  },
+  Renewed: {
+    pill: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200",
+    dot: "bg-sky-500",
+  },
+};
+
+const EMPTY_FORM = {
+  serviceName: "",
+  vendor: "",
+  companyId: "",
+  durationMonths: "",
+  amount: "",
+  purchaseDate: "",
+  expiryDate: "",
+  status: "Active",
+};
+
+function initials(name = "") {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("") || "?";
+}
+
 export default function AdminSoftwareDashboard() {
   const [softwares, setSoftwares] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [page, setPage] = useState(1);
 
   const limit = 8;
@@ -15,19 +73,14 @@ export default function AdminSoftwareDashboard() {
 
   const [editModal, setEditModal] = useState(false);
   const [editData, setEditData] = useState(null);
+
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { user } = useAuth();
 
   const [companies, setCompanies] = useState([]);
-  const [form, setForm] = useState({
-    serviceName: "",
-    vendor: "",
-    companyId: "",
-    durationMonths: "",
-    amount: "",
-    purchaseDate: "",
-    expiryDate: "",
-    status: "Active",
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
 
   /* =========================
      FETCH SOFTWARES
@@ -48,12 +101,14 @@ export default function AdminSoftwareDashboard() {
 
   const fetchSoftwares = async () => {
     try {
+      setIsLoading(true);
       const res = await api.get("/software");
-
       setSoftwares(res.data.data || []);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load softwares");
+      toast.error("Failed to load vendors");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -77,85 +132,35 @@ export default function AdminSoftwareDashboard() {
 
       await api.post("/software", payload);
 
-      toast.success("Vendor Added Successfully");
+      toast.success("Vendor added successfully");
 
-      setForm({
-        serviceName: "",
-        vendor: "",
-        companyId: "",
-        durationMonths: "",
-        amount: "",
-        purchaseDate: "",
-        expiryDate: "",
-        status: "Active",
-      });
-
+      setForm(EMPTY_FORM);
       setAddModal(false);
-
       fetchSoftwares();
     } catch (err) {
       console.error(err);
-
-      toast.error(
-        err?.response?.data?.message || "Failed to add vendor"
-      );
+      toast.error(err?.response?.data?.message || "Failed to add vendor");
     }
   };
 
   /* =========================
      DELETE SOFTWARE
   ========================= */
-  /* =========================
-     DELETE SOFTWARE
-  ========================= */
-  const deleteSoftware = async (id) => {
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
 
-    toast((t) => (
-      <div className="flex flex-col gap-3">
-
-        <p className="font-medium">
-          Delete this vendor?
-        </p>
-
-        <div className="flex justify-end gap-2">
-
-          <button
-            onClick={() => toast.dismiss(t.id)}
-            className="px-3 py-1 rounded bg-gray-200 text-gray-700 text-sm"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={async () => {
-              try {
-                await api.delete(`/software/${id}`);
-
-                toast.dismiss(t.id);
-
-                toast.success("Deleted Successfully");
-
-                fetchSoftwares();
-              } catch (err) {
-                console.error(err);
-
-                toast.dismiss(t.id);
-
-                toast.error("Delete failed");
-              }
-            }}
-            className="px-3 py-1 rounded bg-red-600 text-white text-sm"
-          >
-            Delete
-          </button>
-
-        </div>
-
-      </div>
-    ), {
-      duration: 10000,
-    });
-
+    try {
+      setIsDeleting(true);
+      await api.delete(`/software/${deleteTarget._id}`);
+      toast.success("Vendor deleted successfully");
+      setDeleteTarget(null);
+      fetchSoftwares();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete vendor");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   /* =========================
@@ -164,14 +169,8 @@ export default function AdminSoftwareDashboard() {
   const openEdit = (item) => {
     setEditData({
       ...item,
-
-      purchaseDate: item.purchaseDate
-        ? item.purchaseDate.split("T")[0]
-        : "",
-
-      expiryDate: item.expiryDate
-        ? item.expiryDate.split("T")[0]
-        : "",
+      purchaseDate: item.purchaseDate ? item.purchaseDate.split("T")[0] : "",
+      expiryDate: item.expiryDate ? item.expiryDate.split("T")[0] : "",
     });
 
     setEditModal(true);
@@ -190,18 +189,14 @@ export default function AdminSoftwareDashboard() {
 
       await api.put(`/software/${editData._id}`, payload);
 
-      toast.success("Updated Successfully");
+      toast.success("Vendor updated successfully");
 
       setEditModal(false);
       setEditData(null);
-
       fetchSoftwares();
     } catch (err) {
       console.error(err);
-
-      toast.error(
-        err?.response?.data?.message || "Update failed"
-      );
+      toast.error(err?.response?.data?.message || "Failed to update vendor");
     }
   };
 
@@ -209,19 +204,29 @@ export default function AdminSoftwareDashboard() {
      FILTER
   ========================= */
   const filtered = useMemo(() => {
-    return softwares.filter((s) =>
-      `${s.serviceName} ${s.vendor} ${s.status}`
+    return softwares.filter((s) => {
+      const matchesSearch = `${s.serviceName} ${s.vendor} ${s.status}`
         .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  }, [softwares, search]);
+        .includes(search.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "All" || s.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [softwares, search, statusFilter]);
 
   /* =========================
      PAGINATION
   ========================= */
+  const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
   const paginated = useMemo(() => {
     const start = (page - 1) * limit;
-
     return filtered.slice(start, start + limit);
   }, [filtered, page]);
 
@@ -231,508 +236,614 @@ export default function AdminSoftwareDashboard() {
   const kpi = useMemo(() => {
     return {
       total: softwares.length,
-
-      active: softwares.filter(
-        (s) => s.status === "Active"
-      ).length,
-
-      expired: softwares.filter(
-        (s) => s.status === "Expired"
-      ).length,
-
-      renewed: softwares.filter(
-        (s) => s.status === "Renewed"
-      ).length,
+      active: softwares.filter((s) => s.status === "Active").length,
+      expired: softwares.filter((s) => s.status === "Expired").length,
+      renewed: softwares.filter((s) => s.status === "Renewed").length,
     };
   }, [softwares]);
 
+  const kpiCards = [
+    {
+      label: "Total vendors",
+      value: kpi.total,
+      icon: Layers,
+      iconBg: "bg-slate-100",
+      iconColor: "text-slate-600",
+      valueColor: "text-slate-900",
+    },
+    {
+      label: "Active",
+      value: kpi.active,
+      icon: CheckCircle2,
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      valueColor: "text-emerald-700",
+    },
+    {
+      label: "Expired",
+      value: kpi.expired,
+      icon: XCircle,
+      iconBg: "bg-rose-50",
+      iconColor: "text-rose-600",
+      valueColor: "text-rose-700",
+    },
+    {
+      label: "Renewed",
+      value: kpi.renewed,
+      icon: RefreshCcw,
+      iconBg: "bg-sky-50",
+      iconColor: "text-sky-600",
+      valueColor: "text-sky-700",
+    },
+  ];
+
   return (
-    <div className="bg-[#f4f6f9] min-h-screen">
-      {/* ================= BACK NAVIGATION ================= */}
-      <div className="mb-4">
+    <div className="bg-slate-50 min-h-screen font-sans text-slate-900">
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* ================= BACK NAVIGATION ================= */}
         <button
           onClick={() => window.history.back()}
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition shadow-sm text-sm font-semibold"
+          className="inline-flex items-center gap-2 mb-5 px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 transition text-sm font-medium shadow-sm"
         >
-          ← Back
+          <ArrowLeft className="w-4 h-4" />
+          Back
         </button>
-      </div>
-      {/* HEADER */}
-      <div className="bg-white border-b shadow-sm px-6 py-4 flex items-center justify-between">
 
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">
-            Vendor Dashboard
-          </h1>
+        {/* HEADER */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm px-6 py-5 flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
+              Vendor Dashboard
+            </h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Software & license management
+            </p>
+          </div>
 
-          <p className="text-sm text-gray-500">
-            Software & License Management
-          </p>
+          <button
+            onClick={() => setAddModal(true)}
+            className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition text-sm font-semibold shadow-sm shadow-indigo-200"
+          >
+            <Plus className="w-4 h-4" />
+            Add vendor
+          </button>
         </div>
 
-        <button
-          onClick={() => setAddModal(true)}
-          className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800"
-        >
-          + Add Vendor
-        </button>
-      </div>
-
-      {/* KPI */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5 p-6">
-
-        <div className="bg-white rounded-xl shadow-sm border p-5">
-          <p className="text-gray-500 text-sm">Total Vendors</p>
-          <h2 className="text-3xl font-bold mt-2">
-            {kpi.total}
-          </h2>
+        {/* KPI */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {kpiCards.map(({ label, value, icon: Icon, iconBg, iconColor, valueColor }) => (
+            <div
+              key={label}
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-start justify-between"
+            >
+              <div>
+                <p className="text-slate-500 text-sm font-medium">{label}</p>
+                <h2 className={`text-3xl font-semibold mt-2 tracking-tight ${valueColor}`}>
+                  {value}
+                </h2>
+              </div>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}>
+                <Icon className={`w-5 h-5 ${iconColor}`} />
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div className="bg-green-50 rounded-xl shadow-sm border p-5">
-          <p className="text-green-700 text-sm">Active</p>
-          <h2 className="text-3xl font-bold text-green-700 mt-2">
-            {kpi.active}
-          </h2>
+        {/* TOOLBAR */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+          <div className="relative w-full sm:w-[340px]">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              className="w-full border border-slate-200 rounded-lg pl-10 pr-4 py-2.5 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition"
+              placeholder="Search by service, vendor, or status"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {["All", "Active", "Expired", "Renewed"].map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3.5 py-2 rounded-lg text-sm font-medium border transition ${
+                  statusFilter === s
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="bg-red-50 rounded-xl shadow-sm border p-5">
-          <p className="text-red-700 text-sm">Expired</p>
-          <h2 className="text-3xl font-bold text-red-700 mt-2">
-            {kpi.expired}
-          </h2>
-        </div>
-
-        <div className="bg-blue-50 rounded-xl shadow-sm border p-5">
-          <p className="text-blue-700 text-sm">Renewed</p>
-          <h2 className="text-3xl font-bold text-blue-700 mt-2">
-            {kpi.renewed}
-          </h2>
-        </div>
-
-      </div>
-
-      {/* SEARCH */}
-      <div className="px-6 mb-5">
-        <input
-          className="w-full md:w-[350px] border rounded-lg px-4 py-2 bg-white"
-          placeholder="Search software..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      {/* TABLE */}
-      <div className="px-6 pb-10">
-
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-
-          <table className="w-full text-sm">
-
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="text-left px-4 py-3">
-                  Service
-                </th>
-
-                <th className="text-left px-4 py-3">
-                  Vendor
-                </th>
-
-                <th className="text-left px-4 py-3">
-                  Company
-                </th>
-
-                <th className="text-left px-4 py-3">
-                  Duration
-                </th>
-
-                <th className="text-left px-4 py-3">
-                  Amount
-                </th>
-
-                <th className="text-left px-4 py-3">
-                  Start Date
-                </th>
-
-                <th className="text-left px-4 py-3">
-                  End Date
-                </th>
-
-                <th className="text-left px-4 py-3">
-                  Status
-                </th>
-
-                <th className="text-center px-4 py-3">
-                  Action
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {paginated.map((s) => (
-                <tr
-                  key={s._id}
-                  className="border-t hover:bg-gray-50"
-                >
-                  <td className="px-4 py-3 font-medium">
-                    {s.serviceName}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    {s.vendor}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
-                      {s.companyId?.name || "-"}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-3">
-                    {s.durationMonths} Months
-                  </td>
-
-                  <td className="px-4 py-3">
-                    QAR {s.amount}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    {s.purchaseDate
-                      ? new Date(s.purchaseDate).toLocaleDateString()
-                      : "-"}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    {s.expiryDate
-                      ? new Date(s.expiryDate).toLocaleDateString()
-                      : "-"}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold
-      ${s.status === "Active"
-                          ? "bg-green-100 text-green-700"
-                          : s.status === "Expired"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-blue-100 text-blue-700"
-                        }`}
-                    >
-                      {s.status}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => openEdit(s)}
-                      className="bg-blue-50 text-blue-700 px-3 py-1 rounded mr-2 text-xs"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => deleteSoftware(s._id)}
-                      className="bg-red-50 text-red-700 px-3 py-1 rounded text-xs"
-                    >
-                      Delete
-                    </button>
-                  </td>
+        {/* TABLE */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Service
+                  </th>
+                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Company
+                  </th>
+                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Duration
+                  </th>
+                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Amount
+                  </th>
+                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Start date
+                  </th>
+                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    End date
+                  </th>
+                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Status
+                  </th>
+                  <th className="text-right px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
+              </thead>
 
-          </table>
+              <tbody>
+                {isLoading &&
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-b border-slate-100">
+                      {Array.from({ length: 8 }).map((__, j) => (
+                        <td key={j} className="px-5 py-4">
+                          <div className="h-3.5 bg-slate-100 rounded animate-pulse w-full max-w-[120px]" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
 
+                {!isLoading && paginated.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-16">
+                      <div className="flex flex-col items-center justify-center text-center gap-2">
+                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-1">
+                          <PackageSearch className="w-6 h-6 text-slate-400" />
+                        </div>
+                        <p className="text-slate-700 font-medium">No vendors found</p>
+                        <p className="text-slate-400 text-sm max-w-xs">
+                          Try adjusting your search or filters, or add a new vendor to get started.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+
+                {!isLoading &&
+                  paginated.map((s) => {
+                    const statusStyle =
+                      STATUS_STYLES[s.status] || STATUS_STYLES.Active;
+
+                    return (
+                      <tr
+                        key={s._id}
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition-colors"
+                      >
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-semibold shrink-0">
+                              {initials(s.vendor)}
+                            </div>
+                            <div>
+                              <p className="font-medium text-slate-900">
+                                {s.serviceName}
+                              </p>
+                              <p className="text-xs text-slate-400">{s.vendor}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-medium">
+                            <Building2 className="w-3.5 h-3.5" />
+                            {s.companyId?.name || "—"}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4 text-slate-600">
+                          {s.durationMonths} months
+                        </td>
+
+                        <td className="px-5 py-4 text-slate-900 font-medium">
+                          QAR {s.amount}
+                        </td>
+
+                        <td className="px-5 py-4 text-slate-600">
+                          {s.purchaseDate
+                            ? new Date(s.purchaseDate).toLocaleDateString()
+                            : "—"}
+                        </td>
+
+                        <td className="px-5 py-4 text-slate-600">
+                          {s.expiryDate
+                            ? new Date(s.expiryDate).toLocaleDateString()
+                            : "—"}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyle.pill}`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
+                            {s.status}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => openEdit(s)}
+                              title="Edit vendor"
+                              className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              onClick={() => setDeleteTarget(s)}
+                              title="Delete vendor"
+                              className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* PAGINATION */}
+          {!isLoading && filtered.length > 0 && (
+            <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100">
+              <p className="text-xs text-slate-400">
+                Showing{" "}
+                <span className="font-medium text-slate-600">
+                  {(page - 1) * limit + 1}–{Math.min(page * limit, filtered.length)}
+                </span>{" "}
+                of <span className="font-medium text-slate-600">{filtered.length}</span>
+              </p>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-xs text-slate-500 px-2 font-medium">
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ADD MODAL */}
       {addModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Add vendor</h2>
+                <p className="text-sm text-slate-400 mt-0.5">
+                  Register a new software license or subscription
+                </p>
+              </div>
+              <button
+                onClick={() => setAddModal(false)}
+                className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-          <div className="bg-white w-[700px] rounded-2xl p-6">
-
-            <h2 className="text-xl font-bold mb-5">
-              Add Vendor
-            </h2>
-
-            <form
-              onSubmit={handleSubmit}
-              className="grid grid-cols-2 gap-4"
-            >
-
-              <input
-                className="border p-3 rounded-lg"
-                placeholder="Service Name"
-                value={form.serviceName}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    serviceName: e.target.value,
-                  })
-                }
-                required
-              />
-              <input
-                className="border p-3 rounded-lg"
-                placeholder="Vendor Name"
-                value={form.vendor}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    vendor: e.target.value,
-                  })
-                }
-                required
-              />
-              {user?.role === "super_admin" && (
-                <select
-                  className="border p-3 rounded-lg"
-                  value={form.companyId}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      companyId: e.target.value,
-                    })
-                  }
+            <form onSubmit={handleSubmit} className="px-6 py-6 grid grid-cols-2 gap-4">
+              <Field label="Service name" required className="col-span-2 sm:col-span-1">
+                <input
+                  className="input-field"
+                  placeholder="e.g. Kaspersky"
+                  value={form.serviceName}
+                  onChange={(e) => setForm({ ...form, serviceName: e.target.value })}
                   required
-                >
-                  <option value="">Select Company</option>
+                />
+              </Field>
 
-                  {companies.map((company) => (
-                    <option
-                      key={company._id}
-                      value={company._id}
-                    >
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
+              <Field label="Vendor name" required className="col-span-2 sm:col-span-1">
+                <input
+                  className="input-field"
+                  placeholder="e.g. Aruba"
+                  value={form.vendor}
+                  onChange={(e) => setForm({ ...form, vendor: e.target.value })}
+                  required
+                />
+              </Field>
+
+              {user?.role === "super_admin" && (
+                <Field label="Company" required className="col-span-2">
+                  <select
+                    className="input-field"
+                    value={form.companyId}
+                    onChange={(e) => setForm({ ...form, companyId: e.target.value })}
+                    required
+                  >
+                    <option value="">Select company</option>
+                    {companies.map((company) => (
+                      <option key={company._id} value={company._id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
               )}
 
-              <input
-                type="number"
-                className="border p-3 rounded-lg"
-                placeholder="Duration Months"
-                value={form.durationMonths}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    durationMonths: e.target.value,
-                  })
-                }
-              />
+              <Field label="Duration (months)" className="col-span-2 sm:col-span-1">
+                <input
+                  type="number"
+                  className="input-field"
+                  placeholder="12"
+                  value={form.durationMonths}
+                  onChange={(e) => setForm({ ...form, durationMonths: e.target.value })}
+                />
+              </Field>
 
-              <input
-                type="number"
-                className="border p-3 rounded-lg"
-                placeholder="Amount"
-                value={form.amount}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    amount: e.target.value,
-                  })
-                }
-              />
+              <Field label="Amount (QAR)" className="col-span-2 sm:col-span-1">
+                <input
+                  type="number"
+                  className="input-field"
+                  placeholder="0.00"
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                />
+              </Field>
 
-              <div>
-                <label className="text-xs text-gray-500">
-                  Purchase Date
-                </label>
-
+              <Field label="Purchase date" className="col-span-2 sm:col-span-1">
                 <input
                   type="date"
-                  className="border p-3 rounded-lg w-full"
+                  className="input-field"
                   value={form.purchaseDate}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      purchaseDate: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="text-xs text-gray-500">
-                  Expiry Date
-                </label>
-
+              <Field label="Expiry date" className="col-span-2 sm:col-span-1">
                 <input
                   type="date"
-                  className="border p-3 rounded-lg w-full"
+                  className="input-field"
                   value={form.expiryDate}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      expiryDate: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
                 />
-              </div>
+              </Field>
 
-              <select
-                className="border p-3 rounded-lg col-span-2"
-                value={form.status}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    status: e.target.value,
-                  })
-                }
-              >
-                <option>Active</option>
-                <option>Expired</option>
-                <option>Renewed</option>
-              </select>
+              <Field label="Status" className="col-span-2">
+                <select
+                  className="input-field"
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                >
+                  <option>Active</option>
+                  <option>Expired</option>
+                  <option>Renewed</option>
+                </select>
+              </Field>
 
-              <div className="col-span-2 flex justify-end gap-3 mt-2">
-
+              <div className="col-span-2 flex justify-end gap-3 mt-2 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setAddModal(false)}
-                  className="bg-gray-400 text-white px-5 py-2 rounded-lg"
+                  className="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
-                  className="bg-black text-white px-5 py-2 rounded-lg"
+                  className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition text-sm font-semibold shadow-sm shadow-indigo-200"
                 >
-                  Save Vendor
+                  Save vendor
                 </button>
-
               </div>
-
             </form>
-
           </div>
         </div>
       )}
 
       {/* EDIT MODAL */}
       {editModal && editData && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-
-          <div className="bg-white w-[700px] rounded-2xl p-6">
-
-            <h2 className="text-xl font-bold mb-5">
-              Edit Vendor
-            </h2>
-
-            <div className="grid grid-cols-2 gap-4">
-
-              <input
-                className="border p-3 rounded-lg"
-                value={editData.serviceName}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    serviceName: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                className="border p-3 rounded-lg"
-                value={editData.vendor}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    vendor: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                type="number"
-                className="border p-3 rounded-lg"
-                value={editData.durationMonths}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    durationMonths: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                type="number"
-                className="border p-3 rounded-lg"
-                value={editData.amount}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    amount: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                type="date"
-                className="border p-3 rounded-lg"
-                value={editData.purchaseDate || ""}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    purchaseDate: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                type="date"
-                className="border p-3 rounded-lg"
-                value={editData.expiryDate || ""}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    expiryDate: e.target.value,
-                  })
-                }
-              />
-
-              <select
-                className="border p-3 rounded-lg col-span-2"
-                value={editData.status}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    status: e.target.value,
-                  })
-                }
-              >
-                <option>Active</option>
-                <option>Expired</option>
-                <option>Renewed</option>
-              </select>
-
-            </div>
-
-            <div className="flex justify-end gap-3 mt-5">
-
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Edit vendor</h2>
+                <p className="text-sm text-slate-400 mt-0.5">
+                  Update license details for {editData.serviceName}
+                </p>
+              </div>
               <button
                 onClick={() => setEditModal(false)}
-                className="bg-gray-400 text-white px-5 py-2 rounded-lg"
+                className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="px-6 py-6 grid grid-cols-2 gap-4">
+              <Field label="Service name" className="col-span-2 sm:col-span-1">
+                <input
+                  className="input-field"
+                  value={editData.serviceName}
+                  onChange={(e) =>
+                    setEditData({ ...editData, serviceName: e.target.value })
+                  }
+                />
+              </Field>
+
+              <Field label="Vendor name" className="col-span-2 sm:col-span-1">
+                <input
+                  className="input-field"
+                  value={editData.vendor}
+                  onChange={(e) => setEditData({ ...editData, vendor: e.target.value })}
+                />
+              </Field>
+
+              <Field label="Duration (months)" className="col-span-2 sm:col-span-1">
+                <input
+                  type="number"
+                  className="input-field"
+                  value={editData.durationMonths}
+                  onChange={(e) =>
+                    setEditData({ ...editData, durationMonths: e.target.value })
+                  }
+                />
+              </Field>
+
+              <Field label="Amount (QAR)" className="col-span-2 sm:col-span-1">
+                <input
+                  type="number"
+                  className="input-field"
+                  value={editData.amount}
+                  onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
+                />
+              </Field>
+
+              <Field label="Purchase date" className="col-span-2 sm:col-span-1">
+                <input
+                  type="date"
+                  className="input-field"
+                  value={editData.purchaseDate || ""}
+                  onChange={(e) =>
+                    setEditData({ ...editData, purchaseDate: e.target.value })
+                  }
+                />
+              </Field>
+
+              <Field label="Expiry date" className="col-span-2 sm:col-span-1">
+                <input
+                  type="date"
+                  className="input-field"
+                  value={editData.expiryDate || ""}
+                  onChange={(e) =>
+                    setEditData({ ...editData, expiryDate: e.target.value })
+                  }
+                />
+              </Field>
+
+              <Field label="Status" className="col-span-2">
+                <select
+                  className="input-field"
+                  value={editData.status}
+                  onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+                >
+                  <option>Active</option>
+                  <option>Expired</option>
+                  <option>Renewed</option>
+                </select>
+              </Field>
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 pb-6 pt-4 border-t border-slate-100">
+              <button
+                onClick={() => setEditModal(false)}
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
               >
                 Cancel
               </button>
-
               <button
                 onClick={handleUpdate}
-                className="bg-green-600 text-white px-5 py-2 rounded-lg"
+                className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition text-sm font-semibold shadow-sm shadow-indigo-200"
               >
-                Update
+                Save changes
               </button>
-
             </div>
-
           </div>
         </div>
       )}
 
+      {/* DELETE CONFIRM MODAL */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden p-6">
+            <div className="w-11 h-11 rounded-full bg-rose-50 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-5 h-5 text-rose-600" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-900">
+              Delete this vendor?
+            </h3>
+            <p className="text-sm text-slate-500 mt-1.5">
+              This will permanently remove{" "}
+              <span className="font-medium text-slate-700">
+                {deleteTarget.serviceName}
+              </span>{" "}
+              ({deleteTarget.vendor}). This action can't be undone.
+            </p>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="bg-rose-600 text-white px-4 py-2.5 rounded-lg hover:bg-rose-700 transition text-sm font-semibold shadow-sm shadow-rose-200 disabled:opacity-60"
+              >
+                {isDeleting ? "Deleting…" : "Delete vendor"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .input-field {
+          width: 100%;
+          border: 1px solid rgb(226 232 240);
+          border-radius: 0.5rem;
+          padding: 0.625rem 0.75rem;
+          font-size: 0.875rem;
+          background: white;
+          transition: box-shadow 0.15s, border-color 0.15s;
+        }
+        .input-field:focus {
+          outline: none;
+          border-color: rgb(129 140 248);
+          box-shadow: 0 0 0 3px rgb(199 210 254 / 0.5);
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function Field({ label, required, className = "", children }) {
+  return (
+    <div className={className}>
+      <label className="block text-xs font-medium text-slate-500 mb-1.5">
+        {label} {required && <span className="text-rose-500">*</span>}
+      </label>
+      {children}
     </div>
   );
 }
