@@ -834,7 +834,7 @@ export default function AssetStoreFiori() {
                       <option value="assigned">Assigned</option>
                       <option value="damaged">Damaged</option>
                       <option value="printer_for_service">
-                        Printer for Service
+                        For Service
                       </option>
                       <option value="under_service">Under Service</option>
                     </select>
