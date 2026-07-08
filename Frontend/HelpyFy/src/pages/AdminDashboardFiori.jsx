@@ -6,8 +6,6 @@ import {
   Cell,
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -26,9 +24,15 @@ import {
   FileText,
   Lock,
   DollarSign,
-  TrendingUp,
   Calendar,
 } from "lucide-react";
+
+/**
+ * FONTS — same as Login/Register/Dashboard, add once to index.html <head>:
+ * <link rel="preconnect" href="https://fonts.googleapis.com">
+ * <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ * <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+ */
 
 export default function AdminDashboardProfessional() {
   /* ================= STATE ================= */
@@ -50,6 +54,7 @@ export default function AdminDashboardProfessional() {
   const [recentAssets, setRecentAssets] = useState([]);
   const [recentSoftware, setRecentSoftware] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
@@ -80,6 +85,7 @@ export default function AdminDashboardProfessional() {
 
       setRecentAssets(Array.isArray(assetsRes.data) ? assetsRes.data : []);
       setRecentSoftware(Array.isArray(softwareRes.data) ? softwareRes.data : []);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error(err);
     } finally {
@@ -89,13 +95,21 @@ export default function AdminDashboardProfessional() {
 
   useEffect(() => {
     loadDashboard();
+
+    // Real auto-refresh every 5 minutes — matches what the footer claims.
+    const interval = setInterval(loadDashboard, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  /* ================= CHART DATA ================= */
+  const formattedLastUpdated = lastUpdated
+    ? lastUpdated.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    : "—";
+
+  /* ================= CHART DATA — green/wheat palette ================= */
   const assetChart = [
-    { name: "Laptops", value: stats.laptops || 0, fill: "#0066ff" },
-    { name: "Printers", value: stats.printers || 0, fill: "#00d084" },
-    { name: "Mobile/HHT", value: stats.hht || 0, fill: "#ff6b6b" },
+    { name: "Laptops", value: stats.laptops || 0, fill: "#1f4a35" },
+    { name: "Printers", value: stats.printers || 0, fill: "#4a7c59" },
+    { name: "Mobile/HHT", value: stats.hht || 0, fill: "#d4a94c" },
   ];
 
   const assetStatus = [
@@ -104,7 +118,7 @@ export default function AdminDashboardProfessional() {
   ];
 
   /* ================= STAT CARD COMPONENT ================= */
-  const StatCard = ({ icon: Icon, title, value, trend, trendType = "neutral", subtext }) => (
+  const StatCard = ({ icon: Icon, title, value, subtext, trendType = "neutral" }) => (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
       <div className="flex items-start justify-between mb-4">
         <div>
@@ -115,37 +129,27 @@ export default function AdminDashboardProfessional() {
         <div
           className={`p-3 rounded-lg ${
             trendType === "positive"
-              ? "bg-green-100"
+              ? "bg-[#eef3ee]"
               : trendType === "warning"
               ? "bg-amber-100"
-              : "bg-blue-100"
+              : "bg-[#eef3ee]"
           }`}
         >
           <Icon
             size={20}
             className={
-              trendType === "positive"
-                ? "text-green-600"
-                : trendType === "warning"
-                ? "text-amber-600"
-                : "text-blue-600"
+              trendType === "warning" ? "text-amber-600" : "text-[#1f4a35]"
             }
           />
         </div>
       </div>
-      {trend && (
-        <div className="flex items-center gap-1 text-xs">
-          <TrendingUp size={14} className="text-green-600" />
-          <span className="text-green-600 font-medium">{trend}</span>
-        </div>
-      )}
     </div>
   );
 
   /* ================= SECTION HEADER ================= */
   const SectionHeader = ({ title, subtitle }) => (
     <div className="mb-6">
-      <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+      <h2 className="font-['Fraunces',serif] text-xl font-medium text-[#14251c]">{title}</h2>
       {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
     </div>
   );
@@ -153,7 +157,7 @@ export default function AdminDashboardProfessional() {
   /* ================= CHART WRAPPER ================= */
   const ChartCard = ({ title, children }) => (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-      <h3 className="text-lg font-bold text-gray-900 mb-6">{title}</h3>
+      <h3 className="font-['Fraunces',serif] text-lg font-medium text-[#14251c] mb-6">{title}</h3>
       {children}
     </div>
   );
@@ -162,7 +166,7 @@ export default function AdminDashboardProfessional() {
   const EnhancedTable = ({ title, columns, data, loading }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="p-6 border-b border-gray-100">
-        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        <h3 className="font-['Fraunces',serif] text-lg font-medium text-[#14251c]">{title}</h3>
       </div>
 
       {loading ? (
@@ -207,9 +211,9 @@ export default function AdminDashboardProfessional() {
   /* ================= STATUS BADGE ================= */
   const StatusBadge = ({ status }) => {
     const colors = {
-      available: "bg-green-100 text-green-800",
+      available: "bg-[#eef3ee] text-[#1f4a35]",
       assigned: "bg-blue-100 text-blue-800",
-      active: "bg-green-100 text-green-800",
+      active: "bg-[#eef3ee] text-[#1f4a35]",
       expired: "bg-red-100 text-red-800",
       expiring: "bg-amber-100 text-amber-800",
     };
@@ -235,9 +239,7 @@ export default function AdminDashboardProfessional() {
       return (
         <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-100">
           <p className="text-sm font-medium text-gray-900">{label}</p>
-          <p className="text-sm text-blue-600 font-semibold">
-            {payload[0].value}
-          </p>
+          <p className="text-sm text-[#1f4a35] font-semibold">{payload[0].value}</p>
         </div>
       );
     }
@@ -246,13 +248,13 @@ export default function AdminDashboardProfessional() {
 
   /* ================= RENDER ================= */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className="min-h-screen bg-[#faf8f4] font-['Inter',sans-serif]">
       {/* HEADER */}
       <div className="border-b border-gray-100 bg-white sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="font-['Fraunces',serif] text-2xl font-medium text-[#14251c]">
                 Dashboard
               </h1>
               <p className="text-sm text-gray-500 mt-1">
@@ -261,7 +263,9 @@ export default function AdminDashboardProfessional() {
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Calendar size={16} />
-              <span>Last updated: Just now</span>
+              <span>
+                {loading ? "Updating…" : `Last updated: ${formattedLastUpdated}`}
+              </span>
             </div>
           </div>
         </div>
@@ -286,8 +290,7 @@ export default function AdminDashboardProfessional() {
               icon={Laptop}
               title="Laptops"
               value={stats.laptops}
-              trendType="positive"
-              trend="+2 this month"
+              subtext="Managed devices"
             />
             <StatCard
               icon={Printer}
@@ -376,7 +379,7 @@ export default function AdminDashboardProfessional() {
                   <XAxis dataKey="name" stroke="#9ca3af" style={{ fontSize: "12px" }} />
                   <YAxis stroke="#9ca3af" style={{ fontSize: "12px" }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="value" fill="#0066ff" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="value" fill="#1f4a35" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -417,7 +420,8 @@ export default function AdminDashboardProfessional() {
         {/* FOOTER */}
         <div className="border-t border-gray-100 pt-6">
           <p className="text-xs text-gray-500 text-center">
-            Dashboard automatically refreshes every 5 minutes • Last sync: Today at 2:30 PM
+            Dashboard refreshes automatically every 5 minutes
+            {lastUpdated && ` • Last sync: ${formattedLastUpdated}`}
           </p>
         </div>
       </div>
