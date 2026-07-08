@@ -127,11 +127,8 @@ export default function CreateTicket() {
       Object.keys(form).forEach((k) => data.append(k, form[k]));
       files.forEach((f) => data.append("files", f));
 
-      const token = localStorage.getItem("token");
-
       const res = await api.post("/tickets", data, {
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
       });

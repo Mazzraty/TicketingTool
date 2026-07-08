@@ -10,7 +10,7 @@ const api = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -32,6 +32,7 @@ api.interceptors.response.use(
 
     // 🔐 ONLY logout for invalid/expired token
     if (status === 401) {
+      sessionStorage.removeItem("token");
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("activeCompany");

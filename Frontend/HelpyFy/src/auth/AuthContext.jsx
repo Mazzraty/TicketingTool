@@ -19,7 +19,20 @@ const getStoredUser = () => {
 };
 
 const getStoredToken = () => {
-  return localStorage.getItem("token");
+  const sessionToken = sessionStorage.getItem("token");
+
+  if (sessionToken) {
+    return sessionToken;
+  }
+
+  const legacyToken = localStorage.getItem("token");
+
+  if (legacyToken) {
+    sessionStorage.setItem("token", legacyToken);
+    localStorage.removeItem("token");
+  }
+
+  return legacyToken;
 };
 
 const getStoredRole = () => {
@@ -69,7 +82,8 @@ export const AuthProvider = ({ children }) => {
     const normalizedRole =
       normalizedUser?.role || "user";
 
-    localStorage.setItem("token", jwtToken);
+    sessionStorage.setItem("token", jwtToken);
+    localStorage.removeItem("token");
     localStorage.setItem("role", normalizedRole);
     localStorage.setItem(
       "user",
@@ -114,6 +128,7 @@ export const AuthProvider = ({ children }) => {
   ========================= */
 
   const logout = () => {
+    sessionStorage.removeItem("token");
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user");
