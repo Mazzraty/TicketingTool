@@ -32,14 +32,13 @@ export default function UserAssetPage() {
     try {
       setLoading(true);
       setError(null);
-      console.log("📍 Fetching assets from: /assets/my-assets");
+
       
-      const res = await api.get("/assets/my-assets");
-      console.log("✅ Assets loaded:", res.data);
+      const res = await api.get("/assets/my-assets")
       
       setAssets(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("❌ Error loading assets:", err);
+
       
       // Extract detailed error message
       const errorMsg = 
