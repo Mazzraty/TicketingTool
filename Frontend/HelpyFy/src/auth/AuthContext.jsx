@@ -1,8 +1,10 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useState,
 } from "react";
+import api from "../api/axios.js";
 
 const AuthContext = createContext();
 
@@ -19,20 +21,13 @@ const getStoredUser = () => {
 };
 
 const getStoredToken = () => {
-  const sessionToken = sessionStorage.getItem("token");
-
-  if (sessionToken) {
-    return sessionToken;
-  }
-
   const legacyToken = localStorage.getItem("token");
 
   if (legacyToken) {
-    sessionStorage.setItem("token", legacyToken);
     localStorage.removeItem("token");
   }
 
-  return legacyToken;
+  return null;
 };
 
 const getStoredRole = () => {
@@ -48,7 +43,9 @@ const getStoredRole = () => {
 ========================= */
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(getStoredToken());
+  const [token, setToken] = useState(() => {
+    return getStoredToken() || (getStoredUser() ? "cookie" : null);
+  });
   const [role, setRole] = useState(getStoredRole());
   const [user, setUser] = useState(getStoredUser());
 
@@ -66,11 +63,31 @@ export const AuthProvider = ({ children }) => {
   const companyId = activeCompany?._id || null;
   const companyName = activeCompany?.name || null;
 
+  useEffect(() => {
+    const handleLogout = () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("user");
+      localStorage.removeItem("activeCompany");
+
+      setToken(null);
+      setRole(null);
+      setUser(null);
+      setActiveCompany(null);
+    };
+
+    window.addEventListener("auth:logout", handleLogout);
+
+    return () => {
+      window.removeEventListener("auth:logout", handleLogout);
+    };
+  }, []);
+
   /* =========================
      LOGIN
   ========================= */
 
-  const login = (jwtToken, decodedUser) => {
+  const login = (decodedUser) => {
     const normalizedUser = {
       ...decodedUser,
       companies:
@@ -82,15 +99,13 @@ export const AuthProvider = ({ children }) => {
     const normalizedRole =
       normalizedUser?.role || "user";
 
-    sessionStorage.setItem("token", jwtToken);
-    localStorage.removeItem("token");
     localStorage.setItem("role", normalizedRole);
     localStorage.setItem(
       "user",
       JSON.stringify(normalizedUser)
     );
 
-    setToken(jwtToken);
+    setToken("cookie");
     setRole(normalizedRole);
     setUser(normalizedUser);
 
@@ -127,8 +142,13 @@ export const AuthProvider = ({ children }) => {
      LOGOUT
   ========================= */
 
-  const logout = () => {
-    sessionStorage.removeItem("token");
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      // ignore logout errors and still clear local state
+    }
+
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user");

@@ -179,9 +179,16 @@ export const login = async (req, res) => {
     const userData = user.toObject();
     delete userData.password;
 
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 8 * 60 * 60 * 1000,
+      path: "/",
+    });
+
     res.json({
       success: true,
-      token,
       user: userData,
     });
 
@@ -191,6 +198,17 @@ export const login = async (req, res) => {
       msg: err.message || "Server error",
     });
   }
+};
+
+export const logout = (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  });
+
+  res.json({ success: true, message: "Logged out successfully" });
 };
 
 /* =========================
@@ -250,10 +268,17 @@ export const switchCompany = async (req, res) => {
       { expiresIn: "8h" }
     );
 
+    res.cookie("token", newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 8 * 60 * 60 * 1000,
+      path: "/",
+    });
+
     res.json({
       success: true,
       message: "Company switched successfully",
-      token: newToken,
       companyId: companyId,
     });
   } catch (err) {

@@ -3,6 +3,7 @@ import express from "express";
 import {
   register,
   login,
+  logout,
   forgotPassword,
   resetPassword,
   getMyProfile,
@@ -12,7 +13,9 @@ import {
 
 import {
   protect,
+  roleCheck,
 } from "../middleware/authMiddleware.js";
+import { getUsersByCompany } from "../controllers/userController.js";
 
 const router = express.Router();
 
@@ -23,6 +26,7 @@ const asyncHandler = (fn) => (req, res, next) =>
    AUTH (PUBLIC)
 ========================= */
 router.post("/login", login);
+router.post("/logout", logout);
 router.post("/forgot-password",forgotPassword);
 router.post("/reset-password", resetPassword);
 
@@ -52,4 +56,10 @@ router.put(
   changePassword
 );
 
+router.get(
+  "/users/company/:companyId",
+  protect,
+  roleCheck("it_support", "super_admin"),
+  getUsersByCompany
+);
 export default router;

@@ -2,6 +2,7 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  withCredentials: true,
 });
 
 /**
@@ -10,12 +11,6 @@ const api = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
     return config;
   },
   (error) => Promise.reject(error)
@@ -32,11 +27,7 @@ api.interceptors.response.use(
 
     // 🔐 ONLY logout for invalid/expired token
     if (status === 401) {
-      sessionStorage.removeItem("token");
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("activeCompany");
-
+      window.dispatchEvent(new Event("auth:logout"));
       window.location.href = "/login";
     }
 

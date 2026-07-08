@@ -35,7 +35,7 @@ const handleLogin = async (e) => {
       companyAccess: res.data.user?.companyAccess || [],
     };
 
-    login(res.data.token, safeUser);
+    login(safeUser);
 
     toast.success("Login successful");
 
