@@ -147,8 +147,8 @@ export default function Navbar() {
 
   const isActive = (path) =>
     location.pathname === path
-      ? "bg-[#1f4a35] text-white shadow-sm"
-      : "text-gray-600 hover:text-[#1f4a35] hover:bg-[#eef3ee]";
+      ? "text-[#1f4a35] font-semibold border-b-2 border-[#1f4a35]"
+      : "text-gray-600 hover:text-[#1f4a35] border-b-2 border-transparent";
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
