@@ -152,47 +152,43 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
-      <div className="h-16 px-4 lg:px-8 flex items-center justify-between gap-4">
+      <div className="h-16 px-4 lg:px-8 grid grid-cols-[auto_1fr_auto] items-center gap-4">
 
-        {/* LEFT SECTION */}
-        <div className="flex items-center gap-8 flex-shrink-0">
-
-          {/* LOGO */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#1f4a35] to-[#0f2419] flex items-center justify-center p-1.5 shadow-sm">
-              <img
-                src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
-                alt="Mazzraty"
-                className="object-contain w-full h-full"
-              />
-            </div>
-
-            <div className="hidden sm:block leading-tight">
-              <h1 className="text-[15px] font-bold text-gray-900">Mazzraty</h1>
-              <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
-                IT Service
-              </p>
-            </div>
+        {/* LOGO */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#1f4a35] to-[#0f2419] flex items-center justify-center p-1.5 shadow-sm">
+            <img
+              src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
+              alt="Mazzraty"
+              className="object-contain w-full h-full"
+            />
           </div>
 
-          {/* DESKTOP NAV */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(
-                  item.path
-                )}`}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          <div className="hidden sm:block leading-tight">
+            <h1 className="text-[15px] font-bold text-gray-900">Mazzraty</h1>
+            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
+              IT Service
+            </p>
+          </div>
         </div>
 
+        {/* CENTERED DESKTOP NAV */}
+        <nav className="hidden lg:flex items-center justify-center gap-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${isActive(
+                item.path
+              )}`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
         {/* RIGHT SECTION */}
-        <div className="flex items-center gap-2 relative" ref={dropdownRef}>
+        <div className="flex items-center justify-end gap-2 relative" ref={dropdownRef}>
 
           {/* SEARCH */}
           <div className="hidden md:block relative" ref={searchRef}>
