@@ -48,6 +48,7 @@ export const AuthProvider = ({ children }) => {
   });
   const [role, setRole] = useState(getStoredRole());
   const [user, setUser] = useState(getStoredUser());
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   // Active selected company
   const [activeCompany, setActiveCompany] = useState(() => {
@@ -64,6 +65,38 @@ export const AuthProvider = ({ children }) => {
   const companyName = activeCompany?.name || null;
 
   useEffect(() => {
+    const restoreSession = async () => {
+      const storedUser = getStoredUser();
+
+      if (storedUser) {
+        setUser(storedUser);
+        setRole(storedUser.role || getStoredRole());
+        setToken("cookie");
+
+        try {
+          const res = await api.get("/auth/me");
+          const serverUser = res.data || storedUser;
+          const normalizedUser = {
+            ...serverUser,
+            companies:
+              serverUser?.companies ||
+              serverUser?.companyAccess ||
+              [],
+          };
+
+          localStorage.setItem("user", JSON.stringify(normalizedUser));
+          localStorage.setItem("role", normalizedUser.role || "user");
+          setUser(normalizedUser);
+          setRole(normalizedUser.role || "user");
+          setToken("cookie");
+        } catch {
+          // keep the locally stored session if it exists
+        }
+      }
+
+      setIsAuthReady(true);
+    };
+
     const handleLogout = () => {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
@@ -76,6 +109,7 @@ export const AuthProvider = ({ children }) => {
       setActiveCompany(null);
     };
 
+    restoreSession();
     window.addEventListener("auth:logout", handleLogout);
 
     return () => {
@@ -176,6 +210,7 @@ export const AuthProvider = ({ children }) => {
         // auth
         login,
         logout,
+        isAuthReady,
 
         // setters (optional)
         setUser,

@@ -37,10 +37,19 @@ const handleLogin = async (e) => {
 
     login(safeUser);
 
+    const meRes = await api.get("/auth/me");
+    const serverUser = meRes.data || safeUser;
+    const normalizedUser = {
+      ...serverUser,
+      companyAccess: serverUser?.companyAccess || safeUser.companyAccess || [],
+    };
+
+    login(normalizedUser);
+
     toast.success("Login successful");
 
     const adminRoles = ["company_admin", "super_admin", "it_support"];
-    const isAdminRole = adminRoles.includes(res.data.user.role);
+    const isAdminRole = adminRoles.includes(normalizedUser.role);
 
     if (isAdminRole) {
       navigate("/admin");

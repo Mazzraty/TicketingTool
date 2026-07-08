@@ -27,8 +27,13 @@ api.interceptors.response.use(
 
     // 🔐 ONLY logout for invalid/expired token
     if (status === 401) {
-      window.dispatchEvent(new Event("auth:logout"));
-      window.location.href = "/login";
+      const hasStoredUser = Boolean(localStorage.getItem("user"));
+
+      if (hasStoredUser) {
+        window.dispatchEvent(new Event("auth:logout"));
+      } else {
+        window.location.href = "/login";
+      }
     }
 
     return Promise.reject(error);
