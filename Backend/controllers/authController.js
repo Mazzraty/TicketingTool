@@ -6,6 +6,13 @@ import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js";
 import { otpEmail } from "../utils/otpEmail.js";
 import EmployeeMaster from "../models/employeeMasterSchema.js";
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  path: "/",
+};
 /* =========================
    REGISTER (MULTI-TENANT)
 ========================= */
@@ -180,11 +187,8 @@ export const login = async (req, res) => {
     delete userData.password;
 
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      ...cookieOptions,
       maxAge: 8 * 60 * 60 * 1000,
-      path: "/",
     });
 
     res.json({
@@ -201,12 +205,7 @@ export const login = async (req, res) => {
 };
 
 export const logout = (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-  });
+  res.clearCookie("token", cookieOptions);
 
   res.json({ success: true, message: "Logged out successfully" });
 };
@@ -269,11 +268,8 @@ export const switchCompany = async (req, res) => {
     );
 
     res.cookie("token", newToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      ...cookieOptions,
       maxAge: 8 * 60 * 60 * 1000,
-      path: "/",
     });
 
     res.json({

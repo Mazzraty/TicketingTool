@@ -18,9 +18,11 @@ export const protect = (req, res, next) => {
     .find((c) => c.startsWith("token="))
     ?.split("=")[1];
 
+  const decodedCookieToken = cookieToken ? decodeURIComponent(cookieToken) : null;
+
   const token = authHeader?.startsWith("Bearer ")
     ? authHeader.split(" ")[1]
-    : cookieToken;
+    : decodedCookieToken;
 
   if (!token) {
     return res.status(401).json({
