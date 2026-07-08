@@ -315,7 +315,7 @@ export default function AdminTickets() {
       )}
 
       {/* ================= MAIN ================= */}
-      <div className="flex-1 p-6 md:p-8 max-w-[1400px]">
+      <div className="flex-1 p-6 md:p-8 max-w-[1400px] mx-auto w-full">
 
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
@@ -479,9 +479,8 @@ export default function AdminTickets() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div className="flex items-center gap-3 mb-1">
-              <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                statusModal.targetStatus === "Resolved" ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-600"
-              }`}>
+              <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${statusModal.targetStatus === "Resolved" ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-600"
+                }`}>
                 {statusModal.targetStatus === "Resolved" ? <IconCheck className="w-4 h-4" /> : <IconLock className="w-4 h-4" />}
               </span>
               <h3 className="font-bold text-base text-slate-900">
