@@ -46,17 +46,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       {/* TOP */}
       <div className="h-16 border-b border-gray-200 flex items-center justify-between px-4">
         {!collapsed && (
-          <div>
-            <h1 className="text-lg font-bold text-gray-800">Mazzraty</h1>
-            <p className="text-[11px] text-gray-500 uppercase tracking-wide">
-              IT Helpdesk
-            </p>
-          </div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            {role.replace("_", " ")}
+          </p>
         )}
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-10 h-10 rounded-xl border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 hover:text-[#1f4a35] flex items-center justify-center transition"
+          className="w-10 h-10 rounded-xl border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 hover:text-[#1f4a35] flex items-center justify-center transition ml-auto"
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
