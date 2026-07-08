@@ -147,8 +147,8 @@ export default function Navbar() {
 
   const isActive = (path) =>
     location.pathname === path
-      ? "bg-[#0a6ed1] text-white shadow-sm"
-      : "text-gray-600 hover:text-[#0a6ed1] hover:bg-gray-50";
+      ? "bg-[#1f4a35] text-white shadow-sm"
+      : "text-gray-600 hover:text-[#1f4a35] hover:bg-[#eef3ee]";
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
@@ -159,7 +159,7 @@ export default function Navbar() {
 
           {/* LOGO */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0a6ed1] to-[#0856a8] flex items-center justify-center p-1.5 shadow-sm">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#1f4a35] to-[#0f2419] flex items-center justify-center p-1.5 shadow-sm">
               <img
                 src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
                 alt="Mazzraty"
@@ -205,7 +205,7 @@ export default function Navbar() {
                 <Search size={18} />
               </button>
             ) : (
-              <div className="flex items-center gap-2 w-72 px-3.5 py-2.5 rounded-lg border border-[#0a6ed1] bg-white shadow-lg">
+              <div className="flex items-center gap-2 w-72 px-3.5 py-2.5 rounded-lg border border-[#1f4a35] bg-white shadow-lg">
                 <Search size={16} className="text-gray-400 flex-shrink-0" />
                 <input
                   autoFocus
@@ -271,7 +271,7 @@ export default function Navbar() {
                                   : `/tickets/${t._id}`
                               )
                             }
-                            className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b transition-colors last:border-b-0"
+                            className="px-4 py-3 hover:bg-[#eef3ee] cursor-pointer border-b transition-colors last:border-b-0"
                           >
                             <p className="text-sm font-medium text-gray-900">
                               {t.title}
@@ -301,7 +301,7 @@ export default function Navbar() {
                             onClick={() =>
                               handleResultClick("/admin/assets/fiori")
                             }
-                            className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b transition-colors last:border-b-0"
+                            className="px-4 py-3 hover:bg-[#eef3ee] cursor-pointer border-b transition-colors last:border-b-0"
                           >
                             <p className="text-sm font-medium text-gray-900">
                               {a.assetCode}
@@ -331,7 +331,7 @@ export default function Navbar() {
                             onClick={() =>
                               handleResultClick("/admin/employees")
                             }
-                            className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b transition-colors last:border-b-0"
+                            className="px-4 py-3 hover:bg-[#eef3ee] cursor-pointer border-b transition-colors last:border-b-0"
                           >
                             <p className="text-sm font-medium text-gray-900">
                               {e.name}
@@ -360,7 +360,7 @@ export default function Navbar() {
             >
               <Bell size={18} />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-semibold rounded-full flex items-center justify-center">
+                <span className="absolute top-1 right-1 w-5 h-5 bg-[#d4a94c] text-[#14251c] text-xs font-semibold rounded-full flex items-center justify-center">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
@@ -385,7 +385,7 @@ export default function Navbar() {
                     notifications.map((n) => (
                       <div
                         key={n._id}
-                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${!n.isRead ? "bg-blue-50" : ""
+                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${!n.isRead ? "bg-[#eef3ee]" : ""
                           }`}
                         onClick={async () => {
                           await api.put(`/notifications/${n._id}/read`);
@@ -394,7 +394,7 @@ export default function Navbar() {
                       >
                         <div className="flex items-start gap-2">
                           {!n.isRead && (
-                            <div className="w-2 h-2 rounded-full bg-[#0a6ed1] mt-1.5 flex-shrink-0" />
+                            <div className="w-2 h-2 rounded-full bg-[#1f4a35] mt-1.5 flex-shrink-0" />
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900">
@@ -424,7 +424,7 @@ export default function Navbar() {
             className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
             title="User menu"
           >
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#0a6ed1] to-[#0856a8] text-white flex items-center justify-center font-semibold text-sm shadow-sm group-hover:shadow-md transition-shadow">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#1f4a35] to-[#0f2419] text-white flex items-center justify-center font-semibold text-sm shadow-sm group-hover:shadow-md transition-shadow">
               {user?.name?.charAt(0).toUpperCase() || "U"}
             </div>
             <ChevronDown
@@ -439,7 +439,7 @@ export default function Navbar() {
               {/* USER INFO */}
               <div className="px-5 py-4 border-b bg-gradient-to-r from-gray-50 to-white">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#0a6ed1] to-[#0856a8] text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#1f4a35] to-[#0f2419] text-white flex items-center justify-center font-bold text-lg shadow-sm">
                     {user?.name?.charAt(0).toUpperCase() || "U"}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -459,7 +459,7 @@ export default function Navbar() {
                   <span className="text-sm text-gray-600 font-medium">
                     Access Role
                   </span>
-                  <span className="px-3 py-1 rounded-full bg-blue-50 text-[#0a6ed1] text-xs font-semibold capitalize border border-blue-100">
+                  <span className="px-3 py-1 rounded-full bg-[#eef3ee] text-[#1f4a35] text-xs font-semibold capitalize border border-[#cfe0d3]">
                     {role}
                   </span>
                 </div>
@@ -499,7 +499,7 @@ export default function Navbar() {
                 to={item.path}
                 onClick={() => setMobileMenu(false)}
                 className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${location.pathname === item.path
-                    ? "bg-[#0a6ed1] text-white shadow-sm"
+                    ? "bg-[#1f4a35] text-white shadow-sm"
                     : "text-gray-700 hover:bg-gray-100"
                   }`}
               >
