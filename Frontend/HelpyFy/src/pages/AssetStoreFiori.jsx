@@ -69,7 +69,9 @@ export default function AssetStoreFiori() {
   const laptop = assets.filter(
     (a) => a.type === "Laptop"
   ).length;
-
+  const mobile = assets.filter(
+    (a) => a.type === "Mobile"
+  ).length;
   const printer = assets.filter(
     (a) => a.type === "Printer"
   ).length;
@@ -235,19 +237,18 @@ export default function AssetStoreFiori() {
 
   const TYPE_BADGE = {
     Laptop: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+    Mobile: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200",
     Printer: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
     HHT: "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
   };
-
   const navLink = (label, href, active = false) => (
     <button
       key={label}
       onClick={() => (window.location.href = href)}
-      className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition ${
-        active
-          ? "bg-[#0a6ed1] text-white shadow-sm shadow-blue-600/30"
-          : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-      }`}
+      className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition ${active
+        ? "bg-[#0a6ed1] text-white shadow-sm shadow-blue-600/30"
+        : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        }`}
     >
       {label}
     </button>
@@ -311,7 +312,17 @@ export default function AssetStoreFiori() {
               </h2>
             </div>
           </div>
-
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+            <span className="w-11 h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-lg">
+              📱
+            </span>
+            <div>
+              <p className="text-gray-500 text-xs font-medium">Mobiles</p>
+              <h2 className="text-2xl md:text-3xl font-bold mt-0.5 text-cyan-600">
+                {mobile}
+              </h2>
+            </div>
+          </div>
           <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
             <span className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
               🖨️
@@ -357,11 +368,10 @@ export default function AssetStoreFiori() {
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2.5 rounded-2xl text-sm font-semibold transition ${
-                  showFilters
-                    ? "bg-[#0a6ed1] text-white shadow-sm shadow-blue-600/30"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+                className={`px-4 py-2.5 rounded-2xl text-sm font-semibold transition ${showFilters
+                  ? "bg-[#0a6ed1] text-white shadow-sm shadow-blue-600/30"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
               >
                 {showFilters ? "Hide Filters" : "Show Filters"}
               </button>
@@ -388,9 +398,8 @@ export default function AssetStoreFiori() {
 
           {/* EXPANDABLE FILTER AREA */}
           <div
-            className={`grid transition-all duration-300 ease-in-out ${
-              showFilters ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-            }`}
+            className={`grid transition-all duration-300 ease-in-out ${showFilters ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              }`}
           >
             <div className="overflow-hidden">
               <div className="px-6 pb-6 pt-1 space-y-5 border-t border-gray-100">
@@ -402,15 +411,14 @@ export default function AssetStoreFiori() {
                   </p>
 
                   <div className="flex flex-wrap gap-2">
-                    {["All", "Laptop", "Printer", "HHT"].map((t) => (
+                    {["All", "Laptop", "Mobile", "Printer", "HHT"].map((t) => (
                       <button
                         key={t}
                         onClick={() => setFilter(t)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition ${
-                          filter === t
-                            ? "bg-[#0a6ed1] text-white border-[#0a6ed1] shadow-sm shadow-blue-600/20"
-                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                        }`}
+                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition ${filter === t
+                          ? "bg-[#0a6ed1] text-white border-[#0a6ed1] shadow-sm shadow-blue-600/20"
+                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                          }`}
                       >
                         {t}
                       </button>
@@ -436,11 +444,10 @@ export default function AssetStoreFiori() {
                       <button
                         key={s}
                         onClick={() => setStatusFilter(s)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition ${
-                          statusFilter === s
-                            ? "bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20"
-                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                        }`}
+                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition ${statusFilter === s
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20"
+                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                          }`}
                       >
                         {STATUS_LABELS[s]}
                       </button>
@@ -519,9 +526,8 @@ export default function AssetStoreFiori() {
                   filtered.map((a, index) => (
                     <tr
                       key={a._id}
-                      className={`border-b border-gray-100 last:border-0 hover:bg-blue-50/40 transition ${
-                        index % 2 === 0 ? "bg-white" : "bg-gray-50/40"
-                      }`}
+                      className={`border-b border-gray-100 last:border-0 hover:bg-blue-50/40 transition ${index % 2 === 0 ? "bg-white" : "bg-gray-50/40"
+                        }`}
                     >
                       <td className="px-6 py-3.5 font-semibold text-gray-900">
                         {a.assetCode}
@@ -529,9 +535,8 @@ export default function AssetStoreFiori() {
 
                       <td className="px-6 py-3.5">
                         <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                            TYPE_BADGE[a.type] || "bg-gray-100 text-gray-700"
-                          }`}
+                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${TYPE_BADGE[a.type] || "bg-gray-100 text-gray-700"
+                            }`}
                         >
                           {a.type}
                         </span>
@@ -567,9 +572,8 @@ export default function AssetStoreFiori() {
 
                       <td className="px-6 py-3.5">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            STATUS_BADGE[a.status] || "bg-gray-100 text-gray-700"
-                          }`}
+                          className={`px-3 py-1 rounded-full text-xs font-bold ${STATUS_BADGE[a.status] || "bg-gray-100 text-gray-700"
+                            }`}
                         >
                           {STATUS_LABELS[a.status] || a.status}
                         </span>
@@ -660,12 +664,14 @@ export default function AssetStoreFiori() {
                       }
                     >
                       <option value="Laptop">Laptop</option>
+                      <option value="Mobile">Mobile</option>
                       <option value="Printer">Printer</option>
                       <option value="HHT">HHT</option>
                     </select>
                   </div>
 
                   {(selected.type === "Laptop" ||
+                    selected.type === "Mobile" ||
                     selected.type === "Printer") && (
                       <>
                         <div>
