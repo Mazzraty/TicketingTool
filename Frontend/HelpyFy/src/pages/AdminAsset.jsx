@@ -247,7 +247,7 @@ export default function AdminAssets() {
             Asset Management
           </h1>
           <p className="text-sm text-gray-500">
-            Laptop / Printer / HHT Management System
+            Laptop / Printer / HHT / Mobile Management System
           </p>
         </div>
 
@@ -294,6 +294,8 @@ export default function AdminAssets() {
               >
                 <option value="">Select Type</option>
                 <option value="Laptop">Laptop</option>
+                <option value="Desktop">Desktop</option>
+                <option value="Mobile">Mobile</option>
                 <option value="Printer">Printer</option>
                 <option value="HHT">HHT</option>
               </select>

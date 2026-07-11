@@ -17,24 +17,24 @@ const assetSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["Laptop", "Printer", "HHT"],
+      enum: ["Laptop", "Desktop", "Mobile", "Printer", "HHT"],
       default: "Laptop",
     },
 
     model: String,
     serialNumber: String,
 
-  status: {
-  type: String,
-  enum: [
-    "available",
-    "assigned",
-    "damaged",
-    "for_service",
-    "under_service",
-  ],
-  default: "available",
-},
+    status: {
+      type: String,
+      enum: [
+        "available",
+        "assigned",
+        "damaged",
+        "for_service",
+        "under_service",
+      ],
+      default: "available",
+    },
 
     accessories: {
       charger: { type: Boolean, default: true },
