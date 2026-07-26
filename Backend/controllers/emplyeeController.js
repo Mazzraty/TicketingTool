@@ -2,26 +2,43 @@ import EmployeeMaster from "../models/employeeMasterSchema.js";
 import Asset from "../models/assetSchema.js";
 import Company from "../models/comapnySchema.js";
 
+const normalizeCompanyId = (value) => {
+  if (!value) return null;
+  if (typeof value === "object") {
+    if (value._id && typeof value._id.toString === "function") {
+      return value._id.toString();
+    }
+    if (typeof value.toString === "function") {
+      return value.toString();
+    }
+    return null;
+  }
+  if (typeof value.toString === "function") {
+    return value.toString();
+  }
+  return value;
+};
+
 export const getAllowedCompanyIds = (user) => {
   if (!user) return [];
   if (user.role === "super_admin") return null;
 
   const ids = [];
 
-  if (user.companyId) {
-    ids.push(user.companyId);
+  const topLevelId = normalizeCompanyId(user.companyId);
+  if (topLevelId) {
+    ids.push(topLevelId);
   }
 
   const fromAccess = (user.companyAccess || [])
-    .map((entry) => entry?.companyId)
-    .filter(Boolean)
-    .map((id) => id.toString());
+    .map((entry) => normalizeCompanyId(entry?.companyId))
+    .filter(Boolean);
 
   if (fromAccess.length > 0) {
     ids.push(...fromAccess);
   }
 
-  return [...new Set(ids.map((id) => id.toString()))];
+  return [...new Set(ids)];
 };
 
 /* =========================

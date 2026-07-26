@@ -42,12 +42,29 @@ export default function AdminEmployeeMaster() {
 
   const isSuperAdmin = user?.role === "super_admin";
 
+  const normalizeCompanyId = (value) => {
+    if (!value) return null;
+    if (typeof value === "object") {
+      if (value._id && typeof value._id.toString === "function") {
+        return value._id.toString();
+      }
+      if (typeof value.toString === "function") {
+        return value.toString();
+      }
+      return null;
+    }
+    if (typeof value.toString === "function") {
+      return value.toString();
+    }
+    return value;
+  };
+
   const allowedCompanyIds = [
-    ...(user?.companyId ? [user.companyId] : []),
+    ...(user?.companyId ? [normalizeCompanyId(user.companyId)] : []),
     ...(user?.companyAccess || [])
-      .filter((c) => c?.companyId)
-      .map((c) => c.companyId),
-  ].map((id) => id?.toString?.() || id);
+      .map((c) => normalizeCompanyId(c?.companyId))
+      .filter(Boolean),
+  ];
 
   // ================= LOAD EMPLOYEES & COMPANIES =================
   const loadEmployees = async () => {
@@ -128,7 +145,8 @@ export default function AdminEmployeeMaster() {
           return false;
         }
 
-        return allowedCompanyIds.includes(e.companyId?.toString?.() || e.companyId);
+        const employeeCompanyId = normalizeCompanyId(e.companyId);
+        return allowedCompanyIds.includes(employeeCompanyId);
       }
       return true;
     })

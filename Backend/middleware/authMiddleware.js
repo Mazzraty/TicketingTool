@@ -139,14 +139,34 @@ export const roleCheck = (...allowedRoles) => {
    🏢 COMPANY CHECK
    ✅ Multi-tenant safe
 ========================= */
+const normalizeCompanyId = (value) => {
+  if (!value) return null;
+  if (typeof value === "object") {
+    if (value._id && typeof value._id.toString === "function") {
+      return value._id.toString();
+    }
+    if (typeof value.toString === "function") {
+      return value.toString();
+    }
+    return null;
+  }
+  if (typeof value.toString === "function") {
+    return value.toString();
+  }
+  return value;
+};
+
 export const companyCheck = (req, res, next) => {
   // ✅ Super admin has access to everything
   if (req.user.role === "super_admin") {
     return next();
   }
 
-  // ✅ User must have a company assigned
-  if (!req.user.companyId) {
+  // ✅ User must have either an active company or explicit company access
+  const hasTopLevelCompany = normalizeCompanyId(req.user.companyId);
+  const hasCompanyAccess = Array.isArray(req.user.companyAccess) && req.user.companyAccess.length > 0;
+
+  if (!hasTopLevelCompany && !hasCompanyAccess) {
     return res.status(403).json({
       success: false,
       message: "Company access missing - no active company",
