@@ -42,10 +42,12 @@ export default function AdminEmployeeMaster() {
 
   const isSuperAdmin = user?.role === "super_admin";
 
-  const allowedCompanyIds =
-    user?.companyAccess
-      ?.filter((c) => c.isActive)
-      ?.map((c) => c.companyId) || [];
+  const allowedCompanyIds = [
+    ...(user?.companyId ? [user.companyId] : []),
+    ...(user?.companyAccess || [])
+      .filter((c) => c?.companyId)
+      .map((c) => c.companyId),
+  ].map((id) => id?.toString?.() || id);
 
   // ================= LOAD EMPLOYEES & COMPANIES =================
   const loadEmployees = async () => {
@@ -121,8 +123,12 @@ export default function AdminEmployeeMaster() {
   const filteredEmployees = employees
     .filter((e) => {
       // 🔐 Company restriction (only non-super admin)
-      if (!isSuperAdmin && allowedCompanyIds.length > 0) {
-        return allowedCompanyIds.includes(e.companyId);
+      if (!isSuperAdmin) {
+        if (allowedCompanyIds.length === 0) {
+          return false;
+        }
+
+        return allowedCompanyIds.includes(e.companyId?.toString?.() || e.companyId);
       }
       return true;
     })

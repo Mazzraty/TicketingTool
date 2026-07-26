@@ -2,12 +2,42 @@ import EmployeeMaster from "../models/employeeMasterSchema.js";
 import Asset from "../models/assetSchema.js";
 import Company from "../models/comapnySchema.js";
 
+export const getAllowedCompanyIds = (user) => {
+  if (!user) return [];
+  if (user.role === "super_admin") return null;
+
+  const ids = [];
+
+  if (user.companyId) {
+    ids.push(user.companyId);
+  }
+
+  const fromAccess = (user.companyAccess || [])
+    .map((entry) => entry?.companyId)
+    .filter(Boolean)
+    .map((id) => id.toString());
+
+  if (fromAccess.length > 0) {
+    ids.push(...fromAccess);
+  }
+
+  return [...new Set(ids.map((id) => id.toString()))];
+};
+
 /* =========================
    HELPER: COMPANY FILTER
 ========================= */
 const getCompanyFilter = (user) => {
+  if (!user) return {};
   if (user.role === "super_admin") return {};
-  return { companyId: user.companyId };
+
+  const allowedCompanyIds = getAllowedCompanyIds(user);
+
+  if (!allowedCompanyIds || allowedCompanyIds.length === 0) {
+    return { companyId: null };
+  }
+
+  return { companyId: { $in: allowedCompanyIds } };
 };
 
 /* =========================
