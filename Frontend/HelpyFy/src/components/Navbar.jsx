@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 import api from "../api/axios";
+import { changeFavicon } from "../utils/favicon";
 import {
   Search,
   Bell,
@@ -129,21 +130,9 @@ const loadNotifications = async () => {
     // Update browser title
     const unread = data.filter((n) => !n.isRead).length;
 
-    document.title =
-      unread > 0
-        ? `(${unread}) HelpyFy`
-        : "HelpyFy";
+    document.title = unread > 0 ? `(${unread}) HelpyFy` : "HelpyFy";
 
-    // Optional: Change favicon
-    const favicon = document.getElementById("favicon");
-
-    if (favicon) {
-      favicon.href =
-        unread > 0
-          ? "/favicon-alert.ico"
-          : "/favicon.ico";
-    }
-
+    changeFavicon(unread > 0);
   } catch (err) {
     console.error(err);
   }

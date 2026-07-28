@@ -8,84 +8,81 @@ import Notification from "../models/notifcationSchema.js";
 /* ======================================================
    ✅ CREATE TICKET
 ====================================================== */
-export const createTicket = async (req, res) => {
-  try {
-    const { title, description, department, priority } = req.body;
+const ticket = await Ticket.create({
+  companyId: req.user.companyId,
+  title,
+  description,
+  department,
+  priority,
+  attachments,
+  userId: req.user.id,
 
-    if (!title || !description) {
-      return res.status(400).json({
-        success: false,
-        message: "Title and description required",
-      });
-    }
+  slaDue: new Date(
+    Date.now() + (slaHours[priority] || 72) * 3600000
+  ),
 
-    // 🔍 DEBUG
-    console.log("REQ USER:", req.user);
+  status: "Open",
+  reopened: false,
+  review: "",
+  rating: 0,
 
-    // ✅ CHECK COMPANY
-    if (!req.user.companyId) {
-      return res.status(400).json({
-        success: false,
-        message: "User has no company assigned",
-      });
-    }
+  resolvedAt: null,
+  closedAt: null,
+  reopenedAt: null,
 
-    const attachments = req.files?.map((f) => f.path) || [];
-
-    const slaHours = {
-      Low: 72,
-      Medium: 24,
-      High: 8,
-      Critical: 2,
-    };
-
-    const ticket = await Ticket.create({
-      companyId: req.user.companyId,
-      title,
-      description,
-      department,
-      priority,
-      attachments,
-      userId: req.user.id,
-
-      slaDue: new Date(
-        Date.now() + (slaHours[priority] || 72) * 3600000
-      ),
-
+  statusHistory: [
+    {
       status: "Open",
-      reopened: false,
-      review: "",
-      rating: 0,
+      changedAt: new Date(),
+      note: "Ticket created",
+    },
+  ],
+});
 
-      resolvedAt: null,
-      closedAt: null,
-      reopenedAt: null,
+// ==========================
+// CREATE NOTIFICATIONS
+// ==========================
 
-      statusHistory: [
-        {
-          status: "Open",
-          changedAt: new Date(),
-          note: "Ticket created",
-        },
-      ],
-    });
+// Company Admin + IT Support
+const companyUsers = await User.find({
+  companyId: req.user.companyId,
+  role: {
+    $in: ["company_admin", "it_support"],
+  },
+});
 
-    // ✅ Send success response
-    res.status(201).json({
-      success: true,
-      message: "Ticket created successfully",
-      data: ticket,
-    });
+// Super Admin
+const superAdmins = await User.find({
+  role: "super_admin",
+});
 
-  } catch (err) {
-    console.error("TICKET CREATION ERROR:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Error creating ticket",
-    });
-  }
-};
+// Remove duplicate users
+const uniqueUsers = new Map();
 
+[...companyUsers, ...superAdmins].forEach((user) => {
+  uniqueUsers.set(user._id.toString(), user);
+});
+
+// Create notifications
+const notifications = [...uniqueUsers.values()].map((user) => ({
+  userId: user._id,
+  title: "New Ticket",
+  message: `${title}`,
+  type: "ticket_created",
+}));
+
+if (notifications.length > 0) {
+  await Notification.insertMany(notifications);
+}
+
+// ==========================
+
+// ✅ Send success response
+res.status(201).json({
+  success: true,
+  message: "Ticket created successfully",
+  data: ticket,
+});
 /* ======================================================
    ✅ GET USER TICKETS
 ====================================================== */
