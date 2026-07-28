@@ -501,17 +501,17 @@ export const addReview = async (req, res) => {
       });
     }
 
-    if (ticket.status !== "Resolved") {
+    const allowedStatuses = ["Resolved", "Closed"];
+    if (!allowedStatuses.includes(ticket.status)) {
       return res.status(400).json({
         success: false,
-        message: "Only resolved tickets can be reviewed",
+        message: "Only resolved or closed tickets can be reviewed",
       });
     }
 
-    // ✅ ALLOW CREATE OR UPDATE (FIX)
     ticket.review = review;
     ticket.rating = rating;
-    ticket.reviewedAt = new Date(); // optional tracking
+    ticket.reviewedAt = new Date();
 
     await ticket.save();
 

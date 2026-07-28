@@ -74,9 +74,12 @@ export default function MyTickets() {
         review: comment,
       });
 
-      await api.put(`/tickets/${selectedTicket._id}/confirm`);
-
-      toast.success("Ticket confirmed and closed successfully");
+      if (selectedTicket.status === "Resolved") {
+        await api.put(`/tickets/${selectedTicket._id}/confirm`);
+        toast.success("Ticket confirmed and closed successfully");
+      } else {
+        toast.success("Review saved successfully");
+      }
 
       setReviewModal(false);
       setSelectedTicket(null);
@@ -422,7 +425,7 @@ export default function MyTickets() {
                               </Button>
                             )}
 
-                          {ticket.status === "Resolved" && (
+                          {(ticket.status === "Resolved" || ticket.status === "Closed") && (
                             <>
                               <Button
                                 variant="success"
@@ -435,17 +438,19 @@ export default function MyTickets() {
                                   setReviewModal(true);
                                 }}
                               >
-                                Confirm
+                                {ticket.status === "Closed" ? "Review" : "Confirm"}
                               </Button>
 
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                icon={RotateCw}
-                                onClick={() => reopenTicket(ticket._id)}
-                              >
-                                Reopen
-                              </Button>
+                              {ticket.status === "Resolved" && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  icon={RotateCw}
+                                  onClick={() => reopenTicket(ticket._id)}
+                                >
+                                  Reopen
+                                </Button>
+                              )}
                             </>
                           )}
                         </div>
