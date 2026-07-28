@@ -5,84 +5,115 @@ import { ticketAdminEmail } from "../utils/ticketAdminEmail.js";
 import { ticketUserEmail } from "../utils/ticketUserEmail.js";
 import { ticketResolvedEmail } from "../utils/ticketResolvedEmail.js";
 import Notification from "../models/notifcationSchema.js";
+
 /* ======================================================
    ✅ CREATE TICKET
 ====================================================== */
-const ticket = await Ticket.create({
-  companyId: req.user.companyId,
-  title,
-  description,
-  department,
-  priority,
-  attachments,
-  userId: req.user.id,
+export const createTicket = async (req, res) => {
+  try {
+    const { title, description, department, priority } = req.body;
+    const slaHours = {
+      low: 24,
+      medium: 48,
+      high: 72,
+      urgent: 96,
+    };
+    const attachments = (req.files || []).map((file) => file.path);
 
-  slaDue: new Date(
-    Date.now() + (slaHours[priority] || 72) * 3600000
-  ),
-
-  status: "Open",
-  reopened: false,
-  review: "",
-  rating: 0,
-
-  resolvedAt: null,
-  closedAt: null,
-  reopenedAt: null,
-
-  statusHistory: [
-    {
+    const ticket = await Ticket.create({
+      companyId: req.user.companyId,
+      title,
+      description,
+      department,
+      priority,
+      attachments,
+      userId: req.user.id,
+      slaDue: new Date(
+        Date.now() + (slaHours[priority] || 72) * 3600000
+      ),
       status: "Open",
-      changedAt: new Date(),
-      note: "Ticket created",
-    },
-  ],
-});
+      reopened: false,
+      review: "",
+      rating: 0,
+      resolvedAt: null,
+      closedAt: null,
+      reopenedAt: null,
+      statusHistory: [
+        {
+          status: "Open",
+          changedAt: new Date(),
+          note: "Ticket created",
+        },
+      ],
+    });
 
-// ==========================
-// CREATE NOTIFICATIONS
-// ==========================
+    const companyUsers = await User.find({
+      companyId: req.user.companyId,
+      role: {
+        $in: ["company_admin", "it_support"],
+      },
+    });
 
-// Company Admin + IT Support
-const companyUsers = await User.find({
-  companyId: req.user.companyId,
-  role: {
-    $in: ["company_admin", "it_support"],
-  },
-});
+    const superAdmins = await User.find({
+      role: "super_admin",
+    });
 
-// Super Admin
-const superAdmins = await User.find({
-  role: "super_admin",
-});
+    const uniqueUsers = new Map();
+    [...companyUsers, ...superAdmins].forEach((user) => {
+      uniqueUsers.set(user._id.toString(), user);
+    });
 
-// Remove duplicate users
-const uniqueUsers = new Map();
+    const notifications = [...uniqueUsers.values()].map((user) => ({
+      userId: user._id,
+      title: "New Ticket",
+      message: `${title}`,
+      type: "ticket_created",
+    }));
 
-[...companyUsers, ...superAdmins].forEach((user) => {
-  uniqueUsers.set(user._id.toString(), user);
-});
+    if (notifications.length > 0) {
+      await Notification.insertMany(notifications);
+    }
 
-// Create notifications
-const notifications = [...uniqueUsers.values()].map((user) => ({
-  userId: user._id,
-  title: "New Ticket",
-  message: `${title}`,
-  type: "ticket_created",
-}));
+    try {
+      const ticketUser = await User.findById(req.user.id);
+      if (ticketUser?.email) {
+        await sendEmail({
+          to: ticketUser.email,
+          subject: "Ticket created successfully",
+          html: ticketUserEmail({ ...ticket._doc, userEmail: ticketUser.email }),
+        });
+      }
 
-if (notifications.length > 0) {
-  await Notification.insertMany(notifications);
-}
+      const adminRecipients = [...companyUsers, ...superAdmins]
+        .filter((user, index, arr) => arr.findIndex((entry) => entry.email === user.email) === index)
+        .map((user) => user.email)
+        .filter(Boolean);
 
-// ==========================
+      if (adminRecipients.length > 0) {
+        await sendEmail({
+          to: adminRecipients,
+          subject: "New ticket created",
+          html: ticketAdminEmail({ ...ticket._doc, userEmail: ticketUser?.email || "" }),
+        });
+      }
+    } catch (emailError) {
+      console.error("Failed to send ticket emails:", emailError.message);
+    }
 
-// ✅ Send success response
-res.status(201).json({
-  success: true,
-  message: "Ticket created successfully",
-  data: ticket,
-});
+    res.status(201).json({
+      success: true,
+      message: "Ticket created successfully",
+      data: ticket,
+    });
+  } catch (error) {
+    console.error("Create ticket error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create ticket",
+    });
+  }
+};
+
 /* ======================================================
    ✅ GET USER TICKETS
 ====================================================== */
