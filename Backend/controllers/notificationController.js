@@ -8,6 +8,25 @@ export const getMyNotifications = async (req, res) => {
   res.json({ success: true, data });
 };
 
+export const getUnreadCount = async (req, res) => {
+  try {
+    const count = await Notification.countDocuments({
+      userId: req.user.id,
+      isRead: false,
+    });
+
+    res.json({
+      success: true,
+      count,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 export const markAsRead = async (req, res) => {
   await Notification.findByIdAndUpdate(req.params.id, {
     isRead: true,

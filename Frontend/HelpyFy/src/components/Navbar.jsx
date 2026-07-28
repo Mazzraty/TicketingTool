@@ -118,16 +118,48 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
-
-  const loadNotifications = async () => {
+const loadNotifications = async () => {
+  try {
     const res = await api.get("/notifications");
-    setNotifications(res.data.data || []);
-  };
 
-  useEffect(() => {
+    const data = res.data.data || [];
+
+    setNotifications(data);
+
+    // Update browser title
+    const unread = data.filter((n) => !n.isRead).length;
+
+    document.title =
+      unread > 0
+        ? `(${unread}) HelpyFy`
+        : "HelpyFy";
+
+    // Optional: Change favicon
+    const favicon = document.getElementById("favicon");
+
+    if (favicon) {
+      favicon.href =
+        unread > 0
+          ? "/favicon-alert.ico"
+          : "/favicon.ico";
+    }
+
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+useEffect(() => {
+
+  loadNotifications();
+
+  const interval = setInterval(() => {
     loadNotifications();
-  }, []);
+  }, 15000);
 
+  return () => clearInterval(interval);
+
+}, []);
   const navItems = useMemo(() => {
     if (isAdminRole) {
       return [

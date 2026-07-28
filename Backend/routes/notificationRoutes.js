@@ -2,6 +2,7 @@ import express from "express";
 
 import {
   getMyNotifications,
+  getUnreadCount,
   markAsRead,
   clearReadNotifications,
   clearAllNotifications,
@@ -17,6 +18,14 @@ const router = express.Router();
 /* =========================
    NOTIFICATIONS (SAAS SAFE)
 ========================= */
+
+// GET UNREAD COUNT
+router.get(
+  "/unread-count",
+  protect,
+  companyCheck,
+  getUnreadCount
+);
 
 // GET MY NOTIFICATIONS
 router.get(
