@@ -2,16 +2,21 @@ import { useEffect, useState } from "react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 
+const INITIAL_FORM = {
+  title: "",
+  description: "",
+  priority: "Medium",
+  department: "IT",
+  assetId: "",
+};
+
+const PRIORITIES = ["Low", "Medium", "High", "Critical"];
+const DEPARTMENTS = ["IT", "HR", "Finance", "Operations"];
+
 export default function CreateManualTicket() {
   const [assets, setAssets] = useState([]);
-
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    priority: "Medium",
-    department: "IT",
-    assetId: "",
-  });
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -19,29 +24,30 @@ export default function CreateManualTicket() {
         const res = await api.get("/assets?limit=1000");
         setAssets(res.data.assets || []);
       } catch (error) {
-        console.log(error);
+        console.error(error);
+        toast.error("Failed to load assets");
       }
     };
 
     loadAssets();
   }, []);
 
+  const handleChange = (field) => (e) => {
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
   const submitHandler = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
 
     try {
       await api.post("/tickets/manual", form);
       toast.success("Manual ticket created");
-
-      setForm({
-        title: "",
-        description: "",
-        priority: "Medium",
-        department: "IT",
-        assetId: "",
-      });
+      setForm(INITIAL_FORM);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed");
+      toast.error(error.response?.data?.message || "Failed to create ticket");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -54,23 +60,24 @@ export default function CreateManualTicket() {
           className="border p-3 w-full"
           placeholder="Issue title"
           value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          onChange={handleChange("title")}
+          required
         />
 
         <textarea
           className="border p-3 w-full"
           placeholder="Description"
           value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          onChange={handleChange("description")}
+          required
         />
 
         <select
           className="border p-3 w-full"
           value={form.assetId}
-          onChange={(e) => setForm({ ...form, assetId: e.target.value })}
+          onChange={handleChange("assetId")}
         >
           <option value="">Select Asset</option>
-
           {assets.map((asset) => (
             <option key={asset._id} value={asset._id}>
               {asset.assetCode} - {asset.type}
@@ -80,17 +87,34 @@ export default function CreateManualTicket() {
 
         <select
           className="border p-3 w-full"
-          value={form.priority}
-          onChange={(e) => setForm({ ...form, priority: e.target.value })}
+          value={form.department}
+          onChange={handleChange("department")}
         >
-          <option>Low</option>
-          <option>Medium</option>
-          <option>High</option>
-          <option>Critical</option>
+          {DEPARTMENTS.map((dept) => (
+            <option key={dept} value={dept}>
+              {dept}
+            </option>
+          ))}
         </select>
 
-        <button className="bg-blue-600 text-white px-5 py-3 rounded">
-          Create Ticket
+        <select
+          className="border p-3 w-full"
+          value={form.priority}
+          onChange={handleChange("priority")}
+        >
+          {PRIORITIES.map((priority) => (
+            <option key={priority} value={priority}>
+              {priority}
+            </option>
+          ))}
+        </select>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="bg-blue-600 text-white px-5 py-3 rounded disabled:opacity-50"
+        >
+          {submitting ? "Creating..." : "Create Ticket"}
         </button>
       </form>
     </div>
