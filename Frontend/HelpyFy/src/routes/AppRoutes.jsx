@@ -171,6 +171,10 @@ export default function AppRoutes() {
 
       {/* ================= FALLBACK ================= */}
       <Route
+        path="/admin/*"
+        element={<Navigate to="/admin/dashboard" replace />}
+      />
+      <Route
         path="*"
         element={<Navigate to="/" replace />}
       />
