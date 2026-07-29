@@ -28,6 +28,8 @@ const IconNote = (p) => <Icon {...p}><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d
 const IconLayers = (p) => <Icon {...p}><path d="m12 2 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5" /><path d="m3 17 9 5 9-5" /></Icon>;
 const IconCircleDot = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3" fill="currentColor" /></Icon>;
 const IconClock = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></Icon>;
+const IconAlertTriangle = (p) => <Icon {...p}><path d="m10.29 3.86-8.18 14.18A2 2 0 0 0 4 21h16a2 2 0 0 0 1.89-2.96L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4M12 17h.01" /></Icon>;
+const IconZap = (p) => <Icon {...p}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" /></Icon>;
 
 /* ================= STATUS THEME (single source of truth) ================= */
 const STATUS_THEME = {
@@ -35,6 +37,242 @@ const STATUS_THEME = {
   "In Progress": { text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", solid: "bg-amber-500", accent: "bg-amber-400" },
   Resolved: { text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", solid: "bg-emerald-600", accent: "bg-emerald-500" },
   Closed: { text: "text-slate-600", bg: "bg-slate-100", border: "border-slate-200", solid: "bg-slate-500", accent: "bg-slate-400" },
+};
+
+/* ================= SLA THEME ================= */
+// Running/on-track (green), running but close to due (amber), breached (red), completed on time (emerald), done (slate)
+const SLA_THEME = {
+  ok: { text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", dot: "bg-emerald-500" },
+  warning: { text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", dot: "bg-amber-500" },
+  breached: { text: "text-red-700", bg: "bg-red-50", border: "border-red-200", dot: "bg-red-500" },
+  done: { text: "text-slate-500", bg: "bg-slate-100", border: "border-slate-200", dot: "bg-slate-400" },
+};
+
+/* ================= SLA HELPERS ================= */
+
+// Formats a millisecond duration into a compact "1d 4h" / "45m" style string
+const formatDuration = (ms) => {
+  const abs = Math.abs(ms);
+  const minutes = Math.floor(abs / (1000 * 60));
+  const days = Math.floor(minutes / (60 * 24));
+  const hours = Math.floor((minutes % (60 * 24)) / 60);
+  const mins = minutes % 60;
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+};
+
+// Given a due date, an "achieved" timestamp (null if not yet hit), and an explicit
+// breached flag from the backend, work out the current SLA state for one leg
+// (first response OR resolution) of the ticket.
+const getSlaLegState = ({ due, achievedAt, breached, now }) => {
+  if (!due) {
+    return { level: "done", label: "No SLA", detail: "—" };
+  }
+
+  const dueDate = new Date(due);
+
+  // Already hit the milestone (responded / resolved)
+  if (achievedAt) {
+    const achievedDate = new Date(achievedAt);
+    if (breached || achievedDate > dueDate) {
+      return {
+        level: "breached",
+        label: "Breached",
+        detail: `${formatDuration(achievedDate - dueDate)} late`,
+      };
+    }
+    return {
+      level: "ok",
+      label: "Met",
+      detail: `${formatDuration(dueDate - achievedDate)} to spare`,
+    };
+  }
+
+  // Not yet achieved — still running or overdue
+  const diff = dueDate - now;
+  if (diff <= 0) {
+    return {
+      level: "breached",
+      label: "Overdue",
+      detail: `${formatDuration(diff)} over`,
+    };
+  }
+
+  // Within 25% of the total window (or under 1h) counts as "at risk"
+  const isSoon = diff < 60 * 60 * 1000;
+  return {
+    level: isSoon ? "warning" : "ok",
+    label: isSoon ? "Due soon" : "On track",
+    detail: `due in ${formatDuration(diff)}`,
+  };
+};
+
+// Overall SLA pill for a ticket row — prioritizes resolution leg, falls back to first response
+const getOverallSlaState = (ticket, now) => {
+  const sla = ticket.sla;
+  if (!sla) return { level: "done", label: "No SLA" };
+
+  if (sla.status === "Breached") {
+    return { level: "breached", label: "SLA Breached" };
+  }
+  if (sla.status === "Completed") {
+    return { level: "ok", label: "SLA Met" };
+  }
+
+  // Running — check resolution leg first, then first response
+  const resolutionState = getSlaLegState({
+    due: sla.resolutionDue,
+    achievedAt: sla.resolvedAt,
+    breached: sla.resolutionBreached,
+    now,
+  });
+
+  if (resolutionState.level === "breached") {
+    return { level: "breached", label: "SLA Breached" };
+  }
+
+  if (!sla.firstRespondedAt) {
+    const responseState = getSlaLegState({
+      due: sla.firstResponseDue,
+      achievedAt: sla.firstRespondedAt,
+      breached: sla.firstResponseBreached,
+      now,
+    });
+    if (responseState.level === "breached") {
+      return { level: "breached", label: "Response overdue" };
+    }
+    if (responseState.level === "warning") {
+      return { level: "warning", label: "Response due soon" };
+    }
+  }
+
+  if (resolutionState.level === "warning") {
+    return { level: "warning", label: "Resolution due soon" };
+  }
+
+  return { level: "ok", label: "On track" };
+};
+
+const priorityDot = {
+  Low: "bg-blue-500",
+  Medium: "bg-amber-500",
+  High: "bg-orange-500",
+  Critical: "bg-red-500",
+};
+
+/* ================= SLA UI COMPONENTS ================= */
+
+const SlaBadge = ({ ticket, now }) => {
+  const state = getOverallSlaState(ticket, now);
+  const theme = SLA_THEME[state.level];
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${theme.bg} ${theme.text} ${theme.border}`}
+    >
+      {state.level === "breached" ? (
+        <IconAlertTriangle className="w-3 h-3" />
+      ) : (
+        <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`} />
+      )}
+      {state.label}
+    </span>
+  );
+};
+
+const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now }) => {
+  const state = getSlaLegState({ due, achievedAt, breached, now });
+  const theme = SLA_THEME[state.level];
+
+  // Progress bar: how much of the SLA window has elapsed (only meaningful pre-achievement)
+  let progressPct = 100;
+  if (!achievedAt && due) {
+    const dueDate = new Date(due);
+    const remaining = dueDate - now;
+    const totalGuess = 1000 * 60 * 60 * 24; // fallback normalization window (24h) just for a visual bar
+    progressPct = Math.min(100, Math.max(0, 100 - (remaining / totalGuess) * 100));
+  }
+
+  return (
+    <div className={`rounded-lg border p-3 ${theme.bg} ${theme.border}`}>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className={`text-xs font-semibold flex items-center gap-1.5 ${theme.text}`}>
+          {icon} {label}
+        </p>
+        <span className={`text-[11px] font-semibold ${theme.text}`}>{state.label}</span>
+      </div>
+
+      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
+        <span>Due {due ? new Date(due).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}</span>
+        <span className={theme.text}>{state.detail}</span>
+      </div>
+
+      {!achievedAt && due && (
+        <div className="h-1.5 w-full rounded-full bg-white/70 overflow-hidden">
+          <div
+            className={`h-full rounded-full ${theme.dot}`}
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      )}
+
+      {achievedAt && (
+        <p className="text-[11px] text-slate-500 mt-1">
+          {achievedLabel} {new Date(achievedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+        </p>
+      )}
+    </div>
+  );
+};
+
+const SlaDetailPanel = ({ ticket, now }) => {
+  const sla = ticket.sla;
+  if (!sla) {
+    return <p className="text-xs text-slate-400">No SLA policy on this ticket</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between">
+        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${priorityDot[sla.priority] || "bg-slate-400"} text-white`}>
+          {sla.priority || "—"} priority
+        </span>
+        <SlaBadge ticket={ticket} now={now} />
+      </div>
+
+      <SlaLegRow
+        icon={<IconZap className="w-3.5 h-3.5" />}
+        label="First Response"
+        due={sla.firstResponseDue}
+        achievedAt={sla.firstRespondedAt}
+        breached={sla.firstResponseBreached}
+        achievedLabel="Responded at"
+        now={now}
+      />
+
+      <SlaLegRow
+        icon={<IconCheck className="w-3.5 h-3.5" />}
+        label="Resolution"
+        due={sla.resolutionDue}
+        achievedAt={sla.resolvedAt}
+        breached={sla.resolutionBreached}
+        achievedLabel="Resolved at"
+        now={now}
+      />
+
+      {sla.escalated && (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-2.5 flex items-center gap-2">
+          <IconAlertTriangle className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+          <p className="text-[11px] text-orange-700 font-medium">
+            Escalated (level {sla.escalationLevel || 1})
+            {sla.escalatedAt && ` on ${new Date(sla.escalatedAt).toLocaleDateString()}`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default function AdminTickets() {
@@ -50,6 +288,9 @@ export default function AdminTickets() {
   const [resolutionNote, setResolutionNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // ✅ LIVE CLOCK — ticks every 30s so SLA countdowns stay fresh without a full reload
+  const [now, setNow] = useState(() => new Date());
+
   const initialStats = {
     total: 0,
     open: 0,
@@ -64,6 +305,11 @@ export default function AdminTickets() {
     load(page);
     loadStats();
   }, [page]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const load = async (pageNumber = 1) => {
     try {
@@ -140,13 +386,20 @@ export default function AdminTickets() {
 
   const filtered = tickets.filter((t) => {
     const s = search.toLowerCase();
+    const slaState = getOverallSlaState(t, now).label.toLowerCase();
     return (
       t.title?.toLowerCase().includes(s) ||
       t.userId?.email?.toLowerCase().includes(s) ||
       t.priority?.toLowerCase().includes(s) ||
-      t.status?.toLowerCase().includes(s)
+      t.status?.toLowerCase().includes(s) ||
+      slaState.includes(s)
     );
   });
+
+  // ✅ SLA breach count for the stats strip
+  const breachedCount = tickets.filter(
+    (t) => getOverallSlaState(t, now).level === "breached"
+  ).length;
 
   const priorityColor = (p) => {
     if (p === "High") return "bg-red-50 text-red-700 border border-red-200";
@@ -195,6 +448,7 @@ export default function AdminTickets() {
     { key: "inProgress", label: "In Progress", value: stats.inProgress, theme: "amber", icon: <IconClock className="w-4 h-4" /> },
     { key: "resolved", label: "Resolved", value: stats.resolved, theme: "emerald", icon: <IconCheck className="w-4 h-4" /> },
     { key: "closed", label: "Closed", value: stats.closed, theme: "slate", icon: <IconLock className="w-4 h-4" /> },
+    { key: "breached", label: "SLA Breached", value: breachedCount, theme: "red", icon: <IconAlertTriangle className="w-4 h-4" /> },
   ];
 
   const statBarClass = {
@@ -202,12 +456,14 @@ export default function AdminTickets() {
     blue: "bg-blue-500",
     amber: "bg-amber-400",
     emerald: "bg-emerald-500",
+    red: "bg-red-500",
   };
   const statIconClass = {
     slate: "bg-slate-100 text-slate-500",
     blue: "bg-blue-50 text-blue-600",
     amber: "bg-amber-50 text-amber-600",
     emerald: "bg-emerald-50 text-emerald-600",
+    red: "bg-red-50 text-red-600",
   };
 
   return (
@@ -241,6 +497,14 @@ export default function AdminTickets() {
                   {selected.status}
                 </span>
               </div>
+            </div>
+
+            {/* ================= SLA SECTION ================= */}
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                <IconClock className="w-3.5 h-3.5" /> SLA Tracking
+              </p>
+              <SlaDetailPanel ticket={selected} now={now} />
             </div>
 
             <div>
@@ -328,7 +592,7 @@ export default function AdminTickets() {
             <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               className="w-full border border-slate-200 bg-white pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition placeholder:text-slate-400"
-              placeholder="Search tickets, users, status..."
+              placeholder="Search tickets, users, status, SLA..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -336,7 +600,7 @@ export default function AdminTickets() {
         </div>
 
         {/* STATS */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           {statCards.map((s) => (
             <div key={s.key} className="relative bg-white border border-slate-200 rounded-xl p-4 overflow-hidden shadow-sm">
               <span className={`absolute left-0 top-0 bottom-0 w-1 ${statBarClass[s.theme]}`} />
@@ -369,6 +633,7 @@ export default function AdminTickets() {
                     <th className="p-3.5 text-left font-semibold">Company</th>
                     <th className="p-3.5 text-center font-semibold">Priority</th>
                     <th className="p-3.5 text-center font-semibold">Status</th>
+                    <th className="p-3.5 text-center font-semibold">SLA</th>
                     <th className="p-3.5 text-center font-semibold">Opened</th>
                     <th className="p-3.5 text-center font-semibold">Closed</th>
                     <th className="p-3.5 text-center font-semibold">Files</th>
@@ -426,6 +691,10 @@ export default function AdminTickets() {
                               </p>
                             )}
                           </div>
+                        </td>
+
+                        <td className="p-3.5 text-center">
+                          <SlaBadge ticket={t} now={now} />
                         </td>
 
                         <td className="p-3.5 text-center text-xs text-slate-500">{formatDateTime(t.createdAt)}</td>
@@ -490,6 +759,11 @@ export default function AdminTickets() {
             <p className="text-xs text-slate-400 mb-4 ml-12 -mt-1">
               "{statusModal.ticket.title}"
             </p>
+
+            {/* SLA reminder inside the modal so admins see the stakes before confirming */}
+            <div className="ml-12 -mt-1 mb-4">
+              <SlaBadge ticket={statusModal.ticket} now={now} />
+            </div>
 
             <label className="text-xs font-medium text-slate-500 mb-1.5 block">
               Resolution note <span className="text-red-500">*</span>

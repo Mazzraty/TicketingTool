@@ -12,12 +12,29 @@ import Notification from "../models/notifcationSchema.js";
 export const createTicket = async (req, res) => {
   try {
     const { title, description, department, priority } = req.body;
-    const slaHours = {
-      low: 24,
-      medium: 48,
-      high: 72,
-      urgent: 96,
+
+    // SLA Policy (Temporary - Later move to SLA collection)
+    const slaPolicy = {
+      Low: {
+        firstResponse: 8, // hours
+        resolution: 72, // hours
+      },
+      Medium: {
+        firstResponse: 4,
+        resolution: 48,
+      },
+      High: {
+        firstResponse: 2,
+        resolution: 24,
+      },
+      Critical: {
+        firstResponse: 0.5, // 30 minutes
+        resolution: 8,
+      },
     };
+
+    const policy = slaPolicy[priority] || slaPolicy.Low;
+
     const attachments = (req.files || []).map((file) => file.path);
 
     const ticket = await Ticket.create({
@@ -28,16 +45,48 @@ export const createTicket = async (req, res) => {
       priority,
       attachments,
       userId: req.user.id,
-      slaDue: new Date(
-        Date.now() + (slaHours[priority] || 72) * 3600000
-      ),
+
       status: "Open",
+
+      // ==========================
+      // SLA
+      // ==========================
+      sla: {
+        priority,
+
+        firstResponseDue: new Date(
+          Date.now() + policy.firstResponse * 60 * 60 * 1000
+        ),
+
+        resolutionDue: new Date(
+          Date.now() + policy.resolution * 60 * 60 * 1000
+        ),
+
+        firstRespondedAt: null,
+
+        resolvedAt: null,
+
+        firstResponseBreached: false,
+
+        resolutionBreached: false,
+
+        escalationLevel: 0,
+
+        escalated: false,
+
+        escalatedAt: null,
+
+        status: "Running",
+      },
+
       reopened: false,
       review: "",
       rating: 0,
+
       resolvedAt: null,
       closedAt: null,
       reopenedAt: null,
+
       statusHistory: [
         {
           status: "Open",
@@ -59,6 +108,7 @@ export const createTicket = async (req, res) => {
     });
 
     const uniqueUsers = new Map();
+
     [...companyUsers, ...superAdmins].forEach((user) => {
       uniqueUsers.set(user._id.toString(), user);
     });
@@ -66,7 +116,7 @@ export const createTicket = async (req, res) => {
     const notifications = [...uniqueUsers.values()].map((user) => ({
       userId: user._id,
       title: "New Ticket",
-      message: `${title}`,
+      message: title,
       type: "ticket_created",
     }));
 
@@ -76,24 +126,34 @@ export const createTicket = async (req, res) => {
 
     try {
       const ticketUser = await User.findById(req.user.id);
+
       if (ticketUser?.email) {
         await sendEmail({
           to: ticketUser.email,
           subject: "Ticket created successfully",
-          html: ticketUserEmail({ ...ticket._doc, userEmail: ticketUser.email }),
+          html: ticketUserEmail({
+            ...ticket._doc,
+            userEmail: ticketUser.email,
+          }),
         });
       }
 
       const adminRecipients = [...companyUsers, ...superAdmins]
-        .filter((user, index, arr) => arr.findIndex((entry) => entry.email === user.email) === index)
+        .filter(
+          (user, index, arr) =>
+            arr.findIndex((u) => u.email === user.email) === index
+        )
         .map((user) => user.email)
         .filter(Boolean);
 
       if (adminRecipients.length > 0) {
         await sendEmail({
           to: adminRecipients,
-          subject: "New ticket created",
-          html: ticketAdminEmail({ ...ticket._doc, userEmail: ticketUser?.email || "" }),
+          subject: "New Ticket Created",
+          html: ticketAdminEmail({
+            ...ticket._doc,
+            userEmail: ticketUser?.email || "",
+          }),
         });
       }
     } catch (emailError) {
@@ -107,6 +167,7 @@ export const createTicket = async (req, res) => {
     });
   } catch (error) {
     console.error("Create ticket error:", error);
+
     res.status(500).json({
       success: false,
       message: error.message || "Failed to create ticket",
@@ -254,51 +315,129 @@ export const updateStatus = async (req, res) => {
 
     ticket.status = status;
 
-    if (status === "In Progress") ticket.inProgressAt = new Date();
-    if (status === "Resolved") ticket.resolvedAt = new Date();
-    
-    if (status === "Closed") ticket.closedAt = new Date();
+    // ============================
+    // IN PROGRESS
+    // ============================
+    if (status === "In Progress") {
+      ticket.inProgressAt = new Date();
 
+      // Record first response only once
+      if (!ticket.sla.firstRespondedAt) {
+        ticket.sla.firstRespondedAt = new Date();
+
+        if (
+          ticket.sla.firstRespondedAt >
+          ticket.sla.firstResponseDue
+        ) {
+          ticket.sla.firstResponseBreached = true;
+        }
+      }
+    }
+
+    // ============================
+    // RESOLVED
+    // ============================
+    if (status === "Resolved") {
+      ticket.resolvedAt = new Date();
+
+      ticket.sla.resolvedAt = ticket.resolvedAt;
+
+      if (
+        ticket.resolvedAt >
+        ticket.sla.resolutionDue
+      ) {
+        ticket.sla.resolutionBreached = true;
+        ticket.sla.status = "Breached";
+      } else {
+        ticket.sla.status = "Completed";
+      }
+    }
+
+    // ============================
+    // CLOSED
+    // ============================
+    if (status === "Closed") {
+      ticket.closedAt = new Date();
+    }
+
+    // ============================
+    // REOPEN
+    // ============================
     if (status === "Open") {
       ticket.reopened = true;
       ticket.reopenedAt = new Date();
+
       ticket.resolvedAt = null;
       ticket.closedAt = null;
+
+      // Reset SLA Resolution Status
+      ticket.sla.resolvedAt = null;
+      ticket.sla.resolutionBreached = false;
+      ticket.sla.status = "Running";
     }
+
+    // ============================
+    // STATUS HISTORY
+    // ============================
+    ticket.statusHistory.push({
+      status,
+      changedAt: new Date(),
+      changedBy: req.user.id,
+      note: `Status changed to ${status}`,
+    });
 
     await ticket.save();
 
+    // ============================
+    // EMAIL WHEN RESOLVED
+    // ============================
     if (status === "Resolved") {
       const ticketUser = await User.findById(ticket.userId);
+
       if (ticketUser?.email) {
         try {
           await sendEmail({
             to: ticketUser.email,
             subject: "Your ticket has been resolved",
-            html: ticketResolvedEmail({ ...ticket._doc, userEmail: ticketUser.email }),
+            html: ticketResolvedEmail({
+              ...ticket._doc,
+              userEmail: ticketUser.email,
+            }),
           });
         } catch (emailError) {
-          console.error("Failed to send resolved ticket email:", emailError.message);
+          console.error(
+            "Failed to send resolved ticket email:",
+            emailError.message
+          );
         }
       }
     }
 
+    // ============================
+    // NOTIFICATION
+    // ============================
     await Notification.create({
       userId: ticket.userId,
       title: "Ticket Status Updated",
       message: `Your ticket "${ticket.title}" is now ${status}`,
       type: "status",
     });
+
     res.json({
       success: true,
-      message: "Status updated",
+      message: "Status updated successfully",
       data: ticket,
     });
+
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
-
 /* ======================================================
    ✅ EDIT TICKET (USER)
 ====================================================== */
