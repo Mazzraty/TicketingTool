@@ -161,13 +161,13 @@ export default function AppRoutes() {
             path="/admin/it-support/employees"
             element={<ITSupportEmployeeView />}
           />
-
+          <Route
+            path="/admin/it-support/create-ticket"
+            element={<CreateManualTicket />}
+          />
         </Route>
-        <Route
-          path="/admin/it-support/create-ticket"
-          element={<CreateManualTicket />}
-        />
       </Route>
+
 
       {/* ================= FALLBACK ================= */}
       <Route
