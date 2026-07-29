@@ -173,17 +173,53 @@ const ticketSchema = new mongoose.Schema(
       default: null,
     },
 
-    // =========================
-    // USER
-    // =========================
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
       index: true,
     },
-
     // =========================
+    // INCIDENT DATE
+    // =========================
+
+    incidentDate: {
+      type: Date,
+      default: Date.now,
+    },
+    // =========================
+    // TICKET SOURCE
+    // =========================
+    source: {
+      type: String,
+      enum: [
+        "Portal",
+        "Manual",
+        "Email",
+        "Phone"
+      ],
+      default: "Portal",
+    },
+
+    createdByType: {
+      type: String,
+      enum: [
+        "user",
+        "it_support",
+        "company_admin",
+        "super_admin"
+      ],
+      default: "user",
+    },
+    // ===
+
+    assetId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Asset",
+      default: null,
+      index: true,
+    },
+    // ======================
     // STATUS HISTORY
     // =========================
     statusHistory: [

@@ -757,3 +757,128 @@ export const deleteTicket = async (req, res) => {
     });
   }
 };
+
+
+export const createManualTicket = async (req, res) => {
+  try {
+
+    const {
+      title,
+      description,
+      priority,
+      department,
+      assetId,
+      incidentDate
+    } = req.body;
+
+
+    // Validation
+    if (!title || !description) {
+      return res.status(400).json({
+        success: false,
+        message: "Title and description are required",
+      });
+    }
+
+
+    const ticket = await Ticket.create({
+
+      // =========================
+      // COMPANY
+      // =========================
+      companyId: req.user.companyId,
+
+
+      // =========================
+      // BASIC INFO
+      // =========================
+      title,
+
+      description,
+
+      department: department || "General",
+
+
+      // =========================
+      // PRIORITY
+      // =========================
+      priority: priority || "Low",
+
+
+      // =========================
+      // STATUS
+      // =========================
+      status: "Open",
+
+
+      // =========================
+      // ASSET LINK
+      // =========================
+      assetId: assetId || null,
+
+
+      // =========================
+      // MANUAL TICKET
+      // =========================
+      source: "Manual",
+
+      createdByType: "it_support",
+
+
+      // No end user
+      userId: null,
+
+
+      // =========================
+      // INCIDENT DATE
+      // =========================
+      incidentDate: incidentDate || new Date(),
+
+
+
+      // =========================
+      // STATUS HISTORY
+      // =========================
+      statusHistory: [
+        {
+          status: "Open",
+
+          changedBy: req.user._id,
+
+          note: "Ticket created manually by IT Support",
+
+          changedAt: new Date()
+        }
+      ]
+
+    });
+
+
+
+    return res.status(201).json({
+
+      success: true,
+
+      message: "Manual ticket created successfully",
+
+      ticket
+
+    });
+
+
+
+  } catch (error) {
+
+    console.error("Create Manual Ticket Error:", error);
+
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: error.message
+
+    });
+
+  }
+};

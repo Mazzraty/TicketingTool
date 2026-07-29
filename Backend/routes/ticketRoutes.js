@@ -2,6 +2,7 @@ import express from "express";
 
 import {
   createTicket,
+  createManualTicket,
   getAllTickets,
   getUserTickets,
   updateStatus,
@@ -15,19 +16,48 @@ import {
   deleteAttachment,
 } from "../controllers/ticketController.js";
 
+
 import {
   protect,
   adminOnly,
   companyCheck,
 } from "../middleware/authMiddleware.js";
 
+
 import { upload } from "../middleware/upload.js";
+
 
 const router = express.Router();
 
-/* ======================================================
-   🔥 ADMIN STATS
-====================================================== */
+
+// ======================================================
+// IT SUPPORT ACCESS MIDDLEWARE
+// ======================================================
+
+const supportOnly = (req, res, next) => {
+
+  if (
+    req.user.role === "it_support" ||
+    req.user.role === "company_admin" ||
+    req.user.role === "super_admin"
+  ) {
+    return next();
+  }
+
+
+  return res.status(403).json({
+    success: false,
+    message: "Access denied",
+  });
+
+};
+
+
+
+// ======================================================
+// ADMIN STATS (COMPANY ISOLATED)
+// ======================================================
+
 router.get(
   "/stats",
   protect,
@@ -36,11 +66,16 @@ router.get(
   getTicketStats
 );
 
-/* ======================================================
-   👤 USER ROUTES (COMPANY ISOLATED)
-====================================================== */
 
-// CREATE TICKET
+
+
+// ======================================================
+// USER ROUTES (COMPANY ISOLATED)
+// ======================================================
+
+
+// CREATE USER TICKET
+
 router.post(
   "/",
   protect,
@@ -49,7 +84,10 @@ router.post(
   createTicket
 );
 
-// MY TICKETS
+
+
+// USER MY TICKETS
+
 router.get(
   "/my",
   protect,
@@ -57,7 +95,35 @@ router.get(
   getUserTickets
 );
 
+
+
+
+// ======================================================
+// IT SUPPORT MANUAL TICKET
+// ======================================================
+
+
+// CREATE MANUAL TICKET
+
+router.post(
+  "/manual",
+  protect,
+  companyCheck,
+  supportOnly,
+  createManualTicket
+);
+
+
+
+
+
+// ======================================================
+// REVIEW / CONFIRM / REOPEN
+// ======================================================
+
+
 // REVIEW TICKET
+
 router.put(
   "/:id/review",
   protect,
@@ -65,7 +131,10 @@ router.put(
   addReview
 );
 
+
+
 // CONFIRM RESOLUTION
+
 router.put(
   "/:id/confirm",
   protect,
@@ -73,7 +142,10 @@ router.put(
   confirmResolution
 );
 
+
+
 // REOPEN TICKET
+
 router.put(
   "/:id/reopen",
   protect,
@@ -81,11 +153,17 @@ router.put(
   reopenTicket
 );
 
-/* ======================================================
-   🛠️ COMMON (USER + ADMIN SAFE)
-====================================================== */
 
-// SINGLE TICKET
+
+
+
+// ======================================================
+// COMMON ROUTES
+// ======================================================
+
+
+// GET SINGLE TICKET
+
 router.get(
   "/:id",
   protect,
@@ -93,7 +171,11 @@ router.get(
   getTicketById
 );
 
+
+
+
 // EDIT TICKET
+
 router.put(
   "/:id/edit",
   protect,
@@ -102,7 +184,11 @@ router.put(
   editTicket
 );
 
+
+
+
 // DELETE ATTACHMENT
+
 router.put(
   "/:id/delete-attachment",
   protect,
@@ -110,11 +196,17 @@ router.put(
   deleteAttachment
 );
 
-/* ======================================================
-   👑 ADMIN ROUTES (COMPANY SCOPED)
-====================================================== */
+
+
+
+
+// ======================================================
+// ADMIN ROUTES
+// ======================================================
+
 
 // GET ALL TICKETS
+
 router.get(
   "/",
   protect,
@@ -123,7 +215,11 @@ router.get(
   getAllTickets
 );
 
+
+
+
 // UPDATE STATUS
+
 router.put(
   "/:id",
   protect,
@@ -132,7 +228,11 @@ router.put(
   updateStatus
 );
 
+
+
+
 // DELETE TICKET
+
 router.delete(
   "/:id",
   protect,
@@ -140,5 +240,7 @@ router.delete(
   adminOnly,
   deleteTicket
 );
+
+
 
 export default router;

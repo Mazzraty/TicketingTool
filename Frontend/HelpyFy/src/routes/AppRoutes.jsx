@@ -25,6 +25,7 @@ import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
 import AdminCompanyAccess from "../pages/AdminCompanyAccess.jsx"
 import ITSupportUsers from "../pages/itSupport/ItSupportUsers.jsx"
 import ITSupportEmployeeView from "../pages/itSupport/ItSupportEmployeeView.jsx"
+import CreateManualTicket from "../pages/itSupport/CreateManualTicket.jsx";
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
@@ -162,6 +163,10 @@ export default function AppRoutes() {
           />
 
         </Route>
+        <Route
+          path="/admin/it-support/create-ticket"
+          element={<CreateManualTicket />}
+        />
       </Route>
 
       {/* ================= FALLBACK ================= */}

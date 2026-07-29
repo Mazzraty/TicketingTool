@@ -25,9 +25,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const NavItem = ({ to, icon: Icon, label }) => (
     <Link
       to={to}
-      className={`flex items-center ${
-        collapsed ? "justify-center" : "gap-3"
-      } px-4 py-3 rounded-xl transition-all duration-200 ${isActive(to)}`}
+      className={`flex items-center ${collapsed ? "justify-center" : "gap-3"
+        } px-4 py-3 rounded-xl transition-all duration-200 ${isActive(to)}`}
     >
       <Icon size={18} className="shrink-0" />
 
@@ -39,9 +38,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   return (
     <aside
-      className={`h-[calc(100vh-64px)] bg-white border-r border-gray-200 shadow-sm flex flex-col transition-all duration-300 ${
-        collapsed ? "w-[90px]" : "w-[280px]"
-      }`}
+      className={`h-[calc(100vh-64px)] bg-white border-r border-gray-200 shadow-sm flex flex-col transition-all duration-300 ${collapsed ? "w-[90px]" : "w-[280px]"
+        }`}
     >
       {/* TOP */}
       <div className="h-16 border-b border-gray-200 flex items-center justify-between px-4">
@@ -111,6 +109,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <NavItem to="/admin/dashboard" icon={LayoutDashboard} label="Dashboard" />
               <NavItem to="/admin/it-support-users" icon={Users} label="Company Users" />
               <NavItem to="/admin/tickets" icon={Ticket} label="Company Tickets" />
+              <NavItem to="/admin/it-support/create-ticket" icon={Plus} label="Create Ticket" />
               {/* <NavItem
                 to="/admin/it-support/employees"
                 icon={Users}
