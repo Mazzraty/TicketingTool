@@ -10,6 +10,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  BarChart3
 } from "lucide-react";
 export default function Sidebar({ collapsed, setCollapsed }) {
   const location = useLocation();
