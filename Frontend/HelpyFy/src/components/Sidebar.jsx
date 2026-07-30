@@ -11,7 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-
+import { Ticket, LayoutDashboard } from "lucide-react";
 export default function Sidebar({ collapsed, setCollapsed }) {
   const location = useLocation();
   const { user } = useAuth();
@@ -93,6 +93,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <NavItem to="/admin/assets" icon={Package} label="Asset Management" />
               <NavItem to="/admin/company-access" icon={Building2} label="Users" />
               <NavItem to="/admin/tickets" icon={Ticket} label="All Tickets" />
+              <NavItem to="/admin/ticket-dashboard" icon={PieChart} label="Ticket Dashboard" />
             </div>
           </div>
         )}

@@ -6,7 +6,7 @@ import Software from "../models/softwareSchema.js";
 /* =========================
    HELPER: COMPANY FILTER
 ========================= */
-const getCompanyFilter = (user) => {
+export const getCompanyFilter = (user) => {
   if (user.role === "super_admin") return {};
   return { companyId: user.companyId };
 };
