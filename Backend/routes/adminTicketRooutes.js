@@ -1,15 +1,14 @@
 import express from "express";
 
 import { protect } from "../middleware/authMiddleware.js";
-import { getTicketById } from "../controllers/ticketController.js";
-import { getDepartmentChart, getTicketCategoryChart, getTicketPriorityChart, getTicketStatusChart, getTicketTrend } from "../controllers/adminTicketDashboardController.js";
+import { getTicketKpis, getDepartmentChart, getTicketCategoryChart, getTicketPriorityChart, getTicketStatusChart, getTicketTrend } from "../controllers/adminTicketDashboardController.js";
 
 const router = express.Router();
 
 /* =========================
    TICKET DASHBOARD KPIs
 ========================= */
-router.get("/kpis", protect, getTicketById);
+router.get("/kpis", protect, getTicketKpis);
 
 /* =========================
    TICKET CHARTS

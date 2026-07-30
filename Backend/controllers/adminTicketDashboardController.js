@@ -1,6 +1,56 @@
 import Ticket from "../models/ticketSchema.js";
 import { getCompanyFilter } from "./dashboardController.js";
 
+export const getTicketKpis = async (req, res) => {
+  try {
+    const filter = getCompanyFilter(req.user);
+    const { from, to } = req.query;
+
+    if (from && to) {
+      filter.createdAt = {
+        $gte: new Date(from),
+        $lte: new Date(to),
+      };
+    }
+
+    const [
+      totalTickets,
+      openTickets,
+      inProgressTickets,
+      resolvedTickets,
+      closedTickets,
+      criticalTickets,
+      slaBreached,
+    ] = await Promise.all([
+      Ticket.countDocuments(filter),
+      Ticket.countDocuments({ ...filter, status: "Open" }),
+      Ticket.countDocuments({ ...filter, status: "In Progress" }),
+      Ticket.countDocuments({ ...filter, status: "Resolved" }),
+      Ticket.countDocuments({ ...filter, status: "Closed" }),
+      Ticket.countDocuments({ ...filter, priority: "Critical" }),
+      Ticket.countDocuments({
+        ...filter,
+        $or: [
+          { "sla.firstResponseBreached": true },
+          { "sla.resolutionBreached": true },
+        ],
+      }),
+    ]);
+
+    res.json({
+      totalTickets,
+      openTickets,
+      inProgressTickets,
+      resolvedTickets,
+      closedTickets,
+      criticalTickets,
+      slaBreached,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const getTicketTrend = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user);
