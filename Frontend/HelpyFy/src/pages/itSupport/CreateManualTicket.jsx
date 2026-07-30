@@ -21,6 +21,7 @@ const IconLayers = (p) => <Icon {...p}><path d="m12 2 9 5-9 5-9-5 9-5Z" /><path 
 const IconBuilding = (p) => <Icon {...p}><rect x="4" y="2" width="16" height="20" rx="1" /><path d="M9 22v-4h6v4M9 6h.01M15 6h.01M9 10h.01M15 10h.01M9 14h.01M15 14h.01" /></Icon>;
 const IconTag = (p) => <Icon {...p}><path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l8.58-8.58a1 1 0 0 0 0-1.42L12 2Z" /><circle cx="7" cy="7" r="1.5" fill="currentColor" /></Icon>;
 const IconCheck = (p) => <Icon {...p}><path d="M20 6 9 17l-5-5" /></Icon>;
+const IconCalendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Icon>;
 
 /* ================= PRIORITY THEME (mirrors AdminTickets) ================= */
 const PRIORITY_THEME = {
@@ -33,12 +34,15 @@ const PRIORITY_THEME = {
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
 const DEPARTMENTS = ["IT", "HR", "Finance", "Operations"];
 
+const todayStr = () => new Date().toISOString().split("T")[0];
+
 const INITIAL_FORM = {
   title: "",
   description: "",
   priority: "Medium",
   department: "IT",
   assetId: "",
+  incidentDate: todayStr(),
 };
 
 export default function CreateManualTicket() {
@@ -123,6 +127,24 @@ export default function CreateManualTicket() {
             />
             <p className="text-[11px] text-slate-400 mt-1.5">
               This is saved with the ticket so anyone can see what was reported.
+            </p>
+          </div>
+
+          {/* Incident Date */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1.5">
+              <IconCalendar className="w-3.5 h-3.5" /> Date incident occurred <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              className="w-full border border-slate-200 bg-white px-3.5 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
+              value={form.incidentDate}
+              onChange={handleChange("incidentDate")}
+              max={todayStr()}
+              required
+            />
+            <p className="text-[11px] text-slate-400 mt-1.5">
+              Defaults to today — change this if the issue happened earlier.
             </p>
           </div>
 
