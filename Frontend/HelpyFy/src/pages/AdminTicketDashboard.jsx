@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import api from "../../api/axios";
+import api from "../api/axios";
 import toast from "react-hot-toast";
 import {
   Chart as ChartJS,
