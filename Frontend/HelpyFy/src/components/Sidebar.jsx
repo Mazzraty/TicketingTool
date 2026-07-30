@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { Ticket, LayoutDashboard } from "lucide-react";
 export default function Sidebar({ collapsed, setCollapsed }) {
   const location = useLocation();
   const { user } = useAuth();
