@@ -23,6 +23,7 @@ import HhtUpload from "../pages/HhtUpload.jsx";
 import LaptopUpload from "../pages/LaptopUpload.jsx";
 import AdminDashboardFiori from "../pages/AdminDashboardFiori.jsx";
 import AdminCompanyAccess from "../pages/AdminCompanyAccess.jsx"
+import AdminTicketDashboard from "../pages/AdminTicketDashboard.jsx";
 import ITSupportUsers from "../pages/itSupport/ItSupportUsers.jsx"
 import ITSupportEmployeeView from "../pages/itSupport/ItSupportEmployeeView.jsx"
 import CreateManualTicket from "../pages/itSupport/CreateManualTicket.jsx";
@@ -106,7 +107,7 @@ export default function AppRoutes() {
             path="/admin/tickets"
             element={<AdminTickets />}
           />
-
+          <Route path="/admin/ticket-dashboard" element={<AdminTicketDashboard />} />
           <Route
             path="/admin/employees"
             element={<AdminEmployeeMaster />}
