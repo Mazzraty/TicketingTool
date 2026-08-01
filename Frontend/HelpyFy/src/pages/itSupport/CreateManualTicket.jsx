@@ -32,7 +32,14 @@ const PRIORITY_THEME = {
 };
 
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
-const DEPARTMENTS = ["IT", "HR", "Finance", "Operations"];
+const DEPARTMENTS = [
+  "Finance",
+  "Supply Chain",
+  "Sales",
+  "IT",
+  "Procurement",
+  "HR",
+];
 
 const todayStr = () => new Date().toISOString().split("T")[0];
 
@@ -196,11 +203,10 @@ export default function CreateManualTicket() {
                       key={priority}
                       type="button"
                       onClick={() => setForm((prev) => ({ ...prev, priority }))}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-                        active
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${active
                           ? PRIORITY_THEME[priority]
                           : "bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100"
-                      }`}
+                        }`}
                     >
                       {priority}
                     </button>
