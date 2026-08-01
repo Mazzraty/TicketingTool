@@ -37,8 +37,14 @@ export const createTicket = async (req, res) => {
 
     const attachments = (req.files || []).map((file) => file.path);
 
+    const companyId =
+      req.user.companyId ||
+      req.user.companyAccess?.find((c) => c.isActive && c.companyId)
+        ?.companyId ||
+      req.user.companyAccess?.[0]?.companyId;
+
     const ticket = await Ticket.create({
-      companyId: req.user.companyId,
+      companyId,
       title,
       description,
       department,

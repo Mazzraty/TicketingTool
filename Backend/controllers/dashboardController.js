@@ -8,7 +8,16 @@ import Software from "../models/softwareSchema.js";
 ========================= */
 export const getCompanyFilter = (user) => {
   if (user.role === "super_admin") return {};
-  return { companyId: user.companyId };
+
+  if (user.companyId) {
+    return { companyId: user.companyId };
+  }
+
+  const activeCompany = user.companyAccess?.find(
+    (c) => c.isActive && c.companyId
+  )?.companyId;
+
+  return activeCompany ? { companyId: activeCompany } : {};
 };
 
 /* =========================
