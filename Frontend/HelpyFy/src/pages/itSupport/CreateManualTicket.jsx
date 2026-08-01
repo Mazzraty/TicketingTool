@@ -44,7 +44,8 @@ const DEPARTMENTS = [
   "Quality",
   "Production",
   "Warehouse",
-  "Others"
+  "Others",
+  
 ];
 
 const todayStr = () => new Date().toISOString().split("T")[0];
