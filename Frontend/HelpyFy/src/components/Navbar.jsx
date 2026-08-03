@@ -369,88 +369,102 @@ export default function Navbar() {
           </div>
 
           {/* NOTIFICATIONS */}
-          {notificationOpen && (
-            <div className="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
-              <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-900">
-                  Notifications
-                  {unreadCount > 0 && (
-                    <span className="ml-2 text-xs font-medium text-[#1f4a35]">
-                      {unreadCount} new
-                    </span>
-                  )}
-                </h3>
-                {notifications.length > 0 && unreadCount > 0 && (
-                  <button
-                    onClick={async () => {
-                      const unreadIds = notifications.filter((n) => !n.isRead).map((n) => n._id);
-                      await Promise.all(unreadIds.map((id) => api.put(`/notifications/${id}/read`)));
-                      loadNotifications();
-                    }}
-                    className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-[#1f4a35] transition-colors"
-                  >
-                    <CheckCheck size={13} />
-                    Mark all read
-                  </button>
-                )}
-              </div>
+          <div className="relative">
+            <button
+              onClick={() => setNotificationOpen(!notificationOpen)}
+              className="relative flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-all duration-200"
+              title="Notifications"
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-5 h-5 bg-[#d4a94c] text-[#14251c] text-xs font-semibold rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
 
-              <div className="max-h-96 overflow-y-auto divide-y">
-                {notifications.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <Bell size={24} className="text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No notifications</p>
-                  </div>
-                ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n._id}
-                      className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${!n.isRead ? "bg-[#eef3ee]" : ""
-                        }`}
+            {notificationOpen && (
+              <div className="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Notifications
+                    {unreadCount > 0 && (
+                      <span className="ml-2 text-xs font-medium text-[#1f4a35]">
+                        {unreadCount} new
+                      </span>
+                    )}
+                  </h3>
+                  {notifications.length > 0 && unreadCount > 0 && (
+                    <button
                       onClick={async () => {
-                        if (!n.isRead) {
-                          await api.put(`/notifications/${n._id}/read`);
-                          loadNotifications();
-                        }
+                        const unreadIds = notifications.filter((n) => !n.isRead).map((n) => n._id);
+                        await Promise.all(unreadIds.map((id) => api.put(`/notifications/${id}/read`)));
+                        loadNotifications();
                       }}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-[#1f4a35] transition-colors"
                     >
-                      <div className="flex items-start gap-2">
-                        {!n.isRead && (
-                          <div className="w-2 h-2 rounded-full bg-[#1f4a35] mt-1.5 flex-shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
+                      <CheckCheck size={13} />
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-96 overflow-y-auto divide-y">
+                  {notifications.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Bell size={24} className="text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No notifications</p>
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n._id}
+                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${!n.isRead ? "bg-[#eef3ee]" : ""}`}
+                        onClick={async () => {
+                          if (!n.isRead) {
+                            await api.put(`/notifications/${n._id}/read`);
+                            loadNotifications();
+                          }
+                        }}
+                      >
+                        <div className="flex items-start gap-2">
+                          {!n.isRead && (
+                            <div className="w-2 h-2 rounded-full bg-[#1f4a35] mt-1.5 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900">{n.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))
+                  )}
+                </div>
+
+                {notifications.length > 0 && (
+                  <div className="px-4 py-2.5 border-t bg-gray-50 flex items-center justify-between">
+                    <Link
+                      to="/notifications"
+                      onClick={() => setNotificationOpen(false)}
+                      className="text-xs font-medium text-[#1f4a35] hover:underline"
+                    >
+                      View all
+                    </Link>
+                    <button
+                      onClick={async () => {
+                        await api.delete("/notifications/clear-all");
+                        loadNotifications();
+                      }}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 size={13} />
+                      Clear all
+                    </button>
+                  </div>
                 )}
               </div>
-
-              {notifications.length > 0 && (
-                <div className="px-4 py-2.5 border-t bg-gray-50 flex items-center justify-between">
-                  <Link
-                    to="/notifications"
-                    onClick={() => setNotificationOpen(false)}
-                    className="text-xs font-medium text-[#1f4a35] hover:underline"
-                  >
-                    View all
-                  </Link>
-                  <button
-                    onClick={async () => {
-                      await api.delete("/notifications/clear-all");
-                      loadNotifications();
-                    }}
-                    className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-600 transition-colors"
-                  >
-                    <Trash2 size={13} />
-                    Clear all
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
           {/* ROLE BADGE - HIDDEN ON MOBILE */}
           <div className="hidden md:flex items-center px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold capitalize border border-gray-200">
