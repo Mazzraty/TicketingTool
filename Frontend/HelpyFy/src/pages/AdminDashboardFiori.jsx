@@ -248,7 +248,7 @@ export default function AdminDashboardProfessional() {
   return (
     <div className="min-h-screen bg-[#faf8f4] font-['Inter',sans-serif]">
       {/* HEADER */}
-      <div className="border-b border-gray-100 bg-white sticky top-16 z-30">
+      <div className="border-b border-gray-100 bg-white sticky top-20 z-30">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div>
