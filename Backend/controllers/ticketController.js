@@ -226,6 +226,7 @@ export const getAllTickets = async (req, res) => {
         "userId",
         "name email employeeId department position"
       )
+      .populate("employeeId", "name staffCode department designation")
       .populate("companyId", "name code")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -257,6 +258,7 @@ export const getTicketById = async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.id)
       .populate("userId", "name email employeeId")
+      .populate("employeeId", "name staffCode department designation")
       .populate("companyId", "name code");
 
     if (!ticket) {
@@ -774,6 +776,7 @@ export const createManualTicket = async (req, res) => {
       priority,
       department,
       assetId,
+      employeeId,
       incidentDate
     } = req.body;
 
@@ -783,6 +786,13 @@ export const createManualTicket = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Title and description are required",
+      });
+    }
+
+    if (!employeeId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select the employee this ticket is for",
       });
     }
 
@@ -824,6 +834,12 @@ export const createManualTicket = async (req, res) => {
 
 
       // =========================
+      // EMPLOYEE LINK (who the ticket is for)
+      // =========================
+      employeeId: employeeId,
+
+
+      // =========================
       // MANUAL TICKET
       // =========================
       source: "Manual",
@@ -831,7 +847,7 @@ export const createManualTicket = async (req, res) => {
       createdByType: "it_support",
 
 
-      // No end user
+      // No portal end user — this was raised on behalf of an employee
       userId: null,
 
 
@@ -859,7 +875,9 @@ export const createManualTicket = async (req, res) => {
 
     });
 
-
+    // Populate the employee so the response (and any caller re-rendering
+    // the list from this response) has the name/staffCode immediately.
+    await ticket.populate("employeeId", "name staffCode department designation");
 
     return res.status(201).json({
 
