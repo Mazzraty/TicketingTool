@@ -1,16 +1,28 @@
 import Ticket from "../models/ticketSchema.js";
 import { getCompanyFilter } from "./dashboardController.js";
 
+/* =========================
+   HELPER: INCLUSIVE DATE RANGE
+   `to` is a plain "YYYY-MM-DD" string from the frontend, which
+   `new Date(to)` parses as midnight UTC. Without this, tickets
+   created later in the "to" day (e.g. this afternoon, when "today"
+   is selected) get excluded by $lte. Push the end boundary to the
+   last millisecond of that day so the whole day is included.
+========================= */
+const buildDateRangeFilter = (from, to) => {
+  if (!from || !to) return null;
+  const end = new Date(to);
+  end.setHours(23, 59, 59, 999);
+  return { $gte: new Date(from), $lte: end };
+};
+
 export const getTicketKpis = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user);
     const { from, to } = req.query;
 
     if (from && to) {
-      filter.createdAt = {
-        $gte: new Date(from),
-        $lte: new Date(to),
-      };
+      filter.createdAt = buildDateRangeFilter(from, to);
     }
 
     const [
@@ -58,10 +70,7 @@ export const getTicketTrend = async (req, res) => {
     const { from, to } = req.query;
 
     if (from && to) {
-      filter.createdAt = {
-        $gte: new Date(from),
-        $lte: new Date(to),
-      };
+      filter.createdAt = buildDateRangeFilter(from, to);
     }
 
     const trend = await Ticket.aggregate([
@@ -100,10 +109,7 @@ export const getTicketStatusChart = async (req, res) => {
     const { from, to } = req.query;
 
     if (from && to) {
-      filter.createdAt = {
-        $gte: new Date(from),
-        $lte: new Date(to),
-      };
+      filter.createdAt = buildDateRangeFilter(from, to);
     }
 
     const data = await Ticket.aggregate([
@@ -130,10 +136,7 @@ export const getTicketPriorityChart = async (req, res) => {
     const { from, to } = req.query;
 
     if (from && to) {
-      filter.createdAt = {
-        $gte: new Date(from),
-        $lte: new Date(to),
-      };
+      filter.createdAt = buildDateRangeFilter(from, to);
     }
 
     const data = await Ticket.aggregate([
@@ -160,10 +163,7 @@ export const getDepartmentChart = async (req, res) => {
     const { from, to } = req.query;
 
     if (from && to) {
-      filter.createdAt = {
-        $gte: new Date(from),
-        $lte: new Date(to),
-      };
+      filter.createdAt = buildDateRangeFilter(from, to);
     }
 
     const data = await Ticket.aggregate([
@@ -198,12 +198,13 @@ export const getTicketCategoryChart = async (req, res) => {
     const { from, to } = req.query;
 
     if (from && to) {
-      filter.createdAt = {
-        $gte: new Date(from),
-        $lte: new Date(to),
-      };
+      filter.createdAt = buildDateRangeFilter(from, to);
     }
 
+    // NOTE: Ticket schema currently has no `category` field, so this
+    // will always group everything under "Uncategorized" until a
+    // `category` field is added to the Ticket model. Left as-is here;
+    // flagging in case you want to add the field or drop this chart.
     const data = await Ticket.aggregate([
       { $match: filter },
       {
