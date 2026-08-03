@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 
@@ -22,6 +22,9 @@ const IconBuilding = (p) => <Icon {...p}><rect x="4" y="2" width="16" height="20
 const IconTag = (p) => <Icon {...p}><path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l8.58-8.58a1 1 0 0 0 0-1.42L12 2Z" /><circle cx="7" cy="7" r="1.5" fill="currentColor" /></Icon>;
 const IconCheck = (p) => <Icon {...p}><path d="M20 6 9 17l-5-5" /></Icon>;
 const IconCalendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Icon>;
+const IconUser = (p) => <Icon {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></Icon>;
+const IconSearch = (p) => <Icon {...p}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></Icon>;
+const IconX = (p) => <Icon {...p}><path d="M18 6 6 18M6 6l12 12" /></Icon>;
 
 /* ================= PRIORITY THEME (mirrors AdminTickets) ================= */
 const PRIORITY_THEME = {
@@ -45,7 +48,6 @@ const DEPARTMENTS = [
   "Production",
   "Warehouse",
   "Others",
-  
 ];
 
 const todayStr = () => new Date().toISOString().split("T")[0];
@@ -56,13 +58,144 @@ const INITIAL_FORM = {
   priority: "Medium",
   department: "IT",
   assetId: "",
+  employeeId: "",
   incidentDate: todayStr(),
+};
+
+/* ================= Searchable Employee Select ================= */
+function EmployeeSelect({ employees, value, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapperRef = useRef(null);
+
+  const selected = employees.find((e) => e._id === value) || null;
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return employees.slice(0, 50);
+    const q = query.toLowerCase();
+    return employees
+      .filter(
+        (e) =>
+          e.name?.toLowerCase().includes(q) ||
+          e.staffCode?.toLowerCase().includes(q) ||
+          e.department?.toLowerCase().includes(q)
+      )
+      .slice(0, 50);
+  }, [employees, query]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      {selected && !open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="w-full flex items-center justify-between border border-slate-200 bg-white px-3.5 py-2.5 rounded-lg text-sm text-left hover:border-blue-300 transition"
+        >
+          <span className="flex flex-col">
+            <span className="font-medium text-slate-800">{selected.name}</span>
+            <span className="text-[11px] text-slate-400">
+              {selected.staffCode}
+              {selected.department ? ` · ${selected.department}` : ""}
+            </span>
+          </span>
+          <span
+            role="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect("");
+            }}
+            className="text-slate-300 hover:text-slate-500 p-1"
+          >
+            <IconX className="w-3.5 h-3.5" />
+          </span>
+        </button>
+      ) : (
+        <div className="relative">
+          <IconSearch className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            autoFocus={open}
+            className="w-full border border-slate-200 bg-white pl-9 pr-3.5 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition placeholder:text-slate-400"
+            placeholder="Search by name or staff code…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setOpen(true)}
+          />
+        </div>
+      )}
+
+      {open && (
+        <div className="absolute z-10 mt-1.5 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-auto">
+          {filtered.length === 0 ? (
+            <div className="px-3.5 py-3 text-sm text-slate-400">No employees found</div>
+          ) : (
+            filtered.map((emp) => (
+              <button
+                type="button"
+                key={emp._id}
+                onClick={() => {
+                  onSelect(emp._id);
+                  setQuery("");
+                  setOpen(false);
+                }}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 transition flex flex-col border-b border-slate-50 last:border-b-0"
+              >
+                <span className="text-sm font-medium text-slate-800">{emp.name}</span>
+                <span className="text-[11px] text-slate-400">
+                  {emp.staffCode}
+                  {emp.department ? ` · ${emp.department}` : ""}
+                  {emp.designation ? ` · ${emp.designation}` : ""}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Mirrors AdminEmployeeMaster's normalizeCompanyId helper
+const normalizeCompanyId = (value) => {
+  if (!value) return null;
+  if (typeof value === "object") {
+    if (value._id && typeof value._id.toString === "function") {
+      return value._id.toString();
+    }
+    if (typeof value.toString === "function") {
+      return value.toString();
+    }
+    return null;
+  }
+  if (typeof value.toString === "function") {
+    return value.toString();
+  }
+  return value;
 };
 
 export default function CreateManualTicket() {
   const [assets, setAssets] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [form, setForm] = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isSuperAdmin = user?.role === "super_admin";
+  const allowedCompanyIds = [
+    ...(user?.companyId ? [normalizeCompanyId(user.companyId)] : []),
+    ...(user?.companyAccess || [])
+      .map((c) => normalizeCompanyId(c?.companyId))
+      .filter(Boolean),
+  ];
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -75,7 +208,31 @@ export default function CreateManualTicket() {
       }
     };
 
+    const loadEmployees = async () => {
+      try {
+        const res = await api.get("/employees");
+        // NOTE: /employees returns a plain array (see AdminEmployeeMaster),
+        // not { employees: [...] } like /assets does.
+        const all = Array.isArray(res.data) ? res.data : res.data.employees || [];
+
+        // Scope to the current user's company, same as AdminEmployeeMaster,
+        // unless they're a super_admin (who can see everyone).
+        const scoped = isSuperAdmin
+          ? all
+          : all.filter((e) =>
+              allowedCompanyIds.includes(normalizeCompanyId(e.companyId))
+            );
+
+        setEmployees(scoped);
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to load employees");
+      }
+    };
+
     loadAssets();
+    loadEmployees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (field) => (e) => {
@@ -84,6 +241,12 @@ export default function CreateManualTicket() {
 
   const submitHandler = async (e) => {
     e.preventDefault();
+
+    if (!form.employeeId) {
+      toast.error("Please select the employee this ticket is for");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -112,6 +275,21 @@ export default function CreateManualTicket() {
           onSubmit={submitHandler}
           className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex flex-col gap-5"
         >
+          {/* Employee (who this ticket is for) */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1.5">
+              <IconUser className="w-3.5 h-3.5" /> Employee <span className="text-red-500">*</span>
+            </label>
+            <EmployeeSelect
+              employees={employees}
+              value={form.employeeId}
+              onSelect={(id) => setForm((prev) => ({ ...prev, employeeId: id }))}
+            />
+            <p className="text-[11px] text-slate-400 mt-1.5">
+              Who this ticket is being raised for.
+            </p>
+          </div>
+
           {/* Title */}
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1.5">
