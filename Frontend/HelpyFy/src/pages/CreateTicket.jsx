@@ -10,24 +10,38 @@ import {
   X,
   CheckCircle,
 } from "lucide-react";
-  const FormField = ({ label, name, error, required, children, hint }) => (
-    <div className="space-y-2">
-      <label htmlFor={name} className="block text-sm font-semibold text-gray-900">
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      {children}
-      {hint && !error && (
-        <p className="text-xs text-gray-500">{hint}</p>
-      )}
-      {error && (
-        <p className="text-xs text-red-600 flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" />
-          {error}
-        </p>
-      )}
-    </div>
-  );
+const DEPARTMENTS = [
+  "Finance",
+  "Supply Chain",
+  "Sales",
+  "IT",
+  "Procurement",
+  "HR",
+  "Fertlization",
+  "Maintenance",
+  "Quality",
+  "Production",
+  "Warehouse",
+  "Others",
+];
+const FormField = ({ label, name, error, required, children, hint }) => (
+  <div className="space-y-2">
+    <label htmlFor={name} className="block text-sm font-semibold text-gray-900">
+      {label}
+      {required && <span className="text-red-500 ml-1">*</span>}
+    </label>
+    {children}
+    {hint && !error && (
+      <p className="text-xs text-gray-500">{hint}</p>
+    )}
+    {error && (
+      <p className="text-xs text-red-600 flex items-center gap-1">
+        <AlertCircle className="w-3 h-3" />
+        {error}
+      </p>
+    )}
+  </div>
+);
 export default function CreateTicket() {
   const [form, setForm] = useState({
     title: "",
@@ -44,7 +58,7 @@ export default function CreateTicket() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
-    
+
     // Only clear error if one exists (avoid unnecessary re-renders)
     if (errors[name]) {
       setErrors((prevErrors) => {
@@ -233,11 +247,10 @@ export default function CreateTicket() {
                   onChange={handleChange}
                   maxLength="100"
                   placeholder="e.g., Email access not working"
-                  className={`w-full px-4 py-3 border rounded-lg font-medium placeholder-gray-400 transition focus:outline-none focus:ring-2 ${
-                    errors.title
-                      ? "border-red-300 focus:ring-red-200 bg-red-50"
-                      : "border-gray-200 focus:ring-blue-200 focus:border-blue-400"
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-lg font-medium placeholder-gray-400 transition focus:outline-none focus:ring-2 ${errors.title
+                    ? "border-red-300 focus:ring-red-200 bg-red-50"
+                    : "border-gray-200 focus:ring-blue-200 focus:border-blue-400"
+                    }`}
                 />
                 <div className="flex justify-between text-xs text-gray-500">
                   <span></span>
@@ -261,11 +274,10 @@ export default function CreateTicket() {
                   maxLength="1000"
                   rows={5}
                   placeholder="Describe what happened, when it started, and what you've already tried..."
-                  className={`w-full px-4 py-3 border rounded-lg placeholder-gray-400 transition focus:outline-none focus:ring-2 resize-none ${
-                    errors.description
-                      ? "border-red-300 focus:ring-red-200 bg-red-50"
-                      : "border-gray-200 focus:ring-blue-200 focus:border-blue-400"
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-lg placeholder-gray-400 transition focus:outline-none focus:ring-2 resize-none ${errors.description
+                    ? "border-red-300 focus:ring-red-200 bg-red-50"
+                    : "border-gray-200 focus:ring-blue-200 focus:border-blue-400"
+                    }`}
                 />
                 <div className="flex justify-between text-xs text-gray-500">
                   <span></span>
@@ -288,11 +300,10 @@ export default function CreateTicket() {
                       onClick={() => setPriority(level)}
                       className={`px-4 py-3 rounded-lg border-2 font-semibold text-sm transition ${getPriorityBg(
                         level
-                      )} ${
-                        form.priority === level
-                          ? "border-current shadow-md"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
+                      )} ${form.priority === level
+                        ? "border-current shadow-md"
+                        : "border-gray-200 hover:border-gray-300"
+                        }`}
                     >
                       {level}
                     </button>
@@ -313,19 +324,17 @@ export default function CreateTicket() {
                   name="department"
                   value={form.department}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg font-medium placeholder-gray-400 transition focus:outline-none focus:ring-2 ${
-                    errors.department
-                      ? "border-red-300 focus:ring-red-200 bg-red-50"
-                      : "border-gray-200 focus:ring-blue-200 focus:border-blue-400"
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-lg font-medium placeholder-gray-400 transition focus:outline-none focus:ring-2 ${errors.department
+                    ? "border-red-300 focus:ring-red-200 bg-red-50"
+                    : "border-gray-200 focus:ring-blue-200 focus:border-blue-400"
+                    }`}
                 >
                   <option value="">Select a department...</option>
-                  <option value="IT">IT / Systems</option>
-                  <option value="HR">Human Resources</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Operations">Operations</option>
-                  <option value="Sales">Sales</option>
-                  <option value="Other">Other</option>
+                  {DEPARTMENTS.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
                 </select>
               </FormField>
 
@@ -339,11 +348,10 @@ export default function CreateTicket() {
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition ${
-                    dragActive
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-300 bg-gray-50 hover:border-gray-400"
-                  }`}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition ${dragActive
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-300 bg-gray-50 hover:border-gray-400"
+                    }`}
                 >
                   <input
                     type="file"
@@ -418,11 +426,10 @@ export default function CreateTicket() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full px-6 py-3 rounded-lg font-semibold text-white transition flex items-center justify-center gap-2 ${
-                    loading
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700 active:scale-95"
-                  }`}
+                  className={`w-full px-6 py-3 rounded-lg font-semibold text-white transition flex items-center justify-center gap-2 ${loading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700 active:scale-95"
+                    }`}
                 >
                   {loading ? (
                     <>
