@@ -13,6 +13,8 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  CheckCheck,
+  Trash2,
 } from "lucide-react";
 
 export default function Navbar() {
