@@ -445,13 +445,13 @@ export default function Navbar() {
 
                 {notifications.length > 0 && (
                   <div className="px-4 py-2.5 border-t bg-gray-50 flex items-center justify-between">
-                    <Link
+                    {/* <Link
                       to="/notifications"
                       onClick={() => setNotificationOpen(false)}
                       className="text-xs font-medium text-[#1f4a35] hover:underline"
                     >
                       View all
-                    </Link>
+                    </Link> */}
                     <button
                       onClick={async () => {
                         await api.delete("/notifications/clear-all");
