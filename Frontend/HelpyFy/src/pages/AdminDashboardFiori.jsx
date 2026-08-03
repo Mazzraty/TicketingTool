@@ -127,13 +127,12 @@ export default function AdminDashboardProfessional() {
           {subtext && <p className="text-xs text-gray-500 mt-2">{subtext}</p>}
         </div>
         <div
-          className={`p-3 rounded-lg ${
-            trendType === "positive"
+          className={`p-3 rounded-lg ${trendType === "positive"
               ? "bg-[#eef3ee]"
               : trendType === "warning"
-              ? "bg-amber-100"
-              : "bg-[#eef3ee]"
-          }`}
+                ? "bg-amber-100"
+                : "bg-[#eef3ee]"
+            }`}
         >
           <Icon
             size={20}
@@ -219,9 +218,8 @@ export default function AdminDashboardProfessional() {
     };
     return (
       <span
-        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
-          colors[status.toLowerCase()] || "bg-gray-100 text-gray-800"
-        }`}
+        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${colors[status.toLowerCase()] || "bg-gray-100 text-gray-800"
+          }`}
       >
         {status.toLowerCase() === "available" || status.toLowerCase() === "active" ? (
           <CheckCircle size={12} />
@@ -250,7 +248,7 @@ export default function AdminDashboardProfessional() {
   return (
     <div className="min-h-screen bg-[#faf8f4] font-['Inter',sans-serif]">
       {/* HEADER */}
-      <div className="border-b border-gray-100 bg-white sticky top-0 z-50">
+      <div className="border-b border-gray-100 bg-white sticky top-16 z-30">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div>
