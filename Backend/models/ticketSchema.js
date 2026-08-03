@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-
 const ticketSchema = new mongoose.Schema(
   {
     // =========================
@@ -177,6 +176,12 @@ const ticketSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: false,
+      index: true,
+    },
+    employeeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "EmployeeMaster",
+      default: null,
       index: true,
     },
     // =========================
