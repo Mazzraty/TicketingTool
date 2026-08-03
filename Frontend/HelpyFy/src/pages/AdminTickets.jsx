@@ -30,6 +30,7 @@ const IconCircleDot = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><circl
 const IconClock = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></Icon>;
 const IconAlertTriangle = (p) => <Icon {...p}><path d="m10.29 3.86-8.18 14.18A2 2 0 0 0 4 21h16a2 2 0 0 0 1.89-2.96L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4M12 17h.01" /></Icon>;
 const IconZap = (p) => <Icon {...p}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" /></Icon>;
+const IconUser = (p) => <Icon {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></Icon>;
 
 /* ================= STATUS THEME (single source of truth) ================= */
 const STATUS_THEME = {
@@ -275,6 +276,25 @@ const SlaDetailPanel = ({ ticket, now }) => {
   );
 };
 
+/* ================= REPORTER (who raised the ticket) HELPERS =================
+   A ticket can be raised two ways:
+   - Self-service (portal login)   -> ticket.userId   { name, email }
+   - Manual, created on behalf of  -> ticket.employeeId { name, staffCode, department }
+   These helpers pick whichever is populated so the name is never blank.
+*/
+const getReporterName = (ticket) =>
+  ticket.userId?.name ||
+  ticket.employeeId?.name ||
+  ticket.userId?.email ||
+  "Unknown";
+
+const getReporterSubtext = (ticket) => {
+  // Prefer email (portal users), fall back to staff code (manual tickets)
+  if (ticket.userId?.email) return ticket.userId.email;
+  if (ticket.employeeId?.staffCode) return `Staff Code: ${ticket.employeeId.staffCode}`;
+  return "—";
+};
+
 export default function AdminTickets() {
   const [tickets, setTickets] = useState([]);
   const [page, setPage] = useState(1);
@@ -389,6 +409,7 @@ export default function AdminTickets() {
     const slaState = getOverallSlaState(t, now).label.toLowerCase();
     return (
       t.title?.toLowerCase().includes(s) ||
+      getReporterName(t).toLowerCase().includes(s) ||
       t.userId?.email?.toLowerCase().includes(s) ||
       t.priority?.toLowerCase().includes(s) ||
       t.status?.toLowerCase().includes(s) ||
@@ -421,7 +442,8 @@ export default function AdminTickets() {
     </span>
   );
 
-  const initials = (email) => (email ? email.charAt(0).toUpperCase() : "?");
+  // Initials now prefer the reporter's name, falling back to email
+  const initials = (nameOrEmail) => (nameOrEmail ? nameOrEmail.charAt(0).toUpperCase() : "?");
 
   const renderAttachments = (files = []) => {
     if (!files || files.length === 0) return <span className="text-slate-300 text-xs">—</span>;
@@ -488,11 +510,15 @@ export default function AdminTickets() {
           <div className="p-5 flex flex-col gap-5 overflow-y-auto">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm shrink-0">
-                {initials(selected.userId?.email)}
+                {initials(getReporterName(selected))}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{selected.userId?.email || "Unknown user"}</p>
-                <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full mt-0.5 ${STATUS_THEME[selected.status]?.bg} ${STATUS_THEME[selected.status]?.text}`}>
+                <p className="text-sm font-semibold text-slate-800 truncate flex items-center gap-1.5">
+                  <IconUser className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  {getReporterName(selected)}
+                </p>
+                <p className="text-xs text-slate-400 truncate">{getReporterSubtext(selected)}</p>
+                <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full mt-1 ${STATUS_THEME[selected.status]?.bg} ${STATUS_THEME[selected.status]?.text}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${STATUS_THEME[selected.status]?.accent}`} />
                   {selected.status}
                 </span>
@@ -630,6 +656,7 @@ export default function AdminTickets() {
                 <thead>
                   <tr className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-200">
                     <th className="p-3.5 text-left font-semibold">Ticket</th>
+                    <th className="p-3.5 text-left font-semibold">Reported By</th>
                     <th className="p-3.5 text-left font-semibold">Company</th>
                     <th className="p-3.5 text-center font-semibold">Priority</th>
                     <th className="p-3.5 text-center font-semibold">Status</th>
@@ -645,16 +672,22 @@ export default function AdminTickets() {
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map((t) => {
                     const theme = STATUS_THEME[t.status] || STATUS_THEME.Open;
+                    const reporterName = getReporterName(t);
+                    const reporterSubtext = getReporterSubtext(t);
                     return (
                       <tr key={t._id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="p-3.5">
+                          <p className="font-semibold text-slate-800 truncate max-w-[220px]">{t.title}</p>
+                        </td>
+
+                        <td className="p-3.5">
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xs shrink-0">
-                              {initials(t.userId?.email)}
+                              {initials(reporterName)}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold text-slate-800 truncate max-w-[220px]">{t.title}</p>
-                              <p className="text-xs text-slate-400 truncate max-w-[220px]">{t.userId?.email}</p>
+                              <p className="font-medium text-slate-800 truncate max-w-[180px]">{reporterName}</p>
+                              <p className="text-xs text-slate-400 truncate max-w-[180px]">{reporterSubtext}</p>
                             </div>
                           </div>
                         </td>
