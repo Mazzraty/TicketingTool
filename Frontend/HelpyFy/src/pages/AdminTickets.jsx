@@ -307,7 +307,7 @@ export default function AdminTickets() {
   const [statusModal, setStatusModal] = useState(null); // { ticket, targetStatus }
   const [resolutionNote, setResolutionNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
+  const user = JSON.parse(localStorage.getItem("user"));
   // ✅ LIVE CLOCK — ticks every 30s so SLA countdowns stay fresh without a full reload
   const [now, setNow] = useState(() => new Date());
 
@@ -370,7 +370,20 @@ export default function AdminTickets() {
     }
     updateStatus(ticket._id, targetStatus);
   };
+  const handleEscalate = async (id) => {
+    try {
+      await api.put(`/tickets/${id}/escalate`, {
+        reason: "Escalated by IT Support",
+      });
 
+      toast.success("Ticket escalated successfully");
+
+      load(page);
+      loadStats();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to escalate");
+    }
+  };
   const updateStatus = async (id, status, extra = {}) => {
     try {
       const payload = { status, ...extra };
@@ -738,12 +751,26 @@ export default function AdminTickets() {
                         </td>
 
                         <td className="p-3.5 text-center">
-                          <button
-                            onClick={() => setSelected(t)}
-                            className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition"
-                          >
-                            <IconEye className="w-3.5 h-3.5" /> View
-                          </button>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => setSelected(t)}
+                              className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition"
+                            >
+                              <IconEye className="w-3.5 h-3.5" />
+                              View
+                            </button>
+
+                            {user?.role === "it_support" &&
+                              !t.escalated &&
+                              t.status !== "Closed" && (
+                                <button
+                                  onClick={() => handleEscalate(t._id)}
+                                  className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg"
+                                >
+                                  Escalate
+                                </button>
+                              )}
+                          </div>
                         </td>
                       </tr>
                     );

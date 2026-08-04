@@ -14,6 +14,7 @@ import {
   reopenTicket,
   confirmResolution,
   deleteAttachment,
+  escalateTicket
 } from "../controllers/ticketController.js";
 
 
@@ -241,6 +242,12 @@ router.delete(
   deleteTicket
 );
 
-
+router.put(
+  "/:id/escalate",
+  protect,
+  companyCheck,
+  supportOnly,
+  escalateTicket
+);
 
 export default router;

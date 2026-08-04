@@ -53,6 +53,10 @@ export const createTicket = async (req, res) => {
       userId: req.user.id,
 
       status: "Open",
+      assignedRole: "it_support",
+      assignedTo: null,
+      escalated: false,
+      escalatedAt: null,
 
       // ==========================
       // SLA
@@ -216,16 +220,25 @@ export const getAllTickets = async (req, res) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
 
-    const filter =
-      req.user.role === "super_admin"
-        ? {}
-        : { companyId: req.user.companyId };
+    let filter = {};
+
+    if (req.user.role === "it_support") {
+      filter = {
+        companyId: req.user.companyId,
+        assignedRole: "it_support",
+      };
+    } else if (req.user.role === "company_admin") {
+      filter = {
+        companyId: req.user.companyId,
+      };
+    } else if (req.user.role === "super_admin") {
+      filter = {
+        assignedRole: "super_admin",
+      };
+    }
 
     const tickets = await Ticket.find(filter)
-      .populate(
-        "userId",
-        "name email employeeId department position"
-      )
+      .populate("userId", "name email employeeId department position")
       .populate("employeeId", "name staffCode department designation")
       .populate("companyId", "name code")
       .sort({ createdAt: -1 })
@@ -250,7 +263,6 @@ export const getAllTickets = async (req, res) => {
     });
   }
 };
-
 /* ======================================================
    ✅ GET SINGLE TICKET
 ====================================================== */
@@ -568,7 +580,7 @@ export const confirmResolution = async (req, res) => {
       });
     }
 
-    
+
     res.json({
       success: true,
       message: "Ticket confirmed",
@@ -744,7 +756,7 @@ export const deleteTicket = async (req, res) => {
     if (
       req.user.role !== "super_admin" &&
       ticket.companyId.toString() !==
-        req.user.companyId.toString()
+      req.user.companyId.toString()
     ) {
       return res.status(403).json({
         success: false,
@@ -904,5 +916,76 @@ export const createManualTicket = async (req, res) => {
 
     });
 
+  }
+};
+
+export const escalateTicket = async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    if (req.user.role !== "it_support") {
+      return res.status(403).json({
+        success: false,
+        message: "Only IT Support can escalate tickets",
+      });
+    }
+
+    ticket.assignedRole = "super_admin";
+
+    ticket.escalated = true;
+
+    ticket.escalatedAt = new Date();
+
+    ticket.escalatedBy = req.user._id;
+
+    ticket.escalationReason = reason;
+
+    ticket.sla.escalated = true;
+
+    ticket.sla.escalationLevel += 1;
+
+    ticket.sla.escalatedAt = new Date();
+
+    ticket.statusHistory.push({
+      status: ticket.status,
+      changedBy: req.user._id,
+      changedAt: new Date(),
+      note: `Escalated to Super Admin : ${reason}`,
+    });
+
+    await ticket.save();
+
+    // Notify Super Admins
+    const admins = await User.find({ role: "super_admin" });
+
+    await Notification.insertMany(
+      admins.map((admin) => ({
+        userId: admin._id,
+        title: "Ticket Escalated",
+        message: `${ticket.title} requires Super Admin attention`,
+        type: "ticket_escalated",
+      }))
+    );
+
+    res.json({
+      success: true,
+      message: "Ticket escalated successfully",
+      data: ticket,
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };

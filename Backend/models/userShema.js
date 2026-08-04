@@ -41,6 +41,18 @@ const userSchema = new mongoose.Schema(
       ref: "Company",
       default: null,  // For super_admin users
     },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+
+    lastLogin: {
+      type: Date,
+    },
+
+    lastLogout: {
+      type: Date,
+    },
 
     // ✅ COMPANY ACCESS ARRAY (Multi-tenant)
     companyAccess: [
