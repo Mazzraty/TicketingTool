@@ -234,6 +234,7 @@ export const getAllTickets = async (req, res) => {
       .populate("userId", "name email employeeId department position")
       .populate("employeeId", "name staffCode department designation")
       .populate("companyId", "name code")
+      .populate({ path: "escalation.escalatedBy", select: "name email" })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -264,7 +265,8 @@ export const getTicketById = async (req, res) => {
     const ticket = await Ticket.findById(req.params.id)
       .populate("userId", "name email employeeId")
       .populate("employeeId", "name staffCode department designation")
-      .populate("companyId", "name code");
+      .populate("companyId", "name code")
+      .populate({ path: "escalation.escalatedBy", select: "name email" });
 
     if (!ticket) {
       return res.status(404).json({
@@ -936,18 +938,13 @@ export const escalateTicket = async (req, res) => {
 
     ticket.assignedRole = "super_admin";
 
-    ticket.escalated = true;
-
-    ticket.escalatedAt = new Date();
-
-    ticket.escalatedBy = req.user._id;
-
-    ticket.escalationReason = reason;
+    ticket.escalation.isEscalated = true;
+    ticket.escalation.level += 1;
+    ticket.escalation.reason = reason;
+    ticket.escalation.escalatedBy = req.user._id;
+    ticket.escalation.escalatedAt = new Date();
 
     ticket.sla.escalated = true;
-
-    ticket.sla.escalationLevel += 1;
-
     ticket.sla.escalatedAt = new Date();
 
     ticket.statusHistory.push({
