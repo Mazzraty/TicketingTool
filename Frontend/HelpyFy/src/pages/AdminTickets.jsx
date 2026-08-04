@@ -264,21 +264,12 @@ const SlaDetailPanel = ({ ticket, now }) => {
       />
 
       {sla.escalated && (
-        <div className="rounded-lg border border-orange-200 bg-orange-50 p-2.5">
-          <div className="flex items-start gap-2">
-            <IconAlertTriangle className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-            <div className="space-y-1">
-              <p className="text-[11px] text-orange-700 font-medium">
-                Escalated (level {sla.escalationLevel || 1})
-                {sla.escalatedAt && ` on ${new Date(sla.escalatedAt).toLocaleDateString()}`}
-              </p>
-              {ticket.escalation?.escalatedBy && (
-                <p className="text-[11px] text-orange-700/90">
-                  Escalated by {ticket.escalation.escalatedBy.name || ticket.escalation.escalatedBy.email}
-                </p>
-              )}
-            </div>
-          </div>
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-2.5 flex items-center gap-2">
+          <IconAlertTriangle className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+          <p className="text-[11px] text-orange-700 font-medium">
+            Escalated (level {sla.escalationLevel || 1})
+            {sla.escalatedAt && ` on ${new Date(sla.escalatedAt).toLocaleDateString()}`}
+          </p>
         </div>
       )}
     </div>
@@ -704,14 +695,7 @@ export default function AdminTickets() {
                     return (
                       <tr key={t._id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="p-3.5">
-                          <div className="space-y-1">
-                            <p className="font-semibold text-slate-800 truncate max-w-[220px]">{t.title}</p>
-                            {t.escalation?.escalatedBy && (
-                              <p className="text-[11px] text-orange-500/90 truncate max-w-[220px]">
-                                Escalated by {t.escalation.escalatedBy.name || t.escalation.escalatedBy.email}
-                              </p>
-                            )}
-                          </div>
+                          <p className="font-semibold text-slate-800 truncate max-w-[220px]">{t.title}</p>
                         </td>
 
                         <td className="p-3.5">
