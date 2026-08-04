@@ -234,7 +234,7 @@ export const getAllTickets = async (req, res) => {
       .populate("userId", "name email employeeId department position")
       .populate("employeeId", "name staffCode department designation")
       .populate("companyId", "name code")
-      .populate({ path: "escalation.escalatedBy", select: "name email" })
+      .populate({ path: "escalation.escalatedBy", select: "name email", strictPopulate: false })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -265,7 +265,8 @@ export const getTicketById = async (req, res) => {
     const ticket = await Ticket.findById(req.params.id)
       .populate("userId", "name email employeeId")
       .populate("employeeId", "name staffCode department designation")
-      .populate("companyId", "name code");
+      .populate("companyId", "name code")
+      .populate({ path: "escalation.escalatedBy", select: "name email", strictPopulate: false });
 
     if (!ticket) {
       return res.status(404).json({
