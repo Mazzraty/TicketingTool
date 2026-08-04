@@ -222,19 +222,12 @@ export const getAllTickets = async (req, res) => {
 
     let filter = {};
 
-    if (req.user.role === "it_support") {
-      filter = {
-        companyId: req.user.companyId,
-        assignedRole: "it_support",
-      };
-    } else if (req.user.role === "company_admin") {
+    if (req.user.role === "it_support" || req.user.role === "company_admin") {
       filter = {
         companyId: req.user.companyId,
       };
     } else if (req.user.role === "super_admin") {
-      filter = {
-        assignedRole: "super_admin",
-      };
+      filter = {};
     }
 
     const tickets = await Ticket.find(filter)
@@ -837,6 +830,8 @@ export const createManualTicket = async (req, res) => {
       // STATUS
       // =========================
       status: "Open",
+      assignedRole: "it_support",
+      assignedTo: req.user._id,
 
 
       // =========================
