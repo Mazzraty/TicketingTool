@@ -370,6 +370,7 @@ export default function AdminTickets() {
     }
     updateStatus(ticket._id, targetStatus);
   };
+
   const handleEscalate = async (id) => {
     try {
       await api.put(`/tickets/${id}/escalate`, {
@@ -384,6 +385,7 @@ export default function AdminTickets() {
       toast.error(err.response?.data?.message || "Failed to escalate");
     }
   };
+
   const updateStatus = async (id, status, extra = {}) => {
     try {
       const payload = { status, ...extra };
@@ -678,7 +680,10 @@ export default function AdminTickets() {
                     <th className="p-3.5 text-center font-semibold">Closed</th>
                     <th className="p-3.5 text-center font-semibold">Files</th>
                     <th className="p-3.5 text-center font-semibold">Review</th>
-                    <th className="p-3.5 text-center font-semibold"></th>
+                    {/* sticky header cell so actions never get clipped off-screen */}
+                    <th className="p-3.5 text-center font-semibold sticky right-0 bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
 
@@ -750,7 +755,8 @@ export default function AdminTickets() {
                           {t.rating ? renderStars(t.rating) : <span className="text-slate-300 text-xs">—</span>}
                         </td>
 
-                        <td className="p-3.5 text-center">
+                        {/* sticky actions cell — always visible on the right, even mid-scroll */}
+                        <td className="p-3.5 text-center sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => setSelected(t)}
@@ -761,11 +767,11 @@ export default function AdminTickets() {
                             </button>
 
                             {user?.role === "it_support" &&
-                              !t.escalated &&
+                              !t.sla?.escalated &&
                               t.status !== "Closed" && (
                                 <button
                                   onClick={() => handleEscalate(t._id)}
-                                  className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg"
+                                  className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap"
                                 >
                                   Escalate
                                 </button>
