@@ -47,7 +47,7 @@ export default function LaptopUpload() {
     if (isSuperAdmin) load();
   }, [isSuperAdmin]);
 
-  // update a single cell
+  // update a single cell (manual typing/edit)
   const updateSheetCell = (rowIdx, col, value) => {
     setSheetRows((prev) => {
       const next = [...prev];
@@ -62,41 +62,51 @@ export default function LaptopUpload() {
 
   const clearSheet = () => {
     setSheetRows(Array.from({ length: 8 }, emptySheetRow));
+    setPasteText("");
   };
 
-  // paste tab/newline separated data (copied from Excel) starting at rowIdx/colIdx
-  const handleSheetPaste = (e, rowIdx, colIdx) => {
-    const text = e.clipboardData.getData("text");
-    if (!text || !text.includes("\t") && !text.includes("\n")) return; // let single-cell paste behave normally
+  // 🔥 SINGLE PASTE BOX — always fires reliably, unlike per-cell paste listeners
+  const [pasteText, setPasteText] = useState("");
 
-    e.preventDefault();
+  const parsePasteIntoGrid = (text) => {
+    if (!text.trim()) return;
 
-    const pastedRows = text
+    const parsedRows = text
       .replace(/\r/g, "")
       .split("\n")
-      .filter((r) => r.length > 0)
+      .filter((r) => r.trim().length > 0)
       .map((r) => r.split("\t"));
 
-    setSheetRows((prev) => {
-      const next = [...prev];
+    // if the first pasted row looks like a header (matches our column names), skip it
+    const looksLikeHeader = parsedRows[0]?.some((cell) =>
+      SHEET_COLUMNS.some((col) => col.toLowerCase() === cell.trim().toLowerCase())
+    );
+    const dataRows = looksLikeHeader ? parsedRows.slice(1) : parsedRows;
 
-      pastedRows.forEach((pastedRow, i) => {
-        const targetRow = rowIdx + i;
-
-        while (next.length <= targetRow) {
-          next.push(emptySheetRow());
-        }
-
-        pastedRow.forEach((val, j) => {
-          const targetCol = SHEET_COLUMNS[colIdx + j];
-          if (targetCol) {
-            next[targetRow] = { ...next[targetRow], [targetCol]: val.trim() };
-          }
-        });
+    const newRows = dataRows.map((cells) => {
+      const row = emptySheetRow();
+      SHEET_COLUMNS.forEach((col, i) => {
+        row[col] = (cells[i] || "").trim();
       });
-
-      return next;
+      return row;
     });
+
+    if (newRows.length > 0) {
+      setSheetRows(newRows);
+      toast.success(`${newRows.length} rows pasted into the grid`);
+    }
+  };
+
+  const handlePasteBoxChange = (e) => {
+    const text = e.target.value;
+    setPasteText(text);
+  };
+
+  const handlePasteBoxPaste = (e) => {
+    const text = e.clipboardData.getData("text");
+    parsePasteIntoGrid(text);
+    // clear the box after a short delay so the browser's own paste doesn't also insert it
+    setTimeout(() => setPasteText(""), 0);
   };
 
   // push the sheet's data into the same `rows` pipeline used by file upload
@@ -239,7 +249,7 @@ export default function LaptopUpload() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm text-gray-600">
-              Copy your asset details from Excel and paste directly into the sheet below (click a cell first, then <kbd className="px-1 py-0.5 bg-gray-100 border rounded text-xs">Ctrl+V</kbd>)
+              Copy your asset details from Excel (including the header row) and paste into the box below
             </p>
             <div className="flex gap-2">
               <button
@@ -257,6 +267,16 @@ export default function LaptopUpload() {
             </div>
           </div>
 
+          {/* single, reliable paste target */}
+          <textarea
+            value={pasteText}
+            onChange={handlePasteBoxChange}
+            onPaste={handlePasteBoxPaste}
+            placeholder="Click here and press Ctrl+V (or Cmd+V) to paste your copied Excel rows..."
+            rows={3}
+            className="w-full p-3 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-green-200 mb-3"
+          />
+
           <div className="overflow-x-auto border rounded-xl">
             <table className="w-full text-sm border-collapse">
               <thead className="bg-gray-100 text-xs uppercase">
@@ -271,14 +291,13 @@ export default function LaptopUpload() {
               <tbody>
                 {sheetRows.map((row, rowIdx) => (
                   <tr key={rowIdx} className="border-t">
-                    {SHEET_COLUMNS.map((col, colIdx) => (
+                    {SHEET_COLUMNS.map((col) => (
                       <td key={col} className="p-0 border-r last:border-r-0">
                         <input
                           value={row[col]}
                           onChange={(e) =>
                             updateSheetCell(rowIdx, col, e.target.value)
                           }
-                          onPaste={(e) => handleSheetPaste(e, rowIdx, colIdx)}
                           className="w-full p-2 text-sm outline-none focus:bg-green-50"
                         />
                       </td>
