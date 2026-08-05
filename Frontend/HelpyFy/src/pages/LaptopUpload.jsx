@@ -34,6 +34,22 @@ export default function LaptopUpload() {
     if (isSuperAdmin) load();
   }, [isSuperAdmin]);
 
+  // 🔥 DOWNLOAD SAMPLE TEMPLATE
+  const downloadTemplate = () => {
+    const sample = [
+      {
+        assetCode: 1052,
+        model: "Dell 3510 laptop",
+        serialNumber: "9RDQJ34",
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sample);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Laptops");
+    XLSX.writeFile(workbook, "laptop_upload_template.xlsx");
+  };
+
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -149,6 +165,19 @@ export default function LaptopUpload() {
       {/* UPLOAD CARD (PRINTER STYLE UI) */}
       <div className="bg-white border rounded-2xl p-6 shadow-sm">
 
+        {/* TEMPLATE HINT + DOWNLOAD */}
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4">
+          <p className="text-sm text-blue-700">
+            File must have columns: <b>assetCode</b>, <b>model</b>, <b>serialNumber</b>
+          </p>
+          <button
+            onClick={downloadTemplate}
+            className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
+          >
+            ⬇ Download Template
+          </button>
+        </div>
+
         {/* DROP AREA */}
         <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 cursor-pointer hover:bg-gray-50 transition">
 
@@ -164,7 +193,7 @@ export default function LaptopUpload() {
               📤 Drag & Drop Excel File
             </p>
             <p className="text-sm text-gray-500 mt-1">
-              or click to browse
+              or click to browse (use the template above)
             </p>
 
             {fileName && (
