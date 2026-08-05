@@ -11,6 +11,19 @@ export default function LaptopUpload() {
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState("");
 
+  // 🔥 IN-PAGE PASTE SHEET
+  const SHEET_COLUMNS = ["assetCode", "type", "serialNumber", "model", "Name"];
+  const emptySheetRow = () => ({
+    assetCode: "",
+    type: "",
+    serialNumber: "",
+    model: "",
+    Name: "",
+  });
+  const [sheetRows, setSheetRows] = useState(
+    Array.from({ length: 8 }, emptySheetRow)
+  );
+
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -34,15 +47,77 @@ export default function LaptopUpload() {
     if (isSuperAdmin) load();
   }, [isSuperAdmin]);
 
-  // 🔥 DOWNLOAD SAMPLE TEMPLATE (real .xlsx file with just the required headers, no data rows)
-  // User downloads this, fills in rows, then uploads it back through the file picker below.
-  const downloadTemplate = () => {
-    const headers = [["assetCode", "type", "serialNumber", "model", "Name"]];
+  // update a single cell
+  const updateSheetCell = (rowIdx, col, value) => {
+    setSheetRows((prev) => {
+      const next = [...prev];
+      next[rowIdx] = { ...next[rowIdx], [col]: value };
+      return next;
+    });
+  };
 
-    const worksheet = XLSX.utils.aoa_to_sheet(headers);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Laptops");
-    XLSX.writeFile(workbook, "laptop_upload_template.xlsx");
+  const addSheetRow = () => {
+    setSheetRows((prev) => [...prev, emptySheetRow()]);
+  };
+
+  const clearSheet = () => {
+    setSheetRows(Array.from({ length: 8 }, emptySheetRow));
+  };
+
+  // paste tab/newline separated data (copied from Excel) starting at rowIdx/colIdx
+  const handleSheetPaste = (e, rowIdx, colIdx) => {
+    const text = e.clipboardData.getData("text");
+    if (!text || !text.includes("\t") && !text.includes("\n")) return; // let single-cell paste behave normally
+
+    e.preventDefault();
+
+    const pastedRows = text
+      .replace(/\r/g, "")
+      .split("\n")
+      .filter((r) => r.length > 0)
+      .map((r) => r.split("\t"));
+
+    setSheetRows((prev) => {
+      const next = [...prev];
+
+      pastedRows.forEach((pastedRow, i) => {
+        const targetRow = rowIdx + i;
+
+        while (next.length <= targetRow) {
+          next.push(emptySheetRow());
+        }
+
+        pastedRow.forEach((val, j) => {
+          const targetCol = SHEET_COLUMNS[colIdx + j];
+          if (targetCol) {
+            next[targetRow] = { ...next[targetRow], [targetCol]: val.trim() };
+          }
+        });
+      });
+
+      return next;
+    });
+  };
+
+  // push the sheet's data into the same `rows` pipeline used by file upload
+  const loadSheetIntoRows = () => {
+    const formatted = sheetRows
+      .filter((r) => r.assetCode || r.serialNumber || r.model)
+      .map((r) => ({
+        type: r.type ? clean(r.type) : "Laptop",
+        assetCode: clean(r.assetCode),
+        model: clean(r.model),
+        serialNumber: clean(r.serialNumber),
+      }));
+
+    if (formatted.length === 0) {
+      toast.error("Sheet is empty — paste or type your asset details first");
+      return;
+    }
+
+    setRows(formatted);
+    setFileName("");
+    toast.success(`${formatted.length} rows loaded — review below and click Upload`);
   };
 
   const handleFile = (e) => {
@@ -160,18 +235,72 @@ export default function LaptopUpload() {
       {/* UPLOAD CARD (PRINTER STYLE UI) */}
       <div className="bg-white border rounded-2xl p-6 shadow-sm">
 
-        {/* TEMPLATE HINT + DOWNLOAD */}
-        <div className="flex items-center justify-between bg-gray-50 border rounded-xl p-3 mb-4">
-          <p className="text-sm text-gray-600">
-            File must have columns: <b className="text-gray-800">assetCode</b>, <b className="text-gray-800">type</b>, <b className="text-gray-800">serialNumber</b>, <b className="text-gray-800">model</b>, <b className="text-gray-800">Name</b>
-          </p>
-          <button
-            onClick={downloadTemplate}
-            className="px-3 py-1.5 rounded-lg bg-white border text-gray-700 text-xs font-semibold hover:bg-gray-100 whitespace-nowrap ml-4"
-          >
-            ⬇ Download Template
-          </button>
+        {/* IN-PAGE PASTE SHEET */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">
+              Copy your asset details from Excel and paste directly into the sheet below (click a cell first, then <kbd className="px-1 py-0.5 bg-gray-100 border rounded text-xs">Ctrl+V</kbd>)
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={addSheetRow}
+                className="px-3 py-1.5 rounded-lg bg-white border text-gray-700 text-xs font-semibold hover:bg-gray-100"
+              >
+                + Add Row
+              </button>
+              <button
+                onClick={clearSheet}
+                className="px-3 py-1.5 rounded-lg bg-white border text-gray-700 text-xs font-semibold hover:bg-gray-100"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto border rounded-xl">
+            <table className="w-full text-sm border-collapse">
+              <thead className="bg-gray-100 text-xs uppercase">
+                <tr>
+                  {SHEET_COLUMNS.map((col) => (
+                    <th key={col} className="p-2 text-left border-b">
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sheetRows.map((row, rowIdx) => (
+                  <tr key={rowIdx} className="border-t">
+                    {SHEET_COLUMNS.map((col, colIdx) => (
+                      <td key={col} className="p-0 border-r last:border-r-0">
+                        <input
+                          value={row[col]}
+                          onChange={(e) =>
+                            updateSheetCell(rowIdx, col, e.target.value)
+                          }
+                          onPaste={(e) => handleSheetPaste(e, rowIdx, colIdx)}
+                          className="w-full p-2 text-sm outline-none focus:bg-green-50"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-end mt-3">
+            <button
+              onClick={loadSheetIntoRows}
+              className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700"
+            >
+              Load Sheet →
+            </button>
+          </div>
         </div>
+
+        <p className="text-xs text-gray-400 text-center mb-2">— or —</p>
+
 
         {/* DROP AREA */}
         <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 cursor-pointer hover:bg-gray-50 transition">
