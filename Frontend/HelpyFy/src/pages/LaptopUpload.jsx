@@ -67,7 +67,6 @@ export default function LaptopUpload() {
 
   // 🔥 SINGLE PASTE BOX — always fires reliably, unlike per-cell paste listeners
   const [pasteText, setPasteText] = useState("");
-  const [pasteHasHeader, setPasteHasHeader] = useState(true);
 
   const parsePasteIntoGrid = (text) => {
     if (!text.trim()) return;
@@ -78,10 +77,7 @@ export default function LaptopUpload() {
       .filter((r) => r.trim().length > 0)
       .map((r) => r.split("\t"));
 
-    // no more guessing — user tells us via the checkbox whether row 1 is a header
-    const dataRows = pasteHasHeader ? parsedRows.slice(1) : parsedRows;
-
-    const newRows = dataRows.map((cells) => {
+    const newRows = parsedRows.map((cells) => {
       const row = emptySheetRow();
       SHEET_COLUMNS.forEach((col, i) => {
         row[col] = (cells[i] ?? "").trim();
@@ -93,7 +89,7 @@ export default function LaptopUpload() {
       setSheetRows(newRows);
       toast.success(`${newRows.length} rows pasted into the grid`);
     } else {
-      toast.error("No data rows found — check the header checkbox is set correctly");
+      toast.error("No data rows found in pasted content");
     }
   };
 
@@ -263,7 +259,7 @@ export default function LaptopUpload() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm text-gray-600">
-              Copy your asset details from Excel (including the header row) and paste into the box below
+              Copy your asset details from Excel (data rows only, no header) and paste into the box below
             </p>
             <div className="flex gap-2">
               <button
@@ -288,17 +284,8 @@ export default function LaptopUpload() {
             onPaste={handlePasteBoxPaste}
             placeholder="Click here and press Ctrl+V (or Cmd+V) to paste your copied Excel rows..."
             rows={3}
-            className="w-full p-3 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-green-200 mb-2"
+            className="w-full p-3 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-green-200 mb-3"
           />
-
-          <label className="flex items-center gap-2 text-xs text-gray-600 mb-3">
-            <input
-              type="checkbox"
-              checked={pasteHasHeader}
-              onChange={(e) => setPasteHasHeader(e.target.checked)}
-            />
-            My pasted data includes the header row (assetCode, type, serialNumber, model, Name)
-          </label>
 
           <div className="overflow-x-auto border rounded-xl">
             <table className="w-full text-sm border-collapse">
