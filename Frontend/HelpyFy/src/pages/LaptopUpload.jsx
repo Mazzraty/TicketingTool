@@ -161,13 +161,13 @@ export default function LaptopUpload() {
       <div className="bg-white border rounded-2xl p-6 shadow-sm">
 
         {/* TEMPLATE HINT + DOWNLOAD */}
-        <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4">
-          <p className="text-sm text-blue-700">
-            File must have columns: <b>assetCode</b>, <b>type</b>, <b>serialNumber</b>, <b>model</b>, <b>Name</b>
+        <div className="flex items-center justify-between bg-gray-50 border rounded-xl p-3 mb-4">
+          <p className="text-sm text-gray-600">
+            File must have columns: <b className="text-gray-800">assetCode</b>, <b className="text-gray-800">type</b>, <b className="text-gray-800">serialNumber</b>, <b className="text-gray-800">model</b>, <b className="text-gray-800">Name</b>
           </p>
           <button
             onClick={downloadTemplate}
-            className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
+            className="px-3 py-1.5 rounded-lg bg-white border text-gray-700 text-xs font-semibold hover:bg-gray-100 whitespace-nowrap ml-4"
           >
             ⬇ Download Template
           </button>
