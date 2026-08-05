@@ -11,14 +11,6 @@ export default function LaptopUpload() {
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState("");
 
-  const [showTemplate, setShowTemplate] = useState(false);
-
-  // sample data shown in the template preview AND used for the actual .xlsx download
-  const templateSample = [
-    { assetCode: 1052, model: "Dell 3510 laptop", serialNumber: "9RDQJ34" },
-    { assetCode: 1053, model: "HP ProBook 440", serialNumber: "6KLT912" },
-  ];
-
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -42,27 +34,17 @@ export default function LaptopUpload() {
     if (isSuperAdmin) load();
   }, [isSuperAdmin]);
 
-  // 🔥 DOWNLOAD SAMPLE TEMPLATE (actual .xlsx file)
+  // 🔥 DOWNLOAD SAMPLE TEMPLATE (real .xlsx file with just the required headers)
+  // User downloads this, fills in rows, then uploads it back through the file picker below.
   const downloadTemplate = () => {
-    const worksheet = XLSX.utils.json_to_sheet(templateSample);
+    const templateRows = [
+      { assetCode: "", model: "", serialNumber: "" },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateRows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Laptops");
     XLSX.writeFile(workbook, "laptop_upload_template.xlsx");
-  };
-
-  // 🔥 USE TEMPLATE DIRECTLY (loads sample rows into the upload flow, no file picker needed)
-  const useTemplateAsFile = () => {
-    const formatted = templateSample.map((r) => ({
-      type: "Laptop",
-      assetCode: clean(r.assetCode),
-      model: clean(r.model),
-      serialNumber: clean(r.serialNumber),
-    }));
-
-    setRows(formatted);
-    setFileName("laptop_upload_template.xlsx");
-    setShowTemplate(false);
-    toast.success("Template loaded — review rows below and click Upload");
   };
 
   const handleFile = (e) => {
@@ -180,83 +162,18 @@ export default function LaptopUpload() {
       {/* UPLOAD CARD (PRINTER STYLE UI) */}
       <div className="bg-white border rounded-2xl p-6 shadow-sm">
 
-        {/* TEMPLATE HINT + PREVIEW/DOWNLOAD */}
+        {/* TEMPLATE HINT + DOWNLOAD */}
         <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4">
           <p className="text-sm text-blue-700">
             File must have columns: <b>assetCode</b>, <b>model</b>, <b>serialNumber</b>
           </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowTemplate(true)}
-              className="px-3 py-1.5 rounded-lg bg-white border border-blue-300 text-blue-700 text-xs font-semibold hover:bg-blue-100"
-            >
-              👁 View Template
-            </button>
-            <button
-              onClick={downloadTemplate}
-              className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
-            >
-              ⬇ Download
-            </button>
-          </div>
+          <button
+            onClick={downloadTemplate}
+            className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
+          >
+            ⬇ Download Template
+          </button>
         </div>
-
-        {/* TEMPLATE PREVIEW MODAL — shows the excel file content, and lets user upload it directly */}
-        {showTemplate && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl p-6">
-
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-gray-800">
-                  laptop_upload_template.xlsx
-                </h2>
-                <button
-                  onClick={() => setShowTemplate(false)}
-                  className="text-gray-400 hover:text-gray-700 text-xl leading-none"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="overflow-x-auto border rounded-xl">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-100 text-xs uppercase">
-                    <tr>
-                      <th className="p-3 text-left">assetCode</th>
-                      <th className="p-3 text-left">model</th>
-                      <th className="p-3 text-left">serialNumber</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {templateSample.map((r, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="p-3">{r.assetCode}</td>
-                        <td className="p-3">{r.model}</td>
-                        <td className="p-3">{r.serialNumber}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="flex justify-end gap-2 mt-6">
-                <button
-                  onClick={downloadTemplate}
-                  className="px-4 py-2 rounded-xl bg-white border text-gray-700 hover:bg-gray-100 text-sm"
-                >
-                  ⬇ Download File
-                </button>
-                <button
-                  onClick={useTemplateAsFile}
-                  className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 text-sm"
-                >
-                  Use This File
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
 
         {/* DROP AREA */}
         <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 cursor-pointer hover:bg-gray-50 transition">
