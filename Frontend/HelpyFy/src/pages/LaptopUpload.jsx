@@ -34,14 +34,12 @@ export default function LaptopUpload() {
     if (isSuperAdmin) load();
   }, [isSuperAdmin]);
 
-  // 🔥 DOWNLOAD SAMPLE TEMPLATE (real .xlsx file with just the required headers)
+  // 🔥 DOWNLOAD SAMPLE TEMPLATE (real .xlsx file with just the required headers, no data rows)
   // User downloads this, fills in rows, then uploads it back through the file picker below.
   const downloadTemplate = () => {
-    const templateRows = [
-      { assetCode: "", model: "", serialNumber: "" },
-    ];
+    const headers = [["assetCode", "type", "serialNumber", "model", "Name"]];
 
-    const worksheet = XLSX.utils.json_to_sheet(templateRows);
+    const worksheet = XLSX.utils.aoa_to_sheet(headers);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Laptops");
     XLSX.writeFile(workbook, "laptop_upload_template.xlsx");
@@ -165,7 +163,7 @@ export default function LaptopUpload() {
         {/* TEMPLATE HINT + DOWNLOAD */}
         <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4">
           <p className="text-sm text-blue-700">
-            File must have columns: <b>assetCode</b>, <b>model</b>, <b>serialNumber</b>
+            File must have columns: <b>assetCode</b>, <b>type</b>, <b>serialNumber</b>, <b>model</b>, <b>Name</b>
           </p>
           <button
             onClick={downloadTemplate}
