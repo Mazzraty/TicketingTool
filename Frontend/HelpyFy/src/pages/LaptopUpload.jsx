@@ -27,7 +27,7 @@ export default function LaptopUpload() {
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
 
-  const clean = (v) => (v ? v.toString().trim() : "");
+  const clean = (v) => (v !== undefined && v !== null ? v.toString().trim() : "");
 
   // load companies for super admin
   useEffect(() => {
@@ -67,6 +67,7 @@ export default function LaptopUpload() {
 
   // 🔥 SINGLE PASTE BOX — always fires reliably, unlike per-cell paste listeners
   const [pasteText, setPasteText] = useState("");
+  const [pasteHasHeader, setPasteHasHeader] = useState(true);
 
   const parsePasteIntoGrid = (text) => {
     if (!text.trim()) return;
@@ -77,16 +78,13 @@ export default function LaptopUpload() {
       .filter((r) => r.trim().length > 0)
       .map((r) => r.split("\t"));
 
-    // if the first pasted row looks like a header (matches our column names), skip it
-    const looksLikeHeader = parsedRows[0]?.some((cell) =>
-      SHEET_COLUMNS.some((col) => col.toLowerCase() === cell.trim().toLowerCase())
-    );
-    const dataRows = looksLikeHeader ? parsedRows.slice(1) : parsedRows;
+    // no more guessing — user tells us via the checkbox whether row 1 is a header
+    const dataRows = pasteHasHeader ? parsedRows.slice(1) : parsedRows;
 
     const newRows = dataRows.map((cells) => {
       const row = emptySheetRow();
       SHEET_COLUMNS.forEach((col, i) => {
-        row[col] = (cells[i] || "").trim();
+        row[col] = (cells[i] ?? "").trim();
       });
       return row;
     });
@@ -94,6 +92,8 @@ export default function LaptopUpload() {
     if (newRows.length > 0) {
       setSheetRows(newRows);
       toast.success(`${newRows.length} rows pasted into the grid`);
+    } else {
+      toast.error("No data rows found — check the header checkbox is set correctly");
     }
   };
 
@@ -274,8 +274,17 @@ export default function LaptopUpload() {
             onPaste={handlePasteBoxPaste}
             placeholder="Click here and press Ctrl+V (or Cmd+V) to paste your copied Excel rows..."
             rows={3}
-            className="w-full p-3 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-green-200 mb-3"
+            className="w-full p-3 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-green-200 mb-2"
           />
+
+          <label className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+            <input
+              type="checkbox"
+              checked={pasteHasHeader}
+              onChange={(e) => setPasteHasHeader(e.target.checked)}
+            />
+            My pasted data includes the header row (assetCode, type, serialNumber, model, Name)
+          </label>
 
           <div className="overflow-x-auto border rounded-xl">
             <table className="w-full text-sm border-collapse">
