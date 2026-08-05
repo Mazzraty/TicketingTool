@@ -114,7 +114,7 @@ export default function LaptopUpload() {
     const formatted = sheetRows
       .filter((r) => r.assetCode || r.serialNumber || r.model)
       .map((r) => ({
-        type: r.type ? clean(r.type) : "Laptop",
+        type: "Laptop", // always hardcode, same as the file-upload path — don't trust pasted casing
         assetCode: clean(r.assetCode),
         model: clean(r.model),
         serialNumber: clean(r.serialNumber),
@@ -180,7 +180,21 @@ export default function LaptopUpload() {
 
       const res = await api.post("/assets/bulk-upload", payload);
 
-      toast.success(`Inserted: ${res.data.inserted}`);
+      const { inserted, skipped, failedRows } = res.data;
+
+      if (inserted > 0) {
+        toast.success(`Inserted: ${inserted}${skipped ? `, Skipped: ${skipped}` : ""}`);
+      } else {
+        toast.error(
+          skipped > 0
+            ? `Nothing inserted — ${skipped} row(s) skipped (likely duplicate assetCode or invalid type)`
+            : "Nothing was inserted"
+        );
+      }
+
+      if (failedRows?.length) {
+        console.warn("Bulk upload failed rows:", failedRows);
+      }
 
       setRows([]);
       setFileName("");
