@@ -42,30 +42,6 @@ export default function AdminEmployeeMaster() {
 
   const isSuperAdmin = user?.role === "super_admin";
 
-  const normalizeCompanyId = (value) => {
-    if (!value) return null;
-    if (typeof value === "object") {
-      if (value._id && typeof value._id.toString === "function") {
-        return value._id.toString();
-      }
-      if (typeof value.toString === "function") {
-        return value.toString();
-      }
-      return null;
-    }
-    if (typeof value.toString === "function") {
-      return value.toString();
-    }
-    return value;
-  };
-
-  const allowedCompanyIds = [
-    ...(user?.companyId ? [normalizeCompanyId(user.companyId)] : []),
-    ...(user?.companyAccess || [])
-      .map((c) => normalizeCompanyId(c?.companyId))
-      .filter(Boolean),
-  ];
-
   // ================= LOAD EMPLOYEES & COMPANIES =================
   const loadEmployees = async () => {
     try {
@@ -137,25 +113,19 @@ export default function AdminEmployeeMaster() {
   };
 
   // ================= COMPANY FILTER + SEARCH =================
-  const filteredEmployees = employees
-    .filter((e) => {
-      // 🔐 Company restriction (only non-super admin)
-      if (!isSuperAdmin) {
-        if (allowedCompanyIds.length === 0) {
-          return false;
-        }
-
-        const employeeCompanyId = normalizeCompanyId(e.companyId);
-        return allowedCompanyIds.includes(employeeCompanyId);
-      }
-      return true;
-    })
-    .filter(
-      (e) =>
-        e.staffCode?.toLowerCase().includes(search.toLowerCase()) ||
-        e.name?.toLowerCase().includes(search.toLowerCase()) ||
-        e.department?.toLowerCase().includes(search.toLowerCase())
-    );
+  // NOTE: Company-level access control is enforced by the backend
+  // (via companyCheck / tenant scoping inside getEmployees), NOT re-derived
+  // here from potentially stale localStorage data. The previous version of
+  // this filter silently hid employees for non-super_admin roles (like
+  // it_support) whenever their cached companyId/companyAccess didn't
+  // include the employee's company — even though the backend had already
+  // correctly returned them. If the backend returned it, we show it.
+  const filteredEmployees = employees.filter(
+    (e) =>
+      e.staffCode?.toLowerCase().includes(search.toLowerCase()) ||
+      e.name?.toLowerCase().includes(search.toLowerCase()) ||
+      e.department?.toLowerCase().includes(search.toLowerCase())
+  );
 
   // ================= PAGINATION =================
   const totalPages = Math.ceil(filteredEmployees.length / pageSize);
@@ -168,9 +138,9 @@ export default function AdminEmployeeMaster() {
   // ================= STATUS BADGE =================
   const VisaBadge = ({ expiryDate }) => {
     if (!expiryDate) return <span className="text-gray-400 text-sm">—</span>;
-    
+
     const daysLeft = Math.floor((new Date(expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
-    
+
     if (daysLeft < 0) {
       return (
         <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
