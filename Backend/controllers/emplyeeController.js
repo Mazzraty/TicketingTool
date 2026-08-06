@@ -247,13 +247,16 @@ export const bulkUploadEmployees = async (req, res) => {
           continue;
         }
 
-        const exists = await EmployeeMaster.findOne({
-          staffCode,
-          companyId: targetCompanyId,
-        });
+        // 🔥 CHANGED: staffCode is now checked GLOBALLY (no companyId filter),
+        // so the same staffCode can't exist under any company.
+        const exists = await EmployeeMaster.findOne({ staffCode });
 
         if (exists) {
           skipped++;
+          failedRows.push({
+            row: e,
+            reason: `staffCode "${staffCode}" already exists (company: ${exists.company || exists.companyId})`,
+          });
           continue;
         }
 
@@ -282,7 +285,7 @@ export const bulkUploadEmployees = async (req, res) => {
     }
 
     /* =========================
-       ASSETS
+       ASSETS (unchanged — still scoped per company)
     ========================= */
     const allowedTypes = ["Laptop", "Printer", "HHT", "PC"];
 
