@@ -36,18 +36,7 @@ const DEPARTMENTS = [
   "OPERATIONS",
 ];
 
-/* ======================================================
-   ⚡ IMPACT × URGENCY → PRIORITY  (ServiceNow / Jira style)
 
-   Instead of picking "Critical" directly, the requester (or
-   the auto-detector below) answers two simpler questions:
-
-   IMPACT  = how many people/systems are affected?
-   URGENCY = how time-sensitive is it?
-
-   The matrix below turns that combination into one of your
-   four existing priority levels (Low/Medium/High/Critical).
-====================================================== */
 const IMPACT_LEVELS = [
   {
     value: "Low",
@@ -71,6 +60,7 @@ const URGENCY_LEVELS = [
     value: "Low",
     label: "Can wait",
     desc: "No deadline — routine work continues fine",
+    
   },
   {
     value: "Medium",
