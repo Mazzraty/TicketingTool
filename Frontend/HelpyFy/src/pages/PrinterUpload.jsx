@@ -12,10 +12,28 @@ export default function PrinterUpload() {
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState("");
 
+  // 🔥 IN-PAGE PASTE SHEET
+  const SHEET_COLUMNS = [
+    "assetCode",
+    "model",
+    "serialNumber",
+    "route",
+    "salesmanCode",
+    "salesmanName",
+    "supervisor",
+    "notes",
+  ];
+  const emptySheetRow = () =>
+    SHEET_COLUMNS.reduce((acc, col) => ({ ...acc, [col]: "" }), {});
+  const [sheetRows, setSheetRows] = useState(
+    Array.from({ length: 8 }, emptySheetRow)
+  );
+  const [pasteText, setPasteText] = useState("");
+
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
 
-  const clean = (v) => (v ? v.toString().trim() : "");
+  const clean = (v) => (v != null && v !== "" ? v.toString().trim() : "");
 
   // ================= LOAD COMPANIES (ONLY SUPER ADMIN)
   useEffect(() => {
@@ -68,6 +86,84 @@ export default function PrinterUpload() {
     reader.readAsArrayBuffer(file);
   };
 
+  // ================= IN-PAGE PASTE SHEET =================
+  const updateSheetCell = (rowIdx, col, value) => {
+    setSheetRows((prev) => {
+      const next = [...prev];
+      next[rowIdx] = { ...next[rowIdx], [col]: value };
+      return next;
+    });
+  };
+
+  const addSheetRow = () => {
+    setSheetRows((prev) => [...prev, emptySheetRow()]);
+  };
+
+  const clearSheet = () => {
+    setSheetRows(Array.from({ length: 8 }, emptySheetRow));
+    setPasteText("");
+  };
+
+  // single reliable paste target — always fires, unlike per-cell paste listeners
+  const parsePasteIntoGrid = (text) => {
+    if (!text.trim()) return;
+
+    const parsedRows = text
+      .replace(/\r/g, "")
+      .split("\n")
+      .filter((r) => r.trim().length > 0)
+      .map((r) => r.split("\t"));
+
+    const newRows = parsedRows.map((cells) => {
+      const row = emptySheetRow();
+      SHEET_COLUMNS.forEach((col, i) => {
+        row[col] = (cells[i] ?? "").trim();
+      });
+      return row;
+    });
+
+    if (newRows.length > 0) {
+      setSheetRows(newRows);
+      toast.success(`${newRows.length} rows pasted into the grid`);
+    } else {
+      toast.error("No data rows found in pasted content");
+    }
+  };
+
+  const handlePasteBoxChange = (e) => setPasteText(e.target.value);
+
+  const handlePasteBoxPaste = (e) => {
+    const text = e.clipboardData.getData("text");
+    parsePasteIntoGrid(text);
+    setTimeout(() => setPasteText(""), 0);
+  };
+
+  // push the sheet's data into the same `rows` pipeline used by file upload
+  const loadSheetIntoRows = () => {
+    const formatted = sheetRows
+      .filter((r) => r.assetCode || r.serialNumber || r.model)
+      .map((r) => ({
+        type: "Printer",
+        assetCode: clean(r.assetCode),
+        model: clean(r.model),
+        serialNumber: clean(r.serialNumber),
+        route: clean(r.route),
+        salesmanCode: clean(r.salesmanCode),
+        salesmanName: clean(r.salesmanName),
+        supervisor: clean(r.supervisor),
+        notes: clean(r.notes),
+      }));
+
+    if (formatted.length === 0) {
+      toast.error("Sheet is empty — paste or type your asset details first");
+      return;
+    }
+
+    setRows(formatted);
+    setFileName("");
+    toast.success(`${formatted.length} rows loaded — review below and click Upload`);
+  };
+
   const upload = async () => {
     try {
       setLoading(true);
@@ -78,6 +174,7 @@ export default function PrinterUpload() {
 
       if (!valid.length) {
         toast.error("No valid rows");
+        setLoading(false);
         return;
       }
 
@@ -90,6 +187,7 @@ export default function PrinterUpload() {
       if (isSuperAdmin) {
         if (!selectedCompany) {
           toast.error("Please select company");
+          setLoading(false);
           return;
         }
         payload.companyId = selectedCompany;
@@ -97,7 +195,22 @@ export default function PrinterUpload() {
 
       const res = await api.post("/assets/bulk-upload", payload);
 
-      toast.success(`Inserted: ${res.data.inserted}`);
+      const { inserted, skipped, failedRows } = res.data;
+
+      if (inserted > 0) {
+        toast.success(`Inserted: ${inserted}${skipped ? `, Skipped: ${skipped}` : ""}`);
+      } else {
+        toast.error(
+          skipped > 0
+            ? `Nothing inserted — ${skipped} row(s) skipped (likely duplicate assetCode or invalid data)`
+            : "Nothing was inserted"
+        );
+      }
+
+      if (failedRows?.length) {
+        console.warn("Bulk upload failed rows:", failedRows);
+      }
+
       setRows([]);
       setFileName("");
     } catch (err) {
@@ -160,6 +273,80 @@ export default function PrinterUpload() {
 
       {/* UPLOAD CARD */}
       <div className="bg-white border rounded-2xl p-6 shadow-sm">
+
+        {/* IN-PAGE PASTE SHEET */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">
+              Copy your asset details from Excel (data rows only, no header) and paste into the box below
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={addSheetRow}
+                className="px-3 py-1.5 rounded-lg bg-white border text-gray-700 text-xs font-semibold hover:bg-gray-100"
+              >
+                + Add Row
+              </button>
+              <button
+                onClick={clearSheet}
+                className="px-3 py-1.5 rounded-lg bg-white border text-gray-700 text-xs font-semibold hover:bg-gray-100"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <textarea
+            value={pasteText}
+            onChange={handlePasteBoxChange}
+            onPaste={handlePasteBoxPaste}
+            placeholder="Click here and press Ctrl+V (or Cmd+V) to paste your copied Excel rows..."
+            rows={3}
+            className="w-full p-3 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-green-200 mb-3"
+          />
+
+          <div className="overflow-x-auto border rounded-xl">
+            <table className="w-full text-sm border-collapse">
+              <thead className="bg-gray-100 text-xs uppercase">
+                <tr>
+                  {SHEET_COLUMNS.map((col) => (
+                    <th key={col} className="p-2 text-left border-b whitespace-nowrap">
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sheetRows.map((row, rowIdx) => (
+                  <tr key={rowIdx} className="border-t">
+                    {SHEET_COLUMNS.map((col) => (
+                      <td key={col} className="p-0 border-r last:border-r-0">
+                        <input
+                          value={row[col]}
+                          onChange={(e) =>
+                            updateSheetCell(rowIdx, col, e.target.value)
+                          }
+                          className="w-full p-2 text-sm outline-none focus:bg-green-50 min-w-[100px]"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-end mt-3">
+            <button
+              onClick={loadSheetIntoRows}
+              className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700"
+            >
+              Load Sheet →
+            </button>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-400 text-center mb-2">— or —</p>
 
         {/* DROP AREA */}
         <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 cursor-pointer hover:bg-gray-50 transition">
