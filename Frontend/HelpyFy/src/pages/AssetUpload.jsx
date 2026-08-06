@@ -19,6 +19,19 @@ const ALLOWED_EMPLOYEE_FIELDS = [
   "dateOfJoining",
 ];
 
+// 🔥 grid columns (label shown to user) mapped to internal field keys, in the exact order requested
+const SHEET_COLUMNS = [
+  { label: "Staff Code", key: "staffCode" },
+  { label: "Name", key: "name" },
+  { label: "Date of Joining", key: "dateOfJoining" },
+  { label: "Division", key: "division" },
+  { label: "Department", key: "department" },
+  { label: "Place Of Work", key: "placeOfWork" },
+  { label: "Designation", key: "designation" },
+  { label: "Visa No.", key: "visaNo" },
+  { label: "Company", key: "company" },
+];
+
 export default function EmployeeExcelUpload() {
   const { user, companyId: activeCompanyId } = useAuth();
   const [rows, setRows] = useState([]);
@@ -28,10 +41,18 @@ export default function EmployeeExcelUpload() {
   const [companies, setCompanies] = useState([]);
   const [companyId, setCompanyId] = useState(activeCompanyId || "");
 
+  // 🔥 IN-PAGE PASTE SHEET
+  const emptySheetRow = () =>
+    SHEET_COLUMNS.reduce((acc, col) => ({ ...acc, [col.key]: "" }), {});
+  const [sheetRows, setSheetRows] = useState(
+    Array.from({ length: 8 }, emptySheetRow)
+  );
+  const [pasteText, setPasteText] = useState("");
+
   /* =========================
      CLEAN VALUE
   ========================= */
-  const clean = (v) => (v ? v.toString().trim() : "");
+  const clean = (v) => (v != null && v !== "" ? v.toString().trim() : "");
 
   /* =========================
      FUZZY MATCH ENGINE
@@ -152,6 +173,86 @@ export default function EmployeeExcelUpload() {
     reader.readAsArrayBuffer(selectedFile);
   };
 
+  // ================= IN-PAGE PASTE SHEET =================
+  const updateSheetCell = (rowIdx, key, value) => {
+    setSheetRows((prev) => {
+      const next = [...prev];
+      next[rowIdx] = { ...next[rowIdx], [key]: value };
+      return next;
+    });
+  };
+
+  const addSheetRow = () => {
+    setSheetRows((prev) => [...prev, emptySheetRow()]);
+  };
+
+  const clearSheet = () => {
+    setSheetRows(Array.from({ length: 8 }, emptySheetRow));
+    setPasteText("");
+  };
+
+  // single reliable paste target — always fires, unlike per-cell paste listeners
+  const parsePasteIntoGrid = (text) => {
+    if (!text.trim()) return;
+
+    const parsedRows = text
+      .replace(/\r/g, "")
+      .split("\n")
+      .filter((r) => r.trim().length > 0)
+      .map((r) => r.split("\t"));
+
+    const newRows = parsedRows.map((cells) => {
+      const row = emptySheetRow();
+      SHEET_COLUMNS.forEach((col, i) => {
+        row[col.key] = (cells[i] ?? "").trim();
+      });
+      return row;
+    });
+
+    if (newRows.length > 0) {
+      setSheetRows(newRows);
+      toast.success(`${newRows.length} rows pasted into the grid`);
+    } else {
+      toast.error("No data rows found in pasted content");
+    }
+  };
+
+  const handlePasteBoxChange = (e) => setPasteText(e.target.value);
+
+  const handlePasteBoxPaste = (e) => {
+    const text = e.clipboardData.getData("text");
+    parsePasteIntoGrid(text);
+    setTimeout(() => setPasteText(""), 0);
+  };
+
+  // push the sheet's data into the same `rows` pipeline used by file upload
+  const loadSheetIntoRows = () => {
+    const formatted = sheetRows
+      .filter((r) => r.staffCode || r.name)
+      .map((r) => ({
+        type: "Employee",
+        company: clean(r.company),
+        staffCode: clean(r.staffCode),
+        name: clean(r.name),
+        department: clean(r.department),
+        designation: clean(r.designation),
+        division: clean(r.division),
+        placeOfWork: clean(r.placeOfWork),
+        visaNo: clean(r.visaNo),
+        dateOfJoining: clean(r.dateOfJoining),
+      }));
+
+    if (formatted.length === 0) {
+      toast.error("Sheet is empty — paste or type employee details first");
+      return;
+    }
+
+    setFileType("Employee");
+    setRows(formatted);
+    setFile(null);
+    toast.success(`${formatted.length} rows loaded — review below and click Upload`);
+  };
+
   const isValid = (r) => {
     return r.staffCode && r.name;
   };
@@ -165,6 +266,7 @@ export default function EmployeeExcelUpload() {
 
       if (user?.role === "super_admin" && !companyId) {
         toast.error("Select the target company before uploading");
+        setLoading(false);
         return;
       }
 
@@ -172,6 +274,7 @@ export default function EmployeeExcelUpload() {
 
       if (!valid.length) {
         toast.error("No valid employees found");
+        setLoading(false);
         return;
       }
 
@@ -188,9 +291,21 @@ export default function EmployeeExcelUpload() {
         payload
       );
 
-      toast.success(
-        `Employees Inserted: ${res.data.inserted}`
-      );
+      const { inserted, skipped, failedRows } = res.data;
+
+      if (inserted > 0) {
+        toast.success(`Employees Inserted: ${inserted}${skipped ? `, Skipped: ${skipped}` : ""}`);
+      } else {
+        toast.error(
+          skipped > 0
+            ? `Nothing inserted — ${skipped} row(s) skipped (likely duplicate staffCode)`
+            : "Nothing was inserted"
+        );
+      }
+
+      if (failedRows?.length) {
+        console.warn("Bulk upload failed rows:", failedRows);
+      }
 
       setRows([]);
       setFile(null);
@@ -251,6 +366,80 @@ export default function EmployeeExcelUpload() {
             </select>
           </div>
         )}
+
+        {/* IN-PAGE PASTE SHEET */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">
+              Copy employee details from Excel (data rows only, no header) and paste into the box below
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={addSheetRow}
+                className="px-3 py-1.5 rounded-lg bg-white border text-gray-700 text-xs font-semibold hover:bg-gray-100"
+              >
+                + Add Row
+              </button>
+              <button
+                onClick={clearSheet}
+                className="px-3 py-1.5 rounded-lg bg-white border text-gray-700 text-xs font-semibold hover:bg-gray-100"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <textarea
+            value={pasteText}
+            onChange={handlePasteBoxChange}
+            onPaste={handlePasteBoxPaste}
+            placeholder="Click here and press Ctrl+V (or Cmd+V) to paste your copied Excel rows..."
+            rows={3}
+            className="w-full p-3 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-blue-200 mb-3"
+          />
+
+          <div className="overflow-x-auto border rounded-xl">
+            <table className="w-full text-sm border-collapse">
+              <thead className="bg-gray-100 text-xs uppercase">
+                <tr>
+                  {SHEET_COLUMNS.map((col) => (
+                    <th key={col.key} className="p-2 text-left border-b whitespace-nowrap">
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sheetRows.map((row, rowIdx) => (
+                  <tr key={rowIdx} className="border-t">
+                    {SHEET_COLUMNS.map((col) => (
+                      <td key={col.key} className="p-0 border-r last:border-r-0">
+                        <input
+                          value={row[col.key]}
+                          onChange={(e) =>
+                            updateSheetCell(rowIdx, col.key, e.target.value)
+                          }
+                          className="w-full p-2 text-sm outline-none focus:bg-blue-50 min-w-[110px]"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-end mt-3">
+            <button
+              onClick={loadSheetIntoRows}
+              className="px-4 py-2 rounded-xl bg-[#0a6ed1] text-white text-sm font-semibold hover:bg-[#085caf]"
+            >
+              Load Sheet →
+            </button>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-400 text-center mb-2">— or —</p>
 
         {/* DROP ZONE */}
         <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 cursor-pointer hover:bg-gray-50 transition">
