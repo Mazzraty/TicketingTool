@@ -415,6 +415,7 @@ export default function AdminTickets() {
     const slaState = getOverallSlaState(t, now).label.toLowerCase();
     return (
       t.title?.toLowerCase().includes(s) ||
+      t.ticketNumber?.toLowerCase().includes(s) ||
       getReporterName(t).toLowerCase().includes(s) ||
       t.userId?.email?.toLowerCase().includes(s) ||
       t.priority?.toLowerCase().includes(s) ||
@@ -527,6 +528,7 @@ export default function AdminTickets() {
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold text-slate-400 tracking-wide uppercase">Ticket Preview</p>
                 <h2 className="font-bold text-slate-900 leading-snug mt-0.5 truncate">{selected.title}</h2>
+                <p className="text-xs font-mono text-slate-400 mt-0.5">{selected.ticketNumber}</p>
               </div>
               <button
                 onClick={() => setSelected(null)}
@@ -690,7 +692,10 @@ export default function AdminTickets() {
                 return (
                   <div key={t._id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                     <div className="flex items-start justify-between gap-2 mb-3">
-                      <p className="font-semibold text-slate-800 text-sm leading-snug min-w-0 break-words">{t.title}</p>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 text-sm leading-snug break-words">{t.title}</p>
+                        <p className="text-[11px] font-mono text-slate-400 mt-0.5">{t.ticketNumber}</p>
+                      </div>
                       <span className={`shrink-0 px-2 py-1 text-[11px] font-medium rounded-full ${priorityColor(t.priority)}`}>
                         {t.priority}
                       </span>
@@ -765,6 +770,7 @@ export default function AdminTickets() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-200">
+                      <th className="p-3.5 text-left font-semibold">Ticket #</th>
                       <th className="p-3.5 text-left font-semibold">Ticket</th>
                       <th className="p-3.5 text-left font-semibold">Reported By</th>
                       <th className="p-3.5 text-left font-semibold">Company</th>
@@ -788,6 +794,10 @@ export default function AdminTickets() {
                       const reporterSubtext = getReporterSubtext(t);
                       return (
                         <tr key={t._id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="p-3.5">
+                            <p className="font-mono text-xs text-slate-500 whitespace-nowrap">{t.ticketNumber || "—"}</p>
+                          </td>
+
                           <td className="p-3.5">
                             <p className="font-semibold text-slate-800 truncate max-w-[220px]">{t.title}</p>
                           </td>
@@ -948,4 +958,5 @@ export default function AdminTickets() {
       )}
     </div>
   );
+  
 }
