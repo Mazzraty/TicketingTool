@@ -25,6 +25,7 @@ const IconCalendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18
 const IconUser = (p) => <Icon {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></Icon>;
 const IconSearch = (p) => <Icon {...p}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></Icon>;
 const IconX = (p) => <Icon {...p}><path d="M18 6 6 18M6 6l12 12" /></Icon>;
+const IconZap = (p) => <Icon {...p}><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6Z" /></Icon>;
 
 /* ================= PRIORITY THEME (mirrors AdminTickets) ================= */
 const PRIORITY_THEME = {
@@ -59,6 +60,78 @@ const DEPARTMENTS = [
   "OPERATIONS",
 ];
 
+const RELATED_OPTIONS = [
+  "Laptop/Desktop",
+  "ERP",
+  "Email",
+  "HHT",
+  "HHT Printer",
+  "Syncwise",
+  "Printer",
+  "Network",
+  "Software",
+  "Hardware",
+  "Others",
+];
+
+/* ================= AUTO-SUGGEST "RELATED TO" FROM TEXT =================
+   Same rule set as the portal ticket form — more specific items (HHT
+   Printer, HHT) are checked before their broader cousins (Printer,
+   Hardware) so a phrase like "HHT printer not scanning" doesn't fall
+   through to "Printer". This only pre-fills the dropdown; IT support can
+   always change it before submitting. */
+const RELATED_KEYWORD_RULES = [
+  {
+    value: "HHT Printer",
+    keywords: ["hht printer", "handheld printer", "mobile printer", "portable printer"],
+  },
+  {
+    value: "HHT",
+    keywords: ["hht", "handheld device", "handheld terminal", "scanner gun", "barcode scanner", "barcode device"],
+  },
+  {
+    value: "ERP",
+    keywords: ["erp", "sap", "tally", "oracle erp", "accounting software", "erp module", "erp login"],
+  },
+  {
+    value: "Syncwise",
+    keywords: ["syncwise"],
+  },
+  {
+    value: "Email",
+    keywords: ["email", "e-mail", "outlook", "gmail", "mailbox", "mail server", "mail not working"],
+  },
+  {
+    value: "Printer",
+    keywords: ["printer", "printout", "print job", "toner", "cartridge", "scanner", "print not working"],
+  },
+  {
+    value: "Network",
+    keywords: ["network", "wifi", "wi-fi", "internet", "vpn", "lan", "ethernet", "router", "connectivity"],
+  },
+  {
+    value: "Laptop/Desktop",
+    keywords: ["laptop", "desktop", "computer", "cpu not", "monitor", "screen flickering", "pc not"],
+  },
+  {
+    value: "Software",
+    keywords: ["software", "application", "app crash", "install", "software update", "license", "activation"],
+  },
+  {
+    value: "Hardware",
+    keywords: ["hardware", "mouse", "keyboard", "cable request", "device", "battery", "charger"],
+  },
+];
+
+const detectRelatedTo = (text) => {
+  const lower = text.toLowerCase();
+  for (const rule of RELATED_KEYWORD_RULES) {
+    const match = rule.keywords.find((kw) => lower.includes(kw));
+    if (match) return { value: rule.value, matched: match };
+  }
+  return null;
+};
+
 const todayStr = () => new Date().toISOString().split("T")[0];
 
 const INITIAL_FORM = {
@@ -66,6 +139,7 @@ const INITIAL_FORM = {
   description: "",
   priority: "Medium",
   department: "IT",
+  relatedTo: "",
   assetId: "",
   employeeId: "",
   incidentDate: todayStr(),
@@ -197,6 +271,10 @@ export default function CreateManualTicket() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
 
+  // ⚡ Auto-suggestion state for Related To
+  const [relatedSuggested, setRelatedSuggested] = useState(null); // { value, matched } | null
+  const [manualRelatedTo, setManualRelatedTo] = useState(false); // true once IT picks Related To themselves
+
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
   const allowedCompanyIds = [
@@ -248,6 +326,32 @@ export default function CreateManualTicket() {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
+  const handleRelatedToChange = (e) => {
+    setManualRelatedTo(true);
+    handleChange("relatedTo")(e);
+  };
+
+  // Re-scan title + description on every keystroke, pre-fill Related To
+  // unless IT support has already chosen it manually.
+  useEffect(() => {
+    const combined = `${form.title} ${form.description}`.trim();
+
+    if (!combined) {
+      setRelatedSuggested(null);
+      return;
+    }
+
+    const result = detectRelatedTo(combined);
+    setRelatedSuggested(result);
+
+    if (result && !manualRelatedTo) {
+      setForm((prev) =>
+        prev.relatedTo === result.value ? prev : { ...prev, relatedTo: result.value }
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.title, form.description]);
+
   const submitHandler = async (e) => {
     e.preventDefault();
 
@@ -262,6 +366,8 @@ export default function CreateManualTicket() {
       await api.post("/tickets/manual", form);
       toast.success("Manual ticket created");
       setForm(INITIAL_FORM);
+      setRelatedSuggested(null);
+      setManualRelatedTo(false);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to create ticket");
     } finally {
@@ -329,6 +435,34 @@ export default function CreateManualTicket() {
             <p className="text-[11px] text-slate-400 mt-1.5">
               This is saved with the ticket so anyone can see what was reported.
             </p>
+          </div>
+
+          {/* Related To */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1.5">
+              <IconTag className="w-3.5 h-3.5" /> Related to
+            </label>
+            <select
+              className="w-full border border-slate-200 bg-white px-3.5 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
+              value={form.relatedTo}
+              onChange={handleRelatedToChange}
+            >
+              <option value="">Select what this relates to…</option>
+              {RELATED_OPTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+
+            {relatedSuggested && !manualRelatedTo && (
+              <div className="flex items-start gap-2 px-3 py-2 mt-2 rounded-lg bg-blue-50 border border-blue-100">
+                <IconZap className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-blue-700 leading-relaxed">
+                  Suggested from "<span className="italic">{relatedSuggested.matched}</span>" — feel free to adjust above
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Incident Date */}
