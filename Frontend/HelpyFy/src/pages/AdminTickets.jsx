@@ -1,255 +1,287 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
-/* =========================================================
-   ICONS
-========================================================= */
+/* ================= ICONS (inline, no extra dependency) ================= */
+const Icon = ({ children, className = "w-4 h-4" }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    {children}
+  </svg>
+);
+const IconSearch = (p) => <Icon {...p}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></Icon>;
+const IconClip = (p) => <Icon {...p}><path d="M21.44 11.05 12.25 20.24a5 5 0 1 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95L9.64 18.36a2 2 0 1 1-2.83-2.83l8.49-8.48" /></Icon>;
+const IconEye = (p) => <Icon {...p}><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" /><circle cx="12" cy="12" r="3" /></Icon>;
+const IconX = (p) => <Icon {...p}><path d="M18 6 6 18M6 6l12 12" /></Icon>;
+const IconChevronLeft = (p) => <Icon {...p}><path d="m15 18-6-6 6-6" /></Icon>;
+const IconChevronRight = (p) => <Icon {...p}><path d="m9 18 6-6-6-6" /></Icon>;
+const IconCheck = (p) => <Icon {...p}><path d="M20 6 9 17l-5-5" /></Icon>;
+const IconLock = (p) => <Icon {...p}><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></Icon>;
+const IconNote = (p) => <Icon {...p}><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z" /><path d="M9 13h6M9 17h6" /></Icon>;
+const IconLayers = (p) => <Icon {...p}><path d="m12 2 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5" /><path d="m3 17 9 5 9-5" /></Icon>;
+const IconCircleDot = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3" fill="currentColor" /></Icon>;
+const IconClock = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></Icon>;
+const IconAlertTriangle = (p) => <Icon {...p}><path d="m10.29 3.86-8.18 14.18A2 2 0 0 0 4 21h16a2 2 0 0 0 1.89-2.96L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4M12 17h.01" /></Icon>;
+const IconZap = (p) => <Icon {...p}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" /></Icon>;
+const IconUser = (p) => <Icon {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></Icon>;
 
-const Icon = ({ type, className = "w-4 h-4" }) => {
-  const icons = {
-    search: (
-      <>
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-4-4" />
-      </>
-    ),
-
-    eye: (
-      <>
-        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
-        <circle cx="12" cy="12" r="3" />
-      </>
-    ),
-
-    x: (
-      <>
-        <path d="M18 6 6 18" />
-        <path d="m6 6 12 12" />
-      </>
-    ),
-
-    check: <path d="m5 12 4 4L19 6" />,
-
-    lock: (
-      <>
-        <rect x="4" y="10" width="16" height="11" rx="2" />
-        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-      </>
-    ),
-
-    clock: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" />
-      </>
-    ),
-
-    alert: (
-      <>
-        <path d="m10.3 3.6-8 14A2 2 0 0 0 4 20.5h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z" />
-        <path d="M12 9v4" />
-        <path d="M12 17h.01" />
-      </>
-    ),
-
-    layers: (
-      <>
-        <path d="m12 3 9 5-9 5-9-5 9-5Z" />
-        <path d="m3 13 9 5 9-5" />
-        <path d="m3 18 9 5 9-5" />
-      </>
-    ),
-
-    bolt: <path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z" />,
-
-    note: (
-      <>
-        <path d="M14 3v5h5" />
-        <path d="M5 3h9l5 5v13H5z" />
-        <path d="M8 13h8" />
-        <path d="M8 17h6" />
-      </>
-    ),
-
-    clip: (
-      <path d="m21 11-9 9a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8" />
-    ),
-
-    user: (
-      <>
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21a8 8 0 0 1 16 0" />
-      </>
-    ),
-
-    left: <path d="m15 18-6-6 6-6" />,
-
-    right: <path d="m9 18 6-6-6-6" />,
-  };
-
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      {icons[type]}
-    </svg>
-  );
-};
-
-/* =========================================================
-   STATUS THEME
-========================================================= */
-
+/* ================= STATUS THEME (single source of truth) ================= */
 const STATUS_THEME = {
-  Open: {
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    border: "border-blue-200",
-    accent: "bg-blue-500",
-  },
-
-  "In Progress": {
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    border: "border-amber-200",
-    accent: "bg-amber-500",
-  },
-
-  Resolved: {
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    border: "border-emerald-200",
-    accent: "bg-emerald-500",
-  },
-
-  Closed: {
-    bg: "bg-slate-100",
-    text: "text-slate-600",
-    border: "border-slate-200",
-    accent: "bg-slate-400",
-  },
+  Open: { text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", solid: "bg-blue-600", accent: "bg-blue-500" },
+  "In Progress": { text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", solid: "bg-amber-500", accent: "bg-amber-400" },
+  Resolved: { text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", solid: "bg-emerald-600", accent: "bg-emerald-500" },
+  Closed: { text: "text-slate-600", bg: "bg-slate-100", border: "border-slate-200", solid: "bg-slate-500", accent: "bg-slate-400" },
 };
 
-/* =========================================================
-   SLA THEME
-========================================================= */
-
+/* ================= SLA THEME ================= */
+// Running/on-track (green), running but close to due (amber), breached (red), completed on time (emerald), done (slate)
 const SLA_THEME = {
-  ok: {
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    border: "border-emerald-200",
-    dot: "bg-emerald-500",
-  },
-
-  warning: {
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    border: "border-amber-200",
-    dot: "bg-amber-500",
-  },
-
-  breached: {
-    bg: "bg-red-50",
-    text: "text-red-700",
-    border: "border-red-200",
-    dot: "bg-red-500",
-  },
-
-  done: {
-    bg: "bg-slate-100",
-    text: "text-slate-500",
-    border: "border-slate-200",
-    dot: "bg-slate-400",
-  },
+  ok: { text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", dot: "bg-emerald-500" },
+  warning: { text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", dot: "bg-amber-500" },
+  breached: { text: "text-red-700", bg: "bg-red-50", border: "border-red-200", dot: "bg-red-500" },
+  done: { text: "text-slate-500", bg: "bg-slate-100", border: "border-slate-200", dot: "bg-slate-400" },
 };
 
-/* =========================================================
-   PRIORITY
-========================================================= */
+/* ================= SLA HELPERS ================= */
 
-const PRIORITY_THEME = {
-  Low: "bg-blue-50 text-blue-700 border-blue-200",
-  Medium: "bg-amber-50 text-amber-700 border-amber-200",
-  High: "bg-orange-50 text-orange-700 border-orange-200",
-  Critical: "bg-red-50 text-red-700 border-red-200",
-};
-
-/* =========================================================
-   FORMATTERS
-========================================================= */
-
+// Formats a millisecond duration into a compact "1d 4h" / "45m" style string
 const formatDuration = (ms) => {
-  const minutes = Math.floor(Math.abs(ms) / 60000);
-
-  const days = Math.floor(minutes / 1440);
-
-  const hours = Math.floor(
-    (minutes % 1440) / 60
-  );
-
+  const abs = Math.abs(ms);
+  const minutes = Math.floor(abs / (1000 * 60));
+  const days = Math.floor(minutes / (60 * 24));
+  const hours = Math.floor((minutes % (60 * 24)) / 60);
   const mins = minutes % 60;
 
-  if (days) {
-    return `${days}d ${hours}h`;
-  }
-
-  if (hours) {
-    return `${hours}h ${mins}m`;
-  }
-
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
   return `${mins}m`;
 };
 
-const formatDateTime = (date) => {
-  if (!date) return "—";
+// Given a due date, an "achieved" timestamp (null if not yet hit), and an explicit
+// breached flag from the backend, work out the current SLA state for one leg
+// (first response OR resolution) of the ticket.
+const getSlaLegState = ({ due, achievedAt, breached, now }) => {
+  if (!due) {
+    return { level: "done", label: "No SLA", detail: "—" };
+  }
 
-  return new Date(date).toLocaleString(
-    undefined,
-    {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
+  const dueDate = new Date(due);
+
+  // Already hit the milestone (responded / resolved)
+  if (achievedAt) {
+    const achievedDate = new Date(achievedAt);
+    if (breached || achievedDate > dueDate) {
+      return {
+        level: "breached",
+        label: "Breached",
+        detail: `${formatDuration(achievedDate - dueDate)} late`,
+      };
     }
+    return {
+      level: "ok",
+      label: "Met",
+      detail: `${formatDuration(dueDate - achievedDate)} to spare`,
+    };
+  }
+
+  // Not yet achieved — still running or overdue
+  const diff = dueDate - now;
+  if (diff <= 0) {
+    return {
+      level: "breached",
+      label: "Overdue",
+      detail: `${formatDuration(diff)} over`,
+    };
+  }
+
+  // Within 25% of the total window (or under 1h) counts as "at risk"
+  const isSoon = diff < 60 * 60 * 1000;
+  return {
+    level: isSoon ? "warning" : "ok",
+    label: isSoon ? "Due soon" : "On track",
+    detail: `due in ${formatDuration(diff)}`,
+  };
+};
+
+// Overall SLA pill for a ticket row — prioritizes resolution leg, falls back to first response
+const getOverallSlaState = (ticket, now) => {
+  const sla = ticket.sla;
+  if (!sla) return { level: "done", label: "No SLA" };
+
+  if (sla.status === "Breached") {
+    return { level: "breached", label: "SLA Breached" };
+  }
+  if (sla.status === "Completed") {
+    return { level: "ok", label: "SLA Met" };
+  }
+
+  // Running — check resolution leg first, then first response
+  const resolutionState = getSlaLegState({
+    due: sla.resolutionDue,
+    achievedAt: sla.resolvedAt,
+    breached: sla.resolutionBreached,
+    now,
+  });
+
+  if (resolutionState.level === "breached") {
+    return { level: "breached", label: "SLA Breached" };
+  }
+
+  if (!sla.firstRespondedAt) {
+    const responseState = getSlaLegState({
+      due: sla.firstResponseDue,
+      achievedAt: sla.firstRespondedAt,
+      breached: sla.firstResponseBreached,
+      now,
+    });
+    if (responseState.level === "breached") {
+      return { level: "breached", label: "Response overdue" };
+    }
+    if (responseState.level === "warning") {
+      return { level: "warning", label: "Response due soon" };
+    }
+  }
+
+  if (resolutionState.level === "warning") {
+    return { level: "warning", label: "Resolution due soon" };
+  }
+
+  return { level: "ok", label: "On track" };
+};
+
+const priorityDot = {
+  Low: "bg-blue-500",
+  Medium: "bg-amber-500",
+  High: "bg-orange-500",
+  Critical: "bg-red-500",
+};
+
+/* ================= SLA UI COMPONENTS ================= */
+
+const SlaBadge = ({ ticket, now }) => {
+  const state = getOverallSlaState(ticket, now);
+  const theme = SLA_THEME[state.level];
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${theme.bg} ${theme.text} ${theme.border}`}
+    >
+      {state.level === "breached" ? (
+        <IconAlertTriangle className="w-3 h-3" />
+      ) : (
+        <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`} />
+      )}
+      {state.label}
+    </span>
   );
 };
 
-const formatShortDate = (date) => {
-  if (!date) return "—";
+const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now }) => {
+  const state = getSlaLegState({ due, achievedAt, breached, now });
+  const theme = SLA_THEME[state.level];
 
-  return new Date(date).toLocaleString(
-    undefined,
-    {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }
+  // Progress bar: how much of the SLA window has elapsed (only meaningful pre-achievement)
+  let progressPct = 100;
+  if (!achievedAt && due) {
+    const dueDate = new Date(due);
+    const remaining = dueDate - now;
+    const totalGuess = 1000 * 60 * 60 * 24; // fallback normalization window (24h) just for a visual bar
+    progressPct = Math.min(100, Math.max(0, 100 - (remaining / totalGuess) * 100));
+  }
+
+  return (
+    <div className={`rounded-lg border p-3 ${theme.bg} ${theme.border}`}>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className={`text-xs font-semibold flex items-center gap-1.5 ${theme.text}`}>
+          {icon} {label}
+        </p>
+        <span className={`text-[11px] font-semibold ${theme.text}`}>{state.label}</span>
+      </div>
+
+      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
+        <span>Due {due ? new Date(due).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}</span>
+        <span className={theme.text}>{state.detail}</span>
+      </div>
+
+      {!achievedAt && due && (
+        <div className="h-1.5 w-full rounded-full bg-white/70 overflow-hidden">
+          <div
+            className={`h-full rounded-full ${theme.dot}`}
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      )}
+
+      {achievedAt && (
+        <p className="text-[11px] text-slate-500 mt-1">
+          {achievedLabel} {new Date(achievedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+        </p>
+      )}
+    </div>
   );
 };
 
-const getInitial = (name) => {
-  if (!name) return "?";
+const SlaDetailPanel = ({ ticket, now }) => {
+  const sla = ticket.sla;
+  if (!sla) {
+    return <p className="text-xs text-slate-400">No SLA policy on this ticket</p>;
+  }
 
-  return name
-    .trim()
-    .charAt(0)
-    .toUpperCase();
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between">
+        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${priorityDot[sla.priority] || "bg-slate-400"} text-white`}>
+          {sla.priority || "—"} priority
+        </span>
+        <SlaBadge ticket={ticket} now={now} />
+      </div>
+
+      <SlaLegRow
+        icon={<IconZap className="w-3.5 h-3.5" />}
+        label="First Response"
+        due={sla.firstResponseDue}
+        achievedAt={sla.firstRespondedAt}
+        breached={sla.firstResponseBreached}
+        achievedLabel="Responded at"
+        now={now}
+      />
+
+      <SlaLegRow
+        icon={<IconCheck className="w-3.5 h-3.5" />}
+        label="Resolution"
+        due={sla.resolutionDue}
+        achievedAt={sla.resolvedAt}
+        breached={sla.resolutionBreached}
+        achievedLabel="Resolved at"
+        now={now}
+      />
+
+      {sla.escalated && (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-2.5 flex items-center gap-2">
+          <IconAlertTriangle className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+          <p className="text-[11px] text-orange-700 font-medium">
+            Escalated (level {sla.escalationLevel || 1})
+            {sla.escalatedAt && ` on ${new Date(sla.escalatedAt).toLocaleDateString()}`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 };
 
-/* =========================================================
-   REPORTER HELPERS
-========================================================= */
-
+/* ================= REPORTER (who raised the ticket) HELPERS =================
+   A ticket can be raised two ways:
+   - Self-service (portal login)   -> ticket.userId   { name, email }
+   - Manual, created on behalf of  -> ticket.employeeId { name, staffCode, department }
+   These helpers pick whichever is populated so the name is never blank.
+*/
 const getReporterName = (ticket) =>
   ticket.userId?.name ||
   ticket.employeeId?.name ||
@@ -257,1190 +289,27 @@ const getReporterName = (ticket) =>
   "Unknown";
 
 const getReporterSubtext = (ticket) => {
-  if (ticket.userId?.email) {
-    return ticket.userId.email;
-  }
-
-  if (ticket.employeeId?.staffCode) {
-    return `Staff Code: ${ticket.employeeId.staffCode}`;
-  }
-
+  // Prefer email (portal users), fall back to staff code (manual tickets)
+  if (ticket.userId?.email) return ticket.userId.email;
+  if (ticket.employeeId?.staffCode) return `Staff Code: ${ticket.employeeId.staffCode}`;
   return "—";
 };
 
-/* =========================================================
-   SLA LEG
-========================================================= */
-
-const getSlaLegState = ({
-  due,
-  achievedAt,
-  breached,
-  now,
-}) => {
-  if (!due) {
-    return {
-      level: "done",
-      label: "No SLA",
-      detail: "—",
-    };
-  }
-
-  const dueDate = new Date(due);
-
-  if (achievedAt) {
-    const achievedDate =
-      new Date(achievedAt);
-
-    if (
-      breached ||
-      achievedDate > dueDate
-    ) {
-      return {
-        level: "breached",
-        label: "Breached",
-        detail: `${formatDuration(
-          achievedDate - dueDate
-        )} late`,
-      };
-    }
-
-    return {
-      level: "ok",
-      label: "Met",
-      detail: `${formatDuration(
-        dueDate - achievedDate
-      )} to spare`,
-    };
-  }
-
-  const diff = dueDate - now;
-
-  if (diff <= 0) {
-    return {
-      level: "breached",
-      label: "Overdue",
-      detail: `${formatDuration(
-        diff
-      )} over`,
-    };
-  }
-
-  const isSoon =
-    diff < 60 * 60 * 1000;
-
-  return {
-    level: isSoon
-      ? "warning"
-      : "ok",
-
-    label: isSoon
-      ? "Due soon"
-      : "On track",
-
-    detail: `due in ${formatDuration(
-      diff
-    )}`,
-  };
-};
-
-/* =========================================================
-   OVERALL SLA
-========================================================= */
-
-const getOverallSlaState = (
-  ticket,
-  now
-) => {
-  const sla = ticket.sla;
-
-  if (!sla) {
-    return {
-      level: "done",
-      label: "No SLA",
-    };
-  }
-
-  if (sla.status === "Breached") {
-    return {
-      level: "breached",
-      label: "SLA Breached",
-    };
-  }
-
-  if (sla.status === "Completed") {
-    return {
-      level: "ok",
-      label: "SLA Met",
-    };
-  }
-
-  const resolutionState =
-    getSlaLegState({
-      due: sla.resolutionDue,
-      achievedAt: sla.resolvedAt,
-      breached:
-        sla.resolutionBreached,
-      now,
-    });
-
-  if (
-    resolutionState.level ===
-    "breached"
-  ) {
-    return {
-      level: "breached",
-      label: "SLA Breached",
-    };
-  }
-
-  if (!sla.firstRespondedAt) {
-    const responseState =
-      getSlaLegState({
-        due: sla.firstResponseDue,
-        achievedAt:
-          sla.firstRespondedAt,
-        breached:
-          sla.firstResponseBreached,
-        now,
-      });
-
-    if (
-      responseState.level ===
-      "breached"
-    ) {
-      return {
-        level: "breached",
-        label: "Response overdue",
-      };
-    }
-
-    if (
-      responseState.level ===
-      "warning"
-    ) {
-      return {
-        level: "warning",
-        label: "Response due soon",
-      };
-    }
-  }
-
-  if (
-    resolutionState.level ===
-    "warning"
-  ) {
-    return {
-      level: "warning",
-      label: "Resolution due soon",
-    };
-  }
-
-  return {
-    level: "ok",
-    label: "On track",
-  };
-};
-
-/* =========================================================
-   SLA BADGE
-========================================================= */
-
-const SlaBadge = ({
-  ticket,
-  now,
-}) => {
-  const state =
-    getOverallSlaState(
-      ticket,
-      now
-    );
-
-  const theme =
-    SLA_THEME[state.level];
-
-  return (
-    <span
-      className={`
-        inline-flex
-        items-center
-        justify-center
-        gap-1.5
-        px-2.5
-        py-1
-        rounded-full
-        border
-        text-[11px]
-        font-semibold
-        whitespace-nowrap
-        ${theme.bg}
-        ${theme.text}
-        ${theme.border}
-      `}
-    >
-      {state.level ===
-      "breached" ? (
-        <Icon
-          type="alert"
-          className="w-3 h-3"
-        />
-      ) : (
-        <span
-          className={`
-            w-1.5
-            h-1.5
-            rounded-full
-            ${theme.dot}
-          `}
-        />
-      )}
-
-      {state.label}
-    </span>
-  );
-};
-
-/* =========================================================
-   SLA DETAIL ROW
-========================================================= */
-
-const SlaLegRow = ({
-  icon,
-  label,
-  due,
-  achievedAt,
-  breached,
-  achievedLabel,
-  now,
-}) => {
-  const state =
-    getSlaLegState({
-      due,
-      achievedAt,
-      breached,
-      now,
-    });
-
-  const theme =
-    SLA_THEME[state.level];
-
-  return (
-    <div
-      className={`
-        rounded-lg
-        border
-        p-3
-        ${theme.bg}
-        ${theme.border}
-      `}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <p
-          className={`
-            text-xs
-            font-semibold
-            flex
-            items-center
-            gap-1.5
-            ${theme.text}
-          `}
-        >
-          {icon}
-          {label}
-        </p>
-
-        <span
-          className={`
-            text-[11px]
-            font-semibold
-            ${theme.text}
-          `}
-        >
-          {state.label}
-        </span>
-      </div>
-
-      <div
-        className="
-          flex
-          items-center
-          justify-between
-          gap-3
-          text-[11px]
-          text-slate-500
-          mt-1
-        "
-      >
-        <span>
-          Due{" "}
-          {due
-            ? formatShortDate(due)
-            : "—"}
-        </span>
-
-        <span
-          className={
-            theme.text
-          }
-        >
-          {state.detail}
-        </span>
-      </div>
-
-      {achievedAt && (
-        <p className="text-[11px] text-slate-500 mt-1">
-          {achievedLabel}{" "}
-          {formatShortDate(
-            achievedAt
-          )}
-        </p>
-      )}
-    </div>
-  );
-};
-
-/* =========================================================
-   SLA DETAIL PANEL
-========================================================= */
-
-const SlaDetailPanel = ({
-  ticket,
-  now,
-}) => {
-  const sla = ticket.sla;
-
-  if (!sla) {
-    return (
-      <p className="text-xs text-slate-400">
-        No SLA policy on this ticket
-      </p>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between">
-        <span
-          className={`
-            inline-flex
-            items-center
-            px-2
-            py-0.5
-            rounded-full
-            text-[10px]
-            font-semibold
-            text-white
-            ${
-              sla.priority ===
-              "Low"
-                ? "bg-blue-500"
-                : sla.priority ===
-                  "Medium"
-                ? "bg-amber-500"
-                : sla.priority ===
-                  "High"
-                ? "bg-orange-500"
-                : "bg-red-500"
-            }
-          `}
-        >
-          {sla.priority || "—"}{" "}
-          priority
-        </span>
-
-        <SlaBadge
-          ticket={ticket}
-          now={now}
-        />
-      </div>
-
-      <SlaLegRow
-        icon={
-          <Icon
-            type="bolt"
-            className="w-3.5 h-3.5"
-          />
-        }
-        label="First Response"
-        due={sla.firstResponseDue}
-        achievedAt={
-          sla.firstRespondedAt
-        }
-        breached={
-          sla.firstResponseBreached
-        }
-        achievedLabel="Responded at"
-        now={now}
-      />
-
-      <SlaLegRow
-        icon={
-          <Icon
-            type="check"
-            className="w-3.5 h-3.5"
-          />
-        }
-        label="Resolution"
-        due={sla.resolutionDue}
-        achievedAt={
-          sla.resolvedAt
-        }
-        breached={
-          sla.resolutionBreached
-        }
-        achievedLabel="Resolved at"
-        now={now}
-      />
-
-      {sla.escalated && (
-        <div
-          className="
-            rounded-lg
-            border
-            border-orange-200
-            bg-orange-50
-            p-3
-            flex
-            items-center
-            gap-2
-          "
-        >
-          <Icon
-            type="alert"
-            className="w-3.5 h-3.5 text-orange-600 shrink-0"
-          />
-
-          <p className="text-[11px] text-orange-700 font-medium">
-            Escalated — Level{" "}
-            {sla.escalationLevel ||
-              1}
-
-            {sla.escalatedAt &&
-              ` on ${new Date(
-                sla.escalatedAt
-              ).toLocaleDateString()}`}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-/* =========================================================
-   STATUS SELECT
-========================================================= */
-
-const StatusSelect = ({
-  ticket,
-  onChange,
-}) => {
-  const theme =
-    STATUS_THEME[
-      ticket.status
-    ] || STATUS_THEME.Open;
-
-  return (
-    <div className="relative inline-block">
-      <select
-        value={ticket.status}
-        onChange={(e) =>
-          onChange(
-            ticket,
-            e.target.value
-          )
-        }
-        className={`
-          appearance-none
-          cursor-pointer
-          rounded-full
-          border
-          pl-3
-          pr-7
-          py-1.5
-          text-[11px]
-          font-semibold
-          outline-none
-          ${theme.bg}
-          ${theme.text}
-          ${theme.border}
-        `}
-      >
-        <option value="Open">
-          Open
-        </option>
-
-        <option value="In Progress">
-          In Progress
-        </option>
-
-        <option value="Resolved">
-          Resolved
-        </option>
-
-        <option value="Closed">
-          Closed
-        </option>
-      </select>
-
-      <span
-        className={`
-          pointer-events-none
-          absolute
-          right-2.5
-          top-1/2
-          -translate-y-1/2
-          w-1.5
-          h-1.5
-          rounded-full
-          ${theme.accent}
-        `}
-      />
-    </div>
-  );
-};
-
-/* =========================================================
-   STAT CARD
-========================================================= */
-
-const StatCard = ({
-  label,
-  value,
-  color,
-  icon,
-}) => (
-  <div
-    className="
-      relative
-      bg-white
-      border
-      border-slate-200
-      rounded-xl
-      p-4
-      shadow-sm
-      overflow-hidden
-    "
-  >
-    <span
-      className={`
-        absolute
-        left-0
-        top-0
-        bottom-0
-        w-1
-        ${color}
-      `}
-    />
-
-    <div className="flex items-center justify-between mb-2">
-      <p className="text-xs font-medium text-slate-400">
-        {label}
-      </p>
-
-      <span className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500">
-        {icon}
-      </span>
-    </div>
-
-    <p className="text-2xl font-bold text-slate-900 tabular-nums">
-      {value}
-    </p>
-  </div>
-);
-
-/* =========================================================
-   STARS
-========================================================= */
-
-const renderStars = (rating) => (
-  <div className="flex items-center gap-0.5">
-    {[1, 2, 3, 4, 5].map(
-      (star) => (
-        <span
-          key={star}
-          className={
-            star <= rating
-              ? "text-amber-400"
-              : "text-slate-200"
-          }
-        >
-          ★
-        </span>
-      )
-    )}
-  </div>
-);
-
-/* =========================================================
-   TICKET DETAILS DRAWER
-========================================================= */
-
-const TicketDrawer = ({
-  ticket,
-  now,
-  onClose,
-}) => {
-  if (!ticket) return null;
-
-  const reporter =
-    getReporterName(ticket);
-
-  const reporterSubtext =
-    getReporterSubtext(
-      ticket
-    );
-
-  return (
-    <>
-      <div
-        className="
-          fixed
-          inset-0
-          bg-slate-900/20
-          z-40
-        "
-        onClick={onClose}
-      />
-
-      <aside
-        className="
-          fixed
-          right-0
-          top-0
-          bottom-0
-          w-full
-          sm:w-[440px]
-          bg-white
-          z-50
-          shadow-2xl
-          border-l
-          border-slate-200
-          flex
-          flex-col
-        "
-      >
-        {/* DRAWER HEADER */}
-
-        <div
-          className="
-            flex
-            items-center
-            justify-between
-            gap-3
-            px-5
-            py-4
-            border-b
-            border-slate-100
-          "
-        >
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-              Ticket Details
-            </p>
-
-            <h2 className="font-bold text-slate-900 truncate mt-1">
-              {ticket.title}
-            </h2>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="
-              w-8
-              h-8
-              rounded-lg
-              flex
-              items-center
-              justify-center
-              text-slate-400
-              hover:bg-slate-100
-              hover:text-slate-700
-              shrink-0
-            "
-          >
-            <Icon
-              type="x"
-              className="w-4 h-4"
-            />
-          </button>
-        </div>
-
-        {/* DRAWER CONTENT */}
-
-        <div className="p-5 overflow-y-auto space-y-5">
-          {/* REPORTER */}
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold shrink-0">
-              {getInitial(
-                reporter
-              )}
-            </div>
-
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
-                <Icon
-                  type="user"
-                  className="w-3.5 h-3.5 text-slate-400 shrink-0"
-                />
-
-                {reporter}
-              </p>
-
-              <p className="text-xs text-slate-400 truncate">
-                {reporterSubtext}
-              </p>
-
-              <span
-                className={`
-                  inline-flex
-                  items-center
-                  gap-1
-                  text-[11px]
-                  font-medium
-                  px-2
-                  py-0.5
-                  rounded-full
-                  mt-1
-                  ${
-                    STATUS_THEME[
-                      ticket.status
-                    ]?.bg
-                  }
-                  ${
-                    STATUS_THEME[
-                      ticket.status
-                    ]?.text
-                  }
-                `}
-              >
-                <span
-                  className={`
-                    w-1.5
-                    h-1.5
-                    rounded-full
-                    ${
-                      STATUS_THEME[
-                        ticket.status
-                      ]?.accent
-                    }
-                  `}
-                />
-
-                {ticket.status}
-              </span>
-            </div>
-          </div>
-
-          {/* SLA */}
-
-          <section>
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <Icon
-                type="clock"
-                className="w-3.5 h-3.5"
-              />
-
-              SLA Tracking
-            </p>
-
-            <SlaDetailPanel
-              ticket={ticket}
-              now={now}
-            />
-          </section>
-
-          {/* DESCRIPTION */}
-
-          <section>
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-              Description
-            </p>
-
-            <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg text-sm text-slate-700 leading-relaxed">
-              {ticket.description ||
-                "No description provided."}
-            </div>
-          </section>
-
-          {/* BASIC INFORMATION */}
-
-          <section>
-            <div className="grid grid-cols-3 gap-2">
-              <InfoBox
-                label="Priority"
-                value={
-                  ticket.priority
-                }
-              />
-
-              <InfoBox
-                label="Company"
-                value={
-                  ticket.companyId
-                    ?.name || "—"
-                }
-              />
-
-              <InfoBox
-                label="Department"
-                value={
-                  ticket.department ||
-                  "—"
-                }
-              />
-            </div>
-          </section>
-
-          {/* DATES */}
-
-          <section>
-            <div className="grid grid-cols-3 gap-2">
-              <InfoBox
-                label="Opened"
-                value={formatDateTime(
-                  ticket.createdAt
-                )}
-              />
-
-              <InfoBox
-                label="Resolved"
-                value={formatDateTime(
-                  ticket.resolvedAt
-                )}
-              />
-
-              <InfoBox
-                label="Closed"
-                value={formatDateTime(
-                  ticket.closedAt
-                )}
-              />
-            </div>
-          </section>
-
-          {/* RESOLUTION NOTE */}
-
-          <section>
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <Icon
-                type="note"
-                className="w-3.5 h-3.5"
-              />
-
-              Resolution Note
-            </p>
-
-            {ticket.resolutionNote ? (
-              <div className="bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm p-3 rounded-lg leading-relaxed">
-                {
-                  ticket.resolutionNote
-                }
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400">
-                Not resolved yet
-              </p>
-            )}
-          </section>
-
-          {/* ATTACHMENTS */}
-
-          <section>
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-              Attachments
-            </p>
-
-            {ticket.files?.length >
-            0 ? (
-              <div className="space-y-2">
-                {ticket.files.map(
-                  (file, index) => (
-                    <a
-                      key={index}
-                      href={
-                        file.url ||
-                        file
-                      }
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium"
-                    >
-                      <Icon
-                        type="clip"
-                        className="w-3.5 h-3.5"
-                      />
-
-                      Download File{" "}
-                      {index + 1}
-                    </a>
-                  )
-                )}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400">
-                No attachments
-              </p>
-            )}
-          </section>
-
-          {/* REVIEW */}
-
-          <section>
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-              Review
-            </p>
-
-            {ticket.rating ? (
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
-                {renderStars(
-                  ticket.rating
-                )}
-
-                {ticket.review && (
-                  <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
-                    {ticket.review}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400">
-                No review submitted
-              </p>
-            )}
-          </section>
-        </div>
-      </aside>
-    </>
-  );
-};
-
-/* =========================================================
-   INFO BOX
-========================================================= */
-
-const InfoBox = ({
-  label,
-  value,
-}) => (
-  <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100 min-w-0">
-    <p className="text-[9px] text-slate-400 uppercase tracking-wide mb-0.5">
-      {label}
-    </p>
-
-    <p className="text-[11px] font-medium text-slate-700 truncate">
-      {value}
-    </p>
-  </div>
-);
-
-/* =========================================================
-   MOBILE TICKET CARD
-========================================================= */
-
-const MobileTicketCard = ({
-  ticket,
-  now,
-  user,
-  onView,
-  onStatusChange,
-  onEscalate,
-}) => {
-  const reporter =
-    getReporterName(ticket);
-
-  const canEscalate =
-    user?.role ===
-      "it_support" &&
-    !ticket.sla?.escalated &&
-    ticket.status !== "Closed";
-
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-      {/* TOP */}
-
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0">
-            {getInitial(
-              reporter
-            )}
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-800 truncate">
-              {reporter}
-            </p>
-
-            <p className="text-[11px] text-slate-400 truncate">
-              {getReporterSubtext(
-                ticket
-              )}
-            </p>
-          </div>
-        </div>
-
-        <SlaBadge
-          ticket={ticket}
-          now={now}
-        />
-      </div>
-
-      {/* TITLE */}
-
-      <div className="border-t border-slate-100 mt-4 pt-3">
-        <p className="text-[10px] uppercase font-semibold tracking-wide text-slate-400">
-          Ticket
-        </p>
-
-        <p className="text-sm font-semibold text-slate-800 mt-1">
-          {ticket.title}
-        </p>
-      </div>
-
-      {/* DETAILS */}
-
-      <div className="grid grid-cols-2 gap-3 mt-4">
-        <div>
-          <p className="text-[10px] uppercase font-semibold tracking-wide text-slate-400">
-            Priority
-          </p>
-
-          <span
-            className={`
-              inline-flex
-              mt-1
-              px-2
-              py-1
-              rounded-full
-              border
-              text-[11px]
-              font-semibold
-              ${
-                PRIORITY_THEME[
-                  ticket.priority
-                ] ||
-                "bg-slate-50 text-slate-600 border-slate-200"
-              }
-            `}
-          >
-            {ticket.priority}
-          </span>
-        </div>
-
-        <div>
-          <p className="text-[10px] uppercase font-semibold tracking-wide text-slate-400">
-            Status
-          </p>
-
-          <div className="mt-1">
-            <StatusSelect
-              ticket={ticket}
-              onChange={
-                onStatusChange
-              }
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ACTIONS */}
-
-      <div className="border-t border-slate-100 mt-4 pt-3 flex gap-2">
-        <button
-          onClick={() =>
-            onView(ticket)
-          }
-          className="
-            flex-1
-            flex
-            items-center
-            justify-center
-            gap-1.5
-            py-2
-            rounded-lg
-            bg-blue-50
-            hover:bg-blue-100
-            text-blue-700
-            text-xs
-            font-semibold
-          "
-        >
-          <Icon
-            type="eye"
-            className="w-3.5 h-3.5"
-          />
-
-          View
-        </button>
-
-        {canEscalate && (
-          <button
-            onClick={() =>
-              onEscalate(
-                ticket._id
-              )
-            }
-            className="
-              flex-1
-              py-2
-              rounded-lg
-              bg-red-600
-              hover:bg-red-700
-              text-white
-              text-xs
-              font-semibold
-            "
-          >
-            Escalate
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/* =========================================================
-   MAIN COMPONENT
-========================================================= */
-
 export default function AdminTickets() {
-  const [tickets, setTickets] =
-    useState([]);
+  const [tickets, setTickets] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [page, setPage] =
-    useState(1);
-
-  const [totalPages, setTotalPages] =
-    useState(1);
-
-  const [selected, setSelected] =
-    useState(null);
-
-  const [search, setSearch] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [statusModal, setStatusModal] =
-    useState(null);
-
-  const [
-    resolutionNote,
-    setResolutionNote,
-  ] = useState("");
-
-  const [submitting, setSubmitting] =
-    useState(false);
-
-  const user = JSON.parse(
-    localStorage.getItem("user") ||
-      "null"
-  );
-
-  const [now, setNow] =
-    useState(() => new Date());
+  // ✅ RESOLUTION MODAL STATE
+  const [statusModal, setStatusModal] = useState(null); // { ticket, targetStatus }
+  const [resolutionNote, setResolutionNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const user = JSON.parse(localStorage.getItem("user"));
+  // ✅ LIVE CLOCK — ticks every 30s so SLA countdowns stay fresh without a full reload
+  const [now, setNow] = useState(() => new Date());
 
   const initialStats = {
     total: 0,
@@ -1450,1135 +319,547 @@ export default function AdminTickets() {
     closed: 0,
   };
 
-  const [stats, setStats] =
-    useState(initialStats);
-
-  /* =======================================================
-     LOAD
-  ======================================================= */
+  const [stats, setStats] = useState(initialStats);
 
   useEffect(() => {
     load(page);
     loadStats();
   }, [page]);
 
-  /* =======================================================
-     LIVE SLA CLOCK
-  ======================================================= */
-
   useEffect(() => {
-    const interval =
-      setInterval(() => {
-        setNow(new Date());
-      }, 30000);
-
-    return () =>
-      clearInterval(interval);
+    const interval = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  /* =======================================================
-     LOAD TICKETS
-  ======================================================= */
-
-  const load = async (
-    pageNumber = 1
-  ) => {
+  const load = async (pageNumber = 1) => {
     try {
       setLoading(true);
-
-      const res = await api.get(
-        `/tickets?page=${pageNumber}&limit=10`
-      );
-
-      setTickets(
-        res?.data?.data || []
-      );
-
-      setTotalPages(
-        res?.data?.pages || 1
-      );
-    } catch (error) {
-      console.error(error);
-
-      toast.error(
-        "Failed to load tickets"
-      );
+      const res = await api.get(`/tickets?page=${pageNumber}&limit=10`);
+      setTickets(res?.data?.data || []);
+      setTotalPages(res?.data?.pages || 1);
+    } catch {
+      toast.error("Failed to load tickets");
     } finally {
       setLoading(false);
     }
   };
 
-  /* =======================================================
-     LOAD STATS
-  ======================================================= */
-
   const loadStats = async () => {
     try {
-      const res = await api.get(
-        "/tickets/stats"
-      );
-
-      const data =
-        res?.data?.data;
-
+      const res = await api.get("/tickets/stats");
+      const data = res?.data?.data;
       setStats({
-        total:
-          data?.total ?? 0,
-
-        open:
-          data?.open ?? 0,
-
-        inProgress:
-          data?.inProgress ?? 0,
-
-        resolved:
-          data?.resolved ?? 0,
-
-        closed:
-          data?.closed ?? 0,
+        total: data?.total ?? 0,
+        open: data?.open ?? 0,
+        inProgress: data?.inProgress ?? 0,
+        resolved: data?.resolved ?? 0,
+        closed: data?.closed ?? 0,
       });
-    } catch (error) {
-      console.error(error);
-
-      toast.error(
-        "Failed to load stats"
-      );
-
-      setStats(
-        initialStats
-      );
+    } catch {
+      toast.error("Failed to load stats");
+      setStats(initialStats);
     }
   };
 
-  /* =======================================================
-     STATUS CHANGE
-  ======================================================= */
-
-  const handleStatusChange = (
-    ticket,
-    targetStatus
-  ) => {
-    if (
-      targetStatus ===
-        "Resolved" ||
-      targetStatus === "Closed"
-    ) {
-      setResolutionNote(
-        ticket.resolutionNote ||
-          ""
-      );
-
-      setStatusModal({
-        ticket,
-        targetStatus,
-      });
-
+  /* ================= STATUS CHANGE ENTRY POINT ================= */
+  const handleStatusChange = (ticket, targetStatus) => {
+    if (targetStatus === "Resolved" || targetStatus === "Closed") {
+      setResolutionNote(ticket.resolutionNote || "");
+      setStatusModal({ ticket, targetStatus });
       return;
     }
+    updateStatus(ticket._id, targetStatus);
+  };
 
-    updateStatus(
-      ticket._id,
-      targetStatus
+  const handleEscalate = async (id) => {
+    try {
+      await api.put(`/tickets/${id}/escalate`, {
+        reason: "Escalated by IT Support",
+      });
+
+      toast.success("Ticket escalated successfully");
+
+      load(page);
+      loadStats();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to escalate");
+    }
+  };
+
+  const updateStatus = async (id, status, extra = {}) => {
+    try {
+      const payload = { status, ...extra };
+      if (status === "Resolved") payload.resolvedAt = new Date().toISOString();
+      if (status === "Closed") payload.closedAt = new Date().toISOString();
+
+      await api.put(`/tickets/${id}`, payload);
+      toast.success(`Ticket marked as ${status}`);
+      load(page);
+      loadStats();
+    } catch {
+      toast.error("Update failed");
+    }
+  };
+
+  const confirmStatusModal = async () => {
+    if (!resolutionNote.trim()) {
+      return toast.error("Please add a resolution note before continuing");
+    }
+    setSubmitting(true);
+    await updateStatus(statusModal.ticket._id, statusModal.targetStatus, {
+      resolutionNote: resolutionNote.trim(),
+    });
+    setSubmitting(false);
+    setStatusModal(null);
+    setResolutionNote("");
+  };
+
+  const cancelStatusModal = () => {
+    setStatusModal(null);
+    setResolutionNote("");
+  };
+
+  const filtered = tickets.filter((t) => {
+    const s = search.toLowerCase();
+    const slaState = getOverallSlaState(t, now).label.toLowerCase();
+    return (
+      t.title?.toLowerCase().includes(s) ||
+      getReporterName(t).toLowerCase().includes(s) ||
+      t.userId?.email?.toLowerCase().includes(s) ||
+      t.priority?.toLowerCase().includes(s) ||
+      t.status?.toLowerCase().includes(s) ||
+      slaState.includes(s)
+    );
+  });
+
+  // ✅ SLA breach count for the stats strip
+  const breachedCount = tickets.filter(
+    (t) => getOverallSlaState(t, now).level === "breached"
+  ).length;
+
+  const priorityColor = (p) => {
+    if (p === "High") return "bg-red-50 text-red-700 border border-red-200";
+    if (p === "Medium") return "bg-amber-50 text-amber-700 border border-amber-200";
+    if (p === "Low") return "bg-blue-50 text-blue-700 border border-blue-200";
+    return "bg-slate-100 text-slate-600 border border-slate-200";
+  };
+
+  const formatDateTime = (date) =>
+    date ? new Date(date).toLocaleString(undefined, {
+      month: "short", day: "numeric", year: "numeric",
+      hour: "numeric", minute: "2-digit",
+    }) : "—";
+
+  const renderStars = (rating) => (
+    <span className="text-amber-400 text-sm tracking-tight">
+      {"★".repeat(rating || 0)}
+      <span className="text-slate-200">{"★".repeat(5 - (rating || 0))}</span>
+    </span>
+  );
+
+  // Initials now prefer the reporter's name, falling back to email
+  const initials = (nameOrEmail) => (nameOrEmail ? nameOrEmail.charAt(0).toUpperCase() : "?");
+
+  const renderAttachments = (files = []) => {
+    if (!files || files.length === 0) return <span className="text-slate-300 text-xs">—</span>;
+    return (
+      <div className="flex flex-col gap-1 items-center">
+        {files.map((file, i) => (
+          <a
+            key={i}
+            href={file.url || file}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs font-medium"
+          >
+            <IconClip className="w-3 h-3" /> File {i + 1}
+          </a>
+        ))}
+      </div>
     );
   };
 
-  /* =======================================================
-     ESCALATE
-  ======================================================= */
-
-  const handleEscalate =
-    async (id) => {
-      try {
-        await api.put(
-          `/tickets/${id}/escalate`,
-          {
-            reason:
-              "Escalated by IT Support",
-          }
-        );
-
-        toast.success(
-          "Ticket escalated successfully"
-        );
-
-        await load(page);
-        await loadStats();
-      } catch (error) {
-        console.error(error);
-
-        toast.error(
-          error.response?.data
-            ?.message ||
-            "Failed to escalate"
-        );
-      }
-    };
-
-  /* =======================================================
-     UPDATE STATUS
-  ======================================================= */
-
-  const updateStatus = async (
-    id,
-    status,
-    extra = {}
-  ) => {
-    try {
-      const payload = {
-        status,
-        ...extra,
-      };
-
-      if (
-        status === "Resolved"
-      ) {
-        payload.resolvedAt =
-          new Date().toISOString();
-      }
-
-      if (
-        status === "Closed"
-      ) {
-        payload.closedAt =
-          new Date().toISOString();
-      }
-
-      await api.put(
-        `/tickets/${id}`,
-        payload
-      );
-
-      toast.success(
-        `Ticket marked as ${status}`
-      );
-
-      await load(page);
-      await loadStats();
-
-      /* Update drawer if the same ticket is open */
-      if (
-        selected?._id === id
-      ) {
-        setSelected(
-          (current) =>
-            current
-              ? {
-                  ...current,
-                  status,
-                  ...extra,
-                  ...(status ===
-                  "Resolved"
-                    ? {
-                        resolvedAt:
-                          payload.resolvedAt,
-                      }
-                    : {}),
-                  ...(status ===
-                  "Closed"
-                    ? {
-                        closedAt:
-                          payload.closedAt,
-                      }
-                    : {}),
-                }
-              : null
-        );
-      }
-    } catch (error) {
-      console.error(error);
-
-      toast.error(
-        error.response?.data
-          ?.message ||
-          "Update failed"
-      );
-
-      throw error;
-    }
-  };
-
-  /* =======================================================
-     CONFIRM RESOLUTION / CLOSE
-  ======================================================= */
-
-  const confirmStatusModal =
-    async () => {
-      if (
-        !resolutionNote.trim()
-      ) {
-        toast.error(
-          "Please add a resolution note before continuing"
-        );
-
-        return;
-      }
-
-      try {
-        setSubmitting(true);
-
-        await updateStatus(
-          statusModal.ticket._id,
-          statusModal.targetStatus,
-          {
-            resolutionNote:
-              resolutionNote.trim(),
-          }
-        );
-
-        setStatusModal(null);
-        setResolutionNote("");
-      } catch {
-        /* updateStatus already shows error */
-      } finally {
-        setSubmitting(false);
-      }
-    };
-
-  /* =======================================================
-     CANCEL MODAL
-  ======================================================= */
-
-  const cancelStatusModal =
-    () => {
-      setStatusModal(null);
-      setResolutionNote("");
-    };
-
-  /* =======================================================
-     SEARCH
-  ======================================================= */
-
-  const filtered =
-    useMemo(() => {
-      const query =
-        search.trim().toLowerCase();
-
-      if (!query) {
-        return tickets;
-      }
-
-      return tickets.filter(
-        (ticket) => {
-          const slaState =
-            getOverallSlaState(
-              ticket,
-              now
-            ).label.toLowerCase();
-
-          const values = [
-            ticket.title,
-            ticket.description,
-            getReporterName(
-              ticket
-            ),
-            getReporterSubtext(
-              ticket
-            ),
-            ticket.priority,
-            ticket.status,
-            ticket.department,
-            ticket.companyId?.name,
-            slaState,
-          ];
-
-          return values
-            .filter(Boolean)
-            .some((value) =>
-              String(value)
-                .toLowerCase()
-                .includes(query)
-            );
-        }
-      );
-    }, [
-      tickets,
-      search,
-      now,
-    ]);
-
-  /* =======================================================
-     SLA BREACHED COUNT
-  ======================================================= */
-
-  const breachedCount =
-    tickets.filter(
-      (ticket) =>
-        getOverallSlaState(
-          ticket,
-          now
-        ).level ===
-        "breached"
-    ).length;
-
-  /* =======================================================
-     STAT CARDS
-  ======================================================= */
-
   const statCards = [
-    {
-      label: "Total",
-      value: stats.total,
-      color: "bg-slate-400",
-      icon: (
-        <Icon
-          type="layers"
-          className="w-4 h-4"
-        />
-      ),
-    },
-
-    {
-      label: "Open",
-      value: stats.open,
-      color: "bg-blue-500",
-      icon: (
-        <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-      ),
-    },
-
-    {
-      label: "In Progress",
-      value: stats.inProgress,
-      color: "bg-amber-500",
-      icon: (
-        <Icon
-          type="clock"
-          className="w-4 h-4"
-        />
-      ),
-    },
-
-    {
-      label: "Resolved",
-      value: stats.resolved,
-      color: "bg-emerald-500",
-      icon: (
-        <Icon
-          type="check"
-          className="w-4 h-4"
-        />
-      ),
-    },
-
-    {
-      label: "Closed",
-      value: stats.closed,
-      color: "bg-slate-500",
-      icon: (
-        <Icon
-          type="lock"
-          className="w-4 h-4"
-        />
-      ),
-    },
-
-    {
-      label: "SLA Breached",
-      value: breachedCount,
-      color: "bg-red-500",
-      icon: (
-        <Icon
-          type="alert"
-          className="w-4 h-4"
-        />
-      ),
-    },
+    { key: "total", label: "Total", value: stats.total, theme: "slate", icon: <IconLayers className="w-4 h-4" /> },
+    { key: "open", label: "Open", value: stats.open, theme: "blue", icon: <IconCircleDot className="w-4 h-4" /> },
+    { key: "inProgress", label: "In Progress", value: stats.inProgress, theme: "amber", icon: <IconClock className="w-4 h-4" /> },
+    { key: "resolved", label: "Resolved", value: stats.resolved, theme: "emerald", icon: <IconCheck className="w-4 h-4" /> },
+    { key: "closed", label: "Closed", value: stats.closed, theme: "slate", icon: <IconLock className="w-4 h-4" /> },
+    { key: "breached", label: "SLA Breached", value: breachedCount, theme: "red", icon: <IconAlertTriangle className="w-4 h-4" /> },
   ];
 
-  /* =======================================================
-     RENDER
-  ======================================================= */
+  const statBarClass = {
+    slate: "bg-slate-400",
+    blue: "bg-blue-500",
+    amber: "bg-amber-400",
+    emerald: "bg-emerald-500",
+    red: "bg-red-500",
+  };
+  const statIconClass = {
+    slate: "bg-slate-100 text-slate-500",
+    blue: "bg-blue-50 text-blue-600",
+    amber: "bg-amber-50 text-amber-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+    red: "bg-red-50 text-red-600",
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-        {/* =================================================
-            HEADER
-        ================================================= */}
+    <div className="min-h-screen bg-slate-50 flex font-sans">
 
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+      {/* ================= SIDE PANEL ================= */}
+      {selected && (
+        <div className="w-[400px] bg-white border-l border-slate-200 flex flex-col shrink-0">
+          <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 tracking-wide uppercase">Ticket Preview</p>
+              <h2 className="font-bold text-slate-900 leading-snug mt-0.5">{selected.title}</h2>
+            </div>
+            <button
+              onClick={() => setSelected(null)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition shrink-0"
+            >
+              <IconX className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="p-5 flex flex-col gap-5 overflow-y-auto">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm shrink-0">
+                {initials(getReporterName(selected))}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate flex items-center gap-1.5">
+                  <IconUser className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  {getReporterName(selected)}
+                </p>
+                <p className="text-xs text-slate-400 truncate">{getReporterSubtext(selected)}</p>
+                <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full mt-1 ${STATUS_THEME[selected.status]?.bg} ${STATUS_THEME[selected.status]?.text}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${STATUS_THEME[selected.status]?.accent}`} />
+                  {selected.status}
+                </span>
+              </div>
+            </div>
+
+            {/* ================= SLA SECTION ================= */}
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                <IconClock className="w-3.5 h-3.5" /> SLA Tracking
+              </p>
+              <SlaDetailPanel ticket={selected} now={now} />
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Description</p>
+              <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg text-sm text-slate-700 leading-relaxed">
+                {selected.description || "No description provided."}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Opened</p>
+                <p className="text-xs font-medium text-slate-700">{formatDateTime(selected.createdAt)}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Resolved</p>
+                <p className="text-xs font-medium text-slate-700">{formatDateTime(selected.resolvedAt)}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Closed</p>
+                <p className="text-xs font-medium text-slate-700">{formatDateTime(selected.closedAt)}</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                <IconNote className="w-3.5 h-3.5" /> Resolution Note
+              </p>
+              {selected.resolutionNote ? (
+                <div className="bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm p-3 rounded-lg leading-relaxed">
+                  {selected.resolutionNote}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">Not resolved yet</p>
+              )}
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Attachments</p>
+              {selected.files?.length > 0 ? (
+                <div className="space-y-1.5">
+                  {selected.files.map((file, i) => (
+                    <a
+                      key={i}
+                      href={file.url || file}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    >
+                      <IconClip className="w-3.5 h-3.5" /> Download File {i + 1}
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No attachments</p>
+              )}
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Review</p>
+              {selected.rating ? (
+                <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                  {renderStars(selected.rating)}
+                  <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{selected.review}</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No review submitted</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MAIN ================= */}
+      <div className="flex-1 p-6 md:p-8 max-w-[1400px] mx-auto w-full">
+
+        {/* HEADER */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Ticket Management
-            </h1>
-
-            <p className="text-sm text-slate-400 mt-1">
-              Track, resolve, and review
-              support requests
-            </p>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Ticket Management</h1>
+            <p className="text-sm text-slate-400 mt-0.5">Track, resolve, and review support requests</p>
           </div>
 
-          <div className="relative w-full lg:w-80">
-            <Icon
-              type="search"
-              className="
-                w-4
-                h-4
-                absolute
-                left-3
-                top-1/2
-                -translate-y-1/2
-                text-slate-400
-              "
-            />
-
+          <div className="relative w-full sm:w-72">
+            <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
-              type="text"
-              value={search}
-              onChange={(e) =>
-                setSearch(
-                  e.target.value
-                )
-              }
+              className="w-full border border-slate-200 bg-white pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition placeholder:text-slate-400"
               placeholder="Search tickets, users, status, SLA..."
-              className="
-                w-full
-                bg-white
-                border
-                border-slate-200
-                rounded-lg
-                pl-9
-                pr-3
-                py-2.5
-                text-sm
-                outline-none
-                placeholder:text-slate-400
-                focus:border-blue-400
-                focus:ring-2
-                focus:ring-blue-500/10
-              "
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
 
-        {/* =================================================
-            KPI CARDS
-        ================================================= */}
-
+        {/* STATS */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          {statCards.map(
-            (card) => (
-              <StatCard
-                key={card.label}
-                {...card}
-              />
-            )
-          )}
+          {statCards.map((s) => (
+            <div key={s.key} className="relative bg-white border border-slate-200 rounded-xl p-4 overflow-hidden shadow-sm">
+              <span className={`absolute left-0 top-0 bottom-0 w-1 ${statBarClass[s.theme]}`} />
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-slate-400">{s.label}</p>
+                <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${statIconClass[s.theme]}`}>
+                  {s.icon}
+                </span>
+              </div>
+              <p className="text-2xl font-bold text-slate-900 tabular-nums">{s.value}</p>
+            </div>
+          ))}
         </div>
 
-        {/* =================================================
-            DESKTOP TABLE
-
-            ONLY 6 COLUMNS
-
-            Ticket
-            Reported By
-            Priority
-            Status
-            SLA
-            Actions
-        ================================================= */}
-
-        <div className="hidden md:block">
-          <div
-            className="
-              bg-white
-              border
-              border-slate-200
-              rounded-xl
-              shadow-sm
-              overflow-hidden
-            "
-          >
-            {loading ? (
-              <div className="p-16 text-center text-sm text-slate-400">
-                Loading tickets...
-              </div>
-            ) : filtered.length ===
-              0 ? (
-              <div className="p-16 text-center">
-                <p className="text-sm font-medium text-slate-600">
-                  No tickets found
-                </p>
-
-                <p className="text-xs text-slate-400 mt-1">
-                  Try another keyword
-                  or clear the search
-                </p>
-              </div>
-            ) : (
-              <table className="w-full table-fixed">
-                {/* HEADER */}
-
+        {/* TABLE */}
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          {loading ? (
+            <div className="p-16 text-center text-sm text-slate-400">Loading tickets…</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-16 text-center">
+              <p className="text-sm font-medium text-slate-600">No tickets match your search</p>
+              <p className="text-xs text-slate-400 mt-1">Try a different keyword or clear the search box</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="w-[28%] px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                      Ticket
-                    </th>
-
-                    <th className="w-[23%] px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                      Reported By
-                    </th>
-
-                    <th className="w-[11%] px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                      Priority
-                    </th>
-
-                    <th className="w-[14%] px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                      Status
-                    </th>
-
-                    <th className="w-[12%] px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                      SLA
-                    </th>
-
-                    <th className="w-[17%] px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  <tr className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-200">
+                    <th className="p-3.5 text-left font-semibold">Ticket</th>
+                    <th className="p-3.5 text-left font-semibold">Reported By</th>
+                    <th className="p-3.5 text-left font-semibold">Company</th>
+                    <th className="p-3.5 text-center font-semibold">Priority</th>
+                    <th className="p-3.5 text-center font-semibold">Status</th>
+                    <th className="p-3.5 text-center font-semibold">SLA</th>
+                    <th className="p-3.5 text-center font-semibold">Opened</th>
+                    <th className="p-3.5 text-center font-semibold">Closed</th>
+                    <th className="p-3.5 text-center font-semibold">Files</th>
+                    <th className="p-3.5 text-center font-semibold">Review</th>
+                    {/* sticky header cell so actions never get clipped off-screen */}
+                    <th className="p-3.5 text-center font-semibold sticky right-0 bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                       Actions
                     </th>
                   </tr>
                 </thead>
 
-                {/* BODY */}
-
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map(
-                    (ticket) => {
-                      const reporter =
-                        getReporterName(
-                          ticket
-                        );
+                  {filtered.map((t) => {
+                    const theme = STATUS_THEME[t.status] || STATUS_THEME.Open;
+                    const reporterName = getReporterName(t);
+                    const reporterSubtext = getReporterSubtext(t);
+                    return (
+                      <tr key={t._id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="p-3.5">
+                          <p className="font-semibold text-slate-800 truncate max-w-[220px]">{t.title}</p>
+                        </td>
 
-                      const reporterSub =
-                        getReporterSubtext(
-                          ticket
-                        );
-
-                      const canEscalate =
-                        user?.role ===
-                          "it_support" &&
-                        !ticket.sla
-                          ?.escalated &&
-                        ticket.status !==
-                          "Closed";
-
-                      return (
-                        <tr
-                          key={
-                            ticket._id
-                          }
-                          className="
-                            hover:bg-slate-50/70
-                            transition-colors
-                          "
-                        >
-                          {/* TICKET */}
-
-                          <td className="px-4 py-4">
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xs shrink-0">
+                              {initials(reporterName)}
+                            </div>
                             <div className="min-w-0">
+                              <p className="font-medium text-slate-800 truncate max-w-[180px]">{reporterName}</p>
+                              <p className="text-xs text-slate-400 truncate max-w-[180px]">{reporterSubtext}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="p-3.5 text-slate-600">{t.companyId?.name || "—"}</td>
+
+                        <td className="p-3.5 text-center">
+                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${priorityColor(t.priority)}`}>
+                            {t.priority}
+                          </span>
+                        </td>
+
+                        <td className="p-3.5 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="relative inline-block">
+                              <select
+                                className={`appearance-none pl-3 pr-7 py-1.5 rounded-full text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/20 ${theme.bg} ${theme.text} ${theme.border}`}
+                                value={t.status}
+                                onChange={(e) => handleStatusChange(t, e.target.value)}
+                              >
+                                <option>Open</option>
+                                <option>In Progress</option>
+                                <option>Resolved</option>
+                                <option>Closed</option>
+                              </select>
+                              <span className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${theme.accent}`} />
+                            </div>
+                            {t.resolutionNote && (
                               <p
-                                className="
-                                  text-sm
-                                  font-semibold
-                                  text-slate-800
-                                  truncate
-                                "
-                                title={
-                                  ticket.title
-                                }
+                                className="text-[10px] text-slate-400 max-w-[140px] truncate flex items-center gap-1"
+                                title={t.resolutionNote}
                               >
-                                {
-                                  ticket.title
-                                }
+                                <IconNote className="w-2.5 h-2.5 shrink-0" /> {t.resolutionNote}
                               </p>
+                            )}
+                          </div>
+                        </td>
 
-                              <p className="text-[11px] text-slate-400 mt-1 truncate">
-                                {ticket.department ||
-                                  "Support request"}
-                              </p>
-                            </div>
-                          </td>
+                        <td className="p-3.5 text-center">
+                          <SlaBadge ticket={t} now={now} />
+                        </td>
 
-                          {/* REPORTER */}
+                        <td className="p-3.5 text-center text-xs text-slate-500">{formatDateTime(t.createdAt)}</td>
+                        <td className="p-3.5 text-center text-xs text-slate-500">{formatDateTime(t.closedAt || t.resolvedAt)}</td>
+                        <td className="p-3.5 text-center">{renderAttachments(t.files || t.attachments)}</td>
+                        <td className="p-3.5 text-center">
+                          {t.rating ? renderStars(t.rating) : <span className="text-slate-300 text-xs">—</span>}
+                        </td>
 
-                          <td className="px-4 py-4">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0">
-                                {getInitial(
-                                  reporter
-                                )}
-                              </div>
-
-                              <div className="min-w-0">
-                                <p
-                                  className="
-                                    text-sm
-                                    font-semibold
-                                    text-slate-800
-                                    truncate
-                                  "
-                                  title={
-                                    reporter
-                                  }
-                                >
-                                  {
-                                    reporter
-                                  }
-                                </p>
-
-                                <p
-                                  className="
-                                    text-[11px]
-                                    text-slate-400
-                                    truncate
-                                  "
-                                  title={
-                                    reporterSub
-                                  }
-                                >
-                                  {
-                                    reporterSub
-                                  }
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* PRIORITY */}
-
-                          <td className="px-3 py-4 text-center">
-                            <span
-                              className={`
-                                inline-flex
-                                items-center
-                                justify-center
-                                px-2.5
-                                py-1
-                                rounded-full
-                                border
-                                text-[11px]
-                                font-semibold
-                                whitespace-nowrap
-                                ${
-                                  PRIORITY_THEME[
-                                    ticket.priority
-                                  ] ||
-                                  "bg-slate-50 text-slate-600 border-slate-200"
-                                }
-                              `}
+                        {/* sticky actions cell — always visible on the right, even mid-scroll */}
+                        <td className="p-3.5 text-center sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => setSelected(t)}
+                              className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition"
                             >
-                              {
-                                ticket.priority
-                              }
-                            </span>
-                          </td>
+                              <IconEye className="w-3.5 h-3.5" />
+                              View
+                            </button>
 
-                          {/* STATUS */}
-
-                          <td className="px-3 py-4 text-center">
-                            <StatusSelect
-                              ticket={
-                                ticket
-                              }
-                              onChange={
-                                handleStatusChange
-                              }
-                            />
-                          </td>
-
-                          {/* SLA */}
-
-                          <td className="px-3 py-4 text-center">
-                            <SlaBadge
-                              ticket={
-                                ticket
-                              }
-                              now={now}
-                            />
-                          </td>
-
-                          {/* ACTIONS */}
-
-                          <td className="px-4 py-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() =>
-                                  setSelected(
-                                    ticket
-                                  )
-                                }
-                                className="
-                                  inline-flex
-                                  items-center
-                                  justify-center
-                                  gap-1.5
-                                  px-3
-                                  py-1.5
-                                  rounded-lg
-                                  bg-blue-50
-                                  hover:bg-blue-100
-                                  text-blue-700
-                                  text-xs
-                                  font-semibold
-                                  transition
-                                "
-                              >
-                                <Icon
-                                  type="eye"
-                                  className="w-3.5 h-3.5"
-                                />
-
-                                View
-                              </button>
-
-                              {canEscalate && (
+                            {user?.role === "it_support" &&
+                              !t.sla?.escalated &&
+                              t.status !== "Closed" && (
                                 <button
-                                  onClick={() =>
-                                    handleEscalate(
-                                      ticket._id
-                                    )
-                                  }
-                                  className="
-                                    px-3
-                                    py-1.5
-                                    rounded-lg
-                                    bg-red-600
-                                    hover:bg-red-700
-                                    text-white
-                                    text-xs
-                                    font-semibold
-                                    transition
-                                  "
+                                  onClick={() => handleEscalate(t._id)}
+                                  className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap"
                                 >
                                   Escalate
                                 </button>
                               )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    }
-                  )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-            )}
-          </div>
-        </div>
-
-        {/* =================================================
-            MOBILE
-        ================================================= */}
-
-        <div className="md:hidden">
-          {loading ? (
-            <div className="bg-white border border-slate-200 rounded-xl p-10 text-center text-sm text-slate-400">
-              Loading tickets...
-            </div>
-          ) : filtered.length ===
-            0 ? (
-            <div className="bg-white border border-slate-200 rounded-xl p-10 text-center">
-              <p className="text-sm font-medium text-slate-600">
-                No tickets found
-              </p>
-
-              <p className="text-xs text-slate-400 mt-1">
-                Try another keyword
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filtered.map(
-                (ticket) => (
-                  <MobileTicketCard
-                    key={
-                      ticket._id
-                    }
-                    ticket={
-                      ticket
-                    }
-                    now={now}
-                    user={user}
-                    onView={
-                      setSelected
-                    }
-                    onStatusChange={
-                      handleStatusChange
-                    }
-                    onEscalate={
-                      handleEscalate
-                    }
-                  />
-                )
-              )}
             </div>
           )}
         </div>
 
-        {/* =================================================
-            PAGINATION
-        ================================================= */}
-
+        {/* PAGINATION */}
         <div className="flex justify-center items-center gap-3 mt-5">
           <button
             disabled={page === 1}
-            onClick={() =>
-              setPage(
-                page - 1
-              )
-            }
-            className="
-              w-9
-              h-9
-              flex
-              items-center
-              justify-center
-              border
-              border-slate-200
-              bg-white
-              rounded-lg
-              text-slate-500
-              hover:bg-slate-50
-              disabled:opacity-40
-              disabled:hover:bg-white
-            "
+            onClick={() => setPage(page - 1)}
+            className="w-8 h-8 flex items-center justify-center border border-slate-200 bg-white rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition"
           >
-            <Icon
-              type="left"
-              className="w-4 h-4"
-            />
+            <IconChevronLeft className="w-4 h-4" />
           </button>
 
-          <span className="text-xs font-medium text-slate-500 tabular-nums">
-            Page {page} of{" "}
-            {totalPages}
-          </span>
+          <span className="text-xs font-medium text-slate-500 tabular-nums">Page {page} of {totalPages}</span>
 
           <button
-            disabled={
-              page ===
-              totalPages
-            }
-            onClick={() =>
-              setPage(
-                page + 1
-              )
-            }
-            className="
-              w-9
-              h-9
-              flex
-              items-center
-              justify-center
-              border
-              border-slate-200
-              bg-white
-              rounded-lg
-              text-slate-500
-              hover:bg-slate-50
-              disabled:opacity-40
-              disabled:hover:bg-white
-            "
+            disabled={page === totalPages}
+            onClick={() => setPage(page + 1)}
+            className="w-8 h-8 flex items-center justify-center border border-slate-200 bg-white rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition"
           >
-            <Icon
-              type="right"
-              className="w-4 h-4"
-            />
+            <IconChevronRight className="w-4 h-4" />
           </button>
         </div>
-      </main>
+      </div>
 
-      {/* ===================================================
-          TICKET DRAWER
-      =================================================== */}
-
-      <TicketDrawer
-        ticket={selected}
-        now={now}
-        onClose={() =>
-          setSelected(null)
-        }
-      />
-
-      {/* ===================================================
-          RESOLVE / CLOSE MODAL
-      =================================================== */}
-
+      {/* ================= RESOLVE / CLOSE MODAL ================= */}
       {statusModal && (
-        <div
-          className="
-            fixed
-            inset-0
-            bg-slate-900/40
-            backdrop-blur-[2px]
-            flex
-            items-center
-            justify-center
-            z-[60]
-            p-4
-          "
-        >
-          <div
-            className="
-              bg-white
-              rounded-2xl
-              shadow-xl
-              w-full
-              max-w-md
-              p-5
-              sm:p-6
-            "
-          >
-            {/* HEADER */}
-
-            <div className="flex items-center gap-3">
-              <span
-                className={`
-                  w-9
-                  h-9
-                  rounded-full
-                  flex
-                  items-center
-                  justify-center
-                  shrink-0
-                  ${
-                    statusModal.targetStatus ===
-                    "Resolved"
-                      ? "bg-emerald-50 text-emerald-600"
-                      : "bg-slate-100 text-slate-600"
-                  }
-                `}
-              >
-                <Icon
-                  type={
-                    statusModal.targetStatus ===
-                    "Resolved"
-                      ? "check"
-                      : "lock"
-                  }
-                  className="w-4 h-4"
-                />
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-1">
+              <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${statusModal.targetStatus === "Resolved" ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-600"
+                }`}>
+                {statusModal.targetStatus === "Resolved" ? <IconCheck className="w-4 h-4" /> : <IconLock className="w-4 h-4" />}
               </span>
-
-              <div className="min-w-0">
-                <h3 className="font-bold text-base text-slate-900">
-                  Mark as{" "}
-                  {
-                    statusModal.targetStatus
-                  }
-                </h3>
-
-                <p className="text-xs text-slate-400 truncate mt-0.5">
-                  {
-                    statusModal
-                      .ticket
-                      .title
-                  }
-                </p>
-              </div>
+              <h3 className="font-bold text-base text-slate-900">
+                Mark as {statusModal.targetStatus}
+              </h3>
             </div>
-
-            {/* SLA */}
-
-            <div className="mt-4">
-              <SlaBadge
-                ticket={
-                  statusModal.ticket
-                }
-                now={now}
-              />
-            </div>
-
-            {/* NOTE */}
-
-            <label className="text-xs font-medium text-slate-500 mb-1.5 mt-5 block">
-              Resolution note{" "}
-              <span className="text-red-500">
-                *
-              </span>
-            </label>
-
-            <textarea
-              rows={4}
-              value={
-                resolutionNote
-              }
-              onChange={(e) =>
-                setResolutionNote(
-                  e.target.value
-                )
-              }
-              autoFocus
-              placeholder="Describe how the issue was resolved..."
-              className="
-                w-full
-                border
-                border-slate-200
-                rounded-lg
-                p-3
-                text-sm
-                outline-none
-                resize-none
-                placeholder:text-slate-400
-                focus:ring-2
-                focus:ring-blue-500/10
-                focus:border-blue-400
-              "
-            />
-
-            <p className="text-[11px] text-slate-400 mt-1.5">
-              This note will be saved
-              with the ticket.
+            <p className="text-xs text-slate-400 mb-4 ml-12 -mt-1">
+              "{statusModal.ticket.title}"
             </p>
 
-            {/* BUTTONS */}
+            {/* SLA reminder inside the modal so admins see the stakes before confirming */}
+            <div className="ml-12 -mt-1 mb-4">
+              <SlaBadge ticket={statusModal.ticket} now={now} />
+            </div>
+
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+              Resolution note <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              className="w-full border border-slate-200 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition resize-none placeholder:text-slate-400"
+              rows={4}
+              placeholder="e.g. Replaced faulty router, tested connection with user, confirmed working."
+              value={resolutionNote}
+              onChange={(e) => setResolutionNote(e.target.value)}
+              autoFocus
+            />
+            <p className="text-[11px] text-slate-400 mt-1.5">
+              This note is saved with the ticket so anyone can see how it was handled.
+            </p>
 
             <div className="flex justify-end gap-2 mt-5">
               <button
-                onClick={
-                  cancelStatusModal
-                }
-                disabled={
-                  submitting
-                }
-                className="
-                  px-4
-                  py-2
-                  text-sm
-                  rounded-lg
-                  border
-                  border-slate-200
-                  text-slate-600
-                  hover:bg-slate-50
-                  transition
-                  font-medium
-                  disabled:opacity-50
-                "
+                onClick={cancelStatusModal}
+                disabled={submitting}
+                className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition font-medium"
               >
                 Cancel
               </button>
-
               <button
-                onClick={
-                  confirmStatusModal
-                }
-                disabled={
-                  submitting
-                }
-                className="
-                  px-4
-                  py-2
-                  text-sm
-                  rounded-lg
-                  bg-blue-600
-                  hover:bg-blue-700
-                  text-white
-                  font-semibold
-                  transition
-                  disabled:opacity-60
-                "
+                onClick={confirmStatusModal}
+                disabled={submitting}
+                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition disabled:opacity-60"
               >
-                {submitting
-                  ? "Saving..."
-                  : `Confirm ${statusModal.targetStatus}`}
+                {submitting ? "Saving…" : `Confirm ${statusModal.targetStatus}`}
               </button>
             </div>
           </div>
@@ -2587,3 +868,4 @@ export default function AdminTickets() {
     </div>
   );
 }
+
