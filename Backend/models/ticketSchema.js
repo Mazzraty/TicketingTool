@@ -1,6 +1,14 @@
 import mongoose from "mongoose";
 const ticketSchema = new mongoose.Schema(
   {
+
+
+    ticketNumber: {
+      type: String,
+      unique: true,
+      index: true,
+      trim: true,
+    },
     // =========================
     // MULTI TENANT
     // =========================
@@ -71,58 +79,58 @@ const ticketSchema = new mongoose.Schema(
       default: "Open",
       index: true,
     },
-// =========================
-// ASSIGNMENT
-// =========================
-assignedRole: {
-  type: String,
-  enum: ["it_support", "super_admin"],
-  default: "it_support",
-  index: true,
-},
+    // =========================
+    // ASSIGNMENT
+    // =========================
+    assignedRole: {
+      type: String,
+      enum: ["it_support", "super_admin"],
+      default: "it_support",
+      index: true,
+    },
 
-assignedTo: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "User",
-  default: null,
-},
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
 
-// =========================
-// TICKET ESCALATION
-// =========================
-escalation: {
-  isEscalated: {
-    type: Boolean,
-    default: false,
-  },
+    // =========================
+    // TICKET ESCALATION
+    // =========================
+    escalation: {
+      isEscalated: {
+        type: Boolean,
+        default: false,
+      },
 
-  level: {
-    type: Number,
-    default: 0,
-  },
+      level: {
+        type: Number,
+        default: 0,
+      },
 
-  reason: {
-    type: String,
-    default: "",
-  },
+      reason: {
+        type: String,
+        default: "",
+      },
 
-  escalatedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    default: null,
-  },
+      escalatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+      },
 
-  escalatedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    default: null,
-  },
+      escalatedTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+      },
 
-  escalatedAt: {
-    type: Date,
-    default: null,
-  },
-},
+      escalatedAt: {
+        type: Date,
+        default: null,
+      },
+    },
     // =========================
     // ATTACHMENTS
     // =========================

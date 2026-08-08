@@ -5,72 +5,212 @@ import { ticketAdminEmail } from "../utils/ticketAdminEmail.js";
 import { ticketUserEmail } from "../utils/ticketUserEmail.js";
 import { ticketResolvedEmail } from "../utils/ticketResolvedEmail.js";
 import Notification from "../models/notifcationSchema.js";
+import { generateTicketNumber } from "../utils/generateTicketNumber.js";
 
 /* ======================================================
    ✅ CREATE TICKET
 ====================================================== */
 export const createTicket = async (req, res) => {
   try {
-    const { title, description, department, relatedTo, priority } = req.body;
+    const {
+      title,
+      description,
+      department,
+      relatedTo,
+      priority,
+    } = req.body;
 
-    // SLA Policy (Temporary - Later move to SLA collection)
+    // ==================================================
+    // COMPANY ID
+    // ==================================================
+
+    const companyId =
+      req.user.companyId ||
+      req.user.companyAccess?.find(
+        (c) => c.isActive && c.companyId
+      )?.companyId ||
+      req.user.companyAccess?.[0]?.companyId;
+
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        message: "Company is not assigned to this user",
+      });
+    }
+
+    // ==================================================
+    // FIND COMPANY
+    // ==================================================
+
+    const company = await Company.findById(companyId);
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    // ==================================================
+    // COMPANY CODE
+    // ==================================================
+
+    const companyCode =
+      company.code ||
+      company.companyCode ||
+      company.name
+        ?.replace(/[^a-zA-Z0-9]/g, "")
+        .substring(0, 3)
+        .toUpperCase();
+
+    if (!companyCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Company code is missing",
+      });
+    }
+
+    // ==================================================
+    // GENERATE COMPANY-WISE TICKET NUMBER
+    // ==================================================
+
+    const ticketNumber =
+      await generateTicketNumber(
+        companyId,
+        companyCode
+      );
+
+    // ==================================================
+    // SLA POLICY
+    // ==================================================
+
     const slaPolicy = {
       Low: {
-        firstResponse: 8, // hours
-        resolution: 72, // hours
+        firstResponse: 8,
+        resolution: 72,
       },
+
       Medium: {
         firstResponse: 4,
         resolution: 48,
       },
+
       High: {
         firstResponse: 2,
         resolution: 24,
       },
+
       Critical: {
-        firstResponse: 0.5, // 30 minutes
+        firstResponse: 0.5,
         resolution: 8,
       },
     };
 
-    const policy = slaPolicy[priority] || slaPolicy.Low;
+    const policy =
+      slaPolicy[priority] ||
+      slaPolicy.Low;
 
-    const attachments = (req.files || []).map((file) => file.path);
+    // ==================================================
+    // ATTACHMENTS
+    // ==================================================
 
-    const companyId =
-      req.user.companyId ||
-      req.user.companyAccess?.find((c) => c.isActive && c.companyId)
-        ?.companyId ||
-      req.user.companyAccess?.[0]?.companyId;
+    const attachments = (
+      req.files || []
+    ).map((file) => file.path);
+
+    // ==================================================
+    // CREATE TICKET
+    // ==================================================
 
     const ticket = await Ticket.create({
+      // ==========================
+      // TICKET NUMBER
+      // ==========================
+
+      ticketNumber,
+
+      // ==========================
+      // COMPANY
+      // ==========================
+
       companyId,
+
+      // ==========================
+      // BASIC INFORMATION
+      // ==========================
+
       title,
+
       description,
+
       department,
-      relatedTo: relatedTo || "Others",
+
+      relatedTo:
+        relatedTo || "Others",
+
       priority,
+
       attachments,
+
+      // ==========================
+      // USER
+      // ==========================
+
       userId: req.user.id,
 
+      // ==========================
+      // STATUS
+      // ==========================
+
       status: "Open",
+
+      // ==========================
+      // ASSIGNMENT
+      // ==========================
+
       assignedRole: "it_support",
+
       assignedTo: null,
-      escalated: false,
-      escalatedAt: null,
+
+      // ==========================
+      // ESCALATION
+      // ==========================
+
+      escalation: {
+        isEscalated: false,
+
+        level: 0,
+
+        reason: "",
+
+        escalatedBy: null,
+
+        escalatedTo: null,
+
+        escalatedAt: null,
+      },
 
       // ==========================
       // SLA
       // ==========================
+
       sla: {
         priority,
 
         firstResponseDue: new Date(
-          Date.now() + policy.firstResponse * 60 * 60 * 1000
+          Date.now() +
+          policy.firstResponse *
+          60 *
+          60 *
+          1000
         ),
 
         resolutionDue: new Date(
-          Date.now() + policy.resolution * 60 * 60 * 1000
+          Date.now() +
+          policy.resolution *
+          60 *
+          60 *
+          1000
         ),
 
         firstRespondedAt: null,
@@ -90,98 +230,226 @@ export const createTicket = async (req, res) => {
         status: "Running",
       },
 
-      reopened: false,
+      // ==========================
+      // REVIEW
+      // ==========================
+
       review: "",
+
       rating: 0,
 
+      reviewedAt: null,
+
+      // ==========================
+      // TIMESTAMPS
+      // ==========================
+
+      inProgressAt: null,
+
       resolvedAt: null,
+
       closedAt: null,
+
+      reopened: false,
+
       reopenedAt: null,
+
+      // ==========================
+      // INCIDENT DATE
+      // ==========================
+
+      incidentDate: new Date(),
+
+      // ==========================
+      // SOURCE
+      // ==========================
+
+      source: "Portal",
+
+      createdByType:
+        req.user.role || "user",
+
+      // ==========================
+      // STATUS HISTORY
+      // ==========================
 
       statusHistory: [
         {
           status: "Open",
+
           changedAt: new Date(),
+
+          changedBy: req.user.id,
+
           note: "Ticket created",
         },
       ],
     });
 
-    const companyUsers = await User.find({
-      companyId: req.user.companyId,
-      role: {
-        $in: ["company_admin", "it_support"],
-      },
-    });
+    // ==================================================
+    // FIND COMPANY USERS
+    // ==================================================
 
-    const superAdmins = await User.find({
-      role: "super_admin",
-    });
+    const companyUsers =
+      await User.find({
+        companyId,
+
+        role: {
+          $in: [
+            "company_admin",
+            "it_support",
+          ],
+        },
+      });
+
+    // ==================================================
+    // FIND SUPER ADMINS
+    // ==================================================
+
+    const superAdmins =
+      await User.find({
+        role: "super_admin",
+      });
+
+    // ==================================================
+    // REMOVE DUPLICATE USERS
+    // ==================================================
 
     const uniqueUsers = new Map();
 
-    [...companyUsers, ...superAdmins].forEach((user) => {
-      uniqueUsers.set(user._id.toString(), user);
+    [
+      ...companyUsers,
+      ...superAdmins,
+    ].forEach((user) => {
+      uniqueUsers.set(
+        user._id.toString(),
+        user
+      );
     });
 
-    const notifications = [...uniqueUsers.values()].map((user) => ({
+    // ==================================================
+    // CREATE NOTIFICATIONS
+    // ==================================================
+
+    const notifications = [
+      ...uniqueUsers.values(),
+    ].map((user) => ({
       userId: user._id,
+
       title: "New Ticket",
-      message: title,
+
+      message:
+        `${ticketNumber} - ${title}`,
+
       type: "ticket_created",
     }));
 
-    if (notifications.length > 0) {
-      await Notification.insertMany(notifications);
+    if (
+      notifications.length > 0
+    ) {
+      await Notification.insertMany(
+        notifications
+      );
     }
 
+    // ==================================================
+    // SEND EMAILS
+    // ==================================================
+
     try {
-      const ticketUser = await User.findById(req.user.id);
+      const ticketUser =
+        await User.findById(
+          req.user.id
+        );
+
+      // ----------------------------------------------
+      // USER EMAIL
+      // ----------------------------------------------
 
       if (ticketUser?.email) {
         await sendEmail({
           to: ticketUser.email,
-          subject: "Ticket created successfully",
+
+          subject:
+            `Ticket ${ticketNumber} created successfully`,
+
           html: ticketUserEmail({
             ...ticket._doc,
-            userEmail: ticketUser.email,
+
+            userEmail:
+              ticketUser.email,
           }),
         });
       }
 
-      const adminRecipients = [...companyUsers, ...superAdmins]
+      // ----------------------------------------------
+      // ADMIN EMAILS
+      // ----------------------------------------------
+
+      const adminRecipients = [
+        ...companyUsers,
+        ...superAdmins,
+      ]
         .filter(
           (user, index, arr) =>
-            arr.findIndex((u) => u.email === user.email) === index
+            arr.findIndex(
+              (u) =>
+                u.email === user.email
+            ) === index
         )
-        .map((user) => user.email)
+        .map(
+          (user) => user.email
+        )
         .filter(Boolean);
 
-      if (adminRecipients.length > 0) {
+      if (
+        adminRecipients.length > 0
+      ) {
         await sendEmail({
           to: adminRecipients,
-          subject: "New Ticket Created",
+
+          subject:
+            `New Ticket Created - ${ticketNumber}`,
+
           html: ticketAdminEmail({
             ...ticket._doc,
-            userEmail: ticketUser?.email || "",
+
+            userEmail:
+              ticketUser?.email || "",
           }),
         });
       }
     } catch (emailError) {
-      console.error("Failed to send ticket emails:", emailError.message);
+      console.error(
+        "Failed to send ticket emails:",
+        emailError.message
+      );
     }
 
-    res.status(201).json({
+    // ==================================================
+    // RESPONSE
+    // ==================================================
+
+    return res.status(201).json({
       success: true,
-      message: "Ticket created successfully",
+
+      message:
+        "Ticket created successfully",
+
       data: ticket,
     });
   } catch (error) {
-    console.error("Create ticket error:", error);
+    console.error(
+      "Create ticket error:",
+      error
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message || "Failed to create ticket",
+
+      message:
+        error.message ||
+        "Failed to create ticket",
     });
   }
 };
