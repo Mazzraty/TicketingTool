@@ -138,11 +138,22 @@ const INITIAL_FORM = {
   title: "",
   description: "",
   priority: "Medium",
-  department: "IT",
+  department: "",
   relatedTo: "",
   assetId: "",
   employeeId: "",
   incidentDate: todayStr(),
+};
+
+const findMatchingDepartment = (raw) => {
+  if (!raw) return "";
+  const upper = raw.trim().toUpperCase();
+  const exact = DEPARTMENTS.find((d) => d === upper);
+  if (exact) return exact;
+  // Loose match either direction, e.g. employee.department "IT" should
+  // still match the dropdown's "IT DEPARTMENT".
+  const loose = DEPARTMENTS.find((d) => d.includes(upper) || upper.includes(d));
+  return loose || raw;
 };
 
 /* ================= Searchable Employee Select ================= */
@@ -275,6 +286,10 @@ export default function CreateManualTicket() {
   const [relatedSuggested, setRelatedSuggested] = useState(null); // { value, matched } | null
   const [manualRelatedTo, setManualRelatedTo] = useState(false); // true once IT picks Related To themselves
 
+  // Auto-fill Department from the selected employee's own department,
+  // unless IT support has picked one manually.
+  const [manualDepartment, setManualDepartment] = useState(false);
+
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
   const allowedCompanyIds = [
@@ -331,6 +346,11 @@ export default function CreateManualTicket() {
     handleChange("relatedTo")(e);
   };
 
+  const handleDepartmentChange = (e) => {
+    setManualDepartment(true);
+    handleChange("department")(e);
+  };
+
   // Re-scan title + description on every keystroke, pre-fill Related To
   // unless IT support has already chosen it manually.
   useEffect(() => {
@@ -360,6 +380,11 @@ export default function CreateManualTicket() {
       return;
     }
 
+    if (!form.department) {
+      toast.error("Please select a department");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -368,6 +393,7 @@ export default function CreateManualTicket() {
       setForm(INITIAL_FORM);
       setRelatedSuggested(null);
       setManualRelatedTo(false);
+      setManualDepartment(false);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to create ticket");
     } finally {
@@ -398,7 +424,17 @@ export default function CreateManualTicket() {
             <EmployeeSelect
               employees={employees}
               value={form.employeeId}
-              onSelect={(id) => setForm((prev) => ({ ...prev, employeeId: id }))}
+              onSelect={(id) => {
+                const emp = employees.find((e) => e._id === id);
+                setForm((prev) => ({
+                  ...prev,
+                  employeeId: id,
+                  department:
+                    emp && !manualDepartment
+                      ? findMatchingDepartment(emp.department)
+                      : prev.department,
+                }));
+              }}
             />
             <p className="text-[11px] text-slate-400 mt-1.5">
               Who this ticket is being raised for.
@@ -506,19 +542,29 @@ export default function CreateManualTicket() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1.5">
-                <IconBuilding className="w-3.5 h-3.5" /> Department
+                <IconBuilding className="w-3.5 h-3.5" /> Department <span className="text-red-500">*</span>
               </label>
               <select
                 className="w-full border border-slate-200 bg-white px-3.5 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
                 value={form.department}
-                onChange={handleChange("department")}
+                onChange={handleDepartmentChange}
+                required
               >
+                <option value="" disabled>Select department…</option>
+                {!DEPARTMENTS.includes(form.department) && form.department && (
+                  <option value={form.department}>{form.department}</option>
+                )}
                 {DEPARTMENTS.map((dept) => (
                   <option key={dept} value={dept}>
                     {dept}
                   </option>
                 ))}
               </select>
+              {form.employeeId && !manualDepartment && form.department && (
+                <p className="text-[11px] text-blue-600 mt-1.5">
+                  Auto-filled from the selected employee's department
+                </p>
+              )}
             </div>
 
             <div>
