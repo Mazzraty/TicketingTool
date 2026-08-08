@@ -312,15 +312,32 @@ export default function AdminTickets() {
     return () => clearInterval(interval);
   }, []);
 
-  // Lock background scroll while the mobile detail sheet is open
+  // Lock background scroll only while the MOBILE full-screen detail sheet
+  // is open. On desktop (md:static panel, part of the normal flex layout)
+  // we must NOT lock the body, or the ticket list behind it becomes
+  // unscrollable and other tickets/rows become unreachable.
   useEffect(() => {
-    if (selected) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
+    if (!selected) return;
+
+    const mql = window.matchMedia("(max-width: 767px)");
+
+    const applyLock = (isMobile) => {
+      if (isMobile) {
+        document.body.style.overflow = "hidden";
+      } else {
+        document.body.style.overflow = "";
+      }
+    };
+
+    applyLock(mql.matches);
+
+    const handleChange = (e) => applyLock(e.matches);
+    mql.addEventListener("change", handleChange);
+
+    return () => {
+      document.body.style.overflow = "";
+      mql.removeEventListener("change", handleChange);
+    };
   }, [selected]);
 
   const load = async (pageNumber = 1) => {
@@ -958,5 +975,4 @@ export default function AdminTickets() {
       )}
     </div>
   );
-  
 }
