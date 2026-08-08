@@ -459,8 +459,6 @@ export default function CreateTicket() {
 
     if (!form.description.trim()) {
       newErrors.description = "Description is required";
-    } else if (form.description.length < 10) {
-      newErrors.description = "Description must be at least 10 characters";
     }
 
     if (!form.department.trim()) {
@@ -620,7 +618,7 @@ export default function CreateTicket() {
                 name="description"
                 error={errors.description}
                 required
-                hint="Provide detailed information about the issue (10-1000 characters)"
+                hint="Provide detailed information about the issue"
               >
                 <textarea
                   id="description"
