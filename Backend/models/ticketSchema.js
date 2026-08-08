@@ -31,6 +31,28 @@ const ticketSchema = new mongoose.Schema(
     },
 
     // =========================
+    // RELATED TO
+    // =========================
+    relatedTo: {
+      type: String,
+      enum: [
+        "Laptop/Desktop",
+        "ERP",
+        "Email",
+        "HHT",
+        "HHT Printer",
+        "Syncwise",
+        "Printer",
+        "Network",
+        "Software",
+        "Hardware",
+        "Others",
+      ],
+      default: "Others",
+      index: true,
+    },
+
+    // =========================
     // PRIORITY
     // =========================
     priority: {
@@ -49,7 +71,58 @@ const ticketSchema = new mongoose.Schema(
       default: "Open",
       index: true,
     },
+// =========================
+// ASSIGNMENT
+// =========================
+assignedRole: {
+  type: String,
+  enum: ["it_support", "super_admin"],
+  default: "it_support",
+  index: true,
+},
 
+assignedTo: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+  default: null,
+},
+
+// =========================
+// TICKET ESCALATION
+// =========================
+escalation: {
+  isEscalated: {
+    type: Boolean,
+    default: false,
+  },
+
+  level: {
+    type: Number,
+    default: 0,
+  },
+
+  reason: {
+    type: String,
+    default: "",
+  },
+
+  escalatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
+
+  escalatedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
+
+  escalatedAt: {
+    type: Date,
+    default: null,
+  },
+},
     // =========================
     // ATTACHMENTS
     // =========================
@@ -259,6 +332,7 @@ const ticketSchema = new mongoose.Schema(
 // Indexes
 ticketSchema.index({ companyId: 1, status: 1 });
 ticketSchema.index({ companyId: 1, priority: 1 });
+ticketSchema.index({ companyId: 1, relatedTo: 1 });
 ticketSchema.index({ "sla.resolutionDue": 1 });
 ticketSchema.index({ "sla.firstResponseDue": 1 });
 

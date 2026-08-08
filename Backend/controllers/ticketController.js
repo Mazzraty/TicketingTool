@@ -11,7 +11,7 @@ import Notification from "../models/notifcationSchema.js";
 ====================================================== */
 export const createTicket = async (req, res) => {
   try {
-    const { title, description, department, priority } = req.body;
+    const { title, description, department, relatedTo, priority } = req.body;
 
     // SLA Policy (Temporary - Later move to SLA collection)
     const slaPolicy = {
@@ -48,6 +48,7 @@ export const createTicket = async (req, res) => {
       title,
       description,
       department,
+      relatedTo: relatedTo || "Others",
       priority,
       attachments,
       userId: req.user.id,
@@ -481,11 +482,12 @@ export const editTicket = async (req, res) => {
       });
     }
 
-    const { title, description, department, priority } = req.body;
+    const { title, description, department, relatedTo, priority } = req.body;
 
     if (title) ticket.title = title;
     if (description) ticket.description = description;
     if (department) ticket.department = department;
+    if (relatedTo) ticket.relatedTo = relatedTo;
     if (priority) ticket.priority = priority;
 
     if (req.files?.length > 0) {
@@ -782,6 +784,7 @@ export const createManualTicket = async (req, res) => {
       description,
       priority,
       department,
+      relatedTo,
       assetId,
       employeeId,
       incidentDate
@@ -820,6 +823,8 @@ export const createManualTicket = async (req, res) => {
       description,
 
       department: department || "General",
+
+      relatedTo: relatedTo || "Others",
 
 
       // =========================

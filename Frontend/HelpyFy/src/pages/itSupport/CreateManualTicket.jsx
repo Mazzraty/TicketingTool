@@ -36,18 +36,27 @@ const PRIORITY_THEME = {
 
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
 const DEPARTMENTS = [
-  "Finance",
-  "Supply Chain",
-  "Sales",
-  "IT",
-  "Procurement",
-  "HR",
-  "Fertlization",
-  "Maintenance",
-  "Quality",
-  "Production",
-  "Warehouse",
-  "Others",
+  "SR. MANAGEMENT",
+  "COW FARM",
+  "AGRICULTURE FARM",
+  "FINANCE",
+  "SALES AND MARKETING",
+  "PRODUCTION",
+  "FACILITY MAINTENANCE",
+  "OTHER FACILITIES",
+  "PROCUREMENT",
+  "WAREHOUSE AND LOGISTICS",
+  "QUALITY",
+  "HR & ADMIN",
+  "REAL ESTATE",
+  "SUPPORT SERVICE",
+  "IT DEPARTMENT",
+  "FERTILIZER FACTORY",
+  "DEMAND PLANNING",
+  "GOAT FARM",
+  "FARMING",
+  "FINANCE AND ADMIN",
+  "OPERATIONS",
 ];
 
 const todayStr = () => new Date().toISOString().split("T")[0];
@@ -220,8 +229,8 @@ export default function CreateManualTicket() {
         const scoped = isSuperAdmin
           ? all
           : all.filter((e) =>
-              allowedCompanyIds.includes(normalizeCompanyId(e.companyId))
-            );
+            allowedCompanyIds.includes(normalizeCompanyId(e.companyId))
+          );
 
         setEmployees(scoped);
       } catch (error) {
@@ -389,8 +398,8 @@ export default function CreateManualTicket() {
                       type="button"
                       onClick={() => setForm((prev) => ({ ...prev, priority }))}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${active
-                          ? PRIORITY_THEME[priority]
-                          : "bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100"
+                        ? PRIORITY_THEME[priority]
+                        : "bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100"
                         }`}
                     >
                       {priority}
