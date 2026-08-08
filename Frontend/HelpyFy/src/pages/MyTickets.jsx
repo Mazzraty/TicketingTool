@@ -259,6 +259,32 @@ export default function MyTickets() {
     );
   };
 
+  /* ================= PAGINATION WINDOW =================
+     Builds a sliding window of page numbers centered on the
+     current page (works correctly for any totalPages, not just
+     the first 5). Always includes first/last page with "…" gaps. */
+  const getPageNumbers = () => {
+    const maxButtons = 5;
+    const pages = [];
+
+    if (totalPages <= maxButtons) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+
+    let start = Math.max(1, page - 2);
+    let end = Math.min(totalPages, start + maxButtons - 1);
+
+    if (end - start < maxButtons - 1) {
+      start = Math.max(1, end - maxButtons + 1);
+    }
+
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  };
+
+  const pageNumbers = getPageNumbers();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* HEADER */}
@@ -320,6 +346,9 @@ export default function MyTickets() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Ticket #
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Ticket
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -346,6 +375,13 @@ export default function MyTickets() {
                       key={ticket._id}
                       className="hover:bg-gray-50 transition-colors"
                     >
+                      {/* TICKET NUMBER */}
+                      <td className="px-6 py-4 align-top">
+                        <p className="font-mono text-xs text-gray-500 whitespace-nowrap">
+                          {ticket.ticketNumber || "-"}
+                        </p>
+                      </td>
+
                       {/* TITLE & DESCRIPTION */}
                       <td className="px-6 py-4">
                         <div className="flex items-start gap-3">
@@ -473,35 +509,60 @@ export default function MyTickets() {
                   variant="secondary"
                   size="sm"
                   icon={ChevronLeft}
-                  onClick={() => setPage(page - 1)}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                 >
                   Previous
                 </Button>
 
                 <div className="flex items-center gap-1">
-                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                    const pageNum = i + 1;
-                    return (
+                  {pageNumbers[0] > 1 && (
+                    <>
                       <button
-                        key={pageNum}
-                        onClick={() => setPage(pageNum)}
-                        className={`w-8 h-8 rounded-lg font-medium transition ${page === pageNum
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
-                          }`}
+                        onClick={() => setPage(1)}
+                        className="w-8 h-8 rounded-lg font-medium transition bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
                       >
-                        {pageNum}
+                        1
                       </button>
-                    );
-                  })}
+                      {pageNumbers[0] > 2 && (
+                        <span className="px-1 text-gray-400 text-sm">…</span>
+                      )}
+                    </>
+                  )}
+
+                  {pageNumbers.map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`w-8 h-8 rounded-lg font-medium transition ${page === pageNum
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
+                        }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+
+                  {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                    <>
+                      {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
+                        <span className="px-1 text-gray-400 text-sm">…</span>
+                      )}
+                      <button
+                        onClick={() => setPage(totalPages)}
+                        className="w-8 h-8 rounded-lg font-medium transition bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 <Button
                   variant="secondary"
                   size="sm"
                   icon={ChevronRight}
-                  onClick={() => setPage(page + 1)}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                 >
                   Next
@@ -518,9 +579,16 @@ export default function MyTickets() {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
             {/* HEADER */}
             <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Edit Ticket
-              </h2>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Edit Ticket
+                </h2>
+                {editData.ticketNumber && (
+                  <p className="mt-0.5 text-xs font-mono text-gray-400">
+                    {editData.ticketNumber}
+                  </p>
+                )}
+              </div>
               <button
                 onClick={() => {
                   setEditModal(false);
@@ -617,6 +685,11 @@ export default function MyTickets() {
               <p className="mt-1 text-sm text-gray-600">
                 {selectedTicket.title}
               </p>
+              {selectedTicket.ticketNumber && (
+                <p className="mt-0.5 text-xs font-mono text-gray-400">
+                  {selectedTicket.ticketNumber}
+                </p>
+              )}
             </div>
 
             {/* CONTENT */}
