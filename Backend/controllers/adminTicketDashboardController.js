@@ -201,15 +201,16 @@ export const getTicketCategoryChart = async (req, res) => {
       filter.createdAt = buildDateRangeFilter(from, to);
     }
 
-    // NOTE: Ticket schema currently has no `category` field, so this
-    // will always group everything under "Uncategorized" until a
-    // `category` field is added to the Ticket model. Left as-is here;
-    // flagging in case you want to add the field or drop this chart.
+    // Ticket schema has no `category` field — this chart now groups by
+    // `relatedTo` instead (Laptop/Desktop, ERP, Email, Printer, etc.),
+    // which is what "By Category" is meant to represent on the dashboard.
+    // Tickets with no relatedTo set fall back to "Others" so the chart
+    // still adds up to 100%.
     const data = await Ticket.aggregate([
       { $match: filter },
       {
         $group: {
-          _id: "$category",
+          _id: { $ifNull: ["$relatedTo", "Others"] },
           value: { $sum: 1 },
         },
       },
