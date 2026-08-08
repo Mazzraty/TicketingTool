@@ -36,6 +36,19 @@ const DEPARTMENTS = [
   "OPERATIONS",
 ];
 
+const RELATED_OPTIONS = [
+  "Laptop/Desktop",
+  "ERP",
+  "Email",
+  "HHT",
+  "HHT Printer",
+  "Syncwise",
+  "Printer",
+  "Network",
+  "Software",
+  "Hardware",
+  "Others",
+];
 
 const IMPACT_LEVELS = [
   {
@@ -192,6 +205,64 @@ const detectImpactUrgency = (text) => {
   return null;
 };
 
+/* ======================================================
+   ⚡ AUTO-SUGGEST "RELATED TO" FROM TEXT
+   More specific items (HHT Printer, HHT) are checked before
+   their broader cousins (Printer, Hardware) so a phrase like
+   "HHT printer not scanning" doesn't fall through to "Printer".
+====================================================== */
+const RELATED_KEYWORD_RULES = [
+  {
+    value: "HHT Printer",
+    keywords: ["hht printer", "handheld printer", "mobile printer", "portable printer"],
+  },
+  {
+    value: "HHT",
+    keywords: ["hht", "handheld device", "handheld terminal", "scanner gun", "barcode scanner", "barcode device"],
+  },
+  {
+    value: "ERP",
+    keywords: ["erp", "sap", "tally", "oracle erp", "accounting software", "erp module", "erp login"],
+  },
+  {
+    value: "Syncwise",
+    keywords: ["syncwise"],
+  },
+  {
+    value: "Email",
+    keywords: ["email", "e-mail", "outlook", "gmail", "mailbox", "mail server", "mail not working"],
+  },
+  {
+    value: "Printer",
+    keywords: ["printer", "printout", "print job", "toner", "cartridge", "scanner", "print not working"],
+  },
+  {
+    value: "Network",
+    keywords: ["network", "wifi", "wi-fi", "internet", "vpn", "lan", "ethernet", "router", "connectivity"],
+  },
+  {
+    value: "Laptop/Desktop",
+    keywords: ["laptop", "desktop", "computer", "cpu not", "monitor", "screen flickering", "pc not"],
+  },
+  {
+    value: "Software",
+    keywords: ["software", "application", "app crash", "install", "software update", "license", "activation"],
+  },
+  {
+    value: "Hardware",
+    keywords: ["hardware", "mouse", "keyboard", "cable request", "device", "battery", "charger"],
+  },
+];
+
+const detectRelatedTo = (text) => {
+  const lower = text.toLowerCase();
+  for (const rule of RELATED_KEYWORD_RULES) {
+    const match = rule.keywords.find((kw) => lower.includes(kw));
+    if (match) return { value: rule.value, matched: match };
+  }
+  return null;
+};
+
 const PRIORITY_BADGE_STYLE = {
   Critical: "bg-red-600 text-white",
   High: "bg-orange-500 text-white",
@@ -243,6 +314,7 @@ export default function CreateTicket() {
     title: "",
     description: "",
     department: "",
+    relatedTo: "",
     impact: "",
     urgency: "",
     priority: "",
@@ -257,6 +329,9 @@ export default function CreateTicket() {
   const [autoSuggested, setAutoSuggested] = useState(null); // { impact, urgency, matched } | null
   const [manualImpactUrgency, setManualImpactUrgency] = useState(false); // true once user picks impact/urgency themselves
   const [overridePriority, setOverridePriority] = useState(false); // true when user wants to bypass the matrix entirely
+
+  const [relatedSuggested, setRelatedSuggested] = useState(null); // { value, matched } | null
+  const [manualRelatedTo, setManualRelatedTo] = useState(false); // true once user picks Related To themselves
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -294,6 +369,27 @@ export default function CreateTicket() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.title, form.description]);
 
+  // Same idea, but for Related To — separate rule set since it maps to a
+  // single dropdown value rather than an impact/urgency pair.
+  useEffect(() => {
+    const combined = `${form.title} ${form.description}`.trim();
+
+    if (!combined) {
+      setRelatedSuggested(null);
+      return;
+    }
+
+    const result = detectRelatedTo(combined);
+    setRelatedSuggested(result);
+
+    if (result && !manualRelatedTo) {
+      setForm((prev) =>
+        prev.relatedTo === result.value ? prev : { ...prev, relatedTo: result.value }
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.title, form.description]);
+
   // Recompute priority from the matrix whenever Impact/Urgency change,
   // unless the requester has switched on manual override.
   useEffect(() => {
@@ -317,6 +413,11 @@ export default function CreateTicket() {
 
   const setPriorityManually = (level) => {
     setForm((prev) => ({ ...prev, priority: level }));
+  };
+
+  const handleRelatedToChange = (e) => {
+    setManualRelatedTo(true);
+    handleChange(e);
   };
 
   const removeFile = (index) => {
@@ -366,6 +467,10 @@ export default function CreateTicket() {
       newErrors.department = "Department is required";
     }
 
+    if (!form.relatedTo.trim()) {
+      newErrors.relatedTo = "Please select what this ticket relates to";
+    }
+
     if (!overridePriority) {
       if (!form.impact) newErrors.impact = "Select how many people/systems are affected";
       if (!form.urgency) newErrors.urgency = "Select how time-sensitive this is";
@@ -392,6 +497,7 @@ export default function CreateTicket() {
       data.append("title", form.title);
       data.append("description", form.description);
       data.append("department", form.department);
+      data.append("relatedTo", form.relatedTo);
       data.append("priority", form.priority);
       // Impact/Urgency are sent too in case the backend is later extended
       // to store them — harmless extra fields otherwise.
@@ -417,6 +523,7 @@ export default function CreateTicket() {
           title: "",
           description: "",
           department: "",
+          relatedTo: "",
           impact: "",
           urgency: "",
           priority: "",
@@ -427,6 +534,8 @@ export default function CreateTicket() {
         setAutoSuggested(null);
         setManualImpactUrgency(false);
         setOverridePriority(false);
+        setRelatedSuggested(null);
+        setManualRelatedTo(false);
       } else {
         toast.error("Ticket creation failed");
       }
@@ -654,6 +763,43 @@ export default function CreateTicket() {
                 </select>
               </FormField>
 
+              {/* RELATED TO FIELD */}
+              <FormField
+                label="Related To"
+                name="relatedTo"
+                error={errors.relatedTo}
+                required
+                hint="What is this issue related to?"
+              >
+                <select
+                  id="relatedTo"
+                  name="relatedTo"
+                  value={form.relatedTo}
+                  onChange={handleRelatedToChange}
+                  required
+                  className={`w-full px-4 py-3 border rounded-lg font-medium placeholder-gray-400 transition focus:outline-none focus:ring-2 ${errors.relatedTo
+                    ? "border-red-300 focus:ring-red-200 bg-red-50"
+                    : "border-gray-200 focus:ring-blue-200 focus:border-blue-400"
+                    }`}
+                >
+                  <option value="" disabled>Select what this relates to...</option>
+                  {RELATED_OPTIONS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+
+                {relatedSuggested && !manualRelatedTo && (
+                  <div className="flex items-start gap-2 px-3 py-2 mt-2 rounded-lg bg-blue-50 border border-blue-100">
+                    <Zap className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-blue-700 leading-relaxed">
+                      Suggested from "<span className="italic">{relatedSuggested.matched}</span>" — feel free to adjust above
+                    </p>
+                  </div>
+                )}
+              </FormField>
+
               {/* FILE UPLOAD */}
               <FormField
                 label="Attachments"
@@ -849,6 +995,16 @@ export default function CreateTicket() {
                     </p>
                   </div>
 
+                  {/* Related To */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                      Related To
+                    </p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {form.relatedTo || "(Not selected)"}
+                    </p>
+                  </div>
+
                   {/* Files */}
                   {files.length > 0 && (
                     <div>
@@ -872,7 +1028,7 @@ export default function CreateTicket() {
 
                 {/* Submit Status */}
                 <div className="pt-4 border-t border-gray-200 text-center">
-                  {form.title && form.description && form.department && form.priority ? (
+                  {form.title && form.description && form.department && form.relatedTo && form.priority ? (
                     <p className="text-xs text-green-600 font-medium flex items-center justify-center gap-1">
                       <CheckCircle className="w-3 h-3" />
                       Ready to submit
