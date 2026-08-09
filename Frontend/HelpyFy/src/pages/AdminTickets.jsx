@@ -216,11 +216,14 @@ const SlaBadge = ({ ticket, now, onOpenReason }) => {
   );
 };
 
-// ADDED: breachReason prop — rendered as a small red note under the leg
-// whenever that leg is breached and a reason was recorded.
-const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now, breachReason }) => {
+// ADDED: leg ("response" | "resolution"), ticket, onOpenReason — lets this
+// row show/add a reason based on the LIVE computed breach state (overdue
+// counts as breached even if the ticket was closed without ever formally
+// triggering the persisted resolutionBreached/firstResponseBreached flag).
+const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now, breachReason, leg, ticket, onOpenReason }) => {
   const state = getSlaLegState({ due, achievedAt, breached, now });
   const theme = SLA_THEME[state.level];
+  const isBreached = state.level === "breached"; // ADDED: live state, not just the persisted flag
 
   let progressPct = 100;
   if (!achievedAt && due) {
@@ -259,13 +262,35 @@ const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now,
         </p>
       )}
 
-      {/* ADDED: breach reason, only shown when this leg actually breached */}
-      {breached && breachReason && (
+      {/* ADDED: reason section — shows on ANY breach (live state), with an
+          inline "add reason" action if nothing's been recorded yet */}
+      {isBreached && (
         <div className="mt-2 pt-2 border-t border-red-200/70">
           <p className="text-[10px] font-semibold text-red-700 uppercase tracking-wide mb-0.5">
             Reason
           </p>
-          <p className="text-[11px] text-red-700 leading-relaxed">{breachReason}</p>
+          {breachReason ? (
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[11px] text-red-700 leading-relaxed">{breachReason}</p>
+              {onOpenReason && ticket && (
+                <button
+                  onClick={() => onOpenReason(ticket, { leg, reason: breachReason })}
+                  className="text-[10px] text-red-600 hover:text-red-800 underline shrink-0"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+          ) : onOpenReason && ticket ? (
+            <button
+              onClick={() => onOpenReason(ticket, { leg, reason: "" })}
+              className="text-[11px] text-red-600 hover:text-red-800 underline"
+            >
+              Add reason
+            </button>
+          ) : (
+            <p className="text-[11px] text-slate-400">No reason recorded</p>
+          )}
         </div>
       )}
     </div>
@@ -296,6 +321,9 @@ const SlaDetailPanel = ({ ticket, now, onOpenReason }) => {
         breachReason={sla.firstResponseBreachReason}
         achievedLabel="Responded at"
         now={now}
+        leg="response"
+        ticket={ticket}
+        onOpenReason={onOpenReason}
       />
 
       <SlaLegRow
@@ -307,6 +335,9 @@ const SlaDetailPanel = ({ ticket, now, onOpenReason }) => {
         breachReason={sla.breachReason}
         achievedLabel="Resolved at"
         now={now}
+        leg="resolution"
+        ticket={ticket}
+        onOpenReason={onOpenReason}
       />
 
       {sla.escalated && (
@@ -338,7 +369,6 @@ const getReporterSubtext = (ticket) => {
 export default function AdminTickets() {
   const [tickets, setTickets] = useState([]);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(null); // ADDED: "Open" | "In Progress" | "Resolved" | "Closed" | "breached" | null
@@ -367,9 +397,9 @@ export default function AdminTickets() {
   const [stats, setStats] = useState(initialStats);
 
   useEffect(() => {
-    load(page);
+    load();
     loadStats();
-  }, [page]);
+  }, []); // CHANGED: load everything once; pagination is now client-side
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 30000);
@@ -404,12 +434,14 @@ export default function AdminTickets() {
     };
   }, [selected]);
 
-  const load = async (pageNumber = 1) => {
+  const load = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/tickets?page=${pageNumber}&limit=10`);
+      // CHANGED: fetch everything in one go (high limit) instead of one
+      // page at a time, so client-side filters (search + stat cards) can
+      // see every ticket, not just the 10 on the current server page.
+      const res = await api.get(`/tickets?page=1&limit=1000`);
       setTickets(res?.data?.data || []);
-      setTotalPages(res?.data?.pages || 1);
     } catch {
       toast.error("Failed to load tickets");
     } finally {
@@ -452,7 +484,7 @@ export default function AdminTickets() {
 
       toast.success("Ticket escalated successfully");
 
-      load(page);
+      load();
       loadStats();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to escalate");
@@ -467,7 +499,7 @@ export default function AdminTickets() {
 
       await api.put(`/tickets/${id}`, payload);
       toast.success(`Ticket marked as ${status}`);
-      load(page);
+      load();
       loadStats();
     } catch {
       toast.error("Update failed");
@@ -529,7 +561,7 @@ export default function AdminTickets() {
       });
       toast.success("Breach reason saved");
       cancelBreachModal();
-      load(page);
+      load();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to save reason");
     } finally {
@@ -563,6 +595,25 @@ export default function AdminTickets() {
   const breachedCount = tickets.filter(
     (t) => getOverallSlaState(t, now).level === "breached"
   ).length;
+
+  // ADDED: client-side pagination over the FILTERED set, so page counts
+  // and page contents always reflect the active search/stat-card filter,
+  // not just whichever 10 tickets the server happened to send for page N.
+  const PAGE_SIZE = 10;
+  const totalFilteredPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageTickets = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // ADDED: whenever the filter/search narrows the result set, jump back
+  // to page 1 so you don't land on a now-empty page.
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
+  // ADDED: if data reloads and the current page no longer exists (e.g.
+  // fewer results after a filter), clamp back into range.
+  useEffect(() => {
+    if (page > totalFilteredPages) setPage(totalFilteredPages);
+  }, [totalFilteredPages]);
 
   const priorityColor = (p) => {
     if (p === "High") return "bg-red-50 text-red-700 border border-red-200";
@@ -850,7 +901,7 @@ export default function AdminTickets() {
           <>
             {/* ================= MOBILE CARD LIST (< md) ================= */}
             <div className="md:hidden flex flex-col gap-3">
-              {filtered.map((t) => {
+              {pageTickets.map((t) => {
                 const theme = STATUS_THEME[t.status] || STATUS_THEME.Open;
                 const reporterName = getReporterName(t);
                 const reporterSubtext = getReporterSubtext(t);
@@ -953,7 +1004,7 @@ export default function AdminTickets() {
                   </thead>
 
                   <tbody className="divide-y divide-slate-100">
-                    {filtered.map((t) => {
+                    {pageTickets.map((t) => {
                       const theme = STATUS_THEME[t.status] || STATUS_THEME.Open;
                       const reporterName = getReporterName(t);
                       const reporterSubtext = getReporterSubtext(t);
@@ -1054,10 +1105,10 @@ export default function AdminTickets() {
             <IconChevronLeft className="w-4 h-4" />
           </button>
 
-          <span className="text-xs font-medium text-slate-500 tabular-nums">Page {page} of {totalPages}</span>
+          <span className="text-xs font-medium text-slate-500 tabular-nums">Page {page} of {totalFilteredPages}</span>
 
           <button
-            disabled={page === totalPages}
+            disabled={page === totalFilteredPages}
             onClick={() => setPage(page + 1)}
             className="w-8 h-8 flex items-center justify-center border border-slate-200 bg-white rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition"
           >
