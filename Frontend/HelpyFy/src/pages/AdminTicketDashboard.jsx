@@ -126,7 +126,7 @@ export default function AdminTicketDashboard() {
     if (user?.role !== "super_admin") return;
     api
       .get("/companies")
-      .then((res) => setCompanies(res?.data?.data || res?.data || []))
+      .then((res) => setCompanies(res?.data?.companies || []))
       .catch((err) => console.error("Failed to load companies", err));
   }, []);
 
@@ -384,7 +384,7 @@ export default function AdminTicketDashboard() {
                   className="border-0 bg-transparent text-xs font-medium text-slate-600 outline-none max-w-[180px]"
                 >
                   <option value="">All Companies</option>
-                  {companies.map((c) => (
+                  {(Array.isArray(companies) ? companies : []).map((c) => (
                     <option key={c._id} value={c._id}>
                       {c.name}
                     </option>
