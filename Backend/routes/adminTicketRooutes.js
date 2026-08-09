@@ -1,7 +1,7 @@
 import express from "express";
 
 import { protect } from "../middleware/authMiddleware.js";
-import { getTicketKpis, getDepartmentChart, getTicketCategoryChart, getTicketPriorityChart, getTicketStatusChart, getTicketTrend } from "../controllers/adminTicketDashboardController.js";
+import { getTicketKpis, getDepartmentChart, getTicketCategoryChart, getTicketPriorityChart, getTicketStatusChart, getTicketTrend,getAvgResolutionTime } from "../controllers/adminTicketDashboardController.js";
 
 const router = express.Router();
 
@@ -22,5 +22,7 @@ router.get("/priority", protect, getTicketPriorityChart);
 router.get("/category", protect, getTicketCategoryChart);
 
 router.get("/department", protect, getDepartmentChart);
+
+router.get("/avg-resolution-time", protect, getAvgResolutionTime);
 
 export default router;

@@ -228,3 +228,42 @@ export const getTicketCategoryChart = async (req, res) => {
     });
   }
 };
+
+export const getAvgResolutionTime = async (req, res) => {
+  try {
+    const filter = getCompanyFilter(req.user);
+    const { from, to } = req.query;
+
+    if (from && to) {
+      filter.createdAt = buildDateRangeFilter(from, to);
+    }
+
+    // Only tickets that actually have a resolution timestamp count
+    // toward the average. Adjust `resolvedAt` below if your schema
+    // uses a different field name (e.g. closedAt, resolvedOn).
+    filter.resolvedAt = { $exists: true, $ne: null };
+
+    const result = await Ticket.aggregate([
+      { $match: filter },
+      {
+        $project: {
+          resolutionMs: { $subtract: ["$resolvedAt", "$createdAt"] },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          avgResolutionMs: { $avg: "$resolutionMs" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    res.json({
+      avgResolutionMs: result[0]?.avgResolutionMs || 0,
+      count: result[0]?.count || 0,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
