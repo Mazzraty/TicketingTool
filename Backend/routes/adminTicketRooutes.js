@@ -1,7 +1,7 @@
 import express from "express";
 
 import { protect } from "../middleware/authMiddleware.js";
-import { getTicketKpis, getDepartmentChart, getTicketCategoryChart, getTicketPriorityChart, getTicketStatusChart, getTicketTrend, getAvgResolutionTime } from "../controllers/adminTicketDashboardController.js";
+import { getTicketKpis, getDepartmentChart, getTicketCategoryChart, getTicketPriorityChart, getTicketStatusChart, getTicketTrend, getAvgResolutionTime, getAvgFirstResponseTime } from "../controllers/adminTicketDashboardController.js";
 import { getSlaPolicy } from "../controllers/adminTicketDashboardController.js";
 const router = express.Router();
 
@@ -24,6 +24,7 @@ router.get("/category", protect, getTicketCategoryChart);
 router.get("/department", protect, getDepartmentChart);
 
 router.get("/avg-resolution-time", protect, getAvgResolutionTime);
+router.get("/avg-first-response-time", protect, getAvgFirstResponseTime);
 
 router.get("/sla-policy", protect, getSlaPolicy);
 
