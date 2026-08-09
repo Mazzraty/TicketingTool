@@ -1274,3 +1274,48 @@ export const escalateTicket = async (req, res) => {
     });
   }
 };
+
+
+
+export const addSlaBreachReason = async (req, res) => {
+  try {
+    const { reason, leg } = req.body; // leg: "response" | "resolution"
+
+    if (!reason?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Reason is required",
+      });
+    }
+
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    if (leg === "response") {
+      ticket.sla.firstResponseBreachReason = reason.trim();
+    } else {
+      // default to resolution leg
+      ticket.sla.breachReason = reason.trim();
+    }
+
+    await ticket.save();
+
+    res.json({
+      success: true,
+      message: "SLA breach reason saved",
+      data: ticket,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};

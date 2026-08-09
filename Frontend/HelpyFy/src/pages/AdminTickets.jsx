@@ -155,13 +155,53 @@ const priorityDot = {
 
 /* ================= SLA UI COMPONENTS ================= */
 
-const SlaBadge = ({ ticket, now }) => {
+// ADDED: figures out which SLA leg is currently breached on a ticket
+// (resolution takes priority over response) and returns its existing
+// reason, if any, so the badge/modal know what to show.
+const getBreachLegInfo = (ticket, now) => {
+  const sla = ticket.sla;
+  if (!sla) return null;
+
+  const resolutionState = getSlaLegState({
+    due: sla.resolutionDue,
+    achievedAt: sla.resolvedAt,
+    breached: sla.resolutionBreached,
+    now,
+  });
+
+  if (resolutionState.level === "breached") {
+    return { leg: "resolution", reason: sla.breachReason || "" };
+  }
+
+  if (!sla.firstRespondedAt) {
+    const responseState = getSlaLegState({
+      due: sla.firstResponseDue,
+      achievedAt: sla.firstRespondedAt,
+      breached: sla.firstResponseBreached,
+      now,
+    });
+    if (responseState.level === "breached") {
+      return { leg: "response", reason: sla.firstResponseBreachReason || "" };
+    }
+  }
+
+  return null;
+};
+
+// ADDED: onOpenReason — called when the badge is clicked on a breached
+// ticket. Optional so SlaBadge still works anywhere it's used without it.
+const SlaBadge = ({ ticket, now, onOpenReason }) => {
   const state = getOverallSlaState(ticket, now);
   const theme = SLA_THEME[state.level];
+  const breachInfo = state.level === "breached" ? getBreachLegInfo(ticket, now) : null;
+  const clickable = state.level === "breached" && onOpenReason && breachInfo;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${theme.bg} ${theme.text} ${theme.border}`}
+      onClick={clickable ? () => onOpenReason(ticket, breachInfo) : undefined}
+      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${theme.bg} ${theme.text} ${theme.border} ${clickable ? "cursor-pointer hover:brightness-95" : ""
+        }`}
+      title={clickable ? (breachInfo.reason ? "Click to edit breach reason" : "Click to add breach reason") : undefined}
     >
       {state.level === "breached" ? (
         <IconAlertTriangle className="w-3 h-3" />
@@ -169,6 +209,9 @@ const SlaBadge = ({ ticket, now }) => {
         <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`} />
       )}
       {state.label}
+      {clickable && !breachInfo.reason && (
+        <span className="text-[10px] underline decoration-dotted ml-0.5">add reason</span>
+      )}
     </span>
   );
 };
@@ -229,7 +272,7 @@ const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now,
   );
 };
 
-const SlaDetailPanel = ({ ticket, now }) => {
+const SlaDetailPanel = ({ ticket, now, onOpenReason }) => {
   const sla = ticket.sla;
   if (!sla) {
     return <p className="text-xs text-slate-400">No SLA policy on this ticket</p>;
@@ -241,7 +284,7 @@ const SlaDetailPanel = ({ ticket, now }) => {
         <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${priorityDot[sla.priority] || "bg-slate-400"} text-white`}>
           {sla.priority || "—"} priority
         </span>
-        <SlaBadge ticket={ticket} now={now} />
+        <SlaBadge ticket={ticket} now={now} onOpenReason={onOpenReason} />
       </div>
 
       <SlaLegRow
@@ -298,12 +341,18 @@ export default function AdminTickets() {
   const [totalPages, setTotalPages] = useState(1);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState(null); // ADDED: "Open" | "In Progress" | "Resolved" | "Closed" | "breached" | null
   const [loading, setLoading] = useState(false);
 
   const [statusModal, setStatusModal] = useState(null);
   const [resolutionNote, setResolutionNote] = useState("");
   const [breachReason, setBreachReason] = useState(""); // ADDED
   const [submitting, setSubmitting] = useState(false);
+
+  // ADDED: quick "add reason immediately" modal, independent of resolve/close flow
+  const [breachModal, setBreachModal] = useState(null); // { ticket, leg }
+  const [breachModalText, setBreachModalText] = useState("");
+  const [breachSubmitting, setBreachSubmitting] = useState(false);
   const user = JSON.parse(localStorage.getItem("user"));
   const [now, setNow] = useState(() => new Date());
 
@@ -457,18 +506,58 @@ export default function AdminTickets() {
     setBreachReason(""); // ADDED
   };
 
+  // ADDED: open the quick reason modal when the breached badge is clicked
+  const openBreachModal = (ticket, breachInfo) => {
+    setBreachModal({ ticket, leg: breachInfo.leg });
+    setBreachModalText(breachInfo.reason || "");
+  };
+
+  const cancelBreachModal = () => {
+    setBreachModal(null);
+    setBreachModalText("");
+  };
+
+  const saveBreachReason = async () => {
+    if (!breachModalText.trim()) {
+      return toast.error("Please enter a reason");
+    }
+    try {
+      setBreachSubmitting(true);
+      await api.put(`/tickets/${breachModal.ticket._id}/sla-breach-reason`, {
+        reason: breachModalText.trim(),
+        leg: breachModal.leg,
+      });
+      toast.success("Breach reason saved");
+      cancelBreachModal();
+      load(page);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save reason");
+    } finally {
+      setBreachSubmitting(false);
+    }
+  };
+
   const filtered = tickets.filter((t) => {
     const s = search.toLowerCase();
     const slaState = getOverallSlaState(t, now).label.toLowerCase();
-    return (
+
+    const matchesSearch =
       t.title?.toLowerCase().includes(s) ||
       t.ticketNumber?.toLowerCase().includes(s) ||
       getReporterName(t).toLowerCase().includes(s) ||
       t.userId?.email?.toLowerCase().includes(s) ||
       t.priority?.toLowerCase().includes(s) ||
       t.status?.toLowerCase().includes(s) ||
-      slaState.includes(s)
-    );
+      slaState.includes(s);
+
+    // ADDED: stat-card filter (status, or SLA breached)
+    const matchesFilter =
+      !statusFilter ||
+      (statusFilter === "breached"
+        ? getOverallSlaState(t, now).level === "breached"
+        : t.status === statusFilter);
+
+    return matchesSearch && matchesFilter;
   });
 
   const breachedCount = tickets.filter(
@@ -517,12 +606,12 @@ export default function AdminTickets() {
   };
 
   const statCards = [
-    { key: "total", label: "Total", value: stats.total, theme: "slate", icon: <IconLayers className="w-4 h-4" /> },
-    { key: "open", label: "Open", value: stats.open, theme: "blue", icon: <IconCircleDot className="w-4 h-4" /> },
-    { key: "inProgress", label: "In Progress", value: stats.inProgress, theme: "amber", icon: <IconClock className="w-4 h-4" /> },
-    { key: "resolved", label: "Resolved", value: stats.resolved, theme: "emerald", icon: <IconCheck className="w-4 h-4" /> },
-    { key: "closed", label: "Closed", value: stats.closed, theme: "slate", icon: <IconLock className="w-4 h-4" /> },
-    { key: "breached", label: "SLA Breached", value: breachedCount, theme: "red", icon: <IconAlertTriangle className="w-4 h-4" /> },
+    { key: "total", label: "Total", value: stats.total, theme: "slate", icon: <IconLayers className="w-4 h-4" />, filterKey: null },
+    { key: "open", label: "Open", value: stats.open, theme: "blue", icon: <IconCircleDot className="w-4 h-4" />, filterKey: "Open" },
+    { key: "inProgress", label: "In Progress", value: stats.inProgress, theme: "amber", icon: <IconClock className="w-4 h-4" />, filterKey: "In Progress" },
+    { key: "resolved", label: "Resolved", value: stats.resolved, theme: "emerald", icon: <IconCheck className="w-4 h-4" />, filterKey: "Resolved" },
+    { key: "closed", label: "Closed", value: stats.closed, theme: "slate", icon: <IconLock className="w-4 h-4" />, filterKey: "Closed" },
+    { key: "breached", label: "SLA Breached", value: breachedCount, theme: "red", icon: <IconAlertTriangle className="w-4 h-4" />, filterKey: "breached" },
   ];
 
   const statBarClass = {
@@ -607,7 +696,7 @@ export default function AdminTickets() {
                 <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                   <IconClock className="w-3.5 h-3.5" /> SLA Tracking
                 </p>
-                <SlaDetailPanel ticket={selected} now={now} />
+                <SlaDetailPanel ticket={selected} now={now} onOpenReason={openBreachModal} />
               </div>
 
               <div>
@@ -705,19 +794,48 @@ export default function AdminTickets() {
 
         {/* STATS — 2 columns on phones so labels/numbers stay readable, not squeezed to 6-across */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          {statCards.map((s) => (
-            <div key={s.key} className="relative bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 overflow-hidden shadow-sm">
-              <span className={`absolute left-0 top-0 bottom-0 w-1 ${statBarClass[s.theme]}`} />
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-slate-400">{s.label}</p>
-                <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${statIconClass[s.theme]}`}>
-                  {s.icon}
-                </span>
-              </div>
-              <p className="text-2xl font-bold text-slate-900 tabular-nums">{s.value}</p>
-            </div>
-          ))}
+          {statCards.map((s) => {
+            // ADDED: a card is "active" if it's the currently applied filter,
+            // or if it's the Total card and no filter is applied at all.
+            const isActive = s.filterKey === null ? statusFilter === null : statusFilter === s.filterKey;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setStatusFilter(isActive && s.filterKey !== null ? null : s.filterKey)}
+                className={`relative bg-white border rounded-xl p-3.5 sm:p-4 overflow-hidden shadow-sm text-left transition ${isActive ? "border-slate-400 ring-2 ring-slate-200" : "border-slate-200 hover:border-slate-300"
+                  }`}
+              >
+                <span className={`absolute left-0 top-0 bottom-0 w-1 ${statBarClass[s.theme]}`} />
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-slate-400">{s.label}</p>
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${statIconClass[s.theme]}`}>
+                    {s.icon}
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-slate-900 tabular-nums">{s.value}</p>
+              </button>
+            );
+          })}
         </div>
+
+        {/* ADDED: active filter indicator + clear button */}
+        {statusFilter && (
+          <div className="flex items-center gap-2 mb-4 -mt-2">
+            <span className="text-xs text-slate-500">
+              Filtering by:{" "}
+              <span className="font-semibold text-slate-700">
+                {statusFilter === "breached" ? "SLA Breached" : statusFilter}
+              </span>
+            </span>
+            <button
+              onClick={() => setStatusFilter(null)}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium underline"
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <div className="bg-white border border-slate-200 rounded-xl p-16 text-center text-sm text-slate-400 shadow-sm">
@@ -725,8 +843,8 @@ export default function AdminTickets() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-white border border-slate-200 rounded-xl p-16 text-center shadow-sm">
-            <p className="text-sm font-medium text-slate-600">No tickets match your search</p>
-            <p className="text-xs text-slate-400 mt-1">Try a different keyword or clear the search box</p>
+            <p className="text-sm font-medium text-slate-600">No tickets match your filters</p>
+            <p className="text-xs text-slate-400 mt-1">Try a different keyword, or clear the active filter above</p>
           </div>
         ) : (
           <>
@@ -764,7 +882,7 @@ export default function AdminTickets() {
 
                     <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                       <StatusSelect t={t} theme={theme} />
-                      <SlaBadge ticket={t} now={now} />
+                      <SlaBadge ticket={t} now={now} onOpenReason={openBreachModal} />
                     </div>
 
                     {t.resolutionNote && (
@@ -818,7 +936,7 @@ export default function AdminTickets() {
                   <thead>
                     <tr className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-200">
                       <th className="p-3.5 text-left font-semibold">Ticket #</th>
-                      <th className="p-3.5 text-left font-semibold">Details</th>
+                      <th className="p-3.5 text-left font-semibold">Ticket</th>
                       <th className="p-3.5 text-left font-semibold">Reported By</th>
                       <th className="p-3.5 text-left font-semibold">Company</th>
                       <th className="p-3.5 text-center font-semibold">Priority</th>
@@ -884,7 +1002,7 @@ export default function AdminTickets() {
                           </td>
 
                           <td className="p-3.5 text-center">
-                            <SlaBadge ticket={t} now={now} />
+                            <SlaBadge ticket={t} now={now} onOpenReason={openBreachModal} />
                           </td>
 
                           <td className="p-3.5 text-center text-xs text-slate-500">{formatDateTime(t.createdAt)}</td>
@@ -1017,6 +1135,57 @@ export default function AdminTickets() {
                 className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition disabled:opacity-60"
               >
                 {submitting ? "Saving…" : `Confirm ${statusModal.targetStatus}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= ADDED: QUICK SLA BREACH REASON MODAL =================
+          Opens the instant an admin clicks a breached SLA badge, so the
+          reason can be captured right when the breach happens — no need
+          to wait until the ticket is Resolved/Closed. */}
+      {breachModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6">
+            <div className="flex items-center gap-3 mb-1">
+              <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-red-50 text-red-600">
+                <IconAlertTriangle className="w-4 h-4" />
+              </span>
+              <h3 className="font-bold text-base text-slate-900">
+                Why did the SLA breach?
+              </h3>
+            </div>
+            <p className="text-xs text-slate-400 mb-4 ml-12 -mt-1 truncate">
+              "{breachModal.ticket.title}" — {breachModal.leg === "response" ? "First Response" : "Resolution"} SLA
+            </p>
+
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+              Reason <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              className="w-full border border-red-200 bg-red-50/40 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 transition resize-none placeholder:text-slate-400"
+              rows={4}
+              placeholder="e.g. Waiting on vendor part, technician unavailable, escalated to super admin."
+              value={breachModalText}
+              onChange={(e) => setBreachModalText(e.target.value)}
+              autoFocus
+            />
+
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                onClick={cancelBreachModal}
+                disabled={breachSubmitting}
+                className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveBreachReason}
+                disabled={breachSubmitting}
+                className="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition disabled:opacity-60"
+              >
+                {breachSubmitting ? "Saving…" : "Save Reason"}
               </button>
             </div>
           </div>

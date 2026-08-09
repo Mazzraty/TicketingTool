@@ -14,7 +14,8 @@ import {
   reopenTicket,
   confirmResolution,
   deleteAttachment,
-  escalateTicket
+  escalateTicket,
+  addSlaBreachReason
 } from "../controllers/ticketController.js";
 
 
@@ -229,7 +230,7 @@ router.put(
   updateStatus
 );
 
-
+router.put("/:id/sla-breach-reason", protect,companyCheck,adminOnly, addSlaBreachReason);
 
 
 // DELETE TICKET

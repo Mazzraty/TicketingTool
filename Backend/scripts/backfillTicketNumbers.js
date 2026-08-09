@@ -1,125 +1,92 @@
 /**
- * backfillTicketNumbers.js
+ * backfillSlaBreachReason.js
  *
- * One-time migration: assigns ticketNumber to any existing tickets that
- * don't have one yet. Uses the SAME TicketCounter collection/logic as
- * generateTicketNumber() in utils/generateTicketNumber.js, so future
- * tickets created normally will continue the sequence correctly and
- * never collide with these backfilled numbers.
+ * One-time migration: adds sla.breachReason and sla.firstResponseBreachReason
+ * to existing tickets that don't have them yet.
  *
- * Difference from calling generateTicketNumber() directly: that helper
- * always stamps the CURRENT year. This script instead uses each
- * ticket's own createdAt year, so old tickets get historically
- * accurate numbers (e.g. a ticket from 2025 gets "...-2025-000001",
- * not "...-2026-...").
+ * Why this is needed: Mongoose schema `default: ""` only applies when a NEW
+ * document is created. Tickets that already existed in the database before
+ * these fields were added to ticketSchema.js do NOT have them at all — so
+ * reading ticket.sla.breachReason on an old ticket returns undefined, not "".
+ * This script writes "" (or a note, for already-breached tickets) onto every
+ * existing ticket so the fields are consistently present going forward.
  *
- * Processes tickets oldest-first (by createdAt) so sequence numbers
- * within each company+year bucket are assigned in the order tickets
- * were actually created.
+ * Behavior:
+ *   - If sla.resolutionBreached is true and breachReason is missing/empty,
+ *     sets a placeholder note ("Backfilled - reason not recorded") so it's
+ *     obvious in the UI that this is historical data, not a real reason.
+ *   - If sla.firstResponseBreached is true and firstResponseBreachReason is
+ *     missing/empty, same placeholder treatment.
+ *   - If a leg was NOT breached, the field is just set to "" (normal default).
+ *   - Tickets that already have a non-empty reason are left untouched.
  *
  * Usage:
- *   node backfillTicketNumbers.js
+ *   node backfillSlaBreachReason.js
  *
  * IMPORTANT:
  *   - Take a database backup before running this.
- *   - Set MONGODB_URI in your env (or hardcode your connection string
- *     below) before running.
- *   - Adjust the relative import paths below to match where you place
- *     this script in your project (paths assume it sits next to your
- *     existing controllers/ folder, alongside models/ and utils/).
+ *   - Set MONGO_URI in your env before running.
+ *   - Adjust the relative import path for Ticket below to match where you
+ *     place this script (assumes it sits next to your controllers/ folder,
+ *     alongside models/).
  */
 
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import Ticket from "../models/ticketSchema.js";
-import Company from "../models/comapnySchema.js";
-import TicketCounter from "../models/ticketCounterSchema.js";
 
 dotenv.config();
 
-async function getNextTicketNumber(companyId, companyCode, year) {
-  const counter = await TicketCounter.findOneAndUpdate(
-    { companyId, year },
-    {
-      $inc: { sequence: 1 },
-      $setOnInsert: { companyId, year },
-    },
-    { new: true, upsert: true }
-  );
-
-  const sequence = String(counter.sequence).padStart(6, "0");
-  return `${companyCode}-${year}-${sequence}`;
-}
+const PLACEHOLDER_NOTE = "Backfilled - reason not recorded";
 
 async function run() {
   await mongoose.connect(process.env.MONGO_URI);
   console.log("Connected to DB");
 
-  // Only tickets missing a ticketNumber, oldest first so numbers are
-  // assigned in the order tickets were actually created.
-  const tickets = await Ticket.find({
-    $or: [
-      { ticketNumber: { $exists: false } },
-      { ticketNumber: null },
-      { ticketNumber: "" },
-    ],
-  }).sort({ createdAt: 1 });
+  // Grab every ticket that has an sla object at all. We check field
+  // presence in JS below rather than in the query, since $exists on a
+  // nested path only tells us the key is missing, and we want to handle
+  // "missing" and "empty string" the same way.
+  const tickets = await Ticket.find({ sla: { $exists: true, $ne: null } });
 
-  console.log(`Found ${tickets.length} tickets without a ticket number`);
-
-  // Cache resolved company codes so we don't re-query per ticket.
-  const companyCodeCache = new Map();
+  console.log(`Found ${tickets.length} tickets with an sla object`);
 
   let updated = 0;
   let skipped = 0;
 
   for (const ticket of tickets) {
     try {
-      const companyIdStr = ticket.companyId?.toString();
+      let changed = false;
 
-      if (!companyIdStr) {
-        console.warn(`Skipping ${ticket._id} — no companyId on ticket`);
+      // ============================
+      // RESOLUTION BREACH REASON
+      // ============================
+      if (!ticket.sla.breachReason) {
+        ticket.sla.breachReason = ticket.sla.resolutionBreached
+          ? PLACEHOLDER_NOTE
+          : "";
+        changed = true;
+      }
+
+      // ============================
+      // FIRST RESPONSE BREACH REASON
+      // ============================
+      if (!ticket.sla.firstResponseBreachReason) {
+        ticket.sla.firstResponseBreachReason = ticket.sla.firstResponseBreached
+          ? PLACEHOLDER_NOTE
+          : "";
+        changed = true;
+      }
+
+      if (!changed) {
         skipped++;
         continue;
       }
 
-      let companyCode = companyCodeCache.get(companyIdStr);
-
-      if (!companyCode) {
-        const company = await Company.findById(ticket.companyId);
-
-        if (!company) {
-          console.warn(`Skipping ${ticket._id} — company not found`);
-          skipped++;
-          continue;
-        }
-
-        companyCode =
-          company.code ||
-          company.companyCode ||
-          company.name?.replace(/[^a-zA-Z0-9]/g, "").substring(0, 3).toUpperCase();
-
-        if (!companyCode) {
-          console.warn(`Skipping ${ticket._id} — no company code resolvable`);
-          skipped++;
-          continue;
-        }
-
-        companyCodeCache.set(companyIdStr, companyCode);
-      }
-
-      const year = new Date(ticket.createdAt).getFullYear();
-
-      const ticketNumber = await getNextTicketNumber(
-        ticket.companyId,
-        companyCode,
-        year
-      );
-
-      ticket.ticketNumber = ticketNumber;
       await ticket.save();
-
-      console.log(`${ticket._id} -> ${ticketNumber}`);
+      console.log(
+        `${ticket._id} -> breachReason: "${ticket.sla.breachReason}", firstResponseBreachReason: "${ticket.sla.firstResponseBreachReason}"`
+      );
       updated++;
     } catch (err) {
       console.error(`Failed on ${ticket._id}:`, err.message);
@@ -127,7 +94,7 @@ async function run() {
     }
   }
 
-  console.log(`Done. Updated: ${updated}, Skipped: ${skipped}`);
+  console.log(`Done. Updated: ${updated}, Skipped (already had values): ${skipped}`);
   await mongoose.disconnect();
 }
 
