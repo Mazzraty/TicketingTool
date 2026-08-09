@@ -225,6 +225,15 @@ const ticketSchema = new mongoose.Schema(
       default: "",
     },
 
+    // ADDED: was missing from the schema entirely. The frontend has been
+    // sending this field on Resolve/Close (payload.resolutionNote), but
+    // Mongoose silently dropped it on save since it wasn't a defined
+    // field on the schema — so it never actually persisted to the DB.
+    resolutionNote: {
+      type: String,
+      default: "",
+    },
+
     rating: {
       type: Number,
       min: 0,
