@@ -186,8 +186,7 @@ export default function AdminTicketDashboard() {
           pointHoverBorderWidth: 2,
         },
       ],
-    };
-  }, [trend]);
+    }), [trend]);
 
   const trendChartOptions = {
     responsive: true,
