@@ -98,6 +98,8 @@ const KPI_CARDS = [
 ];
 
 export default function AdminTicketDashboard() {
+  const user = JSON.parse(localStorage.getItem("user")); // ADDED
+
   const [range, setRange] = useState({ from: daysAgoStr(30), to: todayStr() });
   const [activeQuick, setActiveQuick] = useState(30);
   const [loading, setLoading] = useState(true);
@@ -114,10 +116,29 @@ export default function AdminTicketDashboard() {
   const [prevAvgFirstResponse, setPrevAvgFirstResponse] = useState(null);
   const [slaPolicy, setSlaPolicy] = useState(null);
 
+  // ADDED: company filter — super_admin only, since that's the one role
+  // that sees tickets across every company rather than just its own.
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(""); // "" = all companies
+
+  // ADDED: fetch the company list once, only for super_admin
+  useEffect(() => {
+    if (user?.role !== "super_admin") return;
+    api
+      .get("/companies")
+      .then((res) => setCompanies(res?.data?.data || res?.data || []))
+      .catch((err) => console.error("Failed to load companies", err));
+  }, []);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { from: range.from, to: range.to };
+      const params = {
+        from: range.from,
+        to: range.to,
+        // ADDED: only sent when a specific company is selected
+        ...(selectedCompany ? { companyId: selectedCompany } : {}),
+      };
 
       // Previous period, same length, for trend comparison on KPI cards
       const spanDays = rangeDays(range.from, range.to);
@@ -128,6 +149,8 @@ export default function AdminTicketDashboard() {
       const prevParams = {
         from: prevFrom.toISOString().split("T")[0],
         to: prevTo.toISOString().split("T")[0],
+        // ADDED
+        ...(selectedCompany ? { companyId: selectedCompany } : {}),
       };
 
       const [
@@ -173,7 +196,7 @@ export default function AdminTicketDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [range]);
+  }, [range, selectedCompany]); // CHANGED: re-fetch when company filter changes too
 
   useEffect(() => {
     fetchAll();
@@ -350,46 +373,67 @@ export default function AdminTicketDashboard() {
             </p>
           </div>
 
-          {/* DATE FILTER */}
-          <div className="flex flex-wrap items-end gap-2 bg-white border border-slate-200 rounded-xl p-2.5 shadow-sm">
-            <div className="flex gap-1 mr-1">
-              {[
-                { label: "7D", days: 7 },
-                { label: "30D", days: 30 },
-                { label: "90D", days: 90 },
-              ].map((q) => (
-                <button
-                  key={q.label}
-                  onClick={() => applyQuickRange(q.days)}
-                  className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition ${
-                    activeQuick === q.days
-                      ? "bg-blue-600 text-white"
-                      : "bg-transparent text-slate-500 hover:bg-slate-100"
-                  }`}
+          <div className="flex flex-wrap items-end gap-2">
+            {/* ADDED: company filter, super_admin only */}
+            {user?.role === "super_admin" && (
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm">
+                <IconTicket className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={selectedCompany}
+                  onChange={(e) => setSelectedCompany(e.target.value)}
+                  className="border-0 bg-transparent text-xs font-medium text-slate-600 outline-none max-w-[180px]"
                 >
-                  {q.label}
-                </button>
-              ))}
-            </div>
-            <div className="w-px h-7 bg-slate-200" />
-            <div className="flex items-center gap-1.5 px-1">
-              <IconCalendar className="w-3.5 h-3.5 text-slate-400" />
-              <input
-                type="date"
-                className="border-0 bg-transparent text-xs font-medium text-slate-600 outline-none w-[110px]"
-                value={range.from}
-                max={range.to}
-                onChange={handleRangeChange("from")}
-              />
-              <span className="text-slate-300 text-xs">→</span>
-              <input
-                type="date"
-                className="border-0 bg-transparent text-xs font-medium text-slate-600 outline-none w-[110px]"
-                value={range.to}
-                min={range.from}
-                max={todayStr()}
-                onChange={handleRangeChange("to")}
-              />
+                  <option value="">All Companies</option>
+                  {companies.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* DATE FILTER */}
+            <div className="flex flex-wrap items-end gap-2 bg-white border border-slate-200 rounded-xl p-2.5 shadow-sm">
+              <div className="flex gap-1 mr-1">
+                {[
+                  { label: "7D", days: 7 },
+                  { label: "30D", days: 30 },
+                  { label: "90D", days: 90 },
+                ].map((q) => (
+                  <button
+                    key={q.label}
+                    onClick={() => applyQuickRange(q.days)}
+                    className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition ${
+                      activeQuick === q.days
+                        ? "bg-blue-600 text-white"
+                        : "bg-transparent text-slate-500 hover:bg-slate-100"
+                    }`}
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+              <div className="w-px h-7 bg-slate-200" />
+              <div className="flex items-center gap-1.5 px-1">
+                <IconCalendar className="w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="date"
+                  className="border-0 bg-transparent text-xs font-medium text-slate-600 outline-none w-[110px]"
+                  value={range.from}
+                  max={range.to}
+                  onChange={handleRangeChange("from")}
+                />
+                <span className="text-slate-300 text-xs">→</span>
+                <input
+                  type="date"
+                  className="border-0 bg-transparent text-xs font-medium text-slate-600 outline-none w-[110px]"
+                  value={range.to}
+                  min={range.from}
+                  max={todayStr()}
+                  onChange={handleRangeChange("to")}
+                />
+              </div>
             </div>
           </div>
         </div>
