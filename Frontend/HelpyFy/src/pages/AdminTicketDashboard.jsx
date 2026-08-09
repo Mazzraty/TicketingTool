@@ -121,12 +121,18 @@ export default function AdminTicketDashboard() {
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(""); // "" = all companies
 
+  const normalizeArray = (value) => (Array.isArray(value) ? value : []);
+
   // ADDED: fetch the company list once, only for super_admin
   useEffect(() => {
     if (user?.role !== "super_admin") return;
     api
       .get("/companies")
-      .then((res) => setCompanies(res?.data?.companies || []))
+      .then((res) => {
+        const payload = res?.data;
+        const normalizedCompanies = normalizeArray(payload?.companies) || normalizeArray(payload?.data) || normalizeArray(payload);
+        setCompanies(normalizedCompanies);
+      })
       .catch((err) => console.error("Failed to load companies", err));
   }, []);
 
@@ -181,11 +187,11 @@ export default function AdminTicketDashboard() {
 
       setKpis(kpisRes.data);
       setPrevKpis(prevKpisRes.data);
-      setTrend(trendRes.data);
-      setStatusData(statusRes.data);
-      setPriorityData(priorityRes.data);
-      setDepartmentData(departmentRes.data);
-      setCategoryData(categoryRes.data);
+      setTrend(normalizeArray(trendRes.data));
+      setStatusData(normalizeArray(statusRes.data));
+      setPriorityData(normalizeArray(priorityRes.data));
+      setDepartmentData(normalizeArray(departmentRes.data));
+      setCategoryData(normalizeArray(categoryRes.data));
       setAvgResolution(avgResRes.data);
       setPrevAvgResolution(prevAvgResRes.data);
       setAvgFirstResponse(avgFirstResRes.data);
@@ -246,14 +252,16 @@ export default function AdminTicketDashboard() {
 
   /* ================= TREND CHART ================= */
   const trendChartData = useMemo(
-    () => ({
-      labels: trend.map((t) =>
-        new Date(t._id).toLocaleDateString(undefined, { month: "short", day: "numeric" })
-      ),
-      datasets: [
-        {
-          label: "Tickets",
-          data: trend.map((t) => t.tickets),
+    () => {
+      const normalizedTrend = normalizeArray(trend);
+      return {
+        labels: normalizedTrend.map((t) =>
+          new Date(t._id).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+        ),
+        datasets: [
+          {
+            label: "Tickets",
+            data: normalizedTrend.map((t) => t.tickets),
           borderColor: "#2563eb",
           borderWidth: 2,
           backgroundColor: (ctx) => {
@@ -310,7 +318,8 @@ export default function AdminTicketDashboard() {
 
   /* ================= HORIZONTAL BAR BUILDERS ================= */
   const buildBarData = (data, colorMap) => {
-    const sorted = [...data].sort((a, b) => b.value - a.value);
+    const arrayData = normalizeArray(data);
+    const sorted = [...arrayData].sort((a, b) => b.value - a.value);
     return {
       labels: sorted.map((d) => d._id || "Unassigned"),
       datasets: [
