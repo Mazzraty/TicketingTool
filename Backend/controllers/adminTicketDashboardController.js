@@ -1,5 +1,6 @@
 import Ticket from "../models/ticketSchema.js";
 import { getCompanyFilter } from "./dashboardController.js";
+import { slaPolicy } from "../config/slaPolicy.js";
 
 /* =========================
    HELPER: INCLUSIVE DATE RANGE
@@ -16,6 +17,9 @@ const buildDateRangeFilter = (from, to) => {
   return { $gte: new Date(from), $lte: end };
 };
 
+export const getSlaPolicy = async (req, res) => {
+  res.json(slaPolicy);
+};
 export const getTicketKpis = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user);
@@ -62,6 +66,7 @@ export const getTicketKpis = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 export const getTicketTrend = async (req, res) => {
   try {

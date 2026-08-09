@@ -112,6 +112,7 @@ export default function AdminTicketDashboard() {
   const [prevAvgResolution, setPrevAvgResolution] = useState(null);
   const [avgFirstResponse, setAvgFirstResponse] = useState(null);
   const [prevAvgFirstResponse, setPrevAvgFirstResponse] = useState(null);
+  const [slaPolicy, setSlaPolicy] = useState(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -139,6 +140,8 @@ export default function AdminTicketDashboard() {
         categoryRes,
         avgResRes,
         prevAvgResRes,
+        avgFirstResRes,
+        prevAvgFirstResRes,
       ] = await Promise.all([
         api.get("/ticket-dashboard/kpis", { params }),
         api.get("/ticket-dashboard/kpis", { params: prevParams }),
@@ -149,6 +152,8 @@ export default function AdminTicketDashboard() {
         api.get("/ticket-dashboard/category", { params }),
         api.get("/ticket-dashboard/avg-resolution-time", { params }),
         api.get("/ticket-dashboard/avg-resolution-time", { params: prevParams }),
+        api.get("/ticket-dashboard/avg-first-response-time", { params }),
+        api.get("/ticket-dashboard/avg-first-response-time", { params: prevParams }),
       ]);
 
       setKpis(kpisRes.data);
@@ -160,6 +165,8 @@ export default function AdminTicketDashboard() {
       setCategoryData(categoryRes.data);
       setAvgResolution(avgResRes.data);
       setPrevAvgResolution(prevAvgResRes.data);
+      setAvgFirstResponse(avgFirstResRes.data);
+      setPrevAvgFirstResponse(prevAvgFirstResRes.data);
     } catch (error) {
       console.error(error);
       toast.error("Failed to load dashboard data");
@@ -171,6 +178,21 @@ export default function AdminTicketDashboard() {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  // SLA policy is static config, not date-filtered — fetch once on mount
+  // rather than every time the date range changes.
+  useEffect(() => {
+    api
+      .get("/ticket-dashboard/sla-policy")
+      .then((res) => setSlaPolicy(res.data))
+      .catch((err) => console.error("Failed to load SLA policy", err));
+  }, []);
+
+  // "8" -> "8h", "0.5" -> "30m" — policy values are in hours.
+  const formatSlaHours = (hours) => {
+    if (hours < 1) return `${Math.round(hours * 60)}m`;
+    return `${hours}h`;
+  };
 
   const handleRangeChange = (field) => (e) => {
     setActiveQuick(null);
@@ -192,6 +214,11 @@ export default function AdminTicketDashboard() {
   const avgResChange =
     avgResolution && prevAvgResolution
       ? pctChange(avgResolution.avgResolutionMs, prevAvgResolution.avgResolutionMs)
+      : 0;
+
+  const avgFirstResChange =
+    avgFirstResponse && prevAvgFirstResponse
+      ? pctChange(avgFirstResponse.avgResponseMs, prevAvgFirstResponse.avgResponseMs)
       : 0;
 
   /* ================= TREND CHART ================= */
@@ -372,7 +399,7 @@ export default function AdminTicketDashboard() {
         ) : (
           <>
             {/* KPI CARDS */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3 mb-6">
               {KPI_CARDS.map((card) => {
                 const value = kpis?.[card.key] ?? 0;
                 const prevValue = prevKpis?.[card.key] ?? 0;
@@ -439,7 +466,84 @@ export default function AdminTicketDashboard() {
                   Avg Resolution{avgResolution?.count ? ` (${avgResolution.count})` : ""}
                 </p>
               </div>
+
+              {/* AVG FIRST RESPONSE (SLA) TIME CARD */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-cyan-50 text-cyan-600">
+                    <IconZap className="w-3.5 h-3.5" />
+                  </div>
+                  {prevAvgFirstResponse && avgFirstResChange !== 0 && (
+                    <div
+                      className={`flex items-center gap-0.5 text-[10px] font-semibold ${
+                        avgFirstResChange <= 0 ? "text-emerald-600" : "text-red-500"
+                      }`}
+                    >
+                      {avgFirstResChange > 0 ? (
+                        <IconTrendUp className="w-2.5 h-2.5" />
+                      ) : (
+                        <IconTrendDown className="w-2.5 h-2.5" />
+                      )}
+                      {Math.abs(avgFirstResChange)}%
+                    </div>
+                  )}
+                </div>
+                <p className="text-2xl font-bold text-slate-900 leading-none mb-1">
+                  {formatDuration(avgFirstResponse?.avgResponseMs)}
+                </p>
+                <p className="text-[11px] font-medium text-slate-400">
+                  Avg SLA Response{avgFirstResponse?.count ? ` (${avgFirstResponse.count})` : ""}
+                </p>
+              </div>
             </div>
+
+            {/* SLA POLICY REFERENCE TABLE */}
+            {slaPolicy && (
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">
+                <h2 className="text-sm font-semibold text-slate-800 mb-4">SLA Targets</h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide pb-2 pr-4">
+                          Priority
+                        </th>
+                        <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide pb-2 pr-4">
+                          First Response Target
+                        </th>
+                        <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide pb-2">
+                          Resolution Target
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(slaPolicy).map(([priority, targets]) => (
+                        <tr key={priority} className="border-b border-slate-50 last:border-0">
+                          <td className="py-2.5 pr-4">
+                            <span
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold"
+                              style={{ color: PRIORITY_COLORS[priority] || "#334155" }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ backgroundColor: PRIORITY_COLORS[priority] || "#94a3b8" }}
+                              />
+                              {priority}
+                            </span>
+                          </td>
+                          <td className="py-2.5 pr-4 text-xs font-medium text-slate-600">
+                            {formatSlaHours(targets.firstResponse)}
+                          </td>
+                          <td className="py-2.5 text-xs font-medium text-slate-600">
+                            {formatSlaHours(targets.resolution)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* TREND CHART */}
             <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">
