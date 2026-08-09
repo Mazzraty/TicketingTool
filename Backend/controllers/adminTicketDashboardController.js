@@ -272,3 +272,39 @@ export const getAvgResolutionTime = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getAvgFirstResponseTime = async (req, res) => {
+  try {
+    const filter = getCompanyFilter(req.user);
+    const { from, to } = req.query;
+
+    if (from && to) {
+      filter.createdAt = buildDateRangeFilter(from, to);
+    }
+
+    filter["sla.firstRespondedAt"] = { $exists: true, $ne: null };
+
+    const result = await Ticket.aggregate([
+      { $match: filter },
+      {
+        $project: {
+          responseMs: { $subtract: ["$sla.firstRespondedAt", "$createdAt"] },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          avgResponseMs: { $avg: "$responseMs" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    res.json({
+      avgResponseMs: result[0]?.avgResponseMs || 0,
+      count: result[0]?.count || 0,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
