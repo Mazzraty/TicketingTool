@@ -165,6 +165,12 @@ const ticketSchema = new mongoose.Schema(
         default: false,
       },
 
+      // Response breach reason (why the first-response SLA was missed)
+      firstResponseBreachReason: {
+        type: String,
+        default: "",
+      },
+
       // Resolution SLA
       resolutionDue: {
         type: Date,
@@ -179,6 +185,12 @@ const ticketSchema = new mongoose.Schema(
       resolutionBreached: {
         type: Boolean,
         default: false,
+      },
+
+      // Resolution breach reason (why the resolution SLA was missed)
+      breachReason: {
+        type: String,
+        default: "",
       },
 
       // Escalation

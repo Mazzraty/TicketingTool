@@ -173,7 +173,9 @@ const SlaBadge = ({ ticket, now }) => {
   );
 };
 
-const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now }) => {
+// ADDED: breachReason prop — rendered as a small red note under the leg
+// whenever that leg is breached and a reason was recorded.
+const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now, breachReason }) => {
   const state = getSlaLegState({ due, achievedAt, breached, now });
   const theme = SLA_THEME[state.level];
 
@@ -213,6 +215,16 @@ const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now 
           {achievedLabel} {new Date(achievedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
         </p>
       )}
+
+      {/* ADDED: breach reason, only shown when this leg actually breached */}
+      {breached && breachReason && (
+        <div className="mt-2 pt-2 border-t border-red-200/70">
+          <p className="text-[10px] font-semibold text-red-700 uppercase tracking-wide mb-0.5">
+            Reason
+          </p>
+          <p className="text-[11px] text-red-700 leading-relaxed">{breachReason}</p>
+        </div>
+      )}
     </div>
   );
 };
@@ -238,6 +250,7 @@ const SlaDetailPanel = ({ ticket, now }) => {
         due={sla.firstResponseDue}
         achievedAt={sla.firstRespondedAt}
         breached={sla.firstResponseBreached}
+        breachReason={sla.firstResponseBreachReason}
         achievedLabel="Responded at"
         now={now}
       />
@@ -248,6 +261,7 @@ const SlaDetailPanel = ({ ticket, now }) => {
         due={sla.resolutionDue}
         achievedAt={sla.resolvedAt}
         breached={sla.resolutionBreached}
+        breachReason={sla.breachReason}
         achievedLabel="Resolved at"
         now={now}
       />
@@ -288,6 +302,7 @@ export default function AdminTickets() {
 
   const [statusModal, setStatusModal] = useState(null);
   const [resolutionNote, setResolutionNote] = useState("");
+  const [breachReason, setBreachReason] = useState(""); // ADDED
   const [submitting, setSubmitting] = useState(false);
   const user = JSON.parse(localStorage.getItem("user"));
   const [now, setNow] = useState(() => new Date());
@@ -373,6 +388,7 @@ export default function AdminTickets() {
   const handleStatusChange = (ticket, targetStatus) => {
     if (targetStatus === "Resolved" || targetStatus === "Closed") {
       setResolutionNote(ticket.resolutionNote || "");
+      setBreachReason(ticket.sla?.breachReason || ""); // ADDED
       setStatusModal({ ticket, targetStatus });
       return;
     }
@@ -409,22 +425,36 @@ export default function AdminTickets() {
     }
   };
 
+  // ADDED: whether the ticket currently in the modal is in a breached SLA state
+  const isModalTicketBreached =
+    statusModal && getOverallSlaState(statusModal.ticket, now).level === "breached";
+
   const confirmStatusModal = async () => {
     if (!resolutionNote.trim()) {
       return toast.error("Please add a resolution note before continuing");
     }
+
+    // ADDED: require a breach reason when the SLA is currently breached
+    if (isModalTicketBreached && !breachReason.trim()) {
+      return toast.error("Please explain why the SLA was breached");
+    }
+
     setSubmitting(true);
     await updateStatus(statusModal.ticket._id, statusModal.targetStatus, {
       resolutionNote: resolutionNote.trim(),
+      // ADDED: send slaBreachReason only when relevant
+      ...(isModalTicketBreached ? { slaBreachReason: breachReason.trim() } : {}),
     });
     setSubmitting(false);
     setStatusModal(null);
     setResolutionNote("");
+    setBreachReason(""); // ADDED
   };
 
   const cancelStatusModal = () => {
     setStatusModal(null);
     setResolutionNote("");
+    setBreachReason(""); // ADDED
   };
 
   const filtered = tickets.filter((t) => {
@@ -953,6 +983,25 @@ export default function AdminTickets() {
             <p className="text-[11px] text-slate-400 mt-1.5">
               This note is saved with the ticket so anyone can see how it was handled.
             </p>
+
+            {/* ADDED: SLA breach reason field, only shown when this ticket is currently breached */}
+            {isModalTicketBreached && (
+              <div className="mt-4">
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Reason for SLA breach <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  className="w-full border border-red-200 bg-red-50/40 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 transition resize-none placeholder:text-slate-400"
+                  rows={3}
+                  placeholder="e.g. Part was on backorder, awaiting vendor delivery."
+                  value={breachReason}
+                  onChange={(e) => setBreachReason(e.target.value)}
+                />
+                <p className="text-[11px] text-slate-400 mt-1.5">
+                  This ticket missed its SLA — record why so it can be reviewed later.
+                </p>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 mt-5">
               <button

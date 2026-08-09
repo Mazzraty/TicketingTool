@@ -578,7 +578,7 @@ export const getTicketById = async (req, res) => {
 ====================================================== */
 export const updateStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, slaBreachReason } = req.body; // ADDED: slaBreachReason
 
     const allowed = ["Open", "In Progress", "Resolved", "Closed"];
 
@@ -615,6 +615,11 @@ export const updateStatus = async (req, res) => {
           ticket.sla.firstResponseDue
         ) {
           ticket.sla.firstResponseBreached = true;
+
+          // ADDED: capture reason for first-response breach, if provided
+          if (slaBreachReason?.trim()) {
+            ticket.sla.firstResponseBreachReason = slaBreachReason.trim();
+          }
         }
       }
     }
@@ -633,6 +638,11 @@ export const updateStatus = async (req, res) => {
       ) {
         ticket.sla.resolutionBreached = true;
         ticket.sla.status = "Breached";
+
+        // ADDED: only overwrite if a reason was actually provided
+        if (slaBreachReason?.trim()) {
+          ticket.sla.breachReason = slaBreachReason.trim();
+        }
       } else {
         ticket.sla.status = "Completed";
       }
@@ -659,6 +669,10 @@ export const updateStatus = async (req, res) => {
       ticket.sla.resolvedAt = null;
       ticket.sla.resolutionBreached = false;
       ticket.sla.status = "Running";
+
+      // ADDED: clear the old breach reason on reopen since resolution
+      // is being redone from scratch
+      ticket.sla.breachReason = "";
     }
 
     // ============================
