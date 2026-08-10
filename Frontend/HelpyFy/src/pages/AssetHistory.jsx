@@ -40,7 +40,7 @@ export default function AssetHistoryPage() {
   const [loadingAsset, setLoadingAsset] =
     useState(false);
 
-  // ADDED: inline "assigned date" edit state (shared by both tables)
+  // inline "assigned date" edit state (shared by both tables)
   const [editingId, setEditingId] = useState(null);
   const [editDate, setEditDate] = useState("");
 
@@ -67,6 +67,25 @@ export default function AssetHistoryPage() {
   const getAccessories = (h) => {
     return h.accessories || h.asset?.accessories || {};
   };
+
+  /* ===================================
+     FIX: Convert a Date/ISO string to a
+     "YYYY-MM-DD" value using LOCAL time,
+     not UTC. `toISOString()` shifts the
+     date backward/forward across midnight
+     depending on the browser's timezone
+     offset from UTC — which is what was
+     causing the date picker to show the
+     wrong day.
+  =================================== */
+  const toLocalDateInputValue = (date) => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   /* ===================================
      LOAD EMPLOYEES + ASSETS
   =================================== */
@@ -203,7 +222,7 @@ export default function AssetHistoryPage() {
   };
 
   /* ===================================
-     ADDED: EDIT ASSIGNED DATE
+     EDIT ASSIGNED DATE
      h._id here is the AssetAssignment _id (both empHistory and
      assetHistory rows come from AssetAssignment documents), so this
      hits PUT /assets/assignments/:id/date directly.
@@ -212,7 +231,7 @@ export default function AssetHistoryPage() {
     setEditingId(h._id);
     setEditDate(
       h.assignedDate
-        ? new Date(h.assignedDate).toISOString().slice(0, 10)
+        ? toLocalDateInputValue(h.assignedDate) // FIX: was toISOString().slice(0,10)
         : ""
     );
   };
@@ -229,7 +248,12 @@ export default function AssetHistoryPage() {
 
     try {
       await api.put(`/assets/assignments/${h._id}/date`, {
-        assignedDate: editDate,
+        // FIX: send with a fixed local-noon time component so that
+        // when the backend does `new Date("YYYY-MM-DD...")`, the
+        // UTC conversion can never roll the date to the previous
+        // or next calendar day, no matter what timezone the DB
+        // server is running in.
+        assignedDate: `${editDate}T12:00:00`,
       });
 
       toast.success("Assigned date updated");
@@ -237,13 +261,17 @@ export default function AssetHistoryPage() {
       // Update whichever list this row came from, in place
       setEmpHistory((prev) =>
         prev.map((row) =>
-          row._id === h._id ? { ...row, assignedDate: editDate } : row
+          row._id === h._id
+            ? { ...row, assignedDate: `${editDate}T12:00:00` }
+            : row
         )
       );
 
       setAssetHistory((prev) =>
         prev.map((row) =>
-          row._id === h._id ? { ...row, assignedDate: editDate } : row
+          row._id === h._id
+            ? { ...row, assignedDate: `${editDate}T12:00:00` }
+            : row
         )
       );
 
@@ -255,7 +283,7 @@ export default function AssetHistoryPage() {
   };
 
   /* ===================================
-     ADDED: reusable "assigned date" cell,
+     reusable "assigned date" cell,
      used by both the Employee History and Asset History tables
   =================================== */
   const AssignedDateCell = ({ h }) => {
@@ -709,7 +737,7 @@ export default function AssetHistoryPage() {
                       {statusBadge(h)}
                     </td>
 
-                    {/* ADDED: inline-editable assigned date */}
+                    {/* inline-editable assigned date */}
                     <td className="p-4">
                       <AssignedDateCell h={h} />
                     </td>
@@ -747,7 +775,6 @@ export default function AssetHistoryPage() {
         </div>
       </div>
 
-      {/* ASSET HISTORY */}
       {/* ASSET HISTORY */}
       <div className="bg-white rounded-2xl shadow-sm border p-6">
 
@@ -840,7 +867,7 @@ export default function AssetHistoryPage() {
                       {statusBadge(h)}
                     </td>
 
-                    {/* ADDED: inline-editable assigned date */}
+                    {/* inline-editable assigned date */}
                     <td className="p-4">
                       <AssignedDateCell h={h} />
                     </td>
