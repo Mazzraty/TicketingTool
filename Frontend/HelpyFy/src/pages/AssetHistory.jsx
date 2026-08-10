@@ -1,10 +1,75 @@
 // pages/AssetHistoryPage.jsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+
+/* ===================================
+   MOVED OUT of the main component + wrapped in memo().
+   Previously this was declared inside AssetHistoryPage, so every
+   keystroke in the date input (editDate state change) re-created
+   this function from scratch, forcing React to remount the cell
+   and re-render the ENTIRE page (including the employee/asset
+   search dropdowns) on every keystroke.
+
+   Now it's a stable component reference. memo() means it only
+   re-renders when its own props (h, isEditing, editDate, onStart,
+   onSave, onCancel, onChangeDate) actually change — not when
+   unrelated state (like employeeSearch) changes.
+=================================== */
+const AssignedDateCell = memo(function AssignedDateCell({
+  h,
+  isEditing,
+  editDate,
+  onStart,
+  onSave,
+  onCancel,
+  onChangeDate,
+}) {
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          type="date"
+          className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={editDate}
+          onChange={(e) => onChangeDate(e.target.value)}
+          autoFocus
+        />
+        <button
+          onClick={() => onSave(h)}
+          className="text-xs font-semibold text-emerald-600 hover:text-emerald-800"
+        >
+          Save
+        </button>
+        <button
+          onClick={onCancel}
+          className="text-xs font-semibold text-gray-400 hover:text-gray-600"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 group">
+      <span>
+        {h.assignedDate
+          ? new Date(h.assignedDate).toLocaleString()
+          : "-"}
+      </span>
+      <button
+        onClick={() => onStart(h)}
+        className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 hover:underline transition"
+      >
+        Edit
+      </button>
+    </div>
+  );
+});
 
 export default function AssetHistoryPage() {
   const [employees, setEmployees] = useState([]);
@@ -47,21 +112,27 @@ export default function AssetHistoryPage() {
   /* ===================================
      FILTERED EMPLOYEES
   =================================== */
-  const filteredEmployees = employees.filter(
-    (emp) =>
-      `${emp.staffCode} ${emp.name}`
-        .toLowerCase()
-        .includes(employeeSearch.toLowerCase())
+  const filteredEmployees = useMemo(
+    () =>
+      employees.filter((emp) =>
+        `${emp.staffCode} ${emp.name}`
+          .toLowerCase()
+          .includes(employeeSearch.toLowerCase())
+      ),
+    [employees, employeeSearch]
   );
 
   /* ===================================
      FILTERED ASSETS
   =================================== */
-  const filteredAssets = assets.filter(
-    (asset) =>
-      `${asset.assetCode} ${asset.type}`
-        .toLowerCase()
-        .includes(assetSearch.toLowerCase())
+  const filteredAssets = useMemo(
+    () =>
+      assets.filter((asset) =>
+        `${asset.assetCode} ${asset.type}`
+          .toLowerCase()
+          .includes(assetSearch.toLowerCase())
+      ),
+    [assets, assetSearch]
   );
 
   const getAccessories = (h) => {
@@ -227,108 +298,71 @@ export default function AssetHistoryPage() {
      assetHistory rows come from AssetAssignment documents), so this
      hits PUT /assets/assignments/:id/date directly.
   =================================== */
-  const startEditDate = (h) => {
+  // FIX: wrapped in useCallback so these keep the same function
+  // reference across renders. This matters because AssignedDateCell
+  // is wrapped in memo() — if these were plain functions, they'd be
+  // recreated every render and memo() would never skip a re-render.
+  const startEditDate = useCallback((h) => {
     setEditingId(h._id);
     setEditDate(
       h.assignedDate
         ? toLocalDateInputValue(h.assignedDate) // FIX: was toISOString().slice(0,10)
         : ""
     );
-  };
+  }, []);
 
-  const cancelEditDate = () => {
+  const cancelEditDate = useCallback(() => {
     setEditingId(null);
     setEditDate("");
-  };
+  }, []);
 
-  const saveEditDate = async (h) => {
-    if (!editDate) {
-      return toast.error("Please pick a date");
-    }
+  const saveEditDate = useCallback(
+    async (h) => {
+      if (!editDate) {
+        return toast.error("Please pick a date");
+      }
 
-    try {
-      await api.put(`/assets/assignments/${h._id}/date`, {
-        // FIX: send with a fixed local-noon time component so that
-        // when the backend does `new Date("YYYY-MM-DD...")`, the
-        // UTC conversion can never roll the date to the previous
-        // or next calendar day, no matter what timezone the DB
-        // server is running in.
-        assignedDate: `${editDate}T12:00:00`,
-      });
+      try {
+        await api.put(`/assets/assignments/${h._id}/date`, {
+          // FIX: send with a fixed local-noon time component so that
+          // when the backend does `new Date("YYYY-MM-DD...")`, the
+          // UTC conversion can never roll the date to the previous
+          // or next calendar day, no matter what timezone the DB
+          // server is running in.
+          assignedDate: `${editDate}T12:00:00`,
+        });
 
-      toast.success("Assigned date updated");
+        toast.success("Assigned date updated");
 
-      // Update whichever list this row came from, in place
-      setEmpHistory((prev) =>
-        prev.map((row) =>
-          row._id === h._id
-            ? { ...row, assignedDate: `${editDate}T12:00:00` }
-            : row
-        )
-      );
+        setEmpHistory((prev) =>
+          prev.map((row) =>
+            row._id === h._id
+              ? { ...row, assignedDate: `${editDate}T12:00:00` }
+              : row
+          )
+        );
 
-      setAssetHistory((prev) =>
-        prev.map((row) =>
-          row._id === h._id
-            ? { ...row, assignedDate: `${editDate}T12:00:00` }
-            : row
-        )
-      );
+        setAssetHistory((prev) =>
+          prev.map((row) =>
+            row._id === h._id
+              ? { ...row, assignedDate: `${editDate}T12:00:00` }
+              : row
+          )
+        );
 
-      cancelEditDate();
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.msg || "Failed to update date");
-    }
-  };
+        setEditingId(null);
+        setEditDate("");
+      } catch (err) {
+        console.error(err);
+        toast.error(err.response?.data?.msg || "Failed to update date");
+      }
+    },
+    [editDate]
+  );
 
-  /* ===================================
-     reusable "assigned date" cell,
-     used by both the Employee History and Asset History tables
-  =================================== */
-  const AssignedDateCell = ({ h }) => {
-    if (editingId === h._id) {
-      return (
-        <div className="flex items-center gap-2">
-          <input
-            type="date"
-            className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={editDate}
-            onChange={(e) => setEditDate(e.target.value)}
-            autoFocus
-          />
-          <button
-            onClick={() => saveEditDate(h)}
-            className="text-xs font-semibold text-emerald-600 hover:text-emerald-800"
-          >
-            Save
-          </button>
-          <button
-            onClick={cancelEditDate}
-            className="text-xs font-semibold text-gray-400 hover:text-gray-600"
-          >
-            Cancel
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex items-center gap-2 group">
-        <span>
-          {h.assignedDate
-            ? new Date(h.assignedDate).toLocaleString()
-            : "-"}
-        </span>
-        <button
-          onClick={() => startEditDate(h)}
-          className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 hover:underline transition"
-        >
-          Edit
-        </button>
-      </div>
-    );
-  };
+  const handleChangeEditDate = useCallback((val) => {
+    setEditDate(val);
+  }, []);
 
   /* ===================================
      EXPORT EMP PDF
@@ -739,7 +773,15 @@ export default function AssetHistoryPage() {
 
                     {/* inline-editable assigned date */}
                     <td className="p-4">
-                      <AssignedDateCell h={h} />
+                      <AssignedDateCell
+                        h={h}
+                        isEditing={editingId === h._id}
+                        editDate={editDate}
+                        onStart={startEditDate}
+                        onSave={saveEditDate}
+                        onCancel={cancelEditDate}
+                        onChangeDate={handleChangeEditDate}
+                      />
                     </td>
 
                     <td className="p-4">
@@ -869,7 +911,15 @@ export default function AssetHistoryPage() {
 
                     {/* inline-editable assigned date */}
                     <td className="p-4">
-                      <AssignedDateCell h={h} />
+                      <AssignedDateCell
+                        h={h}
+                        isEditing={editingId === h._id}
+                        editDate={editDate}
+                        onStart={startEditDate}
+                        onSave={saveEditDate}
+                        onCancel={cancelEditDate}
+                        onChangeDate={handleChangeEditDate}
+                      />
                     </td>
 
                     <td className="p-4">
