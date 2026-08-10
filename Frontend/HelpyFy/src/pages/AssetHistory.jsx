@@ -40,6 +40,10 @@ export default function AssetHistoryPage() {
   const [loadingAsset, setLoadingAsset] =
     useState(false);
 
+  // ADDED: inline "assigned date" edit state (shared by both tables)
+  const [editingId, setEditingId] = useState(null);
+  const [editDate, setEditDate] = useState("");
+
   /* ===================================
      FILTERED EMPLOYEES
   =================================== */
@@ -195,6 +199,106 @@ export default function AssetHistoryPage() {
       <span className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-700 font-medium">
         Returned
       </span>
+    );
+  };
+
+  /* ===================================
+     ADDED: EDIT ASSIGNED DATE
+     h._id here is the AssetAssignment _id (both empHistory and
+     assetHistory rows come from AssetAssignment documents), so this
+     hits PUT /assets/assignments/:id/date directly.
+  =================================== */
+  const startEditDate = (h) => {
+    setEditingId(h._id);
+    setEditDate(
+      h.assignedDate
+        ? new Date(h.assignedDate).toISOString().slice(0, 10)
+        : ""
+    );
+  };
+
+  const cancelEditDate = () => {
+    setEditingId(null);
+    setEditDate("");
+  };
+
+  const saveEditDate = async (h) => {
+    if (!editDate) {
+      return toast.error("Please pick a date");
+    }
+
+    try {
+      await api.put(`/assets/assignments/${h._id}/date`, {
+        assignedDate: editDate,
+      });
+
+      toast.success("Assigned date updated");
+
+      // Update whichever list this row came from, in place
+      setEmpHistory((prev) =>
+        prev.map((row) =>
+          row._id === h._id ? { ...row, assignedDate: editDate } : row
+        )
+      );
+
+      setAssetHistory((prev) =>
+        prev.map((row) =>
+          row._id === h._id ? { ...row, assignedDate: editDate } : row
+        )
+      );
+
+      cancelEditDate();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.msg || "Failed to update date");
+    }
+  };
+
+  /* ===================================
+     ADDED: reusable "assigned date" cell,
+     used by both the Employee History and Asset History tables
+  =================================== */
+  const AssignedDateCell = ({ h }) => {
+    if (editingId === h._id) {
+      return (
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={editDate}
+            onChange={(e) => setEditDate(e.target.value)}
+            autoFocus
+          />
+          <button
+            onClick={() => saveEditDate(h)}
+            className="text-xs font-semibold text-emerald-600 hover:text-emerald-800"
+          >
+            Save
+          </button>
+          <button
+            onClick={cancelEditDate}
+            className="text-xs font-semibold text-gray-400 hover:text-gray-600"
+          >
+            Cancel
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2 group">
+        <span>
+          {h.assignedDate
+            ? new Date(h.assignedDate).toLocaleString()
+            : "-"}
+        </span>
+        <button
+          onClick={() => startEditDate(h)}
+          className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 hover:underline transition"
+        >
+          Edit
+        </button>
+      </div>
     );
   };
 
@@ -605,10 +709,9 @@ export default function AssetHistoryPage() {
                       {statusBadge(h)}
                     </td>
 
+                    {/* ADDED: inline-editable assigned date */}
                     <td className="p-4">
-                      {new Date(
-                        h.assignedDate
-                      ).toLocaleString()}
+                      <AssignedDateCell h={h} />
                     </td>
 
                     <td className="p-4">
@@ -737,12 +840,9 @@ export default function AssetHistoryPage() {
                       {statusBadge(h)}
                     </td>
 
+                    {/* ADDED: inline-editable assigned date */}
                     <td className="p-4">
-                      {h.assignedDate
-                        ? new Date(
-                          h.assignedDate
-                        ).toLocaleString()
-                        : "-"}
+                      <AssignedDateCell h={h} />
                     </td>
 
                     <td className="p-4">
@@ -781,4 +881,3 @@ export default function AssetHistoryPage() {
     </div>
   );
 }
-

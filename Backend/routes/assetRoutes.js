@@ -10,6 +10,7 @@ import {
   getEmployeeHistory,
   getAssetHistory,
   getMyAssets,
+  updateAssignmentDate
 } from "../controllers/assetController.js";
 
 import {
@@ -89,7 +90,7 @@ router.delete(
   companyCheck,
   deleteAsset
 );
-
+router.put("/assignments/:id/date", protect,adminOnly,companyCheck  ,updateAssignmentDate);
 /* =========================
    📊 HISTORY (READ ONLY)
 ========================= */

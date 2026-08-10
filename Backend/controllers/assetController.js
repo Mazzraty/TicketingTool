@@ -446,3 +446,38 @@ export const getMyAssets = async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 };
+
+/* =========================
+   📅 UPDATE ASSIGNMENT DATE
+========================= */
+export const updateAssignmentDate = async (req, res) => {
+  try {
+    const { assignedDate } = req.body;
+
+    if (!assignedDate) {
+      return res.status(400).json({ msg: "assignedDate is required" });
+    }
+
+    const filter = getCompanyFilter(req.user);
+
+    const assignment = await AssetAssignment.findOne({
+      _id: req.params.id,
+      ...filter,
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ msg: "Assignment not found" });
+    }
+
+    assignment.assignedDate = new Date(assignedDate);
+    await assignment.save();
+
+    res.json({
+      msg: "Assigned date updated successfully",
+      assignment,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: err.message });
+  }
+};
