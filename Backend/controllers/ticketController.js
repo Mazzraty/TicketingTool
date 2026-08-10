@@ -600,6 +600,11 @@ export const updateStatus = async (req, res) => {
 
     ticket.status = status;
 
+    // ADDED: persist resolution note whenever it's sent
+    if (resolutionNote?.trim()) {
+      ticket.resolutionNote = resolutionNote.trim();
+    }
+
     // ============================
     // IN PROGRESS
     // ============================
