@@ -578,7 +578,7 @@ export const getTicketById = async (req, res) => {
 ====================================================== */
 export const updateStatus = async (req, res) => {
   try {
-    const { status, slaBreachReason } = req.body; // ADDED: slaBreachReason
+   const { status, slaBreachReason, resolutionNote } = req.body;
 
     const allowed = ["Open", "In Progress", "Resolved", "Closed"];
 
