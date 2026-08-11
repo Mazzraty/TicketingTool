@@ -33,6 +33,8 @@ const IconZap = (p) => <Icon {...p}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />
 const IconUser = (p) => <Icon {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></Icon>;
 const IconMenu = (p) => <Icon {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Icon>;
 const IconWrench = (p) => <Icon {...p}><path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L2 19l3 3 7.1-7.1a4 4 0 0 0 5.6-5.6l-2.8 2.8-2-2 2.8-2.8Z" /></Icon>;
+// NEW: trash icon for the delete action (super_admin only)
+const IconTrash = (p) => <Icon {...p}><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></Icon>;
 
 /* ================= STATUS THEME (single source of truth) ================= */
 const STATUS_THEME = {
@@ -393,7 +395,15 @@ export default function AdminTickets() {
   const [breachModal, setBreachModal] = useState(null); // { ticket, leg }
   const [breachModalText, setBreachModalText] = useState("");
   const [breachSubmitting, setBreachSubmitting] = useState(false);
+
+  // NEW: delete-ticket confirmation. Holds the ticket pending deletion
+  // (or null when the modal is closed). Kept separate from statusModal
+  // since deleting is a destructive, unrelated action.
+  const [deleteModal, setDeleteModal] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
   const user = JSON.parse(localStorage.getItem("user"));
+  const isSuperAdmin = user?.role === "super_admin";
   const [now, setNow] = useState(() => new Date());
 
   const initialStats = {
@@ -655,6 +665,42 @@ export default function AdminTickets() {
     }
   };
 
+  // NEW: delete-ticket flow. Opens a confirmation modal instead of
+  // deleting immediately — the backend route is a hard delete with no
+  // undo, so we don't want a stray click to remove a ticket.
+  const handleDeleteClick = (ticket) => {
+    setDeleteModal(ticket);
+  };
+
+  const cancelDeleteModal = () => {
+    if (deleting) return; // ignore stray closes mid-request
+    setDeleteModal(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModal) return;
+
+    try {
+      setDeleting(true);
+      await api.delete(`/tickets/${deleteModal._id}`);
+      toast.success("Ticket deleted");
+
+      // if the ticket being deleted is currently open in the detail
+      // panel, close the panel so it doesn't show stale data
+      if (selected?._id === deleteModal._id) {
+        setSelected(null);
+      }
+
+      setDeleteModal(null);
+      load();
+      loadStats();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete ticket");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const filtered = tickets.filter((t) => {
     const s = search.toLowerCase();
     const slaState = getOverallSlaState(t, now).label.toLowerCase();
@@ -808,12 +854,25 @@ export default function AdminTickets() {
                 <h2 className="font-bold text-slate-900 leading-snug mt-0.5 truncate">{selected.title}</h2>
                 <p className="text-xs font-mono text-slate-400 mt-0.5">{selected.ticketNumber}</p>
               </div>
-              <button
-                onClick={() => setSelected(null)}
-                className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition shrink-0 ml-2"
-              >
-                <IconX className="w-4 h-4" />
-              </button>
+
+              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                {/* NEW: delete action inside the detail panel too, super_admin only */}
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => handleDeleteClick(selected)}
+                    title="Delete ticket"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition"
+                  >
+                    <IconTrash className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelected(null)}
+                  className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                >
+                  <IconX className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="p-4 sm:p-5 flex flex-col gap-5 overflow-y-auto flex-1">
@@ -1122,6 +1181,17 @@ export default function AdminTickets() {
                               Escalate
                             </button>
                           )}
+
+                        {/* NEW: delete, super_admin only */}
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => handleDeleteClick(t)}
+                            title="Delete ticket"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition shrink-0"
+                          >
+                            <IconTrash className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1241,6 +1311,17 @@ export default function AdminTickets() {
                                     Escalate
                                   </button>
                                 )}
+
+                              {/* NEW: delete, super_admin only */}
+                              {isSuperAdmin && (
+                                <button
+                                  onClick={() => handleDeleteClick(t)}
+                                  title="Delete ticket"
+                                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition"
+                                >
+                                  <IconTrash className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1501,6 +1582,51 @@ export default function AdminTickets() {
                 className="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition disabled:opacity-60"
               >
                 {breachSubmitting ? "Saving…" : "Save Reason"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= DELETE TICKET CONFIRMATION MODAL =================
+          NEW. super_admin only — the trigger buttons above are already
+          gated on isSuperAdmin, this is the confirmation step before the
+          irreversible DELETE /tickets/:id call fires. */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 sm:p-6">
+            <div className="flex items-center gap-3 mb-1">
+              <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-red-50 text-red-600">
+                <IconTrash className="w-4 h-4" />
+              </span>
+              <h3 className="font-bold text-base text-slate-900">
+                Delete this ticket?
+              </h3>
+            </div>
+            <p className="text-xs text-slate-400 ml-12 -mt-1 mb-4 truncate">
+              "{deleteModal.title}" — {deleteModal.ticketNumber}
+            </p>
+
+            <p className="text-sm text-slate-600 leading-relaxed">
+              This permanently removes the ticket, including its status
+              history, resolution notes, and any vendor/repair details.
+              This cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                onClick={cancelDeleteModal}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition disabled:opacity-60"
+              >
+                {deleting ? "Deleting…" : "Delete Ticket"}
               </button>
             </div>
           </div>
