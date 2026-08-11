@@ -1,6 +1,7 @@
 import Asset from "../models/assetSchema.js";
 import EmployeeMaster from "../models/employeeMasterSchema.js";
 import AssetAssignment from "../models/assignmentSchema.js";
+import Ticket from "../models/ticketSchema.js"
 
 /* =========================
    HELPER: COMPANY FILTER
@@ -400,14 +401,48 @@ export const getAssetHistory = async (req, res) => {
       return res.status(404).json({ msg: "Asset not found" });
     }
 
-    const history = await AssetAssignment.find({
+    const assignments = await AssetAssignment.find({
       asset: asset._id,
       ...filter,
     })
       .populate("employee")
       .sort({ createdAt: -1 });
 
-    res.json(history);
+    // NEW: vendor/repair records for this asset, pulled from
+    // resolved tickets rather than duplicated onto the Asset itself
+    const repairTickets = await Ticket.find({
+      assetId: asset._id,
+      resolutionType: "External Vendor",
+      ...filter, // same companyId shape as above
+    })
+      .populate("employeeId", "name staffCode")
+      .sort({ "vendorDetails.repairDate": -1 });
+
+    const repairRecords = repairTickets.map((t) => ({
+      _id: t._id,
+      recordType: "repair",
+      assetType: asset.type,
+      asset: { assetCode: asset.assetCode, type: asset.type },
+      employee: t.employeeId
+        ? { name: t.employeeId.name, staffCode: t.employeeId.staffCode }
+        : null,
+      ticketNumber: t.ticketNumber,
+      vendorDetails: t.vendorDetails,
+      assignedDate: null,
+      returnedDate: t.vendorDetails?.repairDate || null,
+      createdAt: t.vendorDetails?.repairDate || t.updatedAt,
+    }));
+
+    const assignmentRecords = assignments.map((a) => ({
+      ...a.toObject(),
+      recordType: "assignment",
+    }));
+
+    const combined = [...assignmentRecords, ...repairRecords].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    res.json(combined);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: err.message });

@@ -71,6 +71,52 @@ const AssignedDateCell = memo(function AssignedDateCell({
   );
 });
 
+/* ===================================
+   NEW: renders vendor/repair details for a "repair" record row.
+   Kept as its own small component purely for readability — it has
+   no internal state so it doesn't need memo().
+=================================== */
+function VendorDetailsCell({ h }) {
+  const v = h.vendorDetails || {};
+
+  return (
+    <div className="text-xs leading-relaxed">
+      <div className="font-semibold text-gray-700">
+        {v.vendorName || "-"}
+      </div>
+
+      {v.complaintDescription && (
+        <div className="text-gray-500">
+          {v.complaintDescription}
+        </div>
+      )}
+
+      {(v.cost || v.cost === 0) && (
+        <div className="text-gray-500">
+          Cost: {v.cost}
+        </div>
+      )}
+
+      {v.receiptUrl && (
+        <a
+          href={v.receiptUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          Receipt
+        </a>
+      )}
+
+      {h.ticketNumber && (
+        <div className="text-gray-400 mt-1">
+          Ticket: {h.ticketNumber}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AssetHistoryPage() {
   const [employees, setEmployees] = useState([]);
   const [assets, setAssets] = useState([]);
@@ -240,6 +286,10 @@ export default function AssetHistoryPage() {
 
   /* ===================================
      ASSET HISTORY
+     NOTE: the backend now returns a merged list of
+     "assignment" and "repair" (vendor) records for this
+     asset, each tagged with `recordType`. No frontend
+     change needed here — just render both kinds below.
   =================================== */
   useEffect(() => {
     if (!assetCode) {
@@ -275,8 +325,19 @@ export default function AssetHistoryPage() {
 
   /* ===================================
      STATUS BADGE
+     UPDATED: repair records get their own badge instead of
+     falling through to Active/Returned logic (repair rows have
+     no `returnedDate` in the assignment sense).
   =================================== */
   const statusBadge = (h) => {
+    if (h.recordType === "repair") {
+      return (
+        <span className="px-3 py-1 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">
+          Sent for Repair
+        </span>
+      );
+    }
+
     if (!h.returnedDate) {
       return (
         <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 font-medium">
@@ -297,6 +358,11 @@ export default function AssetHistoryPage() {
      h._id here is the AssetAssignment _id (both empHistory and
      assetHistory rows come from AssetAssignment documents), so this
      hits PUT /assets/assignments/:id/date directly.
+
+     NOTE: repair rows in assetHistory carry a Ticket _id, not an
+     AssetAssignment _id, so this must never be invoked for them —
+     the render logic below only wires AssignedDateCell up for
+     recordType !== "repair".
   =================================== */
   // FIX: wrapped in useCallback so these keep the same function
   // reference across renders. This matters because AssignedDateCell
@@ -366,6 +432,7 @@ export default function AssetHistoryPage() {
 
   /* ===================================
      EXPORT EMP PDF
+     (unchanged — employee history has no repair rows)
   =================================== */
   const exportEmpPDF = () => {
     const doc = new jsPDF();
@@ -411,6 +478,9 @@ export default function AssetHistoryPage() {
 
   /* ===================================
      EXPORT ASSET PDF
+     UPDATED: repair rows now print vendor name / cost / complaint
+     in the "Accessories" column position instead of "-", and
+     "Assigned" prints "-" for repair rows since they have none.
   =================================== */
   const exportAssetPDF = () => {
     const doc = new jsPDF();
@@ -425,29 +495,56 @@ export default function AssetHistoryPage() {
           "Status",
           "Assigned",
           "Returned",
+          "Details",
         ],
       ],
 
-      body: assetHistory.map((h) => [
-        `${h.employee?.staffCode || "-"} - ${h.employee?.name || "-"
-        }`,
+      body: assetHistory.map((h) => {
+        if (h.recordType === "repair") {
+          const v = h.vendorDetails || {};
+          const details = [
+            v.vendorName && `Vendor: ${v.vendorName}`,
+            v.complaintDescription,
+            (v.cost || v.cost === 0) && `Cost: ${v.cost}`,
+          ]
+            .filter(Boolean)
+            .join(" | ") || "-";
 
-        h.assetType || "-",
-
-        h.status || "-",
-
-        h.assignedDate
-          ? new Date(
-            h.assignedDate
-          ).toLocaleString()
-          : "-",
-
-        h.returnedDate
-          ? new Date(
+          return [
+            "-",
+            h.assetType || "-",
+            "Sent for Repair",
+            "-",
             h.returnedDate
-          ).toLocaleString()
-          : "Active",
-      ]),
+              ? new Date(h.returnedDate).toLocaleString()
+              : "-",
+            details,
+          ];
+        }
+
+        return [
+          `${h.employee?.staffCode || "-"} - ${h.employee?.name || "-"
+          }`,
+
+          h.assetType || "-",
+
+          h.status || "-",
+
+          h.assignedDate
+            ? new Date(
+              h.assignedDate
+            ).toLocaleString()
+            : "-",
+
+          h.returnedDate
+            ? new Date(
+              h.returnedDate
+            ).toLocaleString()
+            : "Active",
+
+          "-",
+        ];
+      }),
     });
 
     doc.save("asset-history.pdf");
@@ -828,7 +925,8 @@ export default function AssetHistoryPage() {
             </h2>
 
             <p className="text-sm text-gray-500 mt-1">
-              Assignment records by asset
+              Assignment & repair records
+              for this asset
             </p>
           </div>
 
@@ -865,7 +963,7 @@ export default function AssetHistoryPage() {
                   Returned
                 </th>
                 <th className="p-4 text-left font-semibold">
-                  Accessories
+                  Accessories / Vendor
                 </th>
               </tr>
             </thead>
@@ -875,7 +973,7 @@ export default function AssetHistoryPage() {
               {loadingAsset ? (
                 <tr>
                   <td
-                    colSpan="5"
+                    colSpan="6"
                     className="p-6 text-center"
                   >
                     Loading...
@@ -884,68 +982,92 @@ export default function AssetHistoryPage() {
               ) : assetHistory.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="5"
+                    colSpan="6"
                     className="p-6 text-center text-gray-500"
                   >
                     No asset history found
                   </td>
                 </tr>
               ) : (
-                assetHistory.map((h) => (
-                  <tr
-                    key={h._id}
-                    className="border-t hover:bg-gray-50"
-                  >
-                    <td className="p-4">
-                      {h.employee?.staffCode || "-"} -{" "}
-                      {h.employee?.name || "-"}
-                    </td>
+                assetHistory.map((h) => {
+                  const isRepair = h.recordType === "repair";
 
-                    <td className="p-4">
-                      {h.assetType || "-"}
-                    </td>
+                  return (
+                    <tr
+                      key={h._id}
+                      className={`border-t hover:bg-gray-50 ${isRepair ? "bg-amber-50/40" : ""
+                        }`}
+                    >
+                      <td className="p-4">
+                        {isRepair
+                          ? "-"
+                          : `${h.employee?.staffCode || "-"} - ${h.employee?.name || "-"
+                          }`}
+                      </td>
 
-                    <td className="p-4">
-                      {statusBadge(h)}
-                    </td>
+                      <td className="p-4">
+                        {h.assetType || "-"}
+                      </td>
 
-                    {/* inline-editable assigned date */}
-                    <td className="p-4">
-                      <AssignedDateCell
-                        h={h}
-                        isEditing={editingId === h._id}
-                        editDate={editDate}
-                        onStart={startEditDate}
-                        onSave={saveEditDate}
-                        onCancel={cancelEditDate}
-                        onChangeDate={handleChangeEditDate}
-                      />
-                    </td>
+                      <td className="p-4">
+                        {statusBadge(h)}
+                      </td>
 
-                    <td className="p-4">
-                      {h.returnedDate
-                        ? new Date(
-                          h.returnedDate
-                        ).toLocaleString()
-                        : "Active"}
-                    </td>
-                    <td className="p-4 text-sm">
-                      {h.assetType?.toLowerCase() === "laptop" ? (() => {
-                        const acc = getAccessories(h);
+                      {/* inline-editable assigned date — repair
+                          rows have no AssetAssignment _id, so they
+                          never get the editable cell */}
+                      <td className="p-4">
+                        {isRepair ? (
+                          <span className="text-xs text-gray-400">
+                            -
+                          </span>
+                        ) : (
+                          <AssignedDateCell
+                            h={h}
+                            isEditing={editingId === h._id}
+                            editDate={editDate}
+                            onStart={startEditDate}
+                            onSave={saveEditDate}
+                            onCancel={cancelEditDate}
+                            onChangeDate={handleChangeEditDate}
+                          />
+                        )}
+                      </td>
 
-                        return (
-                          <>
-                            {acc.charger && "🔌 Charger "}
-                            {acc.mouse && "🖱 Mouse "}
-                            {acc.laptopBag && "🎒 Bag "}
-                            {acc.keyboard && "⌨ Keyboard "}
-                            {acc.headset && "🎧 Headset "}
-                          </>
-                        );
-                      })() : "-"}
-                    </td>
-                  </tr>
-                ))
+                      <td className="p-4">
+                        {h.returnedDate
+                          ? new Date(
+                            h.returnedDate
+                          ).toLocaleString()
+                          : isRepair
+                            ? "-"
+                            : "Active"}
+                      </td>
+
+                      <td className="p-4 text-sm">
+                        {isRepair ? (
+                          <VendorDetailsCell h={h} />
+                        ) : h.assetType?.toLowerCase() === "laptop" ? (
+                          (() => {
+                            const acc = getAccessories(h);
+
+                            return (
+                              <>
+                                {acc.charger && "🔌 Charger "}
+                                {acc.mouse && "🖱 Mouse "}
+                                {acc.laptopBag && "🎒 Bag "}
+                                {acc.keyboard && "⌨ Keyboard "}
+                                {acc.headset && "🎧 Headset "}
+                              </>
+                            );
+                          })()
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
 
             </tbody>
