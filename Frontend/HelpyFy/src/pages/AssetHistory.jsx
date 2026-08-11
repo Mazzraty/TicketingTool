@@ -515,8 +515,12 @@ export default function AssetHistoryPage() {
             h.assetType || "-",
             "Sent for Repair",
             "-",
+            // FIX: date-only, not toLocaleString(). Repair date comes from
+            // a plain date picker with no time component — rendering it
+            // with a time showed the UTC-midnight artifact as a stray
+            // early-morning timestamp (e.g. "8/11/2026, 3:00:00 AM").
             h.returnedDate
-              ? new Date(h.returnedDate).toLocaleString()
+              ? new Date(h.returnedDate).toLocaleDateString()
               : "-",
             details,
           ];
@@ -1036,9 +1040,14 @@ export default function AssetHistoryPage() {
 
                       <td className="p-4">
                         {h.returnedDate
-                          ? new Date(
-                            h.returnedDate
-                          ).toLocaleString()
+                          ? isRepair
+                            // FIX: repair rows carry a date-only value
+                            // (from the vendor-repair date picker), so
+                            // show date-only here too — toLocaleString()
+                            // was surfacing the UTC-midnight artifact as
+                            // a stray "3:00:00 AM"-style timestamp.
+                            ? new Date(h.returnedDate).toLocaleDateString()
+                            : new Date(h.returnedDate).toLocaleString()
                           : isRepair
                             ? "-"
                             : "Active"}
