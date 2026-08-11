@@ -66,6 +66,38 @@ export const uploadStrict = (req, res, next) => {
 };
 
 /* =========================
+   ✅ ADDED: SINGLE-FILE "SAFE" UPLOAD MIDDLEWARE
+   Used on PUT /tickets/:id (updateStatus) for the optional external-vendor
+   receipt/invoice. Follows the same "never block the request" pattern as
+   uploadSafe above — the ticket status still updates even if the receipt
+   upload itself fails, so IT support isn't blocked from resolving a ticket
+   just because an attachment hiccuped.
+
+   The route always sends multipart/form-data for the Resolve/Close flow
+   now (even when resolutionType is "Internal" and no file is chosen), so
+   this middleware just runs upload.single("receipt") — multer/Cloudinary
+   handles the case where no "receipt" field is present and simply leaves
+   req.file undefined.
+========================= */
+export const uploadReceiptSafe = (req, res, next) => {
+  upload.single("receipt")(req, res, (err) => {
+    if (err) {
+      console.error("❌ Receipt Upload Error:", err.message);
+
+      req.uploadError = err.message;
+      req.file = undefined;
+
+      return next();
+    }
+
+    if (req.file) {
+      console.log(`✅ Uploaded receipt to Cloudinary: ${req.file.path}`);
+    }
+    next();
+  });
+};
+
+/* =========================
    ✅ OPTIONAL: Backward compatibility
 ========================= */
 export { upload };

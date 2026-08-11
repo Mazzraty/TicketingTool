@@ -578,7 +578,20 @@ export const getTicketById = async (req, res) => {
 ====================================================== */
 export const updateStatus = async (req, res) => {
   try {
-   const { status, slaBreachReason, resolutionNote } = req.body;
+    const {
+      status,
+      slaBreachReason,
+      resolutionNote,
+      // ADDED: resolution-type + vendor/repair fields. These arrive as
+      // plain string fields on req.body whether the request was sent as
+      // JSON (Open/In Progress quick-change) or multipart/form-data
+      // (Resolve/Close modal, which also carries the optional receipt file).
+      resolutionType,
+      vendorName,
+      complaintDescription,
+      repairDate,
+      cost,
+    } = req.body;
 
     const allowed = ["Open", "In Progress", "Resolved", "Closed"];
 
@@ -603,6 +616,78 @@ export const updateStatus = async (req, res) => {
     // ADDED: persist resolution note whenever it's sent
     if (resolutionNote?.trim()) {
       ticket.resolutionNote = resolutionNote.trim();
+    }
+
+    // ============================
+    // RESOLUTION TYPE / VENDOR DETAILS
+    // Only relevant when the ticket is actually being resolved/closed.
+    // ============================
+    let vendorSummaryForHistory = "";
+
+    if ((status === "Resolved" || status === "Closed") && resolutionType) {
+      const allowedResolutionTypes = ["Internal", "External Vendor"];
+
+      if (!allowedResolutionTypes.includes(resolutionType)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid resolution type",
+        });
+      }
+
+      ticket.resolutionType = resolutionType;
+
+      if (resolutionType === "External Vendor") {
+        if (
+          !vendorName?.trim() ||
+          !complaintDescription?.trim() ||
+          !repairDate ||
+          cost === undefined ||
+          cost === null ||
+          cost === ""
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Vendor name, complaint/repair description, repair date and cost are all required for an external vendor resolution",
+          });
+        }
+
+        const parsedCost = Number(cost);
+        if (Number.isNaN(parsedCost) || parsedCost < 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Cost must be a valid positive number",
+          });
+        }
+
+        const parsedRepairDate = new Date(repairDate);
+        if (Number.isNaN(parsedRepairDate.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: "Repair date is invalid",
+          });
+        }
+
+        // A new receipt upload (req.file, from multer) always wins; if
+        // none was sent this time (e.g. editing other fields later),
+        // keep whatever receipt was already on file.
+        const receiptUrl = req.file
+          ? req.file.path
+          : ticket.vendorDetails?.receiptUrl || "";
+
+        ticket.vendorDetails = {
+          vendorName: vendorName.trim(),
+          complaintDescription: complaintDescription.trim(),
+          repairDate: parsedRepairDate,
+          cost: parsedCost,
+          receiptUrl,
+        };
+
+        vendorSummaryForHistory = ` (External Vendor: ${vendorName.trim()}, cost ${parsedCost})`;
+      } else {
+        // Internal resolution — no vendor record needed.
+        vendorSummaryForHistory = " (Internal resolution)";
+      }
     }
 
     // ============================
@@ -687,7 +772,7 @@ export const updateStatus = async (req, res) => {
       status,
       changedAt: new Date(),
       changedBy: req.user.id,
-      note: `Status changed to ${status}`,
+      note: `Status changed to ${status}${vendorSummaryForHistory}`,
     });
 
     await ticket.save();

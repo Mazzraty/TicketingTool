@@ -225,13 +225,48 @@ const ticketSchema = new mongoose.Schema(
       default: "",
     },
 
-    // ADDED: was missing from the schema entirely. The frontend has been
+    // Was missing from the schema entirely. The frontend has been
     // sending this field on Resolve/Close (payload.resolutionNote), but
     // Mongoose silently dropped it on save since it wasn't a defined
     // field on the schema — so it never actually persisted to the DB.
     resolutionNote: {
       type: String,
       default: "",
+    },
+
+    // =========================
+    // RESOLUTION TYPE (Internal / External Vendor)
+    // =========================
+    resolutionType: {
+      type: String,
+      enum: ["Internal", "External Vendor"],
+      default: "Internal",
+    },
+
+    // Populated only when resolutionType === "External Vendor".
+    // Kept as a sub-document so it's easy to render as a single block
+    // in the ticket detail/history view.
+    vendorDetails: {
+      vendorName: {
+        type: String,
+        default: "",
+      },
+      complaintDescription: {
+        type: String,
+        default: "",
+      },
+      repairDate: {
+        type: Date,
+        default: null,
+      },
+      cost: {
+        type: Number,
+        default: null,
+      },
+      receiptUrl: {
+        type: String,
+        default: "",
+      },
     },
 
     rating: {

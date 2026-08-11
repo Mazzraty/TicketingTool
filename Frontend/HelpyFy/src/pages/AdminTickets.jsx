@@ -32,6 +32,7 @@ const IconAlertTriangle = (p) => <Icon {...p}><path d="m10.29 3.86-8.18 14.18A2 
 const IconZap = (p) => <Icon {...p}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" /></Icon>;
 const IconUser = (p) => <Icon {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></Icon>;
 const IconMenu = (p) => <Icon {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Icon>;
+const IconWrench = (p) => <Icon {...p}><path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L2 19l3 3 7.1-7.1a4 4 0 0 0 5.6-5.6l-2.8 2.8-2-2 2.8-2.8Z" /></Icon>;
 
 /* ================= STATUS THEME (single source of truth) ================= */
 const STATUS_THEME = {
@@ -155,7 +156,7 @@ const priorityDot = {
 
 /* ================= SLA UI COMPONENTS ================= */
 
-// ADDED: figures out which SLA leg is currently breached on a ticket
+// figures out which SLA leg is currently breached on a ticket
 // (resolution takes priority over response) and returns its existing
 // reason, if any, so the badge/modal know what to show.
 const getBreachLegInfo = (ticket, now) => {
@@ -188,7 +189,7 @@ const getBreachLegInfo = (ticket, now) => {
   return null;
 };
 
-// ADDED: onOpenReason — called when the badge is clicked on a breached
+// onOpenReason — called when the badge is clicked on a breached
 // ticket. Optional so SlaBadge still works anywhere it's used without it.
 const SlaBadge = ({ ticket, now, onOpenReason }) => {
   const state = getOverallSlaState(ticket, now);
@@ -216,14 +217,14 @@ const SlaBadge = ({ ticket, now, onOpenReason }) => {
   );
 };
 
-// ADDED: leg ("response" | "resolution"), ticket, onOpenReason — lets this
+// leg ("response" | "resolution"), ticket, onOpenReason — lets this
 // row show/add a reason based on the LIVE computed breach state (overdue
 // counts as breached even if the ticket was closed without ever formally
 // triggering the persisted resolutionBreached/firstResponseBreached flag).
 const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now, breachReason, leg, ticket, onOpenReason }) => {
   const state = getSlaLegState({ due, achievedAt, breached, now });
   const theme = SLA_THEME[state.level];
-  const isBreached = state.level === "breached"; // ADDED: live state, not just the persisted flag
+  const isBreached = state.level === "breached"; // live state, not just the persisted flag
 
   let progressPct = 100;
   if (!achievedAt && due) {
@@ -262,7 +263,7 @@ const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now,
         </p>
       )}
 
-      {/* ADDED: reason section — shows on ANY breach (live state), with an
+      {/* reason section — shows on ANY breach (live state), with an
           inline "add reason" action if nothing's been recorded yet */}
       {isBreached && (
         <div className="mt-2 pt-2 border-t border-red-200/70">
@@ -371,15 +372,24 @@ export default function AdminTickets() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState(null); // ADDED: "Open" | "In Progress" | "Resolved" | "Closed" | "breached" | null
+  const [statusFilter, setStatusFilter] = useState(null); // "Open" | "In Progress" | "Resolved" | "Closed" | "breached" | null
   const [loading, setLoading] = useState(false);
 
   const [statusModal, setStatusModal] = useState(null);
   const [resolutionNote, setResolutionNote] = useState("");
-  const [breachReason, setBreachReason] = useState(""); // ADDED
+  const [breachReason, setBreachReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // ADDED: quick "add reason immediately" modal, independent of resolve/close flow
+  // ADDED: resolution-type + external-vendor repair fields, used inside
+  // the Resolve/Close modal.
+  const [resolutionType, setResolutionType] = useState("Internal");
+  const [vendorName, setVendorName] = useState("");
+  const [vendorComplaint, setVendorComplaint] = useState("");
+  const [vendorRepairDate, setVendorRepairDate] = useState("");
+  const [vendorCost, setVendorCost] = useState("");
+  const [vendorReceipt, setVendorReceipt] = useState(null); // File object
+
+  // quick "add reason immediately" modal, independent of resolve/close flow
   const [breachModal, setBreachModal] = useState(null); // { ticket, leg }
   const [breachModalText, setBreachModalText] = useState("");
   const [breachSubmitting, setBreachSubmitting] = useState(false);
@@ -399,7 +409,7 @@ export default function AdminTickets() {
   useEffect(() => {
     load();
     loadStats();
-  }, []); // CHANGED: load everything once; pagination is now client-side
+  }, []); // load everything once; pagination is client-side
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 30000);
@@ -437,9 +447,9 @@ export default function AdminTickets() {
   const load = async () => {
     try {
       setLoading(true);
-      // CHANGED: fetch everything in one go (high limit) instead of one
-      // page at a time, so client-side filters (search + stat cards) can
-      // see every ticket, not just the 10 on the current server page.
+      // fetch everything in one go (high limit) instead of one page at a
+      // time, so client-side filters (search + stat cards) can see every
+      // ticket, not just the 10 on the current server page.
       const res = await api.get(`/tickets?page=1&limit=1000`);
       setTickets(res?.data?.data || []);
     } catch {
@@ -469,7 +479,25 @@ export default function AdminTickets() {
   const handleStatusChange = (ticket, targetStatus) => {
     if (targetStatus === "Resolved" || targetStatus === "Closed") {
       setResolutionNote(ticket.resolutionNote || "");
-      setBreachReason(ticket.sla?.breachReason || ""); // ADDED
+      setBreachReason(ticket.sla?.breachReason || "");
+
+      // ADDED: pre-fill resolution type / vendor fields from whatever's
+      // already on the ticket (lets IT support edit a previous entry).
+      setResolutionType(ticket.resolutionType || "Internal");
+      setVendorName(ticket.vendorDetails?.vendorName || "");
+      setVendorComplaint(ticket.vendorDetails?.complaintDescription || "");
+      setVendorRepairDate(
+        ticket.vendorDetails?.repairDate
+          ? new Date(ticket.vendorDetails.repairDate).toISOString().slice(0, 10)
+          : ""
+      );
+      setVendorCost(
+        ticket.vendorDetails?.cost !== null && ticket.vendorDetails?.cost !== undefined
+          ? String(ticket.vendorDetails.cost)
+          : ""
+      );
+      setVendorReceipt(null);
+
       setStatusModal({ ticket, targetStatus });
       return;
     }
@@ -491,54 +519,112 @@ export default function AdminTickets() {
     }
   };
 
+  // CHANGED: `extra` can now be a plain object (JSON, used for the quick
+  // Open/In Progress status changes) OR a FormData instance (used by the
+  // Resolve/Close modal so the optional vendor receipt file can travel
+  // alongside the other fields in one multipart request).
   const updateStatus = async (id, status, extra = {}) => {
     try {
-      const payload = { status, ...extra };
-      if (status === "Resolved") payload.resolvedAt = new Date().toISOString();
-      if (status === "Closed") payload.closedAt = new Date().toISOString();
+      let payload;
+      let config = {};
 
-      await api.put(`/tickets/${id}`, payload);
+      if (extra instanceof FormData) {
+        payload = extra;
+        payload.append("status", status);
+        if (status === "Resolved") payload.append("resolvedAt", new Date().toISOString());
+        if (status === "Closed") payload.append("closedAt", new Date().toISOString());
+        config.headers = { "Content-Type": "multipart/form-data" };
+      } else {
+        payload = { status, ...extra };
+        if (status === "Resolved") payload.resolvedAt = new Date().toISOString();
+        if (status === "Closed") payload.closedAt = new Date().toISOString();
+      }
+
+      await api.put(`/tickets/${id}`, payload, config);
       toast.success(`Ticket marked as ${status}`);
       load();
       loadStats();
-    } catch {
-      toast.error("Update failed");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Update failed");
     }
   };
 
-  // ADDED: whether the ticket currently in the modal is in a breached SLA state
+  // whether the ticket currently in the modal is in a breached SLA state
   const isModalTicketBreached =
     statusModal && getOverallSlaState(statusModal.ticket, now).level === "breached";
+
+  const resetStatusModalFields = () => {
+    setResolutionNote("");
+    setBreachReason("");
+    setResolutionType("Internal");
+    setVendorName("");
+    setVendorComplaint("");
+    setVendorRepairDate("");
+    setVendorCost("");
+    setVendorReceipt(null);
+  };
 
   const confirmStatusModal = async () => {
     if (!resolutionNote.trim()) {
       return toast.error("Please add a resolution note before continuing");
     }
 
-    // ADDED: require a breach reason when the SLA is currently breached
+    // require a breach reason when the SLA is currently breached
     if (isModalTicketBreached && !breachReason.trim()) {
       return toast.error("Please explain why the SLA was breached");
     }
 
+    // ADDED: validate vendor/repair fields when External Vendor is selected
+    if (resolutionType === "External Vendor") {
+      if (!vendorName.trim()) {
+        return toast.error("Vendor name is required");
+      }
+      if (!vendorComplaint.trim()) {
+        return toast.error("Please describe the complaint / repair");
+      }
+      if (!vendorRepairDate) {
+        return toast.error("Repair date is required");
+      }
+      if (vendorCost === "" || isNaN(Number(vendorCost)) || Number(vendorCost) < 0) {
+        return toast.error("Please enter a valid repair cost");
+      }
+    }
+
     setSubmitting(true);
-    await updateStatus(statusModal.ticket._id, statusModal.targetStatus, {
-      resolutionNote: resolutionNote.trim(),
-      // ADDED: send slaBreachReason only when relevant
-      ...(isModalTicketBreached ? { slaBreachReason: breachReason.trim() } : {}),
-    });
+
+    // ADDED: always build a FormData payload for this flow so the optional
+    // receipt file can ride along with the rest of the fields.
+    const formData = new FormData();
+    formData.append("resolutionNote", resolutionNote.trim());
+    formData.append("resolutionType", resolutionType);
+
+    if (isModalTicketBreached) {
+      formData.append("slaBreachReason", breachReason.trim());
+    }
+
+    if (resolutionType === "External Vendor") {
+      formData.append("vendorName", vendorName.trim());
+      formData.append("complaintDescription", vendorComplaint.trim());
+      formData.append("repairDate", vendorRepairDate);
+      formData.append("cost", vendorCost);
+      if (vendorReceipt) {
+        formData.append("receipt", vendorReceipt);
+      }
+    }
+
+    await updateStatus(statusModal.ticket._id, statusModal.targetStatus, formData);
+
     setSubmitting(false);
     setStatusModal(null);
-    setResolutionNote("");
-    setBreachReason(""); // ADDED
+    resetStatusModalFields();
   };
 
   const cancelStatusModal = () => {
     setStatusModal(null);
-    setResolutionNote("");
-    setBreachReason(""); // ADDED
+    resetStatusModalFields();
   };
 
-  // ADDED: open the quick reason modal when the breached badge is clicked
+  // open the quick reason modal when the breached badge is clicked
   const openBreachModal = (ticket, breachInfo) => {
     setBreachModal({ ticket, leg: breachInfo.leg });
     setBreachModalText(breachInfo.reason || "");
@@ -582,7 +668,7 @@ export default function AdminTickets() {
       t.status?.toLowerCase().includes(s) ||
       slaState.includes(s);
 
-    // ADDED: stat-card filter (status, or SLA breached)
+    // stat-card filter (status, or SLA breached)
     const matchesFilter =
       !statusFilter ||
       (statusFilter === "breached"
@@ -596,21 +682,21 @@ export default function AdminTickets() {
     (t) => getOverallSlaState(t, now).level === "breached"
   ).length;
 
-  // ADDED: client-side pagination over the FILTERED set, so page counts
-  // and page contents always reflect the active search/stat-card filter,
-  // not just whichever 10 tickets the server happened to send for page N.
+  // client-side pagination over the FILTERED set, so page counts and
+  // page contents always reflect the active search/stat-card filter, not
+  // just whichever 10 tickets the server happened to send for page N.
   const PAGE_SIZE = 10;
   const totalFilteredPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageTickets = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // ADDED: whenever the filter/search narrows the result set, jump back
-  // to page 1 so you don't land on a now-empty page.
+  // whenever the filter/search narrows the result set, jump back to page
+  // 1 so you don't land on a now-empty page.
   useEffect(() => {
     setPage(1);
   }, [search, statusFilter]);
 
-  // ADDED: if data reloads and the current page no longer exists (e.g.
-  // fewer results after a filter), clamp back into range.
+  // if data reloads and the current page no longer exists (e.g. fewer
+  // results after a filter), clamp back into range.
   useEffect(() => {
     if (page > totalFilteredPages) setPage(totalFilteredPages);
   }, [totalFilteredPages]);
@@ -626,6 +712,11 @@ export default function AdminTickets() {
     date ? new Date(date).toLocaleString(undefined, {
       month: "short", day: "numeric", year: "numeric",
       hour: "numeric", minute: "2-digit",
+    }) : "—";
+
+  const formatDateOnly = (date) =>
+    date ? new Date(date).toLocaleDateString(undefined, {
+      month: "short", day: "numeric", year: "numeric",
     }) : "—";
 
   const renderStars = (rating) => (
@@ -785,6 +876,57 @@ export default function AdminTickets() {
                 )}
               </div>
 
+              {/* ADDED: Vendor / repair information — only rendered once a
+                  resolution type has actually been recorded on the ticket. */}
+              {selected.resolutionType && (
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                    <IconWrench className="w-3.5 h-3.5" /> Resolution Type
+                  </p>
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${selected.resolutionType === "External Vendor"
+                      ? "bg-purple-50 text-purple-700 border-purple-200"
+                      : "bg-slate-100 text-slate-600 border-slate-200"
+                    }`}>
+                    {selected.resolutionType}
+                  </span>
+
+                  {selected.resolutionType === "External Vendor" && selected.vendorDetails && (
+                    <div className="mt-2 bg-purple-50/60 border border-purple-100 rounded-lg p-3 flex flex-col gap-1.5 text-sm">
+                      <p className="text-slate-700">
+                        <span className="font-medium text-slate-500">Vendor:</span>{" "}
+                        {selected.vendorDetails.vendorName || "—"}
+                      </p>
+                      <p className="text-slate-700">
+                        <span className="font-medium text-slate-500">Repair date:</span>{" "}
+                        {formatDateOnly(selected.vendorDetails.repairDate)}
+                      </p>
+                      <p className="text-slate-700">
+                        <span className="font-medium text-slate-500">Cost:</span>{" "}
+                        {selected.vendorDetails.cost !== null && selected.vendorDetails.cost !== undefined
+                          ? selected.vendorDetails.cost
+                          : "—"}
+                      </p>
+                      <p className="text-slate-700">
+                        <span className="font-medium text-slate-500">Details:</span>{" "}
+                        {selected.vendorDetails.complaintDescription || "—"}
+                      </p>
+                      {selected.vendorDetails.receiptUrl ? (
+                        <a
+                          href={selected.vendorDetails.receiptUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-purple-700 hover:text-purple-800 text-xs font-semibold mt-1"
+                        >
+                          <IconClip className="w-3.5 h-3.5" /> View Receipt
+                        </a>
+                      ) : (
+                        <p className="text-xs text-slate-400">No receipt uploaded</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
                 <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Attachments</p>
                 {selected.files?.length > 0 ? (
@@ -846,8 +988,8 @@ export default function AdminTickets() {
         {/* STATS — 2 columns on phones so labels/numbers stay readable, not squeezed to 6-across */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           {statCards.map((s) => {
-            // ADDED: a card is "active" if it's the currently applied filter,
-            // or if it's the Total card and no filter is applied at all.
+            // a card is "active" if it's the currently applied filter, or
+            // if it's the Total card and no filter is applied at all.
             const isActive = s.filterKey === null ? statusFilter === null : statusFilter === s.filterKey;
             return (
               <button
@@ -870,7 +1012,7 @@ export default function AdminTickets() {
           })}
         </div>
 
-        {/* ADDED: active filter indicator + clear button */}
+        {/* active filter indicator + clear button */}
         {statusFilter && (
           <div className="flex items-center gap-2 mb-4 -mt-2">
             <span className="text-xs text-slate-500">
@@ -940,6 +1082,13 @@ export default function AdminTickets() {
                       <p className="text-xs text-slate-400 mb-3 flex items-start gap-1">
                         <IconNote className="w-3 h-3 shrink-0 mt-0.5" />
                         <span className="line-clamp-2">{t.resolutionNote}</span>
+                      </p>
+                    )}
+
+                    {/* ADDED: small vendor badge on the mobile card */}
+                    {t.resolutionType === "External Vendor" && (
+                      <p className="text-[11px] text-purple-700 bg-purple-50 border border-purple-100 rounded-md px-2 py-1 mb-3 inline-flex items-center gap-1">
+                        <IconWrench className="w-3 h-3" /> {t.vendorDetails?.vendorName || "External Vendor"}
                       </p>
                     )}
 
@@ -1049,6 +1198,15 @@ export default function AdminTickets() {
                                   <IconNote className="w-2.5 h-2.5 shrink-0" /> {t.resolutionNote}
                                 </p>
                               )}
+                              {/* ADDED: quick vendor indicator under the status pill */}
+                              {t.resolutionType === "External Vendor" && (
+                                <span
+                                  className="text-[10px] text-purple-700 bg-purple-50 border border-purple-100 rounded-full px-2 py-0.5 flex items-center gap-1"
+                                  title={t.vendorDetails?.vendorName}
+                                >
+                                  <IconWrench className="w-2.5 h-2.5" /> Vendor
+                                </span>
+                              )}
                             </div>
                           </td>
 
@@ -1120,7 +1278,7 @@ export default function AdminTickets() {
       {/* ================= RESOLVE / CLOSE MODAL ================= */}
       {statusModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-1">
               <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${statusModal.targetStatus === "Resolved" ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-600"
                 }`}>
@@ -1153,7 +1311,113 @@ export default function AdminTickets() {
               This note is saved with the ticket so anyone can see how it was handled.
             </p>
 
-            {/* ADDED: SLA breach reason field, only shown when this ticket is currently breached */}
+            {/* ADDED: Resolution Type toggle */}
+            <div className="mt-4">
+              <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                Resolution Type <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setResolutionType("Internal")}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${resolutionType === "Internal"
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    }`}
+                >
+                  Internal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setResolutionType("External Vendor")}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${resolutionType === "External Vendor"
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    }`}
+                >
+                  External Vendor
+                </button>
+              </div>
+            </div>
+
+            {/* ADDED: External Vendor fields — only shown when relevant */}
+            {resolutionType === "External Vendor" && (
+              <div className="mt-4 border border-purple-200 bg-purple-50/40 rounded-lg p-3 flex flex-col gap-3">
+                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide flex items-center gap-1.5">
+                  <IconWrench className="w-3.5 h-3.5" /> Vendor / Repair Details
+                </p>
+
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">
+                    Vendor Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    value={vendorName}
+                    onChange={(e) => setVendorName(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
+                    placeholder="e.g. ABC Computer Repairs"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">
+                    Complaint / Repair Description <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={vendorComplaint}
+                    onChange={(e) => setVendorComplaint(e.target.value)}
+                    rows={3}
+                    className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 resize-none bg-white"
+                    placeholder="e.g. Motherboard replaced due to short circuit"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1 block">
+                      Repair Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={vendorRepairDate}
+                      onChange={(e) => setVendorRepairDate(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1 block">
+                      Cost <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={vendorCost}
+                      onChange={(e) => setVendorCost(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">
+                    Receipt / Invoice (optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setVendorReceipt(e.target.files?.[0] || null)}
+                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
+                  />
+                  {vendorReceipt && (
+                    <p className="text-[11px] text-slate-500 mt-1">Selected: {vendorReceipt.name}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* SLA breach reason field, only shown when this ticket is currently breached */}
             {isModalTicketBreached && (
               <div className="mt-4">
                 <label className="text-xs font-medium text-slate-500 mb-1.5 block">
@@ -1192,7 +1456,7 @@ export default function AdminTickets() {
         </div>
       )}
 
-      {/* ================= ADDED: QUICK SLA BREACH REASON MODAL =================
+      {/* ================= QUICK SLA BREACH REASON MODAL =================
           Opens the instant an admin clicks a breached SLA badge, so the
           reason can be captured right when the breach happens — no need
           to wait until the ticket is Resolved/Closed. */}

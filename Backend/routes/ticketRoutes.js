@@ -1,32 +1,24 @@
 import express from "express";
 
 import {
-  createTicket,
-  createManualTicket,
-  getAllTickets,
-  getUserTickets,
-  updateStatus,
-  deleteTicket,
-  getTicketStats,
-  editTicket,
-  addReview,
-  getTicketById,
-  reopenTicket,
-  confirmResolution,
+  createTicket, createManualTicket, getAllTickets, getUserTickets, updateStatus, deleteTicket, getTicketStats, editTicket, addReview, getTicketById, reopenTicket, confirmResolution,
   deleteAttachment,
   escalateTicket,
   addSlaBreachReason
 } from "../controllers/ticketController.js";
 
+// FIXED: was imported twice, from two different (and inconsistent) paths
+// — "../middlewares/upload.js" (plural) and "../middleware/upload.js"
+// (singular). Your authMiddleware import below confirms the real folder
+// is the singular "../middleware/", so both `upload` and the new
+// `uploadReceiptSafe` now come from one place.
+import { upload, uploadReceiptSafe } from "../middleware/upload.js";
 
 import {
   protect,
   adminOnly,
   companyCheck,
 } from "../middleware/authMiddleware.js";
-
-
-import { upload } from "../middleware/upload.js";
 
 
 const router = express.Router();
@@ -227,10 +219,11 @@ router.put(
   protect,
   companyCheck,
   adminOnly,
+  uploadReceiptSafe,
   updateStatus
 );
 
-router.put("/:id/sla-breach-reason", protect,companyCheck,adminOnly, addSlaBreachReason);
+router.put("/:id/sla-breach-reason", protect, companyCheck, adminOnly, addSlaBreachReason);
 
 
 // DELETE TICKET
