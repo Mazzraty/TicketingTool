@@ -286,7 +286,7 @@ export default function AdminDashboardProfessional() {
             />
             <StatCard
               icon={Laptop}
-              title="Laptops"
+              title="Laptops/Desktops"
               value={stats.laptops}
               subtext="Managed devices"
             />
