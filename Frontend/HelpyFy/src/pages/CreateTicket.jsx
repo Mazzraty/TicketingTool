@@ -157,23 +157,24 @@ const detectRelatedTo = (text) => {
   return null;
 };
 
+// Bold gradient chips for the priority badge
 const PRIORITY_BADGE_STYLE = {
-  Critical: "bg-red-600 text-white",
-  High: "bg-orange-500 text-white",
-  Medium: "bg-yellow-500 text-white",
-  Low: "bg-green-600 text-white",
+  Critical: "bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-sm shadow-rose-200",
+  High: "bg-gradient-to-r from-orange-400 to-amber-500 text-white shadow-sm shadow-orange-200",
+  Medium: "bg-gradient-to-r from-amber-300 to-yellow-400 text-amber-950 shadow-sm shadow-amber-100",
+  Low: "bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-sm shadow-emerald-200",
 };
 
 const FormField = ({ label, name, error, required, children, hint, className = "" }) => (
   <div className={`space-y-1.5 ${className}`}>
-    <label htmlFor={name} className="block text-xs font-semibold text-gray-900">
+    <label htmlFor={name} className="block text-xs font-bold text-slate-800 tracking-wide">
       {label}
-      {required && <span className="text-red-500 ml-0.5">*</span>}
+      {required && <span className="text-fuchsia-500 ml-0.5">*</span>}
     </label>
     {children}
-    {hint && !error && <p className="text-[11px] text-gray-500">{hint}</p>}
+    {hint && !error && <p className="text-[11px] text-slate-400">{hint}</p>}
     {error && (
-      <p className="text-[11px] text-red-600 flex items-center gap-1">
+      <p className="text-[11px] text-rose-600 font-medium flex items-center gap-1">
         <AlertCircle className="w-3 h-3" />
         {error}
       </p>
@@ -181,32 +182,46 @@ const FormField = ({ label, name, error, required, children, hint, className = "
   </div>
 );
 
-// Compact selector pill — replaces the old large description cards
-const LevelPill = ({ option, selected, onClick, accent }) => (
+// Compact selector pill, colored per axis
+const LevelPill = ({ option, selected, onClick, palette }) => (
   <button
     type="button"
     onClick={onClick}
     title={option.desc}
-    className={`text-left px-2.5 py-2 rounded-md border transition ${
+    className={`text-left px-3 py-2 rounded-xl border-2 transition-all ${
       selected
-        ? `${accent} border-current`
-        : "bg-white border-gray-200 hover:border-gray-300"
+        ? `${palette.bg} ${palette.border} shadow-md ${palette.shadow}`
+        : "bg-white border-slate-100 hover:border-slate-200"
     }`}
   >
-    <p className={`text-xs font-semibold leading-tight ${selected ? "" : "text-gray-900"}`}>
+    <p className={`text-xs font-bold leading-tight ${selected ? palette.text : "text-slate-800"}`}>
       {option.label}
     </p>
-    <p className={`text-[10px] mt-0.5 leading-tight ${selected ? "opacity-90" : "text-gray-500"}`}>
+    <p className={`text-[10px] mt-0.5 leading-tight ${selected ? `${palette.text} opacity-80` : "text-slate-400"}`}>
       {option.desc}
     </p>
   </button>
 );
 
+const IMPACT_PALETTE = {
+  bg: "bg-gradient-to-br from-indigo-500 to-violet-600",
+  border: "border-transparent",
+  text: "text-white",
+  shadow: "shadow-indigo-200",
+};
+
+const URGENCY_PALETTE = {
+  bg: "bg-gradient-to-br from-fuchsia-500 to-pink-600",
+  border: "border-transparent",
+  text: "text-white",
+  shadow: "shadow-fuchsia-200",
+};
+
 const inputCls = (hasError) =>
-  `w-full px-3 py-2 text-sm border rounded-md font-medium placeholder-gray-400 transition focus:outline-none focus:ring-2 ${
+  `w-full px-3.5 py-2.5 text-sm border-2 rounded-xl font-medium placeholder-slate-400 bg-white transition focus:outline-none ${
     hasError
-      ? "border-red-300 focus:ring-red-200 bg-red-50"
-      : "border-gray-200 focus:ring-blue-200 focus:border-blue-400"
+      ? "border-rose-300 focus:border-rose-400 bg-rose-50"
+      : "border-slate-100 focus:border-indigo-400"
   }`;
 
 export default function CreateTicket() {
@@ -436,31 +451,41 @@ export default function CreateTicket() {
   const getPriorityBg = (level) => {
     switch (level) {
       case "Critical":
-        return form.priority === level ? "bg-red-600 text-white" : "bg-red-50 text-red-700 border-red-200";
+        return form.priority === level
+          ? "bg-gradient-to-r from-rose-500 to-red-600 text-white border-transparent shadow-md shadow-rose-200"
+          : "bg-rose-50 text-rose-700 border-rose-100";
       case "High":
-        return form.priority === level ? "bg-orange-600 text-white" : "bg-orange-50 text-orange-700 border-orange-200";
+        return form.priority === level
+          ? "bg-gradient-to-r from-orange-400 to-amber-500 text-white border-transparent shadow-md shadow-orange-200"
+          : "bg-orange-50 text-orange-700 border-orange-100";
       case "Medium":
-        return form.priority === level ? "bg-yellow-600 text-white" : "bg-yellow-50 text-yellow-700 border-yellow-200";
+        return form.priority === level
+          ? "bg-gradient-to-r from-amber-300 to-yellow-400 text-amber-950 border-transparent shadow-md shadow-amber-100"
+          : "bg-yellow-50 text-yellow-700 border-yellow-100";
       case "Low":
-        return form.priority === level ? "bg-green-600 text-white" : "bg-green-50 text-green-700 border-green-200";
+        return form.priority === level
+          ? "bg-gradient-to-r from-emerald-400 to-teal-500 text-white border-transparent shadow-md shadow-emerald-200"
+          : "bg-emerald-50 text-emerald-700 border-emerald-100";
       default:
-        return "bg-gray-50 text-gray-700";
+        return "bg-slate-50 text-slate-700 border-slate-100";
     }
   };
 
   const isReady = form.title && form.description && form.department && form.relatedTo && form.priority;
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
-      {/* HEADER */}
-      <div className="bg-white border-b border-gray-200 flex-shrink-0">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3">
-          <div className="p-1.5 bg-blue-100 rounded-lg">
-            <Zap className="w-4 h-4 text-blue-600" />
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
+      {/* HEADER — bold gradient band */}
+      <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 flex-shrink-0">
+        <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center gap-3">
+          <div className="p-2 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/20">
+            <Zap className="w-4 h-4 text-white" fill="currentColor" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900 leading-tight">Create Support Ticket</h1>
-            <p className="text-xs text-gray-600">Submit a detailed request to get faster resolution</p>
+            <h1 className="text-lg font-extrabold text-white leading-tight tracking-tight">
+              Create Support Ticket
+            </h1>
+            <p className="text-xs text-indigo-100">Submit a detailed request to get faster resolution</p>
           </div>
         </div>
       </div>
@@ -469,9 +494,9 @@ export default function CreateTicket() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
           {/* MAIN FORM */}
           <form onSubmit={handleSubmit} className="lg:col-span-2 flex flex-col h-full min-h-0">
-            <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0">
+            <div className="space-y-3.5 overflow-y-auto pr-1 flex-1 min-h-0">
               {/* TITLE + DEPARTMENT ROW */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <FormField label="Ticket Title" name="title" error={errors.title} required>
                   <input
                     id="title"
@@ -531,7 +556,7 @@ export default function CreateTicket() {
                   ))}
                 </select>
                 {relatedSuggested && !manualRelatedTo && (
-                  <p className="text-[11px] text-blue-600 flex items-center gap-1">
+                  <p className="text-[11px] text-fuchsia-600 font-semibold flex items-center gap-1">
                     <Zap className="w-3 h-3 shrink-0" />
                     Suggested from "{relatedSuggested.matched}"
                   </p>
@@ -539,13 +564,13 @@ export default function CreateTicket() {
               </FormField>
 
               {/* PRIORITY */}
-              <div className="space-y-2.5 p-3 rounded-lg border border-gray-200 bg-white">
+              <div className="space-y-2.5 p-3.5 rounded-2xl border-2 border-slate-100 bg-white shadow-sm">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-gray-900">Priority</p>
+                  <p className="text-xs font-bold text-slate-800">Priority</p>
                   <button
                     type="button"
                     onClick={() => setOverridePriority((v) => !v)}
-                    className="flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700"
+                    className="flex items-center gap-1 text-[11px] font-bold text-fuchsia-600 hover:text-fuchsia-700"
                   >
                     <Sliders className="w-3 h-3" />
                     {overridePriority ? "Use auto-calculation" : "Set manually"}
@@ -553,7 +578,7 @@ export default function CreateTicket() {
                 </div>
 
                 {autoSuggested && !manualImpactUrgency && !overridePriority && (
-                  <p className="text-[11px] text-blue-600 flex items-center gap-1">
+                  <p className="text-[11px] text-fuchsia-600 font-semibold flex items-center gap-1">
                     <Zap className="w-3 h-3 shrink-0" />
                     Suggested from "{autoSuggested.matched}"
                   </p>
@@ -561,7 +586,7 @@ export default function CreateTicket() {
 
                 {!overridePriority ? (
                   <>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3.5">
                       <FormField label="Impact" name="impact" error={errors.impact} required>
                         <div className="grid grid-cols-1 gap-1.5">
                           {IMPACT_LEVELS.map((opt) => (
@@ -570,7 +595,7 @@ export default function CreateTicket() {
                               option={opt}
                               selected={form.impact === opt.value}
                               onClick={() => setImpact(opt.value)}
-                              accent="bg-blue-50 text-blue-800 border-blue-300"
+                              palette={IMPACT_PALETTE}
                             />
                           ))}
                         </div>
@@ -584,7 +609,7 @@ export default function CreateTicket() {
                               option={opt}
                               selected={form.urgency === opt.value}
                               onClick={() => setUrgency(opt.value)}
-                              accent="bg-purple-50 text-purple-800 border-purple-300"
+                              palette={URGENCY_PALETTE}
                             />
                           ))}
                         </div>
@@ -592,13 +617,13 @@ export default function CreateTicket() {
                     </div>
 
                     <div className="flex items-center gap-2 pt-0.5">
-                      <span className="text-[11px] font-medium text-gray-500">Calculated priority:</span>
+                      <span className="text-[11px] font-bold text-slate-400">Calculated priority:</span>
                       {form.priority ? (
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${PRIORITY_BADGE_STYLE[form.priority]}`}>
+                        <span className={`px-3 py-0.5 rounded-full text-[11px] font-bold ${PRIORITY_BADGE_STYLE[form.priority]}`}>
                           {form.priority}
                         </span>
                       ) : (
-                        <span className="text-[11px] text-gray-400">Select impact & urgency</span>
+                        <span className="text-[11px] text-slate-300">Select impact & urgency</span>
                       )}
                     </div>
                   </>
@@ -610,9 +635,7 @@ export default function CreateTicket() {
                           key={level}
                           type="button"
                           onClick={() => setPriorityManually(level)}
-                          className={`px-3 py-2 rounded-md border-2 font-semibold text-xs transition ${getPriorityBg(level)} ${
-                            form.priority === level ? "border-current" : "border-gray-200 hover:border-gray-300"
-                          }`}
+                          className={`px-3 py-2 rounded-xl border-2 font-bold text-xs transition ${getPriorityBg(level)}`}
                         >
                           {level}
                         </button>
@@ -629,20 +652,22 @@ export default function CreateTicket() {
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-lg px-4 py-3 flex items-center justify-between gap-3 transition ${
-                    dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-gray-50 hover:border-gray-400"
+                  className={`border-2 border-dashed rounded-2xl px-4 py-3 flex items-center justify-between gap-3 transition ${
+                    dragActive
+                      ? "border-fuchsia-400 bg-fuchsia-50"
+                      : "border-slate-200 bg-slate-50 hover:border-indigo-300"
                   }`}
                 >
                   <input type="file" multiple id="fileUpload" className="hidden" onChange={handleFileChange} />
-                  <label htmlFor="fileUpload" className="cursor-pointer flex items-center gap-2 min-w-0">
-                    <div className="p-1.5 bg-blue-100 rounded-md shrink-0">
-                      <Upload className="w-4 h-4 text-blue-600" />
+                  <label htmlFor="fileUpload" className="cursor-pointer flex items-center gap-2.5 min-w-0">
+                    <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-fuchsia-500 rounded-lg shrink-0">
+                      <Upload className="w-4 h-4 text-white" />
                     </div>
-                    <span className="text-xs text-gray-700">
-                      <span className="text-blue-600 font-medium hover:underline">Click to browse</span> or drag files here
+                    <span className="text-xs text-slate-600">
+                      <span className="text-fuchsia-600 font-bold hover:underline">Click to browse</span> or drag files here
                     </span>
                   </label>
-                  <span className="text-[10px] text-gray-500 shrink-0">PDF, PNG, JPG, ZIP · 10 MB max</span>
+                  <span className="text-[10px] text-slate-400 font-medium shrink-0">PDF, PNG, JPG, ZIP · 10 MB max</span>
                 </div>
 
                 {files.length > 0 && (
@@ -650,17 +675,17 @@ export default function CreateTicket() {
                     {files.map((file, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md"
+                        className="flex items-center justify-between px-2.5 py-1.5 bg-slate-50 border-2 border-slate-100 rounded-lg"
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                          <p className="text-xs font-medium text-gray-900 truncate">{file.name}</p>
-                          <p className="text-[10px] text-gray-500 shrink-0">{(file.size / 1024).toFixed(1)} KB</p>
+                          <FileText className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                          <p className="text-xs font-semibold text-slate-800 truncate">{file.name}</p>
+                          <p className="text-[10px] text-slate-400 shrink-0">{(file.size / 1024).toFixed(1)} KB</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => removeFile(index)}
-                          className="p-0.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition flex-shrink-0"
+                          className="p-0.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition flex-shrink-0"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -671,13 +696,15 @@ export default function CreateTicket() {
               </FormField>
             </div>
 
-            {/* SUBMIT BUTTON — pinned to bottom, always visible */}
-            <div className="pt-3 flex-shrink-0">
+            {/* SUBMIT BUTTON — pinned, bold gradient */}
+            <div className="pt-3.5 flex-shrink-0">
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full px-6 py-2.5 rounded-lg font-semibold text-sm text-white transition flex items-center justify-center gap-2 ${
-                  loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 active:scale-95"
+                className={`w-full px-6 py-3 rounded-2xl font-bold text-sm text-white transition flex items-center justify-center gap-2 ${
+                  loading
+                    ? "bg-slate-300 cursor-not-allowed"
+                    : "bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 hover:brightness-110 active:scale-[0.98] shadow-lg shadow-violet-200"
                 }`}
               >
                 {loading ? (
@@ -697,69 +724,69 @@ export default function CreateTicket() {
 
           {/* LIVE PREVIEW SIDEBAR */}
           <div className="lg:col-span-1 min-h-0">
-            <div className="h-full bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-              <div className="px-4 py-2.5 bg-blue-50 border-b border-gray-200 flex-shrink-0">
-                <h3 className="text-sm font-semibold text-gray-900">Preview</h3>
-                <p className="text-[11px] text-gray-600">How your ticket will appear</p>
+            <div className="h-full bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden flex flex-col">
+              <div className="px-4 py-3 bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 flex-shrink-0">
+                <h3 className="text-sm font-extrabold text-white">Preview</h3>
+                <p className="text-[11px] text-indigo-100">How your ticket will appear</p>
               </div>
 
               <div className="p-4 space-y-3 overflow-y-auto flex-1 min-h-0">
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-1">Title</p>
-                  <p className="text-sm font-semibold text-gray-900 line-clamp-2">
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-1">Title</p>
+                  <p className="text-sm font-bold text-slate-900 line-clamp-2">
                     {form.title || "(No title yet)"}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-1">Description</p>
-                  <p className="text-xs text-gray-700 line-clamp-3 leading-relaxed">
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-1">Description</p>
+                  <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
                     {form.description || "(No description yet)"}
                   </p>
                 </div>
 
-                <div className="space-y-2.5 pt-3 border-t border-gray-200">
+                <div className="space-y-2.5 pt-3 border-t-2 border-slate-50">
                   {!overridePriority && (
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-0.5">Impact</p>
-                        <p className="text-xs font-medium text-gray-900">{form.impact || "—"}</p>
+                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-0.5">Impact</p>
+                        <p className="text-xs font-bold text-slate-800">{form.impact || "—"}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-0.5">Urgency</p>
-                        <p className="text-xs font-medium text-gray-900">{form.urgency || "—"}</p>
+                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-0.5">Urgency</p>
+                        <p className="text-xs font-bold text-slate-800">{form.urgency || "—"}</p>
                       </div>
                     </div>
                   )}
 
                   <div>
-                    <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-1">Priority</p>
+                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-1">Priority</p>
                     {form.priority ? (
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${PRIORITY_BADGE_STYLE[form.priority]}`}>
+                      <span className={`inline-block px-3 py-0.5 rounded-full text-[11px] font-bold ${PRIORITY_BADGE_STYLE[form.priority]}`}>
                         {form.priority}
                       </span>
                     ) : (
-                      <span className="text-[11px] text-gray-400">Not yet determined</span>
+                      <span className="text-[11px] text-slate-300">Not yet determined</span>
                     )}
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-0.5">Department</p>
-                    <p className="text-xs font-medium text-gray-900">{form.department || "(Not selected)"}</p>
+                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-0.5">Department</p>
+                    <p className="text-xs font-bold text-slate-800">{form.department || "(Not selected)"}</p>
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-0.5">Related To</p>
-                    <p className="text-xs font-medium text-gray-900">{form.relatedTo || "(Not selected)"}</p>
+                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-0.5">Related To</p>
+                    <p className="text-xs font-bold text-slate-800">{form.relatedTo || "(Not selected)"}</p>
                   </div>
 
                   {files.length > 0 && (
                     <div>
-                      <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-1">Attachments</p>
+                      <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-1">Attachments</p>
                       <div className="space-y-0.5">
                         {files.map((file, index) => (
-                          <div key={index} className="flex items-center gap-1.5 text-xs text-gray-600">
-                            <FileText className="w-3 h-3 shrink-0" />
+                          <div key={index} className="flex items-center gap-1.5 text-xs text-slate-600">
+                            <FileText className="w-3 h-3 shrink-0 text-indigo-400" />
                             <span className="truncate">{file.name}</span>
                           </div>
                         ))}
@@ -769,14 +796,14 @@ export default function CreateTicket() {
                 </div>
               </div>
 
-              <div className="px-4 py-2.5 border-t border-gray-200 text-center flex-shrink-0">
+              <div className="px-4 py-3 border-t-2 border-slate-50 text-center flex-shrink-0">
                 {isReady ? (
-                  <p className="text-xs text-green-600 font-medium flex items-center justify-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
+                  <p className="text-xs text-white font-bold flex items-center justify-center gap-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full py-1.5 px-3">
+                    <CheckCircle className="w-3.5 h-3.5" />
                     Ready to submit
                   </p>
                 ) : (
-                  <p className="text-xs text-gray-500">Fill in required fields</p>
+                  <p className="text-xs text-slate-400 font-medium">Fill in required fields</p>
                 )}
               </div>
             </div>
