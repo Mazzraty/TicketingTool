@@ -1151,7 +1151,7 @@ export default function AdminTickets() {
                   }`}
               >
                 <IconCalendar className="w-4 h-4" />
-                <span className="hidden sm:inline">Dates</span>
+                <span className="hidden sm:inline">Filter Ticket</span>
                 {activeDateFilterCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
                     {activeDateFilterCount}
