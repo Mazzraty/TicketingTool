@@ -1164,6 +1164,46 @@ export const createManualTicket = async (req, res) => {
     } = req.body;
 
 
+    // ==================================================
+    // COMPANY ID (same logic as createTicket)
+    // ==================================================
+    const companyId =
+      req.user.companyId ||
+      req.user.companyAccess?.find((c) => c.isActive && c.companyId)?.companyId ||
+      req.user.companyAccess?.[0]?.companyId;
+
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        message: "Company is not assigned to this user",
+      });
+    }
+
+    // Find company and compute company code for ticket number
+    const company = await Company.findById(companyId);
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    const companyCode =
+      company.code ||
+      company.companyCode ||
+      company.name?.replace(/[^a-zA-Z0-9]/g, "").substring(0, 3).toUpperCase();
+
+    if (!companyCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Company code is missing",
+      });
+    }
+
+    // Generate ticket number for manual tickets as well
+    const ticketNumber = await generateTicketNumber(companyId, companyCode);
+
     // Validation
     if (!title || !description) {
       return res.status(400).json({
@@ -1185,7 +1225,12 @@ export const createManualTicket = async (req, res) => {
       // =========================
       // COMPANY
       // =========================
-      companyId: req.user.companyId,
+      companyId,
+
+      // =========================
+      // TICKET NUMBER
+      // =========================
+      ticketNumber,
 
 
       // =========================
@@ -1211,7 +1256,7 @@ export const createManualTicket = async (req, res) => {
       // =========================
       status: "Open",
       assignedRole: "it_support",
-      assignedTo: req.user._id,
+      assignedTo: req.user.id,
 
 
       // =========================
@@ -1252,7 +1297,7 @@ export const createManualTicket = async (req, res) => {
         {
           status: "Open",
 
-          changedBy: req.user._id,
+          changedBy: req.user.id,
 
           note: "Ticket created manually by IT Support",
 
@@ -1320,7 +1365,7 @@ export const escalateTicket = async (req, res) => {
 
     ticket.escalatedAt = new Date();
 
-    ticket.escalatedBy = req.user._id;
+    ticket.escalatedBy = req.user.id;
 
     ticket.escalationReason = reason;
 
@@ -1332,7 +1377,7 @@ export const escalateTicket = async (req, res) => {
 
     ticket.statusHistory.push({
       status: ticket.status,
-      changedBy: req.user._id,
+          changedBy: req.user.id,
       changedAt: new Date(),
       note: `Escalated to Super Admin : ${reason}`,
     });
