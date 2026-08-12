@@ -1,5 +1,7 @@
 import Ticket from "../models/ticketSchema.js";
 import Company from "../models/comapnySchema.js";
+import Employee from "../models/employeeMasterSchema.js";
+import Asset from "../models/assetSchema.js";
 import User from "../models/userShema.js";
 import sendEmail from "../utils/sendEmail.js";
 import { ticketAdminEmail } from "../utils/ticketAdminEmail.js";
