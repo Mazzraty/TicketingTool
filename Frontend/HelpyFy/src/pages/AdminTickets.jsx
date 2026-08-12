@@ -35,6 +35,8 @@ const IconMenu = (p) => <Icon {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Icon>
 const IconWrench = (p) => <Icon {...p}><path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L2 19l3 3 7.1-7.1a4 4 0 0 0 5.6-5.6l-2.8 2.8-2-2 2.8-2.8Z" /></Icon>;
 // NEW: trash icon for the delete action (super_admin only)
 const IconTrash = (p) => <Icon {...p}><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></Icon>;
+// NEW: calendar icon for the date-range filter
+const IconCalendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Icon>;
 
 /* ================= STATUS THEME (single source of truth) ================= */
 const STATUS_THEME = {
@@ -377,6 +379,16 @@ export default function AdminTickets() {
   const [statusFilter, setStatusFilter] = useState(null); // "Open" | "In Progress" | "Resolved" | "Closed" | "breached" | null
   const [loading, setLoading] = useState(false);
 
+  // NEW: independent date-range filters for Opened (createdAt) and
+  // Closed (closedAt, falling back to resolvedAt to match the "Closed"
+  // column shown in the table/cards). Stored as "YYYY-MM-DD" strings
+  // straight from <input type="date">.
+  const [dateFilterOpen, setDateFilterOpen] = useState(false);
+  const [openedFrom, setOpenedFrom] = useState("");
+  const [openedTo, setOpenedTo] = useState("");
+  const [closedFrom, setClosedFrom] = useState("");
+  const [closedTo, setClosedTo] = useState("");
+
   const [statusModal, setStatusModal] = useState(null);
   const [resolutionNote, setResolutionNote] = useState("");
   const [breachReason, setBreachReason] = useState("");
@@ -701,6 +713,86 @@ export default function AdminTickets() {
     }
   };
 
+  // NEW: date-range filter helpers ------------------------------------
+
+  // "YYYY-MM-DD" -> local midnight / end-of-day Date, so the picked day
+  // is always inclusive regardless of the ticket's exact timestamp.
+  const startOfDay = (ymd) => {
+    const d = new Date(`${ymd}T00:00:00`);
+    return d;
+  };
+  const endOfDay = (ymd) => {
+    const d = new Date(`${ymd}T23:59:59.999`);
+    return d;
+  };
+
+  const isWithinDateRange = (value, fromStr, toStr) => {
+    if (!fromStr && !toStr) return true; // no filter set on this leg
+    if (!value) return false; // filter set but ticket has no such date
+    const d = new Date(value);
+    if (fromStr && d < startOfDay(fromStr)) return false;
+    if (toStr && d > endOfDay(toStr)) return false;
+    return true;
+  };
+
+  const toISODate = (d) => d.toISOString().slice(0, 10);
+
+  // quick presets (Jira/ServiceNow-style relative ranges), applied to
+  // whichever section ("opened" | "closed") the user clicked from.
+  const applyDatePreset = (section, preset) => {
+    const today = new Date();
+    const from = new Date(today);
+
+    if (preset === "today") {
+      // from === to === today
+    } else if (preset === "week") {
+      from.setDate(today.getDate() - 6);
+    } else if (preset === "month") {
+      from.setDate(today.getDate() - 29);
+    }
+
+    const fromStr = toISODate(from);
+    const toStr = toISODate(today);
+
+    if (section === "opened") {
+      setOpenedFrom(fromStr);
+      setOpenedTo(toStr);
+    } else {
+      setClosedFrom(fromStr);
+      setClosedTo(toStr);
+    }
+  };
+
+  const clearDateSection = (section) => {
+    if (section === "opened") {
+      setOpenedFrom("");
+      setOpenedTo("");
+    } else {
+      setClosedFrom("");
+      setClosedTo("");
+    }
+  };
+
+  const clearAllDateFilters = () => {
+    setOpenedFrom("");
+    setOpenedTo("");
+    setClosedFrom("");
+    setClosedTo("");
+  };
+
+  const activeDateFilterCount =
+    (openedFrom || openedTo ? 1 : 0) + (closedFrom || closedTo ? 1 : 0);
+
+  const formatDateRangeLabel = (fromStr, toStr) => {
+    if (!fromStr && !toStr) return "";
+    if (fromStr && toStr && fromStr === toStr) return formatDateOnly(fromStr);
+    if (fromStr && toStr) return `${formatDateOnly(fromStr)} – ${formatDateOnly(toStr)}`;
+    if (fromStr) return `From ${formatDateOnly(fromStr)}`;
+    return `Until ${formatDateOnly(toStr)}`;
+  };
+
+  // ---------------------------------------------------------------------
+
   const filtered = tickets.filter((t) => {
     const s = search.toLowerCase();
     const slaState = getOverallSlaState(t, now).label.toLowerCase();
@@ -721,7 +813,11 @@ export default function AdminTickets() {
         ? getOverallSlaState(t, now).level === "breached"
         : t.status === statusFilter);
 
-    return matchesSearch && matchesFilter;
+    // NEW: date-range filters, independent for Opened and Closed
+    const matchesOpenedDate = isWithinDateRange(t.createdAt, openedFrom, openedTo);
+    const matchesClosedDate = isWithinDateRange(t.closedAt || t.resolvedAt, closedFrom, closedTo);
+
+    return matchesSearch && matchesFilter && matchesOpenedDate && matchesClosedDate;
   });
 
   const breachedCount = tickets.filter(
@@ -739,7 +835,7 @@ export default function AdminTickets() {
   // 1 so you don't land on a now-empty page.
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter]);
+  }, [search, statusFilter, openedFrom, openedTo, closedFrom, closedTo]);
 
   // if data reloads and the current page no longer exists (e.g. fewer
   // results after a filter), clamp back into range.
@@ -1033,14 +1129,143 @@ export default function AdminTickets() {
             <p className="text-sm text-slate-400 mt-0.5">Track, resolve, and review support requests</p>
           </div>
 
-          <div className="relative w-full sm:w-72">
-            <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              className="w-full border border-slate-200 bg-white pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition placeholder:text-slate-400"
-              placeholder="Search tickets, users, status, SLA..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-72">
+              <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                className="w-full border border-slate-200 bg-white pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition placeholder:text-slate-400"
+                placeholder="Search tickets, users, status, SLA..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            {/* NEW: Opened / Closed date-range filter (Jira/ServiceNow style) */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setDateFilterOpen((v) => !v)}
+                className={`relative flex items-center gap-1.5 border rounded-lg px-3 py-2.5 text-sm font-medium transition ${activeDateFilterCount > 0
+                    ? "border-blue-300 bg-blue-50 text-blue-700"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+              >
+                <IconCalendar className="w-4 h-4" />
+                <span className="hidden sm:inline">Dates</span>
+                {activeDateFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
+                    {activeDateFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {dateFilterOpen && (
+                <>
+                  {/* click-outside catcher */}
+                  <div className="fixed inset-0 z-40" onClick={() => setDateFilterOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-[300px] bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold text-slate-700">Filter by date</p>
+                      {activeDateFilterCount > 0 && (
+                        <button
+                          onClick={clearAllDateFilters}
+                          className="text-[11px] text-blue-600 hover:text-blue-700 font-medium underline"
+                        >
+                          Clear all
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Opened section */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Opened</p>
+                        {(openedFrom || openedTo) && (
+                          <button
+                            onClick={() => clearDateSection("opened")}
+                            className="text-[10px] text-slate-400 hover:text-slate-600 underline"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <input
+                          type="date"
+                          value={openedFrom}
+                          onChange={(e) => setOpenedFrom(e.target.value)}
+                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                        />
+                        <input
+                          type="date"
+                          value={openedTo}
+                          onChange={(e) => setOpenedTo(e.target.value)}
+                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                        />
+                      </div>
+                      <div className="flex gap-1.5">
+                        {[["today", "Today"], ["week", "7 Days"], ["month", "30 Days"]].map(([key, label]) => (
+                          <button
+                            key={key}
+                            onClick={() => applyDatePreset("opened", key)}
+                            className="text-[11px] px-2 py-1 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition"
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Closed section */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Closed</p>
+                        {(closedFrom || closedTo) && (
+                          <button
+                            onClick={() => clearDateSection("closed")}
+                            className="text-[10px] text-slate-400 hover:text-slate-600 underline"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <input
+                          type="date"
+                          value={closedFrom}
+                          onChange={(e) => setClosedFrom(e.target.value)}
+                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                        />
+                        <input
+                          type="date"
+                          value={closedTo}
+                          onChange={(e) => setClosedTo(e.target.value)}
+                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                        />
+                      </div>
+                      <div className="flex gap-1.5">
+                        {[["today", "Today"], ["week", "7 Days"], ["month", "30 Days"]].map(([key, label]) => (
+                          <button
+                            key={key}
+                            onClick={() => applyDatePreset("closed", key)}
+                            className="text-[11px] px-2 py-1 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition"
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setDateFilterOpen(false)}
+                      className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 rounded-lg transition"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1072,19 +1297,37 @@ export default function AdminTickets() {
         </div>
 
         {/* active filter indicator + clear button */}
-        {statusFilter && (
-          <div className="flex items-center gap-2 mb-4 -mt-2">
-            <span className="text-xs text-slate-500">
-              Filtering by:{" "}
-              <span className="font-semibold text-slate-700">
+        {(statusFilter || activeDateFilterCount > 0) && (
+          <div className="flex flex-wrap items-center gap-2 mb-4 -mt-2">
+            {statusFilter && (
+              <span className="inline-flex items-center gap-1.5 text-xs bg-slate-100 border border-slate-200 text-slate-700 font-medium px-2.5 py-1 rounded-full">
                 {statusFilter === "breached" ? "SLA Breached" : statusFilter}
+                <button onClick={() => setStatusFilter(null)} className="text-slate-400 hover:text-slate-600">
+                  <IconX className="w-3 h-3" />
+                </button>
               </span>
-            </span>
+            )}
+            {(openedFrom || openedTo) && (
+              <span className="inline-flex items-center gap-1.5 text-xs bg-blue-50 border border-blue-200 text-blue-700 font-medium px-2.5 py-1 rounded-full">
+                Opened: {formatDateRangeLabel(openedFrom, openedTo)}
+                <button onClick={() => clearDateSection("opened")} className="text-blue-400 hover:text-blue-600">
+                  <IconX className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {(closedFrom || closedTo) && (
+              <span className="inline-flex items-center gap-1.5 text-xs bg-blue-50 border border-blue-200 text-blue-700 font-medium px-2.5 py-1 rounded-full">
+                Closed: {formatDateRangeLabel(closedFrom, closedTo)}
+                <button onClick={() => clearDateSection("closed")} className="text-blue-400 hover:text-blue-600">
+                  <IconX className="w-3 h-3" />
+                </button>
+              </span>
+            )}
             <button
-              onClick={() => setStatusFilter(null)}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium underline"
+              onClick={() => { setStatusFilter(null); clearAllDateFilters(); }}
+              className="text-xs text-slate-400 hover:text-slate-600 underline"
             >
-              Clear
+              Clear all
             </button>
           </div>
         )}
