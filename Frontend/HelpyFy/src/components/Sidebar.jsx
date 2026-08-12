@@ -93,7 +93,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <NavItem to="/admin/assets" icon={Package} label="Asset Management" />
               <NavItem to="/admin/company-access" icon={Building2} label="Users" />
               <NavItem to="/admin/tickets" icon={Ticket} label="All Tickets" />
-             <NavItem to="/admin/ticket-dashboard" icon={BarChart3} label="Ticket Dashboard" />
+              <NavItem to="/admin/ticket-dashboard" icon={BarChart3} label="Ticket Dashboard" />
+              <NavItem to="/admin/it-support/create-ticket" icon={Plus} label="Create Ticket" />
             </div>
           </div>
         )}

@@ -1160,17 +1160,33 @@ export const createManualTicket = async (req, res) => {
       relatedTo,
       assetId,
       employeeId,
-      incidentDate
+      incidentDate,
+      companyId: bodyCompanyId,
     } = req.body;
 
 
     // ==================================================
-    // COMPANY ID (same logic as createTicket)
+    // COMPANY ID
     // ==================================================
-    const companyId =
-      req.user.companyId ||
-      req.user.companyAccess?.find((c) => c.isActive && c.companyId)?.companyId ||
-      req.user.companyAccess?.[0]?.companyId;
+    // super_admin has access to every company, so they must explicitly
+    // pick one on the form (sent as companyId in the body). Everyone else
+    // is scoped to their own assigned company, same as createTicket.
+    let companyId;
+
+    if (req.user.role === "super_admin") {
+      if (!bodyCompanyId) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select a company",
+        });
+      }
+      companyId = bodyCompanyId;
+    } else {
+      companyId =
+        req.user.companyId ||
+        req.user.companyAccess?.find((c) => c.isActive && c.companyId)?.companyId ||
+        req.user.companyAccess?.[0]?.companyId;
+    }
 
     if (!companyId) {
       return res.status(400).json({
@@ -1217,6 +1233,34 @@ export const createManualTicket = async (req, res) => {
         success: false,
         message: "Please select the employee this ticket is for",
       });
+    }
+
+    // Guard against a super admin picking an employee/asset that doesn't
+    // actually belong to the selected company (e.g. stale client state).
+    if (employeeId) {
+      const employee = await Employee.findById(employeeId);
+      if (!employee) {
+        return res.status(404).json({
+          success: false,
+          message: "Employee not found",
+        });
+      }
+      if (String(employee.companyId) !== String(companyId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Selected employee does not belong to the selected company",
+        });
+      }
+    }
+
+    if (assetId) {
+      const asset = await Asset.findById(assetId);
+      if (asset && String(asset.companyId) !== String(companyId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Selected asset does not belong to the selected company",
+        });
+      }
     }
 
 
@@ -1276,7 +1320,7 @@ export const createManualTicket = async (req, res) => {
       // =========================
       source: "Manual",
 
-      createdByType: "it_support",
+      createdByType: req.user.role === "super_admin" ? "super_admin" : "it_support",
 
 
       // No portal end user — this was raised on behalf of an employee
@@ -1299,7 +1343,10 @@ export const createManualTicket = async (req, res) => {
 
           changedBy: req.user.id,
 
-          note: "Ticket created manually by IT Support",
+          note:
+            req.user.role === "super_admin"
+              ? "Ticket created manually by Super Admin"
+              : "Ticket created manually by IT Support",
 
           changedAt: new Date()
         }
@@ -1338,7 +1385,6 @@ export const createManualTicket = async (req, res) => {
 
   }
 };
-
 export const escalateTicket = async (req, res) => {
   try {
     const { reason } = req.body;

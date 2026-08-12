@@ -142,6 +142,7 @@ const INITIAL_FORM = {
   relatedTo: "",
   assetId: "",
   employeeId: "",
+  companyId: "",
   incidentDate: todayStr(),
 };
 
@@ -156,8 +157,26 @@ const findMatchingDepartment = (raw) => {
   return loose || raw;
 };
 
+// Mirrors AdminEmployeeMaster's normalizeCompanyId helper
+const normalizeCompanyId = (value) => {
+  if (!value) return null;
+  if (typeof value === "object") {
+    if (value._id && typeof value._id.toString === "function") {
+      return value._id.toString();
+    }
+    if (typeof value.toString === "function") {
+      return value.toString();
+    }
+    return null;
+  }
+  if (typeof value.toString === "function") {
+    return value.toString();
+  }
+  return value;
+};
+
 /* ================= Searchable Employee Select ================= */
-function EmployeeSelect({ employees, value, onSelect }) {
+function EmployeeSelect({ employees, value, onSelect, disabled, placeholder }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const wrapperRef = useRef(null);
@@ -192,8 +211,9 @@ function EmployeeSelect({ employees, value, onSelect }) {
       {selected && !open ? (
         <button
           type="button"
-          onClick={() => setOpen(true)}
-          className="w-full flex items-center justify-between border border-slate-200 bg-white px-3.5 py-2.5 rounded-lg text-sm text-left hover:border-blue-300 transition"
+          onClick={() => !disabled && setOpen(true)}
+          disabled={disabled}
+          className="w-full flex items-center justify-between border border-slate-200 bg-white px-3.5 py-2.5 rounded-lg text-sm text-left hover:border-blue-300 transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <span className="flex flex-col">
             <span className="font-medium text-slate-800">{selected.name}</span>
@@ -218,16 +238,17 @@ function EmployeeSelect({ employees, value, onSelect }) {
           <IconSearch className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             autoFocus={open}
-            className="w-full border border-slate-200 bg-white pl-9 pr-3.5 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition placeholder:text-slate-400"
-            placeholder="Search by name or staff code…"
+            disabled={disabled}
+            className="w-full border border-slate-200 bg-white pl-9 pr-3.5 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition placeholder:text-slate-400 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-50"
+            placeholder={placeholder || "Search by name or staff code…"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setOpen(true)}
+            onFocus={() => !disabled && setOpen(true)}
           />
         </div>
       )}
 
-      {open && (
+      {open && !disabled && (
         <div className="absolute z-10 mt-1.5 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-auto">
           {filtered.length === 0 ? (
             <div className="px-3.5 py-3 text-sm text-slate-400">No employees found</div>
@@ -258,27 +279,12 @@ function EmployeeSelect({ employees, value, onSelect }) {
   );
 }
 
-// Mirrors AdminEmployeeMaster's normalizeCompanyId helper
-const normalizeCompanyId = (value) => {
-  if (!value) return null;
-  if (typeof value === "object") {
-    if (value._id && typeof value._id.toString === "function") {
-      return value._id.toString();
-    }
-    if (typeof value.toString === "function") {
-      return value.toString();
-    }
-    return null;
-  }
-  if (typeof value.toString === "function") {
-    return value.toString();
-  }
-  return value;
-};
-
 export default function CreateManualTicket() {
-  const [assets, setAssets] = useState([]);
-  const [employees, setEmployees] = useState([]);
+  // Full, unscoped lists (loaded once)
+  const [allAssets, setAllAssets] = useState([]);
+  const [allEmployees, setAllEmployees] = useState([]);
+  const [companies, setCompanies] = useState([]);
+
   const [form, setForm] = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
 
@@ -303,7 +309,7 @@ export default function CreateManualTicket() {
     const loadAssets = async () => {
       try {
         const res = await api.get("/assets?limit=1000");
-        setAssets(res.data.assets || []);
+        setAllAssets(res.data.assets || []);
       } catch (error) {
         console.error(error);
         toast.error("Failed to load assets");
@@ -318,24 +324,58 @@ export default function CreateManualTicket() {
         const all = Array.isArray(res.data) ? res.data : res.data.employees || [];
 
         // Scope to the current user's company, same as AdminEmployeeMaster,
-        // unless they're a super_admin (who can see everyone).
+        // unless they're a super_admin (who can see everyone, then narrows
+        // down further once they pick a company below).
         const scoped = isSuperAdmin
           ? all
           : all.filter((e) =>
             allowedCompanyIds.includes(normalizeCompanyId(e.companyId))
           );
 
-        setEmployees(scoped);
+        setAllEmployees(scoped);
       } catch (error) {
         console.error(error);
         toast.error("Failed to load employees");
       }
     };
 
+    const loadCompanies = async () => {
+      if (!isSuperAdmin) return;
+      try {
+        // Adjust this path/response-shape to match your existing companies
+        // endpoint if it differs (e.g. it may already be used elsewhere,
+        // such as an Admin Company Access page).
+        const res = await api.get("/companies");
+        const list = Array.isArray(res.data) ? res.data : res.data.companies || [];
+        setCompanies(list);
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to load companies");
+      }
+    };
+
     loadAssets();
     loadEmployees();
+    loadCompanies();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Employees/assets narrowed to the selected company. Only super admins
+  // need this narrowing — regular IT support is already scoped server-side
+  // via allowedCompanyIds above, and has no company picker.
+  const employees = useMemo(() => {
+    if (!isSuperAdmin || !form.companyId) return allEmployees;
+    return allEmployees.filter(
+      (e) => normalizeCompanyId(e.companyId) === form.companyId
+    );
+  }, [allEmployees, isSuperAdmin, form.companyId]);
+
+  const assets = useMemo(() => {
+    if (!isSuperAdmin || !form.companyId) return allAssets;
+    return allAssets.filter(
+      (a) => normalizeCompanyId(a.companyId) === form.companyId
+    );
+  }, [allAssets, isSuperAdmin, form.companyId]);
 
   const handleChange = (field) => (e) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -349,6 +389,21 @@ export default function CreateManualTicket() {
   const handleDepartmentChange = (e) => {
     setManualDepartment(true);
     handleChange("department")(e);
+  };
+
+  // Switching company (super admin only) resets everything company-scoped
+  // that was picked under the previous company, so stale employee/asset/
+  // department selections can't leak across companies.
+  const handleCompanyChange = (e) => {
+    const companyId = e.target.value;
+    setForm((prev) => ({
+      ...INITIAL_FORM,
+      companyId,
+      incidentDate: prev.incidentDate,
+    }));
+    setManualDepartment(false);
+    setManualRelatedTo(false);
+    setRelatedSuggested(null);
   };
 
   // Re-scan title + description on every keystroke, pre-fill Related To
@@ -374,6 +429,11 @@ export default function CreateManualTicket() {
 
   const submitHandler = async (e) => {
     e.preventDefault();
+
+    if (isSuperAdmin && !form.companyId) {
+      toast.error("Please select a company");
+      return;
+    }
 
     if (!form.employeeId) {
       toast.error("Please select the employee this ticket is for");
@@ -401,6 +461,8 @@ export default function CreateManualTicket() {
     }
   };
 
+  const employeePickerDisabled = isSuperAdmin && !form.companyId;
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       <div className="max-w-2xl mx-auto w-full p-6 md:p-8">
@@ -416,6 +478,31 @@ export default function CreateManualTicket() {
           onSubmit={submitHandler}
           className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex flex-col gap-5"
         >
+          {/* Company (super admin only) */}
+          {isSuperAdmin && (
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1.5">
+                <IconBuilding className="w-3.5 h-3.5" /> Company <span className="text-red-500">*</span>
+              </label>
+              <select
+                className="w-full border border-slate-200 bg-white px-3.5 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
+                value={form.companyId}
+                onChange={handleCompanyChange}
+                required
+              >
+                <option value="">Select company…</option>
+                {companies.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-slate-400 mt-1.5">
+                Employees and assets below are scoped to this company.
+              </p>
+            </div>
+          )}
+
           {/* Employee (who this ticket is for) */}
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-1.5">
@@ -424,6 +511,12 @@ export default function CreateManualTicket() {
             <EmployeeSelect
               employees={employees}
               value={form.employeeId}
+              disabled={employeePickerDisabled}
+              placeholder={
+                employeePickerDisabled
+                  ? "Select a company first"
+                  : "Search by name or staff code…"
+              }
               onSelect={(id) => {
                 const emp = employees.find((e) => e._id === id);
                 setForm((prev) => ({
@@ -437,7 +530,9 @@ export default function CreateManualTicket() {
               }}
             />
             <p className="text-[11px] text-slate-400 mt-1.5">
-              Who this ticket is being raised for.
+              {employeePickerDisabled
+                ? "Choose a company above to load its employees."
+                : "Who this ticket is being raised for."}
             </p>
           </div>
 
@@ -528,8 +623,11 @@ export default function CreateManualTicket() {
               className="w-full border border-slate-200 bg-white px-3.5 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
               value={form.assetId}
               onChange={handleChange("assetId")}
+              disabled={employeePickerDisabled}
             >
-              <option value="">Select asset (optional)</option>
+              <option value="">
+                {employeePickerDisabled ? "Select a company first" : "Select asset (optional)"}
+              </option>
               {assets.map((asset) => (
                 <option key={asset._id} value={asset._id}>
                   {asset.assetCode} - {asset.type}
