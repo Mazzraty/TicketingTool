@@ -1449,7 +1449,7 @@ export default function AdminTickets() {
                   <thead>
                     <tr className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-200">
                       <th className="p-3.5 text-left font-semibold">Ticket #</th>
-                      <th className="p-3.5 text-left font-semibold">Ticket</th>
+                      <th className="p-3.5 text-left font-semibold">Details</th>
                       <th className="p-3.5 text-left font-semibold">Reported By</th>
                       <th className="p-3.5 text-left font-semibold">Company</th>
                       <th className="p-3.5 text-center font-semibold">Priority</th>
