@@ -33,10 +33,12 @@ const IconZap = (p) => <Icon {...p}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />
 const IconUser = (p) => <Icon {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></Icon>;
 const IconMenu = (p) => <Icon {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Icon>;
 const IconWrench = (p) => <Icon {...p}><path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L2 19l3 3 7.1-7.1a4 4 0 0 0 5.6-5.6l-2.8 2.8-2-2 2.8-2.8Z" /></Icon>;
-// NEW: trash icon for the delete action (super_admin only)
+// trash icon for the delete action (super_admin only)
 const IconTrash = (p) => <Icon {...p}><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></Icon>;
-// NEW: calendar icon for the date-range filter
+// calendar icon for the date-range filter
 const IconCalendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Icon>;
+// NEW: flag icon used next to the editable priority dropdown
+const IconFlag = (p) => <Icon {...p}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><path d="M4 22V3" /></Icon>;
 
 /* ================= STATUS THEME (single source of truth) ================= */
 const STATUS_THEME = {
@@ -157,6 +159,10 @@ const priorityDot = {
   High: "bg-orange-500",
   Critical: "bg-red-500",
 };
+
+// NEW: the four valid priority values, in the order they should
+// appear in every priority <select>.
+const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Critical"];
 
 /* ================= SLA UI COMPONENTS ================= */
 
@@ -379,7 +385,7 @@ export default function AdminTickets() {
   const [statusFilter, setStatusFilter] = useState(null); // "Open" | "In Progress" | "Resolved" | "Closed" | "breached" | null
   const [loading, setLoading] = useState(false);
 
-  // NEW: independent date-range filters for Opened (createdAt) and
+  // independent date-range filters for Opened (createdAt) and
   // Closed (closedAt, falling back to resolvedAt to match the "Closed"
   // column shown in the table/cards). Stored as "YYYY-MM-DD" strings
   // straight from <input type="date">.
@@ -394,7 +400,7 @@ export default function AdminTickets() {
   const [breachReason, setBreachReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // ADDED: resolution-type + external-vendor repair fields, used inside
+  // resolution-type + external-vendor repair fields, used inside
   // the Resolve/Close modal.
   const [resolutionType, setResolutionType] = useState("Internal");
   const [vendorName, setVendorName] = useState("");
@@ -408,14 +414,21 @@ export default function AdminTickets() {
   const [breachModalText, setBreachModalText] = useState("");
   const [breachSubmitting, setBreachSubmitting] = useState(false);
 
-  // NEW: delete-ticket confirmation. Holds the ticket pending deletion
+  // delete-ticket confirmation. Holds the ticket pending deletion
   // (or null when the modal is closed). Kept separate from statusModal
   // since deleting is a destructive, unrelated action.
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // NEW: tracks which ticket's priority is currently mid-save, so the
+  // dropdown for that specific row can show a disabled/saving state
+  // without freezing the whole table.
+  const [priorityUpdatingId, setPriorityUpdatingId] = useState(null);
+
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
+  // NEW: both super_admin and it_support are allowed to edit priority
+  const canEditPriority = user?.role === "super_admin" || user?.role === "it_support";
   const [now, setNow] = useState(() => new Date());
 
   const initialStats = {
@@ -503,7 +516,7 @@ export default function AdminTickets() {
       setResolutionNote(ticket.resolutionNote || "");
       setBreachReason(ticket.sla?.breachReason || "");
 
-      // ADDED: pre-fill resolution type / vendor fields from whatever's
+      // pre-fill resolution type / vendor fields from whatever's
       // already on the ticket (lets IT support edit a previous entry).
       setResolutionType(ticket.resolutionType || "Internal");
       setVendorName(ticket.vendorDetails?.vendorName || "");
@@ -538,6 +551,48 @@ export default function AdminTickets() {
       loadStats();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to escalate");
+    }
+  };
+
+  // NEW: fires the priority update against the backend, with a small
+  // local "saving" flag so the specific row's dropdown reflects it.
+  const handlePriorityChange = async (ticket, newPriority) => {
+    if (newPriority === ticket.priority) return;
+
+    // optimistic update so the select doesn't snap back while the
+    // request is in flight
+    setTickets((prev) =>
+      prev.map((t) => (t._id === ticket._id ? { ...t, priority: newPriority } : t))
+    );
+    setPriorityUpdatingId(ticket._id);
+
+    try {
+      const res = await api.put(`/tickets/${ticket._id}/priority`, {
+        priority: newPriority,
+      });
+      const updated = res?.data?.data;
+
+      if (updated) {
+        setTickets((prev) =>
+          prev.map((t) => (t._id === ticket._id ? { ...t, ...updated } : t))
+        );
+        // keep the detail panel in sync if this ticket is open there
+        setSelected((prevSelected) =>
+          prevSelected && prevSelected._id === ticket._id
+            ? { ...prevSelected, ...updated }
+            : prevSelected
+        );
+      }
+
+      toast.success(`Priority updated to ${newPriority}`);
+    } catch (err) {
+      // roll back the optimistic change on failure
+      setTickets((prev) =>
+        prev.map((t) => (t._id === ticket._id ? { ...t, priority: ticket.priority } : t))
+      );
+      toast.error(err.response?.data?.message || "Failed to update priority");
+    } finally {
+      setPriorityUpdatingId(null);
     }
   };
 
@@ -596,7 +651,7 @@ export default function AdminTickets() {
       return toast.error("Please explain why the SLA was breached");
     }
 
-    // ADDED: validate vendor/repair fields when External Vendor is selected
+    // validate vendor/repair fields when External Vendor is selected
     if (resolutionType === "External Vendor") {
       if (!vendorName.trim()) {
         return toast.error("Vendor name is required");
@@ -614,7 +669,7 @@ export default function AdminTickets() {
 
     setSubmitting(true);
 
-    // ADDED: always build a FormData payload for this flow so the optional
+    // always build a FormData payload for this flow so the optional
     // receipt file can ride along with the rest of the fields.
     const formData = new FormData();
     formData.append("resolutionNote", resolutionNote.trim());
@@ -677,7 +732,7 @@ export default function AdminTickets() {
     }
   };
 
-  // NEW: delete-ticket flow. Opens a confirmation modal instead of
+  // delete-ticket flow. Opens a confirmation modal instead of
   // deleting immediately — the backend route is a hard delete with no
   // undo, so we don't want a stray click to remove a ticket.
   const handleDeleteClick = (ticket) => {
@@ -713,7 +768,7 @@ export default function AdminTickets() {
     }
   };
 
-  // NEW: date-range filter helpers ------------------------------------
+  // date-range filter helpers ------------------------------------
 
   // "YYYY-MM-DD" -> local midnight / end-of-day Date, so the picked day
   // is always inclusive regardless of the ticket's exact timestamp.
@@ -813,7 +868,7 @@ export default function AdminTickets() {
         ? getOverallSlaState(t, now).level === "breached"
         : t.status === statusFilter);
 
-    // NEW: date-range filters, independent for Opened and Closed
+    // date-range filters, independent for Opened and Closed
     const matchesOpenedDate = isWithinDateRange(t.createdAt, openedFrom, openedTo);
     const matchesClosedDate = isWithinDateRange(t.closedAt || t.resolvedAt, closedFrom, closedTo);
 
@@ -844,7 +899,8 @@ export default function AdminTickets() {
   }, [totalFilteredPages]);
 
   const priorityColor = (p) => {
-    if (p === "High") return "bg-red-50 text-red-700 border border-red-200";
+    if (p === "Critical") return "bg-red-50 text-red-700 border border-red-200";
+    if (p === "High") return "bg-orange-50 text-orange-700 border border-orange-200";
     if (p === "Medium") return "bg-amber-50 text-amber-700 border border-amber-200";
     if (p === "Low") return "bg-blue-50 text-blue-700 border border-blue-200";
     return "bg-slate-100 text-slate-600 border border-slate-200";
@@ -930,6 +986,42 @@ export default function AdminTickets() {
     </div>
   );
 
+  // NEW: shared editable priority <select>, used in the table, the
+  // mobile card, and the detail panel. Falls back to a plain read-only
+  // badge for roles that aren't allowed to change priority.
+  const PrioritySelect = ({ t, size = "table" }) => {
+    const isSaving = priorityUpdatingId === t._id;
+    const padding = size === "card" ? "pl-2.5 pr-6 py-1" : "pl-2.5 pr-6 py-1";
+
+    if (!canEditPriority) {
+      return (
+        <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${priorityColor(t.priority)}`}>
+          {t.priority}
+        </span>
+      );
+    }
+
+    return (
+      <div
+        className="relative inline-block"
+        onClick={(e) => e.stopPropagation()}
+        title="Change priority"
+      >
+        <select
+          disabled={isSaving}
+          className={`appearance-none ${padding} rounded-full text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-60 disabled:cursor-wait ${priorityColor(t.priority)}`}
+          value={t.priority}
+          onChange={(e) => handlePriorityChange(t, e.target.value)}
+        >
+          {PRIORITY_OPTIONS.map((p) => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
+        <IconFlag className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" />
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans">
 
@@ -952,7 +1044,7 @@ export default function AdminTickets() {
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                {/* NEW: delete action inside the detail panel too, super_admin only */}
+                {/* delete action inside the detail panel too, super_admin only */}
                 {isSuperAdmin && (
                   <button
                     onClick={() => handleDeleteClick(selected)}
@@ -976,16 +1068,20 @@ export default function AdminTickets() {
                 <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm shrink-0">
                   {initials(getReporterName(selected))}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-slate-800 truncate flex items-center gap-1.5">
                     <IconUser className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     {getReporterName(selected)}
                   </p>
                   <p className="text-xs text-slate-400 truncate">{getReporterSubtext(selected)}</p>
-                  <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full mt-1 ${STATUS_THEME[selected.status]?.bg} ${STATUS_THEME[selected.status]?.text}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${STATUS_THEME[selected.status]?.accent}`} />
-                    {selected.status}
-                  </span>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${STATUS_THEME[selected.status]?.bg} ${STATUS_THEME[selected.status]?.text}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_THEME[selected.status]?.accent}`} />
+                      {selected.status}
+                    </span>
+                    {/* NEW: editable priority right next to the status pill */}
+                    <PrioritySelect t={selected} />
+                  </div>
                 </div>
               </div>
 
@@ -1031,7 +1127,7 @@ export default function AdminTickets() {
                 )}
               </div>
 
-              {/* ADDED: Vendor / repair information — only rendered once a
+              {/* Vendor / repair information — only rendered once a
                   resolution type has actually been recorded on the ticket. */}
               {selected.resolutionType && (
                 <div>
@@ -1140,7 +1236,7 @@ export default function AdminTickets() {
               />
             </div>
 
-            {/* NEW: Opened / Closed date-range filter (Jira/ServiceNow style) */}
+            {/* Opened / Closed date-range filter (Jira/ServiceNow style) */}
             <div className="relative shrink-0">
               <button
                 type="button"
@@ -1356,9 +1452,8 @@ export default function AdminTickets() {
                         <p className="font-semibold text-slate-800 text-sm leading-snug break-words">{t.title}</p>
                         <p className="text-[11px] font-mono text-slate-400 mt-0.5">{t.ticketNumber}</p>
                       </div>
-                      <span className={`shrink-0 px-2 py-1 text-[11px] font-medium rounded-full ${priorityColor(t.priority)}`}>
-                        {t.priority}
-                      </span>
+                      {/* NEW: editable priority select replaces the static badge */}
+                      <PrioritySelect t={t} size="card" />
                     </div>
 
                     <div className="flex items-center gap-2.5 mb-3">
@@ -1387,7 +1482,7 @@ export default function AdminTickets() {
                       </p>
                     )}
 
-                    {/* ADDED: small vendor badge on the mobile card */}
+                    {/* small vendor badge on the mobile card */}
                     {t.resolutionType === "External Vendor" && (
                       <p className="text-[11px] text-purple-700 bg-purple-50 border border-purple-100 rounded-md px-2 py-1 mb-3 inline-flex items-center gap-1">
                         <IconWrench className="w-3 h-3" /> {t.vendorDetails?.vendorName || "External Vendor"}
@@ -1425,7 +1520,7 @@ export default function AdminTickets() {
                             </button>
                           )}
 
-                        {/* NEW: delete, super_admin only */}
+                        {/* delete, super_admin only */}
                         {isSuperAdmin && (
                           <button
                             onClick={() => handleDeleteClick(t)}
@@ -1494,10 +1589,9 @@ export default function AdminTickets() {
 
                           <td className="p-3.5 text-slate-600">{t.companyId?.name || "—"}</td>
 
+                          {/* NEW: editable priority column */}
                           <td className="p-3.5 text-center">
-                            <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${priorityColor(t.priority)}`}>
-                              {t.priority}
-                            </span>
+                            <PrioritySelect t={t} />
                           </td>
 
                           <td className="p-3.5 text-center">
@@ -1511,7 +1605,7 @@ export default function AdminTickets() {
                                   <IconNote className="w-2.5 h-2.5 shrink-0" /> {t.resolutionNote}
                                 </p>
                               )}
-                              {/* ADDED: quick vendor indicator under the status pill */}
+                              {/* quick vendor indicator under the status pill */}
                               {t.resolutionType === "External Vendor" && (
                                 <span
                                   className="text-[10px] text-purple-700 bg-purple-50 border border-purple-100 rounded-full px-2 py-0.5 flex items-center gap-1"
@@ -1555,7 +1649,7 @@ export default function AdminTickets() {
                                   </button>
                                 )}
 
-                              {/* NEW: delete, super_admin only */}
+                              {/* delete, super_admin only */}
                               {isSuperAdmin && (
                                 <button
                                   onClick={() => handleDeleteClick(t)}
@@ -1635,7 +1729,7 @@ export default function AdminTickets() {
               This note is saved with the ticket so anyone can see how it was handled.
             </p>
 
-            {/* ADDED: Resolution Type toggle */}
+            {/* Resolution Type toggle */}
             <div className="mt-4">
               <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                 Resolution Type <span className="text-red-500">*</span>
@@ -1664,7 +1758,7 @@ export default function AdminTickets() {
               </div>
             </div>
 
-            {/* ADDED: External Vendor fields — only shown when relevant */}
+            {/* External Vendor fields — only shown when relevant */}
             {resolutionType === "External Vendor" && (
               <div className="mt-4 border border-purple-200 bg-purple-50/40 rounded-lg p-3 flex flex-col gap-3">
                 <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide flex items-center gap-1.5">
@@ -1832,7 +1926,7 @@ export default function AdminTickets() {
       )}
 
       {/* ================= DELETE TICKET CONFIRMATION MODAL =================
-          NEW. super_admin only — the trigger buttons above are already
+          super_admin only — the trigger buttons above are already
           gated on isSuperAdmin, this is the confirmation step before the
           irreversible DELETE /tickets/:id call fires. */}
       {deleteModal && (

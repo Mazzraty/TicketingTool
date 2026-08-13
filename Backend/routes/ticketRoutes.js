@@ -4,7 +4,7 @@ import {
   createTicket, createManualTicket, getAllTickets, getUserTickets, updateStatus, deleteTicket, getTicketStats, editTicket, addReview, getTicketById, reopenTicket, confirmResolution,
   deleteAttachment,
   escalateTicket,
-  addSlaBreachReason
+  addSlaBreachReason,updateTicketPriority
 } from "../controllers/ticketController.js";
 
 // FIXED: was imported twice, from two different (and inconsistent) paths
@@ -224,7 +224,12 @@ router.put(
 );
 
 router.put("/:id/sla-breach-reason", protect, companyCheck, adminOnly, addSlaBreachReason);
-
+router.put(
+  "/:id/priority",
+  protect,companyCheck,
+  adminOnly,
+  updateTicketPriority
+);
 
 // DELETE TICKET
 

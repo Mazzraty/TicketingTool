@@ -1502,3 +1502,103 @@ export const addSlaBreachReason = async (req, res) => {
     });
   }
 };
+
+
+/* ======================================================
+   ✅ UPDATE PRIORITY (SUPER ADMIN / IT SUPPORT)
+====================================================== */
+export const updateTicketPriority = async (req, res) => {
+  try {
+    const { priority } = req.body;
+    const allowedPriorities = ["Low", "Medium", "High", "Critical"];
+
+    if (!allowedPriorities.includes(priority)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid priority",
+      });
+    }
+
+    if (!["super_admin", "it_support"].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to change priority",
+      });
+    }
+
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    // it_support is scoped to their own company; super_admin can touch any ticket
+    if (
+      req.user.role === "it_support" &&
+      String(ticket.companyId) !== String(req.user.companyId)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    const oldPriority = ticket.priority;
+
+    if (oldPriority === priority) {
+      return res.json({
+        success: true,
+        message: "Priority unchanged",
+        data: ticket,
+      });
+    }
+
+    ticket.priority = priority;
+
+    // Recompute whichever SLA legs haven't been hit yet, based on the new
+    // priority's policy, anchored to the ticket's original creation time.
+    const slaPolicy = {
+      Low: { firstResponse: 8, resolution: 72 },
+      Medium: { firstResponse: 4, resolution: 48 },
+      High: { firstResponse: 2, resolution: 24 },
+      Critical: { firstResponse: 0.5, resolution: 8 },
+    };
+    const policy = slaPolicy[priority] || slaPolicy.Low;
+
+    if (!ticket.sla.firstRespondedAt) {
+      ticket.sla.firstResponseDue = new Date(
+        ticket.createdAt.getTime() + policy.firstResponse * 60 * 60 * 1000
+      );
+    }
+    if (!ticket.sla.resolvedAt) {
+      ticket.sla.resolutionDue = new Date(
+        ticket.createdAt.getTime() + policy.resolution * 60 * 60 * 1000
+      );
+    }
+    ticket.sla.priority = priority;
+
+    ticket.statusHistory.push({
+      status: ticket.status,
+      changedAt: new Date(),
+      changedBy: req.user.id,
+      note: `Priority changed from ${oldPriority} to ${priority}`,
+    });
+
+    await ticket.save();
+
+    res.json({
+      success: true,
+      message: "Priority updated successfully",
+      data: ticket,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
