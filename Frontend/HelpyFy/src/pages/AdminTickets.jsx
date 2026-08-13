@@ -365,15 +365,31 @@ const SlaDetailPanel = ({ ticket, now, onOpenReason }) => {
 };
 
 /* ================= REPORTER HELPERS ================= */
-const getReporterName = (ticket) =>
-  ticket.userId?.name ||
-  ticket.employeeId?.name ||
-  ticket.userId?.email ||
-  "Unknown";
+const getReporterName = (ticket) => {
+  if (ticket.userId?.name) return ticket.userId.name;
+  if (ticket.employeeId?.name) return ticket.employeeId.name;
+  if (ticket.assignedTo?.name) return ticket.assignedTo.name;
+
+  const creatorLabel =
+    ticket.createdByType === "super_admin"
+      ? "Super Admin"
+      : ticket.createdByType === "it_support"
+        ? "IT Support"
+        : ticket.createdByType === "company_admin"
+          ? "Company Admin"
+          : null;
+
+  return creatorLabel || "Unknown";
+};
 
 const getReporterSubtext = (ticket) => {
   if (ticket.userId?.email) return ticket.userId.email;
   if (ticket.employeeId?.staffCode) return `Staff Code: ${ticket.employeeId.staffCode}`;
+  if (ticket.assignedTo?.email) return ticket.assignedTo.email;
+  if (ticket.createdByType) {
+    const label = ticket.createdByType.replace("_", " ");
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }
   return "—";
 };
 
