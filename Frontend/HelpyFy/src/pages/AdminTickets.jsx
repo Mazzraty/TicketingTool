@@ -432,7 +432,6 @@ export default function AdminTickets() {
 
   // delete-ticket confirmation. Holds the ticket pending deletion
   // (or null when the modal is closed). Kept separate from statusModal
-  // since deleting is a destructive, unrelated action.
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -441,7 +440,8 @@ export default function AdminTickets() {
   // without freezing the whole table.
   const [priorityUpdatingId, setPriorityUpdatingId] = useState(null);
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(localStorage.getItem("user"))
+
   const isSuperAdmin = user?.role === "super_admin";
   // NEW: both super_admin and it_support are allowed to edit priority
   const canEditPriority = user?.role === "super_admin" || user?.role === "it_support";
