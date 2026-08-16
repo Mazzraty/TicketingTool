@@ -198,57 +198,66 @@ export default function AdminEmployeeMaster() {
       {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* SEARCH & ACTIONS */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 relative">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
-            <input
-              placeholder="Search by staff code, name, or department..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
+        <div className="flex flex-wrap items-center gap-3 mb-8">
+          {/* FILTERS: search + company, grouped and allowed to grow/shrink together */}
+          <div className="flex flex-1 flex-wrap items-center gap-3 min-w-[240px]">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              />
+              <input
+                placeholder="Search by staff code, name, or department..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              />
+            </div>
+
+            {/* COMPANY FILTER — super_admin only */}
+            {isSuperAdmin && (
+              <div className="relative shrink-0 w-full sm:w-56">
+                <Building2
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
+                <select
+                  value={companyFilter}
+                  onChange={(e) => setCompanyFilter(e.target.value)}
+                  className="w-full truncate pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white cursor-pointer"
+                >
+                  <option value="All">All companies</option>
+                  {companies.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          {/* COMPANY FILTER — super_admin only */}
-          {isSuperAdmin && (
-            <div className="flex items-center gap-2">
-              <Building2 size={18} className="text-gray-400 hidden sm:block" />
-              <select
-                value={companyFilter}
-                onChange={(e) => setCompanyFilter(e.target.value)}
-                className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white cursor-pointer"
-              >
-                <option value="All">All companies</option>
-                {companies.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* ACTIONS: kept together, never split across the filters */}
+          <div className="flex items-center gap-3 shrink-0 ml-auto">
+            <button
+              onClick={() => (window.location.href = "/admin/assets/upload-excel")}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 hover:border-gray-300 transition whitespace-nowrap"
+            >
+              <Upload size={18} />
+              Upload Bulk
+            </button>
 
-          <button
-            onClick={() => (window.location.href = "/admin/assets/upload-excel")}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition"
-          >
-            <Upload size={18} />
-            Upload Bulk
-          </button>
-
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
-          >
-            <Plus size={18} />
-            Add Employee
-          </button>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition whitespace-nowrap shadow-sm shadow-indigo-200"
+            >
+              <Plus size={18} />
+              Add Employee
+            </button>
+          </div>
         </div>
 
         {/* STATS CARDS */}
