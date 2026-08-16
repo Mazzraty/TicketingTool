@@ -500,7 +500,9 @@ export const getAllTickets = async (req, res) => {
         companyId: req.user.companyId,
       };
     } else if (req.user.role === "super_admin") {
-      filter = {};
+      // super_admin can optionally scope the list to a single company
+      // via ?companyId=..., otherwise sees every company's tickets
+      filter = req.query.companyId ? { companyId: req.query.companyId } : {};
     }
 
     const tickets = await Ticket.find(filter)
@@ -1070,9 +1072,11 @@ export const addReview = async (req, res) => {
 ====================================================== */
 export const getTicketStats = async (req, res) => {
   try {
+    // super_admin can optionally scope the stats to a single company
+    // via ?companyId=..., matching the same behaviour as getAllTickets
     const filter =
       req.user.role === "super_admin"
-        ? {}
+        ? (req.query.companyId ? { companyId: req.query.companyId } : {})
         : { companyId: req.user.companyId };
 
     const total = await Ticket.countDocuments(filter);

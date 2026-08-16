@@ -39,6 +39,8 @@ const IconTrash = (p) => <Icon {...p}><path d="M3 6h18" /><path d="M8 6V4a2 2 0 
 const IconCalendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Icon>;
 // NEW: flag icon used next to the editable priority dropdown
 const IconFlag = (p) => <Icon {...p}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><path d="M4 22V3" /></Icon>;
+// building icon for the company filter
+const IconBuilding = (p) => <Icon {...p}><rect x="4" y="2" width="16" height="20" rx="1" /><path d="M9 22v-4h6v4M8 6h.01M8 10h.01M8 14h.01M16 6h.01M16 10h.01M16 14h.01" /></Icon>;
 
 /* ================= STATUS THEME (single source of truth) ================= */
 const STATUS_THEME = {
@@ -440,6 +442,10 @@ export default function AdminTickets() {
   // without freezing the whole table.
   const [priorityUpdatingId, setPriorityUpdatingId] = useState(null);
 
+  // super_admin company-wise filter
+  const [companyFilter, setCompanyFilter] = useState("All");
+  const [companies, setCompanies] = useState([]);
+
   const user = JSON.parse(localStorage.getItem("user"))
 
   const isSuperAdmin = user?.role === "super_admin";
@@ -458,9 +464,19 @@ export default function AdminTickets() {
   const [stats, setStats] = useState(initialStats);
 
   useEffect(() => {
+    if (isSuperAdmin) {
+      loadCompanies();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // reload tickets + stats whenever the super-admin company filter
+  // changes (also fires once on mount for everyone else)
+  useEffect(() => {
     load();
     loadStats();
-  }, []); // load everything once; pagination is client-side
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyFilter]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 30000);
@@ -495,13 +511,30 @@ export default function AdminTickets() {
     };
   }, [selected]);
 
+  const loadCompanies = async () => {
+    try {
+      const res = await api.get("/companies");
+      setCompanies(res.data.companies || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const load = async () => {
     try {
       setLoading(true);
       // fetch everything in one go (high limit) instead of one page at a
       // time, so client-side filters (search + stat cards) can see every
       // ticket, not just the 10 on the current server page.
-      const res = await api.get(`/tickets?page=1&limit=1000`);
+      const res = await api.get(`/tickets`, {
+        params: {
+          page: 1,
+          limit: 1000,
+          ...(isSuperAdmin && companyFilter && companyFilter !== "All"
+            ? { companyId: companyFilter }
+            : {}),
+        },
+      });
       setTickets(res?.data?.data || []);
     } catch {
       toast.error("Failed to load tickets");
@@ -512,7 +545,12 @@ export default function AdminTickets() {
 
   const loadStats = async () => {
     try {
-      const res = await api.get("/tickets/stats");
+      const res = await api.get("/tickets/stats", {
+        params:
+          isSuperAdmin && companyFilter && companyFilter !== "All"
+            ? { companyId: companyFilter }
+            : {},
+      });
       const data = res?.data?.data;
       setStats({
         total: data?.total ?? 0,
@@ -906,7 +944,7 @@ export default function AdminTickets() {
   // 1 so you don't land on a now-empty page.
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, openedFrom, openedTo, closedFrom, closedTo]);
+  }, [search, statusFilter, openedFrom, openedTo, closedFrom, closedTo, companyFilter]);
 
   // if data reloads and the current page no longer exists (e.g. fewer
   // results after a filter), clamp back into range.
@@ -1241,7 +1279,7 @@ export default function AdminTickets() {
             <p className="text-sm text-slate-400 mt-0.5">Track, resolve, and review support requests</p>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
             <div className="relative flex-1 sm:w-72">
               <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -1251,6 +1289,25 @@ export default function AdminTickets() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+
+            {/* COMPANY FILTER — super_admin only */}
+            {isSuperAdmin && (
+              <div className="relative shrink-0 w-full sm:w-52">
+                <IconBuilding className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <select
+                  value={companyFilter}
+                  onChange={(e) => setCompanyFilter(e.target.value)}
+                  className="w-full truncate border border-slate-200 bg-white pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition cursor-pointer"
+                >
+                  <option value="All">All companies</option>
+                  {companies.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Opened / Closed date-range filter (Jira/ServiceNow style) */}
             <div className="relative shrink-0">
@@ -1409,8 +1466,16 @@ export default function AdminTickets() {
         </div>
 
         {/* active filter indicator + clear button */}
-        {(statusFilter || activeDateFilterCount > 0) && (
+        {(statusFilter || activeDateFilterCount > 0 || (isSuperAdmin && companyFilter !== "All")) && (
           <div className="flex flex-wrap items-center gap-2 mb-4 -mt-2">
+            {isSuperAdmin && companyFilter !== "All" && (
+              <span className="inline-flex items-center gap-1.5 text-xs bg-indigo-50 border border-indigo-200 text-indigo-700 font-medium px-2.5 py-1 rounded-full">
+                {companies.find((c) => c._id === companyFilter)?.name || "Company"}
+                <button onClick={() => setCompanyFilter("All")} className="text-indigo-400 hover:text-indigo-600">
+                  <IconX className="w-3 h-3" />
+                </button>
+              </span>
+            )}
             {statusFilter && (
               <span className="inline-flex items-center gap-1.5 text-xs bg-slate-100 border border-slate-200 text-slate-700 font-medium px-2.5 py-1 rounded-full">
                 {statusFilter === "breached" ? "SLA Breached" : statusFilter}
@@ -1436,7 +1501,7 @@ export default function AdminTickets() {
               </span>
             )}
             <button
-              onClick={() => { setStatusFilter(null); clearAllDateFilters(); }}
+              onClick={() => { setStatusFilter(null); clearAllDateFilters(); setCompanyFilter("All"); }}
               className="text-xs text-slate-400 hover:text-slate-600 underline"
             >
               Clear all
