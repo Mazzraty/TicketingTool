@@ -11,19 +11,45 @@ import {
   ChevronLeft,
   ChevronRight,
   Star,
-  AlertCircle,
   Calendar,
   Clock,
-  MessageSquare,
+  Ticket as TicketIcon,
   Wrench,
 } from "lucide-react";
+
+/* =========================
+   DESIGN TOKENS
+   (single source of truth for status / priority colors)
+========================= */
+const STATUS_META = {
+  open: { label: "Open", bg: "#EAF1FB", text: "#1E4A85", dot: "#2B5FA8" },
+  "in progress": { label: "In Progress", bg: "#FBF1E1", text: "#8A5709", dot: "#B7791F" },
+  resolved: { label: "Resolved", bg: "#E7F5EC", text: "#1B6B43", dot: "#1F7A4D" },
+  reopened: { label: "Reopened", bg: "#F1ECFB", text: "#5B37AF", dot: "#6B46C1" },
+  closed: { label: "Closed", bg: "#EEF0F2", text: "#4A5260", dot: "#5B6472" },
+};
+
+const PRIORITY_META = {
+  critical: { bg: "#FCEAE9", text: "#A01F15" },
+  high: { bg: "#FBEFE3", text: "#9C5416" },
+  medium: { bg: "#FBF1E1", text: "#8A5709" },
+  low: { bg: "#E7F5EC", text: "#1B6B43" },
+};
+
+const getStatusMeta = (status) =>
+  STATUS_META[status?.toLowerCase()] || STATUS_META.closed;
+
+const getPriorityMeta = (priority) =>
+  PRIORITY_META[priority?.toLowerCase()] || {
+    bg: "#EEF0F2",
+    text: "#4A5260",
+  };
 
 export default function MyTickets() {
   const navigate = useNavigate();
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedTicket, setExpandedTicket] = useState(null);
 
   /* ================= MODALS ================= */
   const [reviewModal, setReviewModal] = useState(false);
@@ -160,39 +186,6 @@ export default function MyTickets() {
     });
   };
 
-  /* ================= BADGES ================= */
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case "open":
-        return "bg-blue-100 text-blue-800";
-      case "in progress":
-        return "bg-yellow-100 text-yellow-800";
-      case "resolved":
-        return "bg-green-100 text-green-800";
-      case "reopened":
-        return "bg-purple-100 text-purple-800";
-      case "closed":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority?.toLowerCase()) {
-      case "critical":
-        return "bg-red-100 text-red-800";
-      case "high":
-        return "bg-orange-100 text-orange-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
-      case "low":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const StarRating = ({ rating, onRate, interactive = true }) => (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map((star) => (
@@ -203,13 +196,12 @@ export default function MyTickets() {
           onMouseEnter={() => interactive && setHoverRating(star)}
           onMouseLeave={() => interactive && setHoverRating(0)}
           onClick={() => interactive && onRate(star)}
-          className={`transition ${interactive ? "cursor-pointer" : "cursor-default"
-            }`}
+          className={`transition ${interactive ? "cursor-pointer" : "cursor-default"}`}
         >
           <Star
             className={`w-5 h-5 ${(interactive ? hoverRating : rating) >= star
-              ? "fill-yellow-400 text-yellow-400"
-              : "text-gray-300"
+                ? "fill-amber-400 text-amber-400"
+                : "text-[#D7DBE1]"
               }`}
           />
         </button>
@@ -227,7 +219,7 @@ export default function MyTickets() {
     className = "",
   }) => {
     const baseStyles =
-      "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 cursor-pointer";
+      "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-all duration-150 cursor-pointer";
 
     const sizes = {
       sm: "px-3 py-1.5 text-xs",
@@ -237,15 +229,15 @@ export default function MyTickets() {
 
     const variants = {
       primary:
-        "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 active:scale-95",
+        "bg-[#0B6E76] text-white hover:bg-[#095A61] disabled:opacity-50 active:scale-[0.98]",
       secondary:
-        "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 active:scale-95",
+        "bg-white text-[#12161C] border border-[#D7DBE1] hover:border-[#0B6E76] hover:text-[#0B6E76] disabled:opacity-50 active:scale-[0.98]",
       danger:
-        "bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 active:scale-95",
+        "bg-[#B42318] text-white hover:bg-[#961D13] disabled:opacity-50 active:scale-[0.98]",
       success:
-        "bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 active:scale-95",
+        "bg-[#1F7A4D] text-white hover:bg-[#186A41] disabled:opacity-50 active:scale-[0.98]",
       ghost:
-        "text-gray-700 hover:bg-gray-100 disabled:opacity-50 active:scale-95",
+        "text-[#5B6472] hover:bg-[#EEF0F2] disabled:opacity-50 active:scale-[0.98]",
     };
 
     return (
@@ -260,10 +252,7 @@ export default function MyTickets() {
     );
   };
 
-  /* ================= PAGINATION WINDOW =================
-     Builds a sliding window of page numbers centered on the
-     current page (works correctly for any totalPages, not just
-     the first 5). Always includes first/last page with "…" gaps. */
+  /* ================= PAGINATION WINDOW ================= */
   const getPageNumbers = () => {
     const maxButtons = 5;
     const pages = [];
@@ -287,46 +276,61 @@ export default function MyTickets() {
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div
+      className="min-h-screen bg-[#F5F6F8]"
+      style={{ fontFamily: "'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif" }}
+    >
+      {/* Font import — remove if you already load these via index.html */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+      `}</style>
+
       {/* HEADER */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="bg-white border-b border-[#E2E5EA]">
+        <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Tickets</h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <h1
+                className="text-[28px] font-semibold text-[#12161C] tracking-tight"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                My Tickets
+              </h1>
+              <p className="mt-1 text-sm text-[#5B6472]">
                 Track and manage your support requests
               </p>
             </div>
-            <Button
-              variant="primary"
-              size="md"
-              icon={Plus}
-              onClick={() => navigate("/create")}
-            >
+            <Button variant="primary" size="md" icon={Plus} onClick={() => navigate("/create")}>
               New Ticket
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         {/* LOADING STATE */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-600 font-medium">Loading your tickets...</p>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-32 rounded-xl bg-white border border-[#E2E5EA] animate-pulse"
+              />
+            ))}
           </div>
         ) : tickets.length === 0 ? (
           /* EMPTY STATE */
-          <div className="rounded-lg border border-gray-200 bg-white p-16 text-center shadow-sm">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-              <MessageSquare className="w-8 h-8 text-gray-400" />
+          <div className="rounded-xl border border-dashed border-[#D7DBE1] bg-white p-16 text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#EEF0F2] mb-4">
+              <TicketIcon className="w-6 h-6 text-[#8A93A3]" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">
+            <h3
+              className="text-lg font-semibold text-[#12161C]"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
               No tickets yet
             </h3>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-1.5 text-sm text-[#5B6472]">
               Create your first support request to get started
             </p>
             <Button
@@ -340,212 +344,176 @@ export default function MyTickets() {
             </Button>
           </div>
         ) : (
-          /* TABLE */
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Ticket #
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Details
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Priority
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Closed
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
+          /* TICKET STUBS */
+          <div className="space-y-3">
+            {tickets.map((ticket) => {
+              const statusMeta = getStatusMeta(ticket.status);
+              const priorityMeta = getPriorityMeta(ticket.priority);
 
-                <tbody className="divide-y divide-gray-200">
-                  {tickets.map((ticket) => (
-                    <tr
-                      key={ticket._id}
-                      className="hover:bg-gray-50 transition-colors"
+              return (
+                <div
+                  key={ticket._id}
+                  className="relative flex rounded-xl border border-[#E2E5EA] bg-white overflow-hidden shadow-[0_1px_2px_rgba(18,22,28,0.04)]"
+                >
+                  {/* status rail */}
+                  <span
+                    className="absolute left-0 top-0 bottom-0 w-1"
+                    style={{ background: statusMeta.dot }}
+                  />
+
+                  {/* ticket stub */}
+                  <div className="w-40 md:w-44 shrink-0 pl-6 pr-4 py-5 flex flex-col justify-between">
+                    <div>
+                      <p
+                        className="text-[11px] text-[#5B6472] tracking-wide break-all"
+                        style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                      >
+                        {ticket.ticketNumber || "—"}
+                      </p>
+                      <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[#8A93A3]">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {formatDate(ticket.createdAt)}
+                      </div>
+                    </div>
+
+                    <span
+                      className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                      style={{ background: statusMeta.bg, color: statusMeta.text }}
                     >
-                      {/* TICKET NUMBER */}
-                      <td className="px-6 py-4 align-top">
-                        <p className="font-mono text-xs text-gray-500 whitespace-nowrap">
-                          {ticket.ticketNumber || "-"}
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${ticket.status === "In Progress" ? "animate-pulse" : ""
+                          }`}
+                        style={{ background: statusMeta.dot }}
+                      />
+                      {statusMeta.label}
+                    </span>
+                  </div>
+
+                  {/* perforation */}
+                  <div className="relative w-0 my-4 shrink-0">
+                    <div className="absolute inset-y-0 left-0 border-l border-dashed border-[#D7DBE1]" />
+                    <span className="absolute -left-[7px] -top-[7px] w-3.5 h-3.5 rounded-full bg-[#F5F6F8] border border-[#E2E5EA]" />
+                    <span className="absolute -left-[7px] -bottom-[7px] w-3.5 h-3.5 rounded-full bg-[#F5F6F8] border border-[#E2E5EA]" />
+                  </div>
+
+                  {/* details */}
+                  <div className="flex-1 min-w-0 px-6 py-5 flex flex-col">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-[15px] text-[#12161C] truncate">
+                          {ticket.title}
+                        </h3>
+                        <p className="mt-1 text-sm text-[#5B6472] line-clamp-2">
+                          {ticket.description}
                         </p>
-                      </td>
+                        {ticket.department && (
+                          <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-[#8A93A3]">
+                            {ticket.department}
+                          </p>
+                        )}
+                      </div>
 
-                      {/* TITLE & DESCRIPTION */}
-                      <td className="px-6 py-4 align-top">
-                        <div className="flex items-start gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 truncate">
-                              {ticket.title}
+                      <span
+                        className="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                        style={{ background: priorityMeta.bg, color: priorityMeta.text }}
+                      >
+                        {ticket.priority}
+                      </span>
+                    </div>
+
+                    {/* RESOLUTION NOTE */}
+                    {ticket.resolutionNote && (
+                      <div className="mt-3 flex items-start gap-2 bg-[#E7F5EC] border border-[#CDEAD9] rounded-lg px-3 py-2.5">
+                        <Check className="w-3.5 h-3.5 text-[#1F7A4D] shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold text-[#1B6B43] uppercase tracking-wide">
+                            Resolution Note
+                          </p>
+                          <p className="text-sm text-[#1B6B43] leading-relaxed">
+                            {ticket.resolutionNote}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* VENDOR DETAILS */}
+                    {ticket.resolutionType === "External Vendor" && ticket.vendorDetails && (
+                      <div className="mt-2 flex items-start gap-2 bg-[#F1ECFB] border border-[#E1D5F7] rounded-lg px-3 py-2.5">
+                        <Wrench className="w-3.5 h-3.5 text-[#6B46C1] shrink-0 mt-0.5" />
+                        <div className="min-w-0 text-sm">
+                          <p className="text-[11px] font-semibold text-[#5B37AF] uppercase tracking-wide">
+                            Sent to Vendor
+                          </p>
+                          <p className="text-[#5B37AF]">
+                            {ticket.vendorDetails.vendorName || "-"}
+                            {ticket.vendorDetails.repairDate &&
+                              ` · ${formatDate(ticket.vendorDetails.repairDate)}`}
+                          </p>
+                          {ticket.vendorDetails.complaintDescription && (
+                            <p className="text-[#7C5FCC] text-xs mt-0.5">
+                              {ticket.vendorDetails.complaintDescription}
                             </p>
-                            <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-                              {ticket.description}
-                            </p>
-                            {ticket.department && (
-                              <p className="mt-2 text-xs text-gray-500">
-                                {ticket.department}
-                              </p>
-                            )}
-
-                            {/* NEW: resolution note — this is what was
-                                missing. Only shown once IT support has
-                                actually recorded one (any status can, in
-                                theory, carry a note, so we don't gate this
-                                on ticket.status). */}
-                            {ticket.resolutionNote && (
-                              <div className="mt-3 flex items-start gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                                <Check className="w-3.5 h-3.5 text-green-600 shrink-0 mt-0.5" />
-                                <div className="min-w-0">
-                                  <p className="text-[11px] font-semibold text-green-700 uppercase tracking-wide">
-                                    Resolution Note
-                                  </p>
-                                  <p className="text-sm text-green-800 leading-relaxed">
-                                    {ticket.resolutionNote}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* NEW: vendor/repair details, only when the
-                                ticket was resolved via an external vendor */}
-                            {ticket.resolutionType === "External Vendor" &&
-                              ticket.vendorDetails && (
-                                <div className="mt-2 flex items-start gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
-                                  <Wrench className="w-3.5 h-3.5 text-purple-600 shrink-0 mt-0.5" />
-                                  <div className="min-w-0 text-sm">
-                                    <p className="text-[11px] font-semibold text-purple-700 uppercase tracking-wide">
-                                      Sent to Vendor
-                                    </p>
-                                    <p className="text-purple-800">
-                                      {ticket.vendorDetails.vendorName || "-"}
-                                      {ticket.vendorDetails.repairDate &&
-                                        ` · ${formatDate(ticket.vendorDetails.repairDate)}`}
-                                    </p>
-                                    {ticket.vendorDetails.complaintDescription && (
-                                      <p className="text-purple-700 text-xs mt-0.5">
-                                        {ticket.vendorDetails.complaintDescription}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* STATUS */}
-                      <td className="px-6 py-4 align-top">
-                        <span
-                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                            ticket.status
-                          )}`}
-                        >
-                          <div
-                            className={`w-2 h-2 rounded-full ${ticket.status === "Open"
-                              ? "bg-blue-500"
-                              : ticket.status === "In Progress"
-                                ? "bg-yellow-500 animate-pulse"
-                                : ticket.status === "Resolved"
-                                  ? "bg-green-500"
-                                  : "bg-gray-500"
-                              }`}
-                          ></div>
-                          {ticket.status}
-                        </span>
-                      </td>
-
-                      {/* PRIORITY */}
-                      <td className="px-6 py-4 align-top">
-                        <span
-                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${getPriorityColor(
-                            ticket.priority
-                          )}`}
-                        >
-                          {ticket.priority}
-                        </span>
-                      </td>
-
-                      {/* CREATED DATE */}
-                      <td className="px-6 py-4 align-top text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          {formatDate(ticket.createdAt)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 align-top text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-gray-400" />
-                          {ticket.closedAt ? formatDateTime(ticket.closedAt) : "-"}
-                        </div>
-                      </td>
-                      {/* ACTIONS */}
-                      <td className="px-6 py-4 align-top text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {(ticket.status === "Open" ||
-                            ticket.status === "Reopened") && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                icon={Edit}
-                                onClick={() => openEdit(ticket)}
-                              >
-                                Edit
-                              </Button>
-                            )}
-
-                          {(ticket.status === "Resolved" || ticket.status === "Closed") && (
-                            <>
-                              <Button
-                                variant="success"
-                                size="sm"
-                                icon={Check}
-                                onClick={() => {
-                                  setSelectedTicket(ticket);
-                                  setRating(0);
-                                  setComment("");
-                                  setReviewModal(true);
-                                }}
-                              >
-                                {ticket.status === "Closed" ? "Review" : "Confirm"}
-                              </Button>
-
-                              {ticket.status === "Resolved" && (
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  icon={RotateCw}
-                                  onClick={() => reopenTicket(ticket._id)}
-                                >
-                                  Reopen
-                                </Button>
-                              )}
-                            </>
                           )}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    )}
+
+                    {/* FOOTER: closed date + actions */}
+                    <div className="mt-4 pt-3 border-t border-[#EEF0F2] flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs text-[#8A93A3]">
+                        <Clock className="w-3.5 h-3.5" />
+                        {ticket.closedAt
+                          ? `Closed ${formatDateTime(ticket.closedAt)}`
+                          : "Not closed"}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {(ticket.status === "Open" || ticket.status === "Reopened") && (
+                          <Button variant="ghost" size="sm" icon={Edit} onClick={() => openEdit(ticket)}>
+                            Edit
+                          </Button>
+                        )}
+
+                        {(ticket.status === "Resolved" || ticket.status === "Closed") && (
+                          <>
+                            <Button
+                              variant="success"
+                              size="sm"
+                              icon={Check}
+                              onClick={() => {
+                                setSelectedTicket(ticket);
+                                setRating(0);
+                                setComment("");
+                                setReviewModal(true);
+                              }}
+                            >
+                              {ticket.status === "Closed" ? "Review" : "Confirm"}
+                            </Button>
+
+                            {ticket.status === "Resolved" && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                icon={RotateCw}
+                                onClick={() => reopenTicket(ticket._id)}
+                              >
+                                Reopen
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
 
             {/* PAGINATION */}
-            <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                Page <span className="font-medium">{page}</span> of{" "}
-                <span className="font-medium">{totalPages}</span>
+            <div className="mt-4 bg-white border border-[#E2E5EA] rounded-xl px-6 py-4 flex items-center justify-between">
+              <div className="text-sm text-[#5B6472]">
+                Page <span className="font-semibold text-[#12161C]">{page}</span> of{" "}
+                <span className="font-semibold text-[#12161C]">{totalPages}</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -564,12 +532,12 @@ export default function MyTickets() {
                     <>
                       <button
                         onClick={() => setPage(1)}
-                        className="w-8 h-8 rounded-lg font-medium transition bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
+                        className="w-8 h-8 rounded-lg text-sm font-medium transition bg-white text-[#5B6472] border border-[#E2E5EA] hover:border-[#0B6E76]"
                       >
                         1
                       </button>
                       {pageNumbers[0] > 2 && (
-                        <span className="px-1 text-gray-400 text-sm">…</span>
+                        <span className="px-1 text-[#8A93A3] text-sm">…</span>
                       )}
                     </>
                   )}
@@ -578,9 +546,9 @@ export default function MyTickets() {
                     <button
                       key={pageNum}
                       onClick={() => setPage(pageNum)}
-                      className={`w-8 h-8 rounded-lg font-medium transition ${page === pageNum
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition ${page === pageNum
+                          ? "bg-[#0B6E76] text-white"
+                          : "bg-white text-[#5B6472] border border-[#E2E5EA] hover:border-[#0B6E76]"
                         }`}
                     >
                       {pageNum}
@@ -590,11 +558,11 @@ export default function MyTickets() {
                   {pageNumbers[pageNumbers.length - 1] < totalPages && (
                     <>
                       {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
-                        <span className="px-1 text-gray-400 text-sm">…</span>
+                        <span className="px-1 text-[#8A93A3] text-sm">…</span>
                       )}
                       <button
                         onClick={() => setPage(totalPages)}
-                        className="w-8 h-8 rounded-lg font-medium transition bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
+                        className="w-8 h-8 rounded-lg text-sm font-medium transition bg-white text-[#5B6472] border border-[#E2E5EA] hover:border-[#0B6E76]"
                       >
                         {totalPages}
                       </button>
@@ -619,16 +587,21 @@ export default function MyTickets() {
 
       {/* ================= EDIT MODAL ================= */}
       {editModal && editData && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-            {/* HEADER */}
-            <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div className="fixed inset-0 bg-[#12161C]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-[#E2E5EA]">
+            <div className="border-b border-[#E2E5EA] px-6 py-4 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2
+                  className="text-lg font-semibold text-[#12161C]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
                   Edit Ticket
                 </h2>
                 {editData.ticketNumber && (
-                  <p className="mt-0.5 text-xs font-mono text-gray-400">
+                  <p
+                    className="mt-0.5 text-xs text-[#8A93A3]"
+                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                  >
                     {editData.ticketNumber}
                   </p>
                 )}
@@ -638,53 +611,46 @@ export default function MyTickets() {
                   setEditModal(false);
                   setEditData(null);
                 }}
-                className="text-gray-400 hover:text-gray-600 transition"
+                className="text-[#8A93A3] hover:text-[#12161C] transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* CONTENT */}
             <div className="px-6 py-6 space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Title
-                </label>
+                <label className="block text-sm font-semibold text-[#12161C] mb-2">Title</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="w-full px-4 py-2 border border-[#D7DBE1] rounded-lg focus:ring-2 focus:ring-[#0B6E76]/30 focus:border-[#0B6E76] outline-none transition"
                   value={editData.title}
-                  onChange={(e) =>
-                    setEditData({ ...editData, title: e.target.value })
-                  }
+                  onChange={(e) => setEditData({ ...editData, title: e.target.value })}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                <label className="block text-sm font-semibold text-[#12161C] mb-2">
                   Description
                 </label>
                 <textarea
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
+                  className="w-full px-4 py-2 border border-[#D7DBE1] rounded-lg focus:ring-2 focus:ring-[#0B6E76]/30 focus:border-[#0B6E76] outline-none transition resize-none"
                   rows={4}
                   value={editData.description}
-                  onChange={(e) =>
-                    setEditData({ ...editData, description: e.target.value })
-                  }
+                  onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                <label className="block text-sm font-semibold text-[#12161C] mb-2">
                   Attachment
                 </label>
                 <input
                   type="file"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="w-full px-4 py-2 border border-[#D7DBE1] rounded-lg focus:ring-2 focus:ring-[#0B6E76]/30 focus:border-[#0B6E76] outline-none transition"
                   onChange={(e) => setImage(e.target.files?.[0] || null)}
                 />
                 {image && (
-                  <p className="mt-2 text-sm text-green-600 flex items-center gap-2">
+                  <p className="mt-2 text-sm text-[#1F7A4D] flex items-center gap-2">
                     <Check className="w-4 h-4" />
                     {image.name}
                   </p>
@@ -692,8 +658,7 @@ export default function MyTickets() {
               </div>
             </div>
 
-            {/* FOOTER */}
-            <div className="border-t border-gray-200 px-6 py-4 flex gap-3 justify-end">
+            <div className="border-t border-[#E2E5EA] px-6 py-4 flex gap-3 justify-end">
               <Button
                 variant="ghost"
                 size="md"
@@ -704,12 +669,7 @@ export default function MyTickets() {
               >
                 Cancel
               </Button>
-              <Button
-                variant="primary"
-                size="md"
-                icon={Check}
-                onClick={updateTicket}
-              >
+              <Button variant="primary" size="md" icon={Check} onClick={updateTicket}>
                 Update
               </Button>
             </div>
@@ -719,35 +679,35 @@ export default function MyTickets() {
 
       {/* ================= REVIEW MODAL ================= */}
       {reviewModal && selectedTicket && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-            {/* HEADER */}
-            <div className="border-b border-gray-200 px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+        <div className="fixed inset-0 bg-[#12161C]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-[#E2E5EA]">
+            <div className="border-b border-[#E2E5EA] px-6 py-4">
+              <h2
+                className="text-lg font-semibold text-[#12161C]"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
                 Confirm Resolution
               </h2>
-              <p className="mt-1 text-sm text-gray-600">
-                {selectedTicket.title}
-              </p>
+              <p className="mt-1 text-sm text-[#5B6472]">{selectedTicket.title}</p>
               {selectedTicket.ticketNumber && (
-                <p className="mt-0.5 text-xs font-mono text-gray-400">
+                <p
+                  className="mt-0.5 text-xs text-[#8A93A3]"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
                   {selectedTicket.ticketNumber}
                 </p>
               )}
             </div>
 
-            {/* CONTENT */}
             <div className="px-6 py-6 space-y-6">
-              {/* NEW: show the resolution note here too, so the user sees
-                  exactly what was done before they rate/confirm it. */}
               {selectedTicket.resolutionNote && (
-                <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
-                  <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2 bg-[#E7F5EC] border border-[#CDEAD9] rounded-lg px-4 py-3">
+                  <Check className="w-4 h-4 text-[#1F7A4D] shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">
+                    <p className="text-xs font-semibold text-[#1B6B43] uppercase tracking-wide">
                       Resolution Note
                     </p>
-                    <p className="text-sm text-green-800 leading-relaxed mt-0.5">
+                    <p className="text-sm text-[#1B6B43] leading-relaxed mt-0.5">
                       {selectedTicket.resolutionNote}
                     </p>
                   </div>
@@ -755,22 +715,18 @@ export default function MyTickets() {
               )}
 
               <div>
-                <p className="text-sm font-semibold text-gray-900 mb-4">
+                <p className="text-sm font-semibold text-[#12161C] mb-4">
                   How satisfied are you with this resolution?
                 </p>
-                <StarRating
-                  rating={rating}
-                  onRate={setRating}
-                  interactive={true}
-                />
+                <StarRating rating={rating} onRate={setRating} interactive={true} />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                <label className="block text-sm font-semibold text-[#12161C] mb-2">
                   Feedback (optional)
                 </label>
                 <textarea
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
+                  className="w-full px-4 py-2 border border-[#D7DBE1] rounded-lg focus:ring-2 focus:ring-[#0B6E76]/30 focus:border-[#0B6E76] outline-none transition resize-none"
                   rows={4}
                   placeholder="Share your experience..."
                   value={comment}
@@ -779,18 +735,16 @@ export default function MyTickets() {
               </div>
 
               {rating > 0 && (
-                <div className="flex items-center gap-2 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <Check className="w-5 h-5 text-green-600" />
-                  <p className="text-sm text-green-800">
-                    You rated this ticket{" "}
-                    <span className="font-semibold">{rating}/5 stars</span>
+                <div className="flex items-center gap-2 p-4 bg-[#E7F5EC] rounded-lg border border-[#CDEAD9]">
+                  <Check className="w-5 h-5 text-[#1F7A4D]" />
+                  <p className="text-sm text-[#1B6B43]">
+                    You rated this ticket <span className="font-semibold">{rating}/5 stars</span>
                   </p>
                 </div>
               )}
             </div>
 
-            {/* FOOTER */}
-            <div className="border-t border-gray-200 px-6 py-4 flex gap-3 justify-end">
+            <div className="border-t border-[#E2E5EA] px-6 py-4 flex gap-3 justify-end">
               <Button
                 variant="ghost"
                 size="md"
