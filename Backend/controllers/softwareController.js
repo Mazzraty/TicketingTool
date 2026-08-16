@@ -2,9 +2,14 @@ import Software from "../models/softwareSchema.js";
 
 /* ==============================
    HELPER: COMPANY FILTER
+   - super_admin: sees all companies by default,
+     or a single company if ?companyId= is passed
+   - normal admin: always locked to their own company
 ============================== */
-const getCompanyFilter = (user) => {
-  if (user.role === "super_admin") return {};
+const getCompanyFilter = (user, query = {}) => {
+  if (user.role === "super_admin") {
+    return query.companyId ? { companyId: query.companyId } : {};
+  }
   return { companyId: user.companyId };
 };
 
@@ -14,7 +19,8 @@ const getCompanyFilter = (user) => {
 export const createSoftware = async (req, res) => {
   try {
     let companyId = req.user.companyId;
-console.log("REQ BODY:", req.body);
+    console.log("REQ BODY:", req.body);
+
     // Super Admin can choose company
     if (req.user.role === "super_admin") {
       companyId = req.body.companyId;
@@ -46,13 +52,14 @@ console.log("REQ BODY:", req.body);
     });
   }
 };
+
 /* ==============================
    📦 GET ALL SOFTWARES
    (PAGINATION + SEARCH + COMPANY SAFE)
 ============================== */
 export const getSoftwares = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -183,7 +190,7 @@ export const deleteSoftware = async (req, res) => {
 ============================== */
 export const getDashboardStats = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const today = new Date();
 

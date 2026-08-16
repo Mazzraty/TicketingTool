@@ -65,6 +65,7 @@ export default function AdminSoftwareDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [companyFilter, setCompanyFilter] = useState("All"); // super_admin scoping
   const [page, setPage] = useState(1);
 
   const limit = 8;
@@ -83,10 +84,9 @@ export default function AdminSoftwareDashboard() {
   const [form, setForm] = useState(EMPTY_FORM);
 
   /* =========================
-     FETCH SOFTWARES
+     LOAD COMPANIES (once)
   ========================= */
   useEffect(() => {
-    fetchSoftwares();
     loadCompanies();
   }, []);
 
@@ -99,10 +99,24 @@ export default function AdminSoftwareDashboard() {
     }
   };
 
-  const fetchSoftwares = async () => {
+  /* =========================
+     FETCH SOFTWARES
+     Refetches whenever the super-admin company filter changes
+  ========================= */
+  useEffect(() => {
+    fetchSoftwares(companyFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyFilter]);
+
+  const fetchSoftwares = async (companyId = companyFilter) => {
     try {
       setIsLoading(true);
-      const res = await api.get("/software");
+      const res = await api.get("/software", {
+        params:
+          user?.role === "super_admin" && companyId && companyId !== "All"
+            ? { companyId }
+            : {},
+      });
       setSoftwares(res.data.data || []);
     } catch (err) {
       console.error(err);
@@ -201,7 +215,8 @@ export default function AdminSoftwareDashboard() {
   };
 
   /* =========================
-     FILTER
+     FILTER (client-side: search + status only;
+     company scoping now happens server-side)
   ========================= */
   const filtered = useMemo(() => {
     return softwares.filter((s) => {
@@ -223,7 +238,7 @@ export default function AdminSoftwareDashboard() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter]);
+  }, [search, statusFilter, companyFilter]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * limit;
@@ -356,6 +371,25 @@ export default function AdminSoftwareDashboard() {
               </button>
             ))}
           </div>
+
+          {/* COMPANY FILTER — super_admin only */}
+          {user?.role === "super_admin" && (
+            <div className="flex items-center gap-2 sm:ml-auto">
+              <Building2 className="w-4 h-4 text-slate-400 hidden sm:block" />
+              <select
+                value={companyFilter}
+                onChange={(e) => setCompanyFilter(e.target.value)}
+                className="border border-slate-200 rounded-lg px-3 py-2.5 bg-white text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition"
+              >
+                <option value="All">All companies</option>
+                {companies.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* TABLE */}
