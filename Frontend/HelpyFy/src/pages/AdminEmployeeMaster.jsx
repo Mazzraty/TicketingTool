@@ -18,6 +18,7 @@ import {
 export default function AdminEmployeeMaster() {
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState("");
+  const [companyFilter, setCompanyFilter] = useState("All"); // super_admin scoping
 
   const [page, setPage] = useState(1);
   const pageSize = 8;
@@ -43,9 +44,14 @@ export default function AdminEmployeeMaster() {
   const isSuperAdmin = user?.role === "super_admin";
 
   // ================= LOAD EMPLOYEES & COMPANIES =================
-  const loadEmployees = async () => {
+  const loadEmployees = async (companyId = companyFilter) => {
     try {
-      const res = await api.get("/employees");
+      const res = await api.get("/employees", {
+        params:
+          isSuperAdmin && companyId && companyId !== "All"
+            ? { companyId }
+            : {},
+      });
       setEmployees(res.data);
     } catch {
       toast.error("Failed to load employees");
@@ -62,11 +68,18 @@ export default function AdminEmployeeMaster() {
   };
 
   useEffect(() => {
-    loadEmployees();
     if (isSuperAdmin) {
       loadCompanies();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refetch employees whenever the super-admin company filter changes
+  useEffect(() => {
+    loadEmployees(companyFilter);
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyFilter]);
 
   // ================= ADD EMPLOYEE =================
   const addEmployee = async () => {
@@ -113,13 +126,10 @@ export default function AdminEmployeeMaster() {
   };
 
   // ================= COMPANY FILTER + SEARCH =================
-  // NOTE: Company-level access control is enforced by the backend
-  // (via companyCheck / tenant scoping inside getEmployees), NOT re-derived
-  // here from potentially stale localStorage data. The previous version of
-  // this filter silently hid employees for non-super_admin roles (like
-  // it_support) whenever their cached companyId/companyAccess didn't
-  // include the employee's company — even though the backend had already
-  // correctly returned them. If the backend returned it, we show it.
+  // NOTE: Company scoping now happens server-side (see loadEmployees / the
+  // companyFilter dropdown below, super_admin only). Non-super_admin roles
+  // are always scoped by the backend regardless of anything sent from here.
+  // This search filter only narrows what the backend already returned.
   const filteredEmployees = employees.filter(
     (e) =>
       e.staffCode?.toLowerCase().includes(search.toLowerCase()) ||
@@ -204,6 +214,25 @@ export default function AdminEmployeeMaster() {
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
           </div>
+
+          {/* COMPANY FILTER — super_admin only */}
+          {isSuperAdmin && (
+            <div className="flex items-center gap-2">
+              <Building2 size={18} className="text-gray-400 hidden sm:block" />
+              <select
+                value={companyFilter}
+                onChange={(e) => setCompanyFilter(e.target.value)}
+                className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white cursor-pointer"
+              >
+                <option value="All">All companies</option>
+                {companies.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <button
             onClick={() => (window.location.href = "/admin/assets/upload-excel")}

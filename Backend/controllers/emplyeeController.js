@@ -43,10 +43,17 @@ export const getAllowedCompanyIds = (user) => {
 
 /* =========================
    HELPER: COMPANY FILTER
+   - super_admin: sees all companies by default,
+     or a single company when ?companyId= is passed
+   - other roles: always locked to their allowed companyId(s),
+     regardless of any companyId query param they might send
 ========================= */
-const getCompanyFilter = (user) => {
+const getCompanyFilter = (user, query = {}) => {
   if (!user) return {};
-  if (user.role === "super_admin") return {};
+
+  if (user.role === "super_admin") {
+    return query.companyId ? { companyId: query.companyId } : {};
+  }
 
   const allowedCompanyIds = getAllowedCompanyIds(user);
 
@@ -62,7 +69,7 @@ const getCompanyFilter = (user) => {
 ========================= */
 export const getEmployees = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const data = await EmployeeMaster.find(filter).sort({
       createdAt: -1,
@@ -99,9 +106,6 @@ export const getEmployee = async (req, res) => {
 /* =========================
    CREATE EMPLOYEE
 ========================= */
-/* =========================
-   CREATE EMPLOYEE
-========================= */
 export const createEmployee = async (req, res) => {
   try {
     const { staffCode, name, companyId: bodyCompanyId } = req.body;
@@ -113,9 +117,9 @@ export const createEmployee = async (req, res) => {
     }
 
     // ✅ Use companyId from body for super_admin, or from user for regular admin
-    const targetCompanyId = 
-      req.user.role === "super_admin" 
-        ? bodyCompanyId 
+    const targetCompanyId =
+      req.user.role === "super_admin"
+        ? bodyCompanyId
         : req.user.companyId;
 
     if (!targetCompanyId) {
@@ -153,6 +157,7 @@ export const createEmployee = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 /* =========================
    UPDATE EMPLOYEE
 ========================= */
