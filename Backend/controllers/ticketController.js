@@ -338,6 +338,7 @@ export const createTicket = async (req, res) => {
       ...uniqueUsers.values(),
     ].map((user) => ({
       userId: user._id,
+      companyId,
 
       title: "New Ticket",
 
@@ -809,6 +810,7 @@ export const updateStatus = async (req, res) => {
     // ============================
     await Notification.create({
       userId: ticket.userId,
+      companyId: ticket.companyId,
       title: "Ticket Status Updated",
       message: `Your ticket "${ticket.title}" is now ${status}`,
       type: "status",
@@ -941,11 +943,13 @@ export const confirmResolution = async (req, res) => {
     await ticket.save();
     // Create notification for admins
     const admins = await User.find({
+      companyId: ticket.companyId,
       role: { $in: ["company_admin", "super_admin", "it_support"] },
     });
     for (const admin of admins) {
       await Notification.create({
         userId: admin._id,
+        companyId: ticket.companyId,
         title: "Ticket Closed by User",
         message: `User confirmed resolution for ticket: "${ticket.title}"`,
         type: "status",
@@ -986,11 +990,13 @@ export const reopenTicket = async (req, res) => {
 
     // Create notification for admins
     const admins = await User.find({
+      companyId: ticket.companyId,
       role: { $in: ["company_admin", "super_admin", "it_support"] },
     });
     for (const admin of admins) {
       await Notification.create({
         userId: admin._id,
+        companyId: ticket.companyId,
         title: "Ticket Reopened",
         message: `User reopened ticket: "${ticket.title}"`,
         type: "status",
@@ -1438,6 +1444,7 @@ export const escalateTicket = async (req, res) => {
     await Notification.insertMany(
       admins.map((admin) => ({
         userId: admin._id,
+        companyId: ticket.companyId,
         title: "Ticket Escalated",
         message: `${ticket.title} requires Super Admin attention`,
         type: "ticket_escalated",
