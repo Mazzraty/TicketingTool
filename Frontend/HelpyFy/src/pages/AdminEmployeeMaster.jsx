@@ -252,7 +252,7 @@ export default function AdminEmployeeMaster() {
 
             <button
               onClick={() => setShowAddForm(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition whitespace-nowrap shadow-sm shadow-indigo-200"
+              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-indigo-200 text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 hover:border-indigo-300 transition whitespace-nowrap"
             >
               <Plus size={18} />
               Add Employee
