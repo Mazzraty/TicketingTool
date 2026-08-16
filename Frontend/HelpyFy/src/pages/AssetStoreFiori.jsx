@@ -8,14 +8,27 @@ export default function AssetStoreFiori() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showFilters, setShowFilters] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState("All"); // super_admin scoping
+  const [companies, setCompanies] = useState([]);
   // EDIT
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
+  // ================= USER INFO =================
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isSuperAdmin = user?.role === "super_admin";
+
   /* ================= LOAD ================= */
-  const loadAssets = async () => {
+  const loadAssets = async (companyId = companyFilter) => {
     try {
-      const res = await api.get("/assets?limit=1000");
+      const res = await api.get("/assets", {
+        params: {
+          limit: 1000,
+          ...(isSuperAdmin && companyId && companyId !== "All"
+            ? { companyId }
+            : {}),
+        },
+      });
 
       console.log("ASSET RESPONSE:", res.data);
 
@@ -33,9 +46,27 @@ export default function AssetStoreFiori() {
     }
   };
 
+  const loadCompanies = async () => {
+    try {
+      const res = await api.get("/companies");
+      setCompanies(res.data.companies || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    loadAssets();
+    if (isSuperAdmin) {
+      loadCompanies();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refetch assets whenever the super-admin company filter changes
+  useEffect(() => {
+    loadAssets(companyFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyFilter]);
 
   /* ================= FILTER ================= */
   const filtered = Array.isArray(assets)
@@ -365,6 +396,22 @@ export default function AssetStoreFiori() {
               />
             </div>
 
+            {/* COMPANY FILTER — super_admin only */}
+            {isSuperAdmin && (
+              <select
+                value={companyFilter}
+                onChange={(e) => setCompanyFilter(e.target.value)}
+                className={`${inputClass} w-full lg:w-56 truncate shrink-0`}
+              >
+                <option value="All">All companies</option>
+                {companies.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
+
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -388,6 +435,7 @@ export default function AssetStoreFiori() {
                   setSearch("");
                   setFilter("All");
                   setStatusFilter("All");
+                  setCompanyFilter("All");
                 }}
                 className="px-4 py-2.5 rounded-2xl text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
               >

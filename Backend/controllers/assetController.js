@@ -5,9 +5,14 @@ import Ticket from "../models/ticketSchema.js"
 
 /* =========================
    HELPER: COMPANY FILTER
+   - super_admin: sees all companies by default,
+     or a single company when ?companyId= is passed
+   - other roles: always locked to their own companyId
 ========================= */
-const getCompanyFilter = (user) => {
-  if (user.role === "super_admin") return {};
+const getCompanyFilter = (user, query = {}) => {
+  if (user.role === "super_admin") {
+    return query.companyId ? { companyId: query.companyId } : {};
+  }
   return { companyId: user.companyId };
 };
 
@@ -115,7 +120,7 @@ export const createAsset = async (req, res) => {
 ========================= */
 export const getAssets = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     if (req.query.type) filter.type = req.query.type;
     if (req.query.status) filter.status = req.query.status;
@@ -133,10 +138,14 @@ export const getAssets = async (req, res) => {
 
     const assetIds = assets.map((a) => a._id);
 
+    // Note: use the same base company scoping for assignments, not the
+    // asset/status/type filter (assignments don't have those fields)
+    const assignmentFilter = getCompanyFilter(req.user, req.query);
+
     const assignments = await AssetAssignment.find({
       asset: { $in: assetIds },
       status: "active",
-      ...filter,
+      ...assignmentFilter,
     }).populate("employee", "name staffCode");
 
     const map = new Map();
