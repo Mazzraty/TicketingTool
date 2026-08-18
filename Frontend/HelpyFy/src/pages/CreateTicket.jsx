@@ -10,6 +10,8 @@ import {
   X,
   CheckCircle,
   Sliders,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 
 const DEPARTMENTS = [
@@ -73,7 +75,6 @@ const URGENCY_LEVELS = [
     value: "Low",
     label: "Can wait",
     desc: "No deadline — routine work continues fine",
-    
   },
   {
     value: "Medium",
@@ -333,6 +334,13 @@ export default function CreateTicket() {
   const [relatedSuggested, setRelatedSuggested] = useState(null); // { value, matched } | null
   const [manualRelatedTo, setManualRelatedTo] = useState(false); // true once user picks Related To themselves
 
+  // 🤖 AI recommendation state
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState(null); // { category, priority, suggestedSolution, confidence } | null
+  const [aiSimilarTickets, setAiSimilarTickets] = useState([]);
+  const [aiApplied, setAiApplied] = useState(false);
+  const [aiError, setAiError] = useState("");
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
@@ -401,6 +409,17 @@ export default function CreateTicket() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.impact, form.urgency, overridePriority]);
 
+  // Clear any stale AI suggestion if the requester substantially edits
+  // title/description after already getting a recommendation.
+  useEffect(() => {
+    if (aiSuggestion) {
+      setAiSuggestion(null);
+      setAiSimilarTickets([]);
+      setAiApplied(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.title, form.description]);
+
   const setImpact = (value) => {
     setManualImpactUrgency(true);
     setForm((prev) => ({ ...prev, impact: value }));
@@ -446,6 +465,59 @@ export default function CreateTicket() {
   const handleFileChange = (e) => {
     const selectedFiles = [...e.target.files];
     setFiles((prev) => [...prev, ...selectedFiles]);
+  };
+
+  // 🤖 Ask the backend AI endpoint for category/priority/solution suggestions
+  const handleAskAI = async () => {
+    if (!form.title.trim() || !form.description.trim()) {
+      toast.error("Add a title and description first");
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError("");
+    setAiSuggestion(null);
+    setAiSimilarTickets([]);
+    setAiApplied(false);
+
+    try {
+      const res = await api.post("/ai/ticket-recommendation", {
+        title: form.title,
+        description: form.description,
+        relatedTo: form.relatedTo || undefined,
+      });
+
+      setAiSuggestion(res.data.recommendation);
+      setAiSimilarTickets(res.data.similarTickets || []);
+    } catch (err) {
+      const msg =
+        err.response?.data?.error ||
+        "Couldn't get an AI suggestion right now. Please try again.";
+      setAiError(msg);
+      toast.error(msg);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Applies the AI's category + priority to the form.
+  // Priority is applied via manual override since it didn't come from the
+  // impact/urgency matrix — the requester can still switch back to
+  // auto-calculation any time.
+  const applyAiSuggestion = () => {
+    if (!aiSuggestion) return;
+
+    setManualRelatedTo(true);
+    setOverridePriority(true);
+
+    setForm((prev) => ({
+      ...prev,
+      relatedTo: aiSuggestion.category || prev.relatedTo,
+      priority: aiSuggestion.priority || prev.priority,
+    }));
+
+    setAiApplied(true);
+    toast.success("AI suggestion applied");
   };
 
   const validateForm = () => {
@@ -534,6 +606,10 @@ export default function CreateTicket() {
         setOverridePriority(false);
         setRelatedSuggested(null);
         setManualRelatedTo(false);
+        setAiSuggestion(null);
+        setAiSimilarTickets([]);
+        setAiApplied(false);
+        setAiError("");
       } else {
         toast.error("Ticket creation failed");
       }
@@ -638,6 +714,139 @@ export default function CreateTicket() {
                   <span>{form.description.length}/1000</span>
                 </div>
               </FormField>
+
+              {/* 🤖 AI SUGGESTION PANEL */}
+              <div className="p-5 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-white space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-purple-100 rounded-lg">
+                      <Sparkles className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        AI Suggestion
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Get category, priority & a suggested fix based on similar tickets
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAskAI}
+                    disabled={aiLoading || !form.title.trim() || !form.description.trim()}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                      aiLoading || !form.title.trim() || !form.description.trim()
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-purple-600 text-white hover:bg-purple-700 active:scale-95"
+                    }`}
+                  >
+                    {aiLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Ask AI
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {aiError && (
+                  <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-100">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
+                    <p className="text-xs text-red-700">{aiError}</p>
+                  </div>
+                )}
+
+                {aiSuggestion && (
+                  <div className="border border-purple-200 rounded-lg bg-white p-4 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold text-gray-500">Category:</span>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        {aiSuggestion.category}
+                      </span>
+
+                      <span className="text-xs font-semibold text-gray-500 ml-2">Priority:</span>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${PRIORITY_BADGE_STYLE[aiSuggestion.priority] || "bg-gray-100 text-gray-700"}`}>
+                        {aiSuggestion.priority}
+                      </span>
+
+                      {aiSuggestion.confidence && (
+                        <span className="ml-auto text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+                          {aiSuggestion.confidence} confidence
+                        </span>
+                      )}
+                    </div>
+
+                    {aiSuggestion.suggestedSolution && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 mb-1">
+                          Suggested next step
+                        </p>
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {aiSuggestion.suggestedSolution}
+                        </p>
+                      </div>
+                    )}
+
+                    {aiSimilarTickets.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 mb-1.5">
+                          Similar past tickets ({aiSimilarTickets.length})
+                        </p>
+                        <div className="space-y-1">
+                          {aiSimilarTickets.map((t) => (
+                            <div
+                              key={t.ticketNumber}
+                              className="flex items-center justify-between text-xs text-gray-600 px-2.5 py-1.5 bg-gray-50 rounded-md"
+                            >
+                              <span className="truncate">
+                                <span className="font-mono text-gray-400 mr-1.5">
+                                  {t.ticketNumber}
+                                </span>
+                                {t.title}
+                              </span>
+                              <span className="text-[10px] uppercase tracking-wide text-gray-400 shrink-0 ml-2">
+                                {t.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={applyAiSuggestion}
+                        disabled={aiApplied}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                          aiApplied
+                            ? "bg-green-50 text-green-700 border border-green-200 cursor-default"
+                            : "bg-purple-600 text-white hover:bg-purple-700 active:scale-95"
+                        }`}
+                      >
+                        {aiApplied ? (
+                          <>
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Applied
+                          </>
+                        ) : (
+                          "Apply category & priority"
+                        )}
+                      </button>
+                      <p className="text-[10px] text-gray-400">
+                        You can still adjust these manually below
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* IMPACT × URGENCY → PRIORITY */}
               <div className="space-y-4 p-5 rounded-xl border border-gray-200 bg-white">
@@ -979,6 +1188,11 @@ export default function CreateTicket() {
                     {!overridePriority && form.priority && (
                       <span className="ml-2 text-[10px] text-blue-500 font-medium">
                         from impact × urgency
+                      </span>
+                    )}
+                    {aiApplied && (
+                      <span className="ml-2 text-[10px] text-purple-500 font-medium">
+                        from AI suggestion
                       </span>
                     )}
                   </div>

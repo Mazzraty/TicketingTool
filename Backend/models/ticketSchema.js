@@ -399,5 +399,7 @@ ticketSchema.index({ companyId: 1, priority: 1 });
 ticketSchema.index({ companyId: 1, relatedTo: 1 });
 ticketSchema.index({ "sla.resolutionDue": 1 });
 ticketSchema.index({ "sla.firstResponseDue": 1 });
+// Add alongside your other indexes
+ticketSchema.index({ title: "text", description: "text" });
 
 export default mongoose.model("Ticket", ticketSchema);
