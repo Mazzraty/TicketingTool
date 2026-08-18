@@ -337,6 +337,7 @@ export default function CreateTicket() {
   // 🤖 AI recommendation state
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState(null); // { category, priority, suggestedSolution, confidence } | null
+  const [aiSimilarTickets, setAiSimilarTickets] = useState([]); // [{ title, status, resolutionNote }]
   const [aiApplied, setAiApplied] = useState(false);
   const [aiError, setAiError] = useState("");
 
@@ -413,6 +414,7 @@ export default function CreateTicket() {
   useEffect(() => {
     if (aiSuggestion) {
       setAiSuggestion(null);
+      setAiSimilarTickets([]);
       setAiApplied(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -475,6 +477,7 @@ export default function CreateTicket() {
     setAiLoading(true);
     setAiError("");
     setAiSuggestion(null);
+    setAiSimilarTickets([]);
     setAiApplied(false);
 
     try {
@@ -485,6 +488,7 @@ export default function CreateTicket() {
       });
 
       setAiSuggestion(res.data.recommendation);
+      setAiSimilarTickets(res.data.similarTickets || []);
     } catch (err) {
       const msg =
         err.response?.data?.error ||
@@ -603,6 +607,7 @@ export default function CreateTicket() {
         setRelatedSuggested(null);
         setManualRelatedTo(false);
         setAiSuggestion(null);
+        setAiSimilarTickets([]);
         setAiApplied(false);
         setAiError("");
       } else {
@@ -722,7 +727,7 @@ export default function CreateTicket() {
                         AI Suggestion
                       </p>
                       <p className="text-xs text-gray-500">
-                        Get a suggested category, priority & fix for this ticket
+                        Get a suggested category, priority & fix based on similar tickets
                       </p>
                     </div>
                   </div>
@@ -786,6 +791,31 @@ export default function CreateTicket() {
                         <p className="text-sm text-gray-700 leading-relaxed">
                           {aiSuggestion.suggestedSolution}
                         </p>
+                      </div>
+                    )}
+
+                    {aiSimilarTickets.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 mb-1.5">
+                          How similar tickets were resolved
+                        </p>
+                        <div className="space-y-2">
+                          {aiSimilarTickets.map((t, idx) => (
+                            <div
+                              key={idx}
+                              className="px-3 py-2 bg-gray-50 rounded-md border border-gray-100"
+                            >
+                              <p className="text-xs font-medium text-gray-800 truncate">
+                                {t.title}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                                {t.resolutionNote
+                                  ? t.resolutionNote
+                                  : "No resolution notes recorded for this ticket."}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
