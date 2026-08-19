@@ -48,6 +48,8 @@ const STATUS_THEME = {
   "In Progress": { text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", solid: "bg-amber-500", accent: "bg-amber-400" },
   Resolved: { text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", solid: "bg-emerald-600", accent: "bg-emerald-500" },
   Closed: { text: "text-slate-600", bg: "bg-slate-100", border: "border-slate-200", solid: "bg-slate-500", accent: "bg-slate-400" },
+  // NEW: super_admin-only rejection status
+  Rejected: { text: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200", solid: "bg-rose-600", accent: "bg-rose-500" },
 };
 
 /* ================= SLA THEME ================= */
@@ -400,7 +402,7 @@ export default function AdminTickets() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState(null); // "Open" | "In Progress" | "Resolved" | "Closed" | "breached" | null
+  const [statusFilter, setStatusFilter] = useState(null); // "Open" | "In Progress" | "Resolved" | "Closed" | "Rejected" | "breached" | null
   const [loading, setLoading] = useState(false);
 
   // independent date-range filters for Opened (createdAt) and
@@ -426,6 +428,10 @@ export default function AdminTickets() {
   const [vendorRepairDate, setVendorRepairDate] = useState("");
   const [vendorCost, setVendorCost] = useState("");
   const [vendorReceipt, setVendorReceipt] = useState(null); // File object
+
+  // NEW: reason field used only when the target status is "Rejected"
+  // (super_admin only flow, reuses the same status modal).
+  const [rejectionReason, setRejectionReason] = useState("");
 
   // quick "add reason immediately" modal, independent of resolve/close flow
   const [breachModal, setBreachModal] = useState(null); // { ticket, leg }
@@ -566,9 +572,19 @@ export default function AdminTickets() {
   };
 
   const handleStatusChange = (ticket, targetStatus) => {
-    if (targetStatus === "Resolved" || targetStatus === "Closed") {
+    // Resolved / Closed / Rejected all go through the same confirmation
+    // modal — Rejected only shows the rejection-reason field inside it
+    // (super_admin only; the option itself is hidden from the <select>
+    // for anyone else, but we still guard here defensively).
+    if (targetStatus === "Resolved" || targetStatus === "Closed" || targetStatus === "Rejected") {
+      if (targetStatus === "Rejected" && !isSuperAdmin) {
+        toast.error("Only Super Admin can reject a ticket");
+        return;
+      }
+
       setResolutionNote(ticket.resolutionNote || "");
       setBreachReason(ticket.sla?.breachReason || "");
+      setRejectionReason(ticket.rejectionReason || "");
 
       // pre-fill resolution type / vendor fields from whatever's
       // already on the ticket (lets IT support edit a previous entry).
@@ -652,8 +668,8 @@ export default function AdminTickets() {
 
   // CHANGED: `extra` can now be a plain object (JSON, used for the quick
   // Open/In Progress status changes) OR a FormData instance (used by the
-  // Resolve/Close modal so the optional vendor receipt file can travel
-  // alongside the other fields in one multipart request).
+  // Resolve/Close/Reject modal so the optional vendor receipt file can
+  // travel alongside the other fields in one multipart request).
   const updateStatus = async (id, status, extra = {}) => {
     try {
       let payload;
@@ -684,9 +700,13 @@ export default function AdminTickets() {
   const isModalTicketBreached =
     statusModal && getOverallSlaState(statusModal.ticket, now).level === "breached";
 
+  // whether the modal currently open is the reject flow
+  const isRejectModal = statusModal?.targetStatus === "Rejected";
+
   const resetStatusModalFields = () => {
     setResolutionNote("");
     setBreachReason("");
+    setRejectionReason("");
     setResolutionType("Internal");
     setVendorName("");
     setVendorComplaint("");
@@ -696,6 +716,28 @@ export default function AdminTickets() {
   };
 
   const confirmStatusModal = async () => {
+    // ============================
+    // REJECTED — its own lightweight validation/payload, skips the
+    // resolution-note / vendor / breach-reason requirements entirely.
+    // ============================
+    if (isRejectModal) {
+      if (!rejectionReason.trim()) {
+        return toast.error("Please provide a reason for rejecting this ticket");
+      }
+
+      setSubmitting(true);
+
+      const formData = new FormData();
+      formData.append("rejectionReason", rejectionReason.trim());
+
+      await updateStatus(statusModal.ticket._id, statusModal.targetStatus, formData);
+
+      setSubmitting(false);
+      setStatusModal(null);
+      resetStatusModalFields();
+      return;
+    }
+
     if (!resolutionNote.trim()) {
       return toast.error("Please add a resolution note before continuing");
     }
@@ -1023,8 +1065,10 @@ export default function AdminTickets() {
     red: "bg-red-50 text-red-600",
   };
 
-  // Shared status <select> used in both the table row and the mobile card
-  const StatusSelect = ({ t, theme }) => (
+  // Shared status <select> used in both the table row and the mobile card.
+  // NEW: `isSuperAdmin` gates whether the "Rejected" option even appears —
+  // it_support/company_admin never see it in the dropdown at all.
+  const StatusSelect = ({ t, theme, isSuperAdmin }) => (
     <div className="relative inline-block">
       <select
         className={`appearance-none pl-3 pr-7 py-1.5 rounded-full text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/20 ${theme.bg} ${theme.text} ${theme.border}`}
@@ -1035,6 +1079,7 @@ export default function AdminTickets() {
         <option>In Progress</option>
         <option>Resolved</option>
         <option>Closed</option>
+        {isSuperAdmin && <option>Rejected</option>}
       </select>
       <span className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${theme.accent}`} />
     </div>
@@ -1180,6 +1225,24 @@ export default function AdminTickets() {
                   <p className="text-xs text-slate-400">Not resolved yet</p>
                 )}
               </div>
+
+              {/* NEW: rejection reason — only rendered once the ticket has
+                  actually been rejected by a super_admin. */}
+              {selected.status === "Rejected" && selected.rejectionReason && (
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                    <IconX className="w-3.5 h-3.5" /> Rejection Reason
+                  </p>
+                  <div className="bg-rose-50 border border-rose-100 text-rose-800 text-sm p-3 rounded-lg leading-relaxed">
+                    {selected.rejectionReason}
+                  </div>
+                  {selected.rejectedAt && (
+                    <p className="text-[11px] text-slate-400 mt-1.5">
+                      Rejected on {formatDateTime(selected.rejectedAt)}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Vendor / repair information — only rendered once a
                   resolution type has actually been recorded on the ticket. */}
@@ -1552,7 +1615,7 @@ export default function AdminTickets() {
                     )}
 
                     <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                      <StatusSelect t={t} theme={theme} />
+                      <StatusSelect t={t} theme={theme} isSuperAdmin={isSuperAdmin} />
                       <SlaBadge ticket={t} now={now} onOpenReason={openBreachModal} />
                     </div>
 
@@ -1560,6 +1623,14 @@ export default function AdminTickets() {
                       <p className="text-xs text-slate-400 mb-3 flex items-start gap-1">
                         <IconNote className="w-3 h-3 shrink-0 mt-0.5" />
                         <span className="line-clamp-2">{t.resolutionNote}</span>
+                      </p>
+                    )}
+
+                    {/* NEW: rejection reason preview on the mobile card */}
+                    {t.status === "Rejected" && t.rejectionReason && (
+                      <p className="text-xs text-rose-600 mb-3 flex items-start gap-1">
+                        <IconX className="w-3 h-3 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{t.rejectionReason}</span>
                       </p>
                     )}
 
@@ -1677,13 +1748,22 @@ export default function AdminTickets() {
 
                           <td className="p-3.5 text-center">
                             <div className="flex flex-col items-center gap-1">
-                              <StatusSelect t={t} theme={theme} />
+                              <StatusSelect t={t} theme={theme} isSuperAdmin={isSuperAdmin} />
                               {t.resolutionNote && (
                                 <p
                                   className="text-[10px] text-slate-400 max-w-[140px] truncate flex items-center gap-1"
                                   title={t.resolutionNote}
                                 >
                                   <IconNote className="w-2.5 h-2.5 shrink-0" /> {t.resolutionNote}
+                                </p>
+                              )}
+                              {/* NEW: rejection reason preview under the status pill */}
+                              {t.status === "Rejected" && t.rejectionReason && (
+                                <p
+                                  className="text-[10px] text-rose-500 max-w-[140px] truncate flex items-center gap-1"
+                                  title={t.rejectionReason}
+                                >
+                                  <IconX className="w-2.5 h-2.5 shrink-0" /> {t.rejectionReason}
                                 </p>
                               )}
                               {/* quick vendor indicator under the status pill */}
@@ -1774,14 +1854,27 @@ export default function AdminTickets() {
         </div>
       </div>
 
-      {/* ================= RESOLVE / CLOSE MODAL ================= */}
+      {/* ================= RESOLVE / CLOSE / REJECT MODAL =================
+          Reused for all three terminal-ish transitions. "Rejected" only
+          shows a single required reason field and skips the resolution
+          note / resolution type / vendor / breach-reason sections. */}
       {statusModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-1">
-              <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${statusModal.targetStatus === "Resolved" ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-600"
+              <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${statusModal.targetStatus === "Resolved"
+                  ? "bg-emerald-50 text-emerald-600"
+                  : statusModal.targetStatus === "Rejected"
+                    ? "bg-rose-50 text-rose-600"
+                    : "bg-slate-100 text-slate-600"
                 }`}>
-                {statusModal.targetStatus === "Resolved" ? <IconCheck className="w-4 h-4" /> : <IconLock className="w-4 h-4" />}
+                {statusModal.targetStatus === "Resolved" ? (
+                  <IconCheck className="w-4 h-4" />
+                ) : statusModal.targetStatus === "Rejected" ? (
+                  <IconX className="w-4 h-4" />
+                ) : (
+                  <IconLock className="w-4 h-4" />
+                )}
               </span>
               <h3 className="font-bold text-base text-slate-900">
                 Mark as {statusModal.targetStatus}
@@ -1791,148 +1884,174 @@ export default function AdminTickets() {
               "{statusModal.ticket.title}"
             </p>
 
-            <div className="ml-12 -mt-1 mb-4">
-              <SlaBadge ticket={statusModal.ticket} now={now} />
-            </div>
-
-            <label className="text-xs font-medium text-slate-500 mb-1.5 block">
-              Resolution note <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              className="w-full border border-slate-200 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition resize-none placeholder:text-slate-400"
-              rows={4}
-              placeholder="e.g. Replaced faulty router, tested connection with user, confirmed working."
-              value={resolutionNote}
-              onChange={(e) => setResolutionNote(e.target.value)}
-              autoFocus
-            />
-            <p className="text-[11px] text-slate-400 mt-1.5">
-              This note is saved with the ticket so anyone can see how it was handled.
-            </p>
-
-            {/* Resolution Type toggle */}
-            <div className="mt-4">
-              <label className="text-xs font-medium text-slate-500 mb-1.5 block">
-                Resolution Type <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setResolutionType("Internal")}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${resolutionType === "Internal"
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                    }`}
-                >
-                  Internal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setResolutionType("External Vendor")}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${resolutionType === "External Vendor"
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                    }`}
-                >
-                  External Vendor
-                </button>
-              </div>
-            </div>
-
-            {/* External Vendor fields — only shown when relevant */}
-            {resolutionType === "External Vendor" && (
-              <div className="mt-4 border border-purple-200 bg-purple-50/40 rounded-lg p-3 flex flex-col gap-3">
-                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide flex items-center gap-1.5">
-                  <IconWrench className="w-3.5 h-3.5" /> Vendor / Repair Details
-                </p>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1 block">
-                    Vendor Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    value={vendorName}
-                    onChange={(e) => setVendorName(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
-                    placeholder="e.g. ABC Computer Repairs"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1 block">
-                    Complaint / Repair Description <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    value={vendorComplaint}
-                    onChange={(e) => setVendorComplaint(e.target.value)}
-                    rows={3}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 resize-none bg-white"
-                    placeholder="e.g. Motherboard replaced due to short circuit"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1 block">
-                      Repair Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={vendorRepairDate}
-                      onChange={(e) => setVendorRepairDate(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1 block">
-                      Cost <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={vendorCost}
-                      onChange={(e) => setVendorCost(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1 block">
-                    Receipt / Invoice (optional)
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => setVendorReceipt(e.target.files?.[0] || null)}
-                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
-                  />
-                  {vendorReceipt && (
-                    <p className="text-[11px] text-slate-500 mt-1">Selected: {vendorReceipt.name}</p>
-                  )}
-                </div>
+            {!isRejectModal && (
+              <div className="ml-12 -mt-1 mb-4">
+                <SlaBadge ticket={statusModal.ticket} now={now} />
               </div>
             )}
 
-            {/* SLA breach reason field, only shown when this ticket is currently breached */}
-            {isModalTicketBreached && (
-              <div className="mt-4">
+            {isRejectModal ? (
+              // ============================
+              // REJECT — single required reason field
+              // ============================
+              <div>
                 <label className="text-xs font-medium text-slate-500 mb-1.5 block">
-                  Reason for SLA breach <span className="text-red-500">*</span>
+                  Reason for rejection <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  className="w-full border border-red-200 bg-red-50/40 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 transition resize-none placeholder:text-slate-400"
-                  rows={3}
-                  placeholder="e.g. Part was on backorder, awaiting vendor delivery."
-                  value={breachReason}
-                  onChange={(e) => setBreachReason(e.target.value)}
+                  className="w-full border border-rose-200 bg-rose-50/40 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 transition resize-none placeholder:text-slate-400"
+                  rows={4}
+                  placeholder="e.g. Duplicate of TCK-0123, or not a valid support request."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  autoFocus
                 />
                 <p className="text-[11px] text-slate-400 mt-1.5">
-                  This ticket missed its SLA — record why so it can be reviewed later.
+                  This ticket will be marked Rejected and the reason recorded on its history.
                 </p>
               </div>
+            ) : (
+              <>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Resolution note <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  className="w-full border border-slate-200 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition resize-none placeholder:text-slate-400"
+                  rows={4}
+                  placeholder="e.g. Replaced faulty router, tested connection with user, confirmed working."
+                  value={resolutionNote}
+                  onChange={(e) => setResolutionNote(e.target.value)}
+                  autoFocus
+                />
+                <p className="text-[11px] text-slate-400 mt-1.5">
+                  This note is saved with the ticket so anyone can see how it was handled.
+                </p>
+
+                {/* Resolution Type toggle */}
+                <div className="mt-4">
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    Resolution Type <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setResolutionType("Internal")}
+                      className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${resolutionType === "Internal"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                        }`}
+                    >
+                      Internal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResolutionType("External Vendor")}
+                      className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${resolutionType === "External Vendor"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                        }`}
+                    >
+                      External Vendor
+                    </button>
+                  </div>
+                </div>
+
+                {/* External Vendor fields — only shown when relevant */}
+                {resolutionType === "External Vendor" && (
+                  <div className="mt-4 border border-purple-200 bg-purple-50/40 rounded-lg p-3 flex flex-col gap-3">
+                    <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide flex items-center gap-1.5">
+                      <IconWrench className="w-3.5 h-3.5" /> Vendor / Repair Details
+                    </p>
+
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">
+                        Vendor Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        value={vendorName}
+                        onChange={(e) => setVendorName(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
+                        placeholder="e.g. ABC Computer Repairs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">
+                        Complaint / Repair Description <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={vendorComplaint}
+                        onChange={(e) => setVendorComplaint(e.target.value)}
+                        rows={3}
+                        className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 resize-none bg-white"
+                        placeholder="e.g. Motherboard replaced due to short circuit"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 mb-1 block">
+                          Repair Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={vendorRepairDate}
+                          onChange={(e) => setVendorRepairDate(e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 mb-1 block">
+                          Cost <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={vendorCost}
+                          onChange={(e) => setVendorCost(e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">
+                        Receipt / Invoice (optional)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setVendorReceipt(e.target.files?.[0] || null)}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
+                      />
+                      {vendorReceipt && (
+                        <p className="text-[11px] text-slate-500 mt-1">Selected: {vendorReceipt.name}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* SLA breach reason field, only shown when this ticket is currently breached */}
+                {isModalTicketBreached && (
+                  <div className="mt-4">
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Reason for SLA breach <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      className="w-full border border-red-200 bg-red-50/40 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 transition resize-none placeholder:text-slate-400"
+                      rows={3}
+                      placeholder="e.g. Part was on backorder, awaiting vendor delivery."
+                      value={breachReason}
+                      onChange={(e) => setBreachReason(e.target.value)}
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1.5">
+                      This ticket missed its SLA — record why so it can be reviewed later.
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="flex justify-end gap-2 mt-5">
@@ -1946,7 +2065,8 @@ export default function AdminTickets() {
               <button
                 onClick={confirmStatusModal}
                 disabled={submitting}
-                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition disabled:opacity-60"
+                className={`px-4 py-2 text-sm rounded-lg text-white font-semibold transition disabled:opacity-60 ${isRejectModal ? "bg-rose-600 hover:bg-rose-700" : "bg-blue-600 hover:bg-blue-700"
+                  }`}
               >
                 {submitting ? "Saving…" : `Confirm ${statusModal.targetStatus}`}
               </button>

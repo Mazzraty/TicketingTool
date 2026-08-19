@@ -75,7 +75,7 @@ const ticketSchema = new mongoose.Schema(
     // =========================
     status: {
       type: String,
-      enum: ["Open", "In Progress", "Resolved", "Closed"],
+      enum: ["Open", "In Progress", "Resolved", "Closed", "Rejected"],
       default: "Open",
       index: true,
     },
@@ -242,7 +242,15 @@ const ticketSchema = new mongoose.Schema(
       enum: ["Internal", "External Vendor"],
       default: "Internal",
     },
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
 
+    rejectionReason: {
+      type: String,
+      default: "",
+    },
     // Populated only when resolutionType === "External Vendor".
     // Kept as a sub-document so it's easy to render as a single block
     // in the ticket detail/history view.
@@ -368,7 +376,7 @@ const ticketSchema = new mongoose.Schema(
       {
         status: {
           type: String,
-          enum: ["Open", "In Progress", "Resolved", "Closed"],
+          enum: ["Open", "In Progress", "Resolved", "Closed", "Rejected"],
         },
 
         changedAt: {

@@ -587,10 +587,7 @@ export const updateStatus = async (req, res) => {
       status,
       slaBreachReason,
       resolutionNote,
-      // ADDED: resolution-type + vendor/repair fields. These arrive as
-      // plain string fields on req.body whether the request was sent as
-      // JSON (Open/In Progress quick-change) or multipart/form-data
-      // (Resolve/Close modal, which also carries the optional receipt file).
+      rejectionReason, // NEW
       resolutionType,
       vendorName,
       complaintDescription,
@@ -598,12 +595,20 @@ export const updateStatus = async (req, res) => {
       cost,
     } = req.body;
 
-    const allowed = ["Open", "In Progress", "Resolved", "Closed"];
+    const allowed = ["Open", "In Progress", "Resolved", "Closed", "Rejected"];
 
     if (!allowed.includes(status)) {
       return res.status(400).json({
         success: false,
         message: "Invalid status",
+      });
+    }
+
+    // NEW: only super_admin can reject a ticket
+    if (status === "Rejected" && req.user.role !== "super_admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only Super Admin can reject a ticket",
       });
     }
 
@@ -618,7 +623,6 @@ export const updateStatus = async (req, res) => {
 
     ticket.status = status;
 
-    // ADDED: persist resolution note whenever it's sent
     if (resolutionNote?.trim()) {
       ticket.resolutionNote = resolutionNote.trim();
     }
@@ -742,7 +746,19 @@ export const updateStatus = async (req, res) => {
         ticket.sla.status = "Completed";
       }
     }
-
+    // ============================
+    // REJECTED
+    // ============================
+    if (status === "Rejected") {
+      if (!rejectionReason?.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "A reason is required to reject a ticket",
+        });
+      }
+      ticket.rejectedAt = new Date();
+      ticket.rejectionReason = rejectionReason.trim();
+    }
     // ============================
     // CLOSED
     // ============================
@@ -777,7 +793,10 @@ export const updateStatus = async (req, res) => {
       status,
       changedAt: new Date(),
       changedBy: req.user.id,
-      note: `Status changed to ${status}${vendorSummaryForHistory}`,
+      note:
+        status === "Rejected"
+          ? `Ticket rejected: ${rejectionReason.trim()}`
+          : `Status changed to ${status}${vendorSummaryForHistory}`,
     });
 
     await ticket.save();
@@ -1435,7 +1454,7 @@ export const escalateTicket = async (req, res) => {
 
     ticket.statusHistory.push({
       status: ticket.status,
-          changedBy: req.user.id,
+      changedBy: req.user.id,
       changedAt: new Date(),
       note: `Escalated to Super Admin : ${reason}`,
     });
