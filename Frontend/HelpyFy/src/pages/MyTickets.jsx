@@ -27,6 +27,8 @@ const STATUS_META = {
   resolved: { label: "Resolved", bg: "#E7F5EC", text: "#1B6B43", dot: "#1F7A4D" },
   reopened: { label: "Reopened", bg: "#F1ECFB", text: "#5B37AF", dot: "#6B46C1" },
   closed: { label: "Closed", bg: "#EEF0F2", text: "#4A5260", dot: "#5B6472" },
+  // NEW: super_admin-only rejection status, surfaced read-only here
+  rejected: { label: "Rejected", bg: "#FCEAEF", text: "#9F1239", dot: "#E11D48" },
 };
 
 const PRIORITY_META = {
@@ -349,6 +351,7 @@ export default function MyTickets() {
             {tickets.map((ticket) => {
               const statusMeta = getStatusMeta(ticket.status);
               const priorityMeta = getPriorityMeta(ticket.priority);
+              const isRejected = ticket.status === "Rejected";
 
               return (
                 <div
@@ -380,11 +383,15 @@ export default function MyTickets() {
                       className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
                       style={{ background: statusMeta.bg, color: statusMeta.text }}
                     >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${ticket.status === "In Progress" ? "animate-pulse" : ""
-                          }`}
-                        style={{ background: statusMeta.dot }}
-                      />
+                      {isRejected ? (
+                        <X className="w-3 h-3" />
+                      ) : (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${ticket.status === "In Progress" ? "animate-pulse" : ""
+                            }`}
+                          style={{ background: statusMeta.dot }}
+                        />
+                      )}
                       {statusMeta.label}
                     </span>
                   </div>
@@ -420,6 +427,23 @@ export default function MyTickets() {
                         {ticket.priority}
                       </span>
                     </div>
+
+                    {/* REJECTION REASON — only ever set when a super_admin
+                        rejects the ticket; shown instead of a resolution
+                        note since a rejected ticket was never resolved. */}
+                    {isRejected && ticket.rejectionReason && (
+                      <div className="mt-3 flex items-start gap-2 bg-[#FCEAEF] border border-[#F8D2DE] rounded-lg px-3 py-2.5">
+                        <X className="w-3.5 h-3.5 text-[#9F1239] shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold text-[#9F1239] uppercase tracking-wide">
+                            Rejection Reason
+                          </p>
+                          <p className="text-sm text-[#9F1239] leading-relaxed">
+                            {ticket.rejectionReason}
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* RESOLUTION NOTE */}
                     {ticket.resolutionNote && (
@@ -462,9 +486,11 @@ export default function MyTickets() {
                     <div className="mt-4 pt-3 border-t border-[#EEF0F2] flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-xs text-[#8A93A3]">
                         <Clock className="w-3.5 h-3.5" />
-                        {ticket.closedAt
-                          ? `Closed ${formatDateTime(ticket.closedAt)}`
-                          : "Not closed"}
+                        {isRejected
+                          ? `Rejected ${formatDateTime(ticket.rejectedAt)}`
+                          : ticket.closedAt
+                            ? `Closed ${formatDateTime(ticket.closedAt)}`
+                            : "Not closed"}
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -502,6 +528,11 @@ export default function MyTickets() {
                             )}
                           </>
                         )}
+
+                        {/* Rejected tickets are a dead end for the user —
+                            no edit/confirm/reopen actions apply, since the
+                            ticket was never worked and can't be resolved.
+                            The reason above explains why; nothing to do here. */}
                       </div>
                     </div>
                   </div>
