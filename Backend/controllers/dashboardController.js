@@ -6,7 +6,7 @@ import Software from "../models/softwareSchema.js";
 /* =========================
    HELPER: COMPANY FILTER
    - super_admin: sees all companies by default,
-     or a single company when companyId is passed in a query/body
+     or a single company when companyId is passed in the query
    - other roles: always locked to their own companyId or active access company
 ========================= */
 export const getCompanyFilter = (user, query = {}) => {
