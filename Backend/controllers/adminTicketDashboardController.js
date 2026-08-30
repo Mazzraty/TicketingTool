@@ -20,9 +20,10 @@ const buildDateRangeFilter = (from, to) => {
 export const getSlaPolicy = async (req, res) => {
   res.json(slaPolicy);
 };
+
 export const getTicketKpis = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
     const { from, to } = req.query;
 
     if (from && to) {
@@ -67,10 +68,9 @@ export const getTicketKpis = async (req, res) => {
   }
 };
 
-
 export const getTicketTrend = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const { from, to } = req.query;
 
@@ -106,10 +106,9 @@ export const getTicketTrend = async (req, res) => {
   }
 };
 
-
 export const getTicketStatusChart = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const { from, to } = req.query;
 
@@ -134,9 +133,10 @@ export const getTicketStatusChart = async (req, res) => {
     });
   }
 };
+
 export const getTicketPriorityChart = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const { from, to } = req.query;
 
@@ -161,9 +161,10 @@ export const getTicketPriorityChart = async (req, res) => {
     });
   }
 };
+
 export const getDepartmentChart = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const { from, to } = req.query;
 
@@ -198,7 +199,7 @@ export const getDepartmentChart = async (req, res) => {
 
 export const getTicketCategoryChart = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const { from, to } = req.query;
 
@@ -236,7 +237,7 @@ export const getTicketCategoryChart = async (req, res) => {
 
 export const getAvgResolutionTime = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
     const { from, to } = req.query;
 
     if (from && to) {
@@ -275,7 +276,7 @@ export const getAvgResolutionTime = async (req, res) => {
 
 export const getAvgFirstResponseTime = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
     const { from, to } = req.query;
 
     if (from && to) {
