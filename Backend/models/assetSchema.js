@@ -59,6 +59,21 @@ const assetSchema = new mongoose.Schema(
 
     notes: String,
 
+
+    repairHistory: [
+      {
+        ticketId: { type: mongoose.Schema.Types.ObjectId, ref: "Ticket" },
+        vendorName: String,
+        vendorContact: String,
+        issueDescription: String,
+        cost: Number,
+        sentDate: Date,
+        returnedDate: Date,
+        notes: String,
+        createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     /* =========================
        NEW FIELDS
     ========================= */

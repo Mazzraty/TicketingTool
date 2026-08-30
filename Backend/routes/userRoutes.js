@@ -13,5 +13,10 @@ router.get(
   roleCheck("it_support", "super_admin"),
   getUsersByCompany
 );
+router.get(
+  "/company/:companyId",
+  protect,
+  getUsersByCompany
+);
 
 export default router;

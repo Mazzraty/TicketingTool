@@ -5,9 +5,14 @@ import Software from "../models/softwareSchema.js";
 
 /* =========================
    HELPER: COMPANY FILTER
+   - super_admin: sees all companies by default,
+     or a single company when companyId is passed in a query/body
+   - other roles: always locked to their own companyId or active access company
 ========================= */
-export const getCompanyFilter = (user) => {
-  if (user.role === "super_admin") return {};
+export const getCompanyFilter = (user, query = {}) => {
+  if (user.role === "super_admin") {
+    return query.companyId ? { companyId: query.companyId } : {};
+  }
 
   if (user.companyId) {
     return { companyId: user.companyId };
