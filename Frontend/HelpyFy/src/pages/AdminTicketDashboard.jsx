@@ -70,6 +70,15 @@ const formatDuration = (ms) => {
   return `${minutes}m`;
 };
 
+// Short "Sep 15" style label for the KPI strip's range indicator.
+const formatShortDate = (isoStr) => {
+  if (!isoStr) return "";
+  return new Date(isoStr).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+};
+
 const FONT_STACK =
   "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
@@ -245,6 +254,64 @@ export default function AdminTicketDashboard() {
     avgFirstResponse && prevAvgFirstResponse
       ? pctChange(avgFirstResponse.avgResponseMs, prevAvgFirstResponse.avgResponseMs)
       : 0;
+
+  // Unified stat list that feeds the single KPI strip — combines the
+  // 7 count-based cards with the 2 duration-based ones so they all
+  // render from one map() with one shared heading above them.
+  const kpiStats = useMemo(() => {
+    const countStats = KPI_CARDS.map((card) => {
+      const value = kpis?.[card.key] ?? 0;
+      const prevValue = prevKpis?.[card.key] ?? 0;
+      const change = pctChange(value, prevValue);
+      const isGoodDirection = ["resolvedTickets", "closedTickets"].includes(card.key)
+        ? change >= 0
+        : change <= 0;
+      return {
+        key: card.key,
+        icon: card.icon,
+        tint: card.tint,
+        label: card.label,
+        display: String(value),
+        change,
+        showChange: !!prevKpis && change !== 0,
+        isGoodDirection,
+      };
+    });
+
+    const durationStats = [
+      {
+        key: "avgResolution",
+        icon: IconTimer,
+        tint: "bg-violet-50 text-violet-600",
+        label: `Avg Resolution${avgResolution?.count ? ` (${avgResolution.count})` : ""}`,
+        display: formatDuration(avgResolution?.avgResolutionMs),
+        change: avgResChange,
+        showChange: !!prevAvgResolution && avgResChange !== 0,
+        isGoodDirection: avgResChange <= 0,
+      },
+      {
+        key: "avgFirstResponse",
+        icon: IconZap,
+        tint: "bg-cyan-50 text-cyan-600",
+        label: `Avg SLA Response${avgFirstResponse?.count ? ` (${avgFirstResponse.count})` : ""}`,
+        display: formatDuration(avgFirstResponse?.avgResponseMs),
+        change: avgFirstResChange,
+        showChange: !!prevAvgFirstResponse && avgFirstResChange !== 0,
+        isGoodDirection: avgFirstResChange <= 0,
+      },
+    ];
+
+    return [...countStats, ...durationStats];
+  }, [
+    kpis,
+    prevKpis,
+    avgResolution,
+    prevAvgResolution,
+    avgResChange,
+    avgFirstResponse,
+    prevAvgFirstResponse,
+    avgFirstResChange,
+  ]);
 
   /* ================= TREND CHART ================= */
   const trendChartData = useMemo(
@@ -444,102 +511,57 @@ export default function AdminTicketDashboard() {
           <div className="py-24 text-center text-sm text-slate-400">Loading dashboard…</div>
         ) : (
           <>
-            {/* KPI CARDS */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3 mb-6">
-              {KPI_CARDS.map((card) => {
-                const value = kpis?.[card.key] ?? 0;
-                const prevValue = prevKpis?.[card.key] ?? 0;
-                const change = pctChange(value, prevValue);
-                const isGoodDirection = ["resolvedTickets", "closedTickets"].includes(card.key)
-                  ? change >= 0
-                  : change <= 0;
-                const CardIcon = card.icon;
-                return (
-                  <div
-                    key={card.key}
-                    className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${card.tint}`}>
-                        <CardIcon className="w-3.5 h-3.5" />
-                      </div>
-                      {prevKpis && change !== 0 && (
-                        <div
-                          className={`flex items-center gap-0.5 text-[10px] font-semibold ${
-                            isGoodDirection ? "text-emerald-600" : "text-red-500"
-                          }`}
-                        >
-                          {change > 0 ? (
-                            <IconTrendUp className="w-2.5 h-2.5" />
-                          ) : (
-                            <IconTrendDown className="w-2.5 h-2.5" />
-                          )}
-                          {Math.abs(change)}%
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-2xl font-bold text-slate-900 leading-none mb-1">{value}</p>
-                    <p className="text-[11px] font-medium text-slate-400">{card.label}</p>
-                  </div>
-                );
-              })}
-
-              {/* AVG RESOLUTION TIME CARD */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-violet-50 text-violet-600">
-                    <IconTimer className="w-3.5 h-3.5" />
-                  </div>
-                  {prevAvgResolution && avgResChange !== 0 && (
-                    <div
-                      className={`flex items-center gap-0.5 text-[10px] font-semibold ${
-                        avgResChange <= 0 ? "text-emerald-600" : "text-red-500"
-                      }`}
-                    >
-                      {avgResChange > 0 ? (
-                        <IconTrendUp className="w-2.5 h-2.5" />
-                      ) : (
-                        <IconTrendDown className="w-2.5 h-2.5" />
-                      )}
-                      {Math.abs(avgResChange)}%
-                    </div>
-                  )}
-                </div>
-                <p className="text-2xl font-bold text-slate-900 leading-none mb-1">
-                  {formatDuration(avgResolution?.avgResolutionMs)}
-                </p>
-                <p className="text-[11px] font-medium text-slate-400">
-                  Avg Resolution{avgResolution?.count ? ` (${avgResolution.count})` : ""}
-                </p>
+            {/* ================= KPI STRIP ================= */}
+            {/* One card, one heading, all stats in a single scrollable
+                row with dividers instead of 9 separately-boxed cards.
+                whitespace-nowrap + min-w keeps long labels like
+                "Avg SLA Response (2)" from wrapping onto two lines. */}
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-6 overflow-hidden">
+              <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
+                <h2 className="text-sm font-semibold text-slate-800">Overview</h2>
+                <span className="text-[11px] font-medium text-slate-400">
+                  {formatShortDate(range.from)} → {formatShortDate(range.to)}
+                </span>
               </div>
 
-              {/* AVG FIRST RESPONSE (SLA) TIME CARD */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-cyan-50 text-cyan-600">
-                    <IconZap className="w-3.5 h-3.5" />
-                  </div>
-                  {prevAvgFirstResponse && avgFirstResChange !== 0 && (
+              <div className="flex overflow-x-auto no-scrollbar">
+                {kpiStats.map((stat, i) => {
+                  const StatIcon = stat.icon;
+                  return (
                     <div
-                      className={`flex items-center gap-0.5 text-[10px] font-semibold ${
-                        avgFirstResChange <= 0 ? "text-emerald-600" : "text-red-500"
+                      key={stat.key}
+                      className={`flex-shrink-0 min-w-[132px] px-5 py-4 ${
+                        i !== kpiStats.length - 1 ? "border-r border-slate-100" : ""
                       }`}
                     >
-                      {avgFirstResChange > 0 ? (
-                        <IconTrendUp className="w-2.5 h-2.5" />
-                      ) : (
-                        <IconTrendDown className="w-2.5 h-2.5" />
-                      )}
-                      {Math.abs(avgFirstResChange)}%
+                      <div className="flex items-center justify-between mb-2.5">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${stat.tint}`}>
+                          <StatIcon className="w-3.5 h-3.5" />
+                        </div>
+                        {stat.showChange && (
+                          <div
+                            className={`flex items-center gap-0.5 text-[10px] font-semibold ${
+                              stat.isGoodDirection ? "text-emerald-600" : "text-red-500"
+                            }`}
+                          >
+                            {stat.change > 0 ? (
+                              <IconTrendUp className="w-2.5 h-2.5" />
+                            ) : (
+                              <IconTrendDown className="w-2.5 h-2.5" />
+                            )}
+                            {Math.abs(stat.change)}%
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xl font-bold text-slate-900 leading-none mb-1 whitespace-nowrap">
+                        {stat.display}
+                      </p>
+                      <p className="text-[11px] font-medium text-slate-400 whitespace-nowrap">
+                        {stat.label}
+                      </p>
                     </div>
-                  )}
-                </div>
-                <p className="text-2xl font-bold text-slate-900 leading-none mb-1">
-                  {formatDuration(avgFirstResponse?.avgResponseMs)}
-                </p>
-                <p className="text-[11px] font-medium text-slate-400">
-                  Avg SLA Response{avgFirstResponse?.count ? ` (${avgFirstResponse.count})` : ""}
-                </p>
+                  );
+                })}
               </div>
             </div>
 
@@ -714,3 +736,11 @@ export default function AdminTicketDashboard() {
     </div>
   );
 }
+
+/* =========================================================
+   Add this once to your global stylesheet (e.g. index.css)
+   to hide the scrollbar on the KPI strip:
+
+   .no-scrollbar::-webkit-scrollbar { display: none; }
+   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+========================================================= */
