@@ -2,6 +2,7 @@ import Asset from "../models/assetSchema.js";
 import Ticket from "../models/ticketSchema.js";
 import Employee from "../models/employeeMasterSchema.js";
 import Software from "../models/softwareSchema.js";
+import mongoose from "mongoose";
 
 /* =========================
    HELPER: COMPANY FILTER
@@ -11,7 +12,9 @@ import Software from "../models/softwareSchema.js";
 ========================= */
 export const getCompanyFilter = (user, query = {}) => {
   if (user.role === "super_admin") {
-    return query.companyId ? { companyId: query.companyId } : {};
+    if (!query.companyId) return {};
+    if (!mongoose.Types.ObjectId.isValid(query.companyId)) return {};
+    return { companyId: new mongoose.Types.ObjectId(query.companyId) };
   }
 
   if (user.companyId) {
