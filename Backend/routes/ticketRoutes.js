@@ -200,8 +200,6 @@ router.put(
   escalateTicket
 );
 
-router.put("/:id/remind", protect,
-  companyCheck,
-  supportOnly, sendTicketReminder);
+router.put("/:id/remind", protect, companyCheck, sendTicketReminder);
 
 export default router;
