@@ -290,22 +290,43 @@ export const createTicket = async (req, res) => {
 ====================================================== */
 export const getUserTickets = async (req, res) => {
   try {
-    const page = Number(req.query.page) || 1;
+    const page = Math.max(1, Number(req.query.page) || 1);
     const limit = 5;
+    const { status, search } = req.query;
 
-    const tickets = await Ticket.find({ userId: req.user.id })
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    const filter = { userId: req.user.id };
 
-    const total = await Ticket.countDocuments({
-      userId: req.user.id,
-    });
+    // Status filter (ignore "all" / empty)
+    const allowedStatuses = ["Open", "In Progress", "Resolved", "Closed", "Rejected"];
+    if (status && allowedStatuses.includes(status)) {
+      filter.status = status;
+    }
+
+    // Search by ticket number, title or description
+    if (search?.trim()) {
+      const safe = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(safe, "i");
+      filter.$or = [
+        { ticketNumber: regex },
+        { title: regex },
+        { description: regex },
+      ];
+    }
+
+    const [tickets, total] = await Promise.all([
+      Ticket.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Ticket.countDocuments(filter),
+    ]);
 
     res.json({
       success: true,
       data: tickets,
-      totalPages: Math.ceil(total / limit),
+      total,
+      page,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

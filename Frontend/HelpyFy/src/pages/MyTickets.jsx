@@ -15,7 +15,8 @@ import {
   Clock,
   Ticket as TicketIcon,
   Wrench,
-  Bell, // NEW: reminder button icon
+  Bell, // reminder button icon
+  Search, // search bar icon
 } from "lucide-react";
 
 /* =========================
@@ -49,7 +50,7 @@ const getPriorityMeta = (priority) =>
   };
 
 /* =========================
-   REMINDER (NEW)
+   REMINDER
    Keep cooldown in sync with REMINDER_COOLDOWN_HOURS in ticketController.js.
    The backend enforces it; this only disables the button as a UX aid.
 ========================= */
@@ -62,6 +63,21 @@ const getReminderState = (ticket) => {
     REMINDER_COOLDOWN_HOURS * 60 * 60 * 1000;
   return { locked: Date.now() < nextAt, nextAt };
 };
+
+/* =========================
+   LIST SETTINGS
+   PAGE_SIZE must match `limit` in getUserTickets (ticketController.js)
+========================= */
+const PAGE_SIZE = 5;
+
+const STATUS_TABS = [
+  { key: "all", label: "All" },
+  { key: "Open", label: "Open" },
+  { key: "In Progress", label: "In Progress" },
+  { key: "Resolved", label: "Resolved" },
+  { key: "Closed", label: "Closed" },
+  { key: "Rejected", label: "Rejected" },
+];
 
 export default function MyTickets() {
   const navigate = useNavigate();
@@ -81,33 +97,63 @@ export default function MyTickets() {
   const [comment, setComment] = useState("");
 
   const [image, setImage] = useState(null);
+
+  /* ================= PAGINATION / FILTERS ================= */
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  // NEW: id of the ticket a reminder is currently being sent for
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchInput, setSearchInput] = useState(""); // what the user is typing
+  const [search, setSearch] = useState(""); // debounced value sent to the API
+
+  // id of the ticket a reminder is currently being sent for
   const [remindingId, setRemindingId] = useState(null);
 
   /* ================= LOAD ================= */
+  // Debounce the search box so we don't hit the API on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   useEffect(() => {
     load();
-  }, [page]);
+  }, [page, statusFilter, search]);
 
   const load = async () => {
     try {
       setLoading(true);
 
       const res = await api.get("/tickets/my", {
-        params: { page },
+        params: {
+          page,
+          status: statusFilter === "all" ? undefined : statusFilter,
+          search: search || undefined,
+        },
       });
 
       setTickets(res.data.data || []);
       setTotalPages(res.data.totalPages || 1);
+      setTotal(res.data.total || 0);
     } catch (err) {
       console.log("LOAD ERROR:", err.response?.status, err.response?.data);
       toast.error(err.response?.data?.message || "Failed to load tickets");
     } finally {
       setLoading(false);
     }
+  };
+
+  const hasFilters = statusFilter !== "all" || !!search;
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setSearchInput("");
+    setSearch("");
+    setPage(1);
   };
 
   /* ================= SUBMIT REVIEW ================= */
@@ -151,7 +197,7 @@ export default function MyTickets() {
     }
   };
 
-  /* ================= SEND REMINDER (NEW) ================= */
+  /* ================= SEND REMINDER ================= */
   const sendReminder = async (id) => {
     try {
       setRemindingId(id);
@@ -310,6 +356,9 @@ export default function MyTickets() {
 
   const pageNumbers = getPageNumbers();
 
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
+
   return (
     <div
       className="min-h-screen bg-[#F5F6F8]"
@@ -343,6 +392,53 @@ export default function MyTickets() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* FILTER BAR
+            Sits outside the loading ternary so the search input keeps
+            focus while results reload. */}
+        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          {/* status tabs */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {STATUS_TABS.map((tab) => {
+              const active = statusFilter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => {
+                    setStatusFilter(tab.key);
+                    setPage(1);
+                  }}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition cursor-pointer ${active
+                      ? "bg-[#0B6E76] text-white"
+                      : "bg-white text-[#5B6472] border border-[#E2E5EA] hover:border-[#0B6E76] hover:text-[#0B6E76]"
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* search */}
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A93A3]" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search ticket no., title..."
+              className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-[#D7DBE1] rounded-lg focus:ring-2 focus:ring-[#0B6E76]/30 focus:border-[#0B6E76] outline-none transition"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8A93A3] hover:text-[#12161C] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* LOADING STATE */}
         {loading ? (
           <div className="space-y-3">
@@ -363,20 +459,33 @@ export default function MyTickets() {
               className="text-lg font-semibold text-[#12161C]"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              No tickets yet
+              {hasFilters ? "No matching tickets" : "No tickets yet"}
             </h3>
             <p className="mt-1.5 text-sm text-[#5B6472]">
-              Create your first support request to get started
+              {hasFilters
+                ? "Try a different status or search term"
+                : "Create your first support request to get started"}
             </p>
-            <Button
-              variant="primary"
-              size="md"
-              icon={Plus}
-              onClick={() => navigate("/create")}
-              className="mt-6"
-            >
-              Create Ticket
-            </Button>
+            {hasFilters ? (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={clearFilters}
+                className="mt-6"
+              >
+                Clear filters
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="md"
+                icon={Plus}
+                onClick={() => navigate("/create")}
+                className="mt-6"
+              >
+                Create Ticket
+              </Button>
+            )}
           </div>
         ) : (
           /* TICKET STUBS */
@@ -597,8 +706,14 @@ export default function MyTickets() {
             })}
 
             {/* PAGINATION */}
-            <div className="mt-4 bg-white border border-[#E2E5EA] rounded-xl px-6 py-4 flex items-center justify-between">
+            <div className="mt-4 bg-white border border-[#E2E5EA] rounded-xl px-6 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="text-sm text-[#5B6472]">
+                Showing{" "}
+                <span className="font-semibold text-[#12161C]">
+                  {rangeStart}–{rangeEnd}
+                </span>{" "}
+                of <span className="font-semibold text-[#12161C]">{total}</span> tickets
+                <span className="mx-2 text-[#D7DBE1]">|</span>
                 Page <span className="font-semibold text-[#12161C]">{page}</span> of{" "}
                 <span className="font-semibold text-[#12161C]">{totalPages}</span>
               </div>
