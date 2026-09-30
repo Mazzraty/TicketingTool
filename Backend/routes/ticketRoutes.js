@@ -154,9 +154,7 @@ router.put(
 // ADMIN ROUTES
 // ======================================================
 
-
 // GET ALL TICKETS
-
 router.get(
   "/",
   protect,

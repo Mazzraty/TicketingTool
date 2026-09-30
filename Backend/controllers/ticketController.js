@@ -939,25 +939,29 @@ export const sendTicketReminder = async (req, res) => {
     await ticket.save();
 
     // ---------- Who to notify ----------
-    let recipients = [];
+    const supportRoles = ["it_support", "company_admin"];
+    const recipientFilters = [
+      { role: "super_admin" },
+      {
+        companyId: ticket.companyId,
+        role: { $in: supportRoles },
+      },
+      {
+        companyAccess: {
+          $elemMatch: {
+            companyId: ticket.companyId,
+            isActive: true,
+            role: { $in: supportRoles },
+          },
+        },
+      },
+    ];
 
     if (ticket.assignedTo) {
-      const assignee = await User.findById(ticket.assignedTo);
-      if (assignee) recipients.push(assignee);
+      recipientFilters.push({ _id: ticket.assignedTo });
     }
 
-    if (recipients.length === 0) {
-      recipients = await User.find({
-        companyId: ticket.companyId,
-        role: { $in: ["it_support", "company_admin"] },
-      });
-    }
-
-    // If escalated, super admins own it now
-    if (ticket.assignedRole === "super_admin") {
-      const superAdmins = await User.find({ role: "super_admin" });
-      recipients.push(...superAdmins);
-    }
+    const recipients = await User.find({ $or: recipientFilters });
 
     const unique = new Map();
     recipients.forEach((u) => unique.set(u._id.toString(), u));

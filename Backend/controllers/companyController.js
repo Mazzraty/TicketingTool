@@ -37,7 +37,7 @@ export const createCompany = async (req, res) => {
 
     const company = await Company.create({
       name: name.trim(),
-      code: trimmedCode,
+      code: trimmedCode,  
       description: description || "",
       location: location || {},
       settings: settings || {},
