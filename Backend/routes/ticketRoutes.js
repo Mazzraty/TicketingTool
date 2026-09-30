@@ -4,7 +4,7 @@ import {
   createTicket, createManualTicket, getAllTickets, getUserTickets, updateStatus, deleteTicket, getTicketStats, editTicket, addReview, getTicketById, reopenTicket, confirmResolution,
   deleteAttachment,
   escalateTicket,
-  addSlaBreachReason,updateTicketPriority
+  addSlaBreachReason, updateTicketPriority, sendTicketReminder
 } from "../controllers/ticketController.js";
 
 // FIXED: was imported twice, from two different (and inconsistent) paths
@@ -20,9 +20,7 @@ import {
   companyCheck,
 } from "../middleware/authMiddleware.js";
 
-
 const router = express.Router();
-
 
 // ======================================================
 // IT SUPPORT ACCESS MIDDLEWARE
@@ -45,13 +43,9 @@ const supportOnly = (req, res, next) => {
   });
 
 };
-
-
-
 // ======================================================
 // ADMIN STATS (COMPANY ISOLATED)
 // ======================================================
-
 router.get(
   "/stats",
   protect,
@@ -59,10 +53,6 @@ router.get(
   adminOnly,
   getTicketStats
 );
-
-
-
-
 // ======================================================
 // USER ROUTES (COMPANY ISOLATED)
 // ======================================================
@@ -77,9 +67,6 @@ router.post(
   upload.array("files", 5),
   createTicket
 );
-
-
-
 // USER MY TICKETS
 
 router.get(
@@ -88,15 +75,9 @@ router.get(
   companyCheck,
   getUserTickets
 );
-
-
-
-
 // ======================================================
 // IT SUPPORT MANUAL TICKET
 // ======================================================
-
-
 // CREATE MANUAL TICKET
 
 router.post(
@@ -106,11 +87,6 @@ router.post(
   supportOnly,
   createManualTicket
 );
-
-
-
-
-
 // ======================================================
 // REVIEW / CONFIRM / REOPEN
 // ======================================================
@@ -136,8 +112,6 @@ router.put(
   confirmResolution
 );
 
-
-
 // REOPEN TICKET
 
 router.put(
@@ -147,26 +121,16 @@ router.put(
   reopenTicket
 );
 
-
-
-
-
 // ======================================================
 // COMMON ROUTES
 // ======================================================
-
-
 // GET SINGLE TICKET
-
 router.get(
   "/:id",
   protect,
   companyCheck,
   getTicketById
 );
-
-
-
 
 // EDIT TICKET
 
@@ -178,9 +142,6 @@ router.put(
   editTicket
 );
 
-
-
-
 // DELETE ATTACHMENT
 
 router.put(
@@ -189,11 +150,6 @@ router.put(
   companyCheck,
   deleteAttachment
 );
-
-
-
-
-
 // ======================================================
 // ADMIN ROUTES
 // ======================================================
@@ -209,9 +165,6 @@ router.get(
   getAllTickets
 );
 
-
-
-
 // UPDATE STATUS
 
 router.put(
@@ -226,7 +179,7 @@ router.put(
 router.put("/:id/sla-breach-reason", protect, companyCheck, adminOnly, addSlaBreachReason);
 router.put(
   "/:id/priority",
-  protect,companyCheck,
+  protect, companyCheck,
   adminOnly,
   updateTicketPriority
 );
@@ -248,5 +201,9 @@ router.put(
   supportOnly,
   escalateTicket
 );
+
+router.put("/:id/remind", protect,
+  companyCheck,
+  supportOnly, sendTicketReminder);
 
 export default router;

@@ -37,10 +37,12 @@ const IconWrench = (p) => <Icon {...p}><path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L2 19
 const IconTrash = (p) => <Icon {...p}><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></Icon>;
 // calendar icon for the date-range filter
 const IconCalendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Icon>;
-// NEW: flag icon used next to the editable priority dropdown
+// flag icon used next to the editable priority dropdown
 const IconFlag = (p) => <Icon {...p}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><path d="M4 22V3" /></Icon>;
 // building icon for the company filter
 const IconBuilding = (p) => <Icon {...p}><rect x="4" y="2" width="16" height="20" rx="1" /><path d="M9 22v-4h6v4M8 6h.01M8 10h.01M8 14h.01M16 6h.01M16 10h.01M16 14h.01" /></Icon>;
+// NEW: bell icon for user reminders
+const IconBell = (p) => <Icon {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></Icon>;
 
 /* ================= STATUS THEME (single source of truth) ================= */
 const STATUS_THEME = {
@@ -48,7 +50,7 @@ const STATUS_THEME = {
   "In Progress": { text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", solid: "bg-amber-500", accent: "bg-amber-400" },
   Resolved: { text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", solid: "bg-emerald-600", accent: "bg-emerald-500" },
   Closed: { text: "text-slate-600", bg: "bg-slate-100", border: "border-slate-200", solid: "bg-slate-500", accent: "bg-slate-400" },
-  // NEW: super_admin-only rejection status
+  // super_admin-only rejection status
   Rejected: { text: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200", solid: "bg-rose-600", accent: "bg-rose-500" },
 };
 
@@ -164,9 +166,17 @@ const priorityDot = {
   Critical: "bg-red-500",
 };
 
-// NEW: the four valid priority values, in the order they should
+// the four valid priority values, in the order they should
 // appear in every priority <select>.
 const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Critical"];
+
+/* ================= REMINDER HELPERS (NEW) =================
+   A ticket has an "active reminder" when the user has nudged support
+   at least once AND the ticket is still In Progress (reminders can only
+   be sent in that status, and once it moves on the nudge is moot).
+   These tickets are pinned to the top of the list. */
+const hasActiveReminder = (ticket) =>
+  ticket.status === "In Progress" && (ticket.reminderCount || 0) > 0;
 
 /* ================= SLA UI COMPONENTS ================= */
 
@@ -402,7 +412,8 @@ export default function AdminTickets() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState(null); // "Open" | "In Progress" | "Resolved" | "Closed" | "Rejected" | "breached" | null
+  // "Open" | "In Progress" | "Resolved" | "Closed" | "Rejected" | "breached" | "reminded" | null
+  const [statusFilter, setStatusFilter] = useState(null);
   const [loading, setLoading] = useState(false);
 
   // independent date-range filters for Opened (createdAt) and
@@ -429,7 +440,7 @@ export default function AdminTickets() {
   const [vendorCost, setVendorCost] = useState("");
   const [vendorReceipt, setVendorReceipt] = useState(null); // File object
 
-  // NEW: reason field used only when the target status is "Rejected"
+  // reason field used only when the target status is "Rejected"
   // (super_admin only flow, reuses the same status modal).
   const [rejectionReason, setRejectionReason] = useState("");
 
@@ -443,7 +454,7 @@ export default function AdminTickets() {
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // NEW: tracks which ticket's priority is currently mid-save, so the
+  // tracks which ticket's priority is currently mid-save, so the
   // dropdown for that specific row can show a disabled/saving state
   // without freezing the whole table.
   const [priorityUpdatingId, setPriorityUpdatingId] = useState(null);
@@ -455,7 +466,7 @@ export default function AdminTickets() {
   const user = JSON.parse(localStorage.getItem("user"))
 
   const isSuperAdmin = user?.role === "super_admin";
-  // NEW: both super_admin and it_support are allowed to edit priority
+  // both super_admin and it_support are allowed to edit priority
   const canEditPriority = user?.role === "super_admin" || user?.role === "it_support";
   const [now, setNow] = useState(() => new Date());
 
@@ -624,7 +635,7 @@ export default function AdminTickets() {
     }
   };
 
-  // NEW: fires the priority update against the backend, with a small
+  // fires the priority update against the backend, with a small
   // local "saving" flag so the specific row's dropdown reflects it.
   const handlePriorityChange = async (ticket, newPriority) => {
     if (newPriority === ticket.priority) return;
@@ -666,7 +677,7 @@ export default function AdminTickets() {
     }
   };
 
-  // CHANGED: `extra` can now be a plain object (JSON, used for the quick
+  // `extra` can be a plain object (JSON, used for the quick
   // Open/In Progress status changes) OR a FormData instance (used by the
   // Resolve/Close/Reject modal so the optional vendor receipt file can
   // travel alongside the other fields in one multipart request).
@@ -944,36 +955,54 @@ export default function AdminTickets() {
 
   // ---------------------------------------------------------------------
 
-  const filtered = tickets.filter((t) => {
-    const s = search.toLowerCase();
-    const slaState = getOverallSlaState(t, now).label.toLowerCase();
+  const filtered = tickets
+    .filter((t) => {
+      const s = search.toLowerCase();
+      const slaState = getOverallSlaState(t, now).label.toLowerCase();
 
-    const matchesSearch =
-      t.title?.toLowerCase().includes(s) ||
-      t.ticketNumber?.toLowerCase().includes(s) ||
-      getReporterName(t).toLowerCase().includes(s) ||
-      t.userId?.email?.toLowerCase().includes(s) ||
-      t.priority?.toLowerCase().includes(s) ||
-      t.status?.toLowerCase().includes(s) ||
-      slaState.includes(s);
+      const matchesSearch =
+        t.title?.toLowerCase().includes(s) ||
+        t.ticketNumber?.toLowerCase().includes(s) ||
+        getReporterName(t).toLowerCase().includes(s) ||
+        t.userId?.email?.toLowerCase().includes(s) ||
+        t.priority?.toLowerCase().includes(s) ||
+        t.status?.toLowerCase().includes(s) ||
+        slaState.includes(s);
 
-    // stat-card filter (status, or SLA breached)
-    const matchesFilter =
-      !statusFilter ||
-      (statusFilter === "breached"
-        ? getOverallSlaState(t, now).level === "breached"
-        : t.status === statusFilter);
+      // stat-card filter (status, SLA breached, or user reminders)
+      const matchesFilter =
+        !statusFilter ||
+        (statusFilter === "breached"
+          ? getOverallSlaState(t, now).level === "breached"
+          : statusFilter === "reminded"
+            ? hasActiveReminder(t)
+            : t.status === statusFilter);
 
-    // date-range filters, independent for Opened and Closed
-    const matchesOpenedDate = isWithinDateRange(t.createdAt, openedFrom, openedTo);
-    const matchesClosedDate = isWithinDateRange(t.closedAt || t.resolvedAt, closedFrom, closedTo);
+      // date-range filters, independent for Opened and Closed
+      const matchesOpenedDate = isWithinDateRange(t.createdAt, openedFrom, openedTo);
+      const matchesClosedDate = isWithinDateRange(t.closedAt || t.resolvedAt, closedFrom, closedTo);
 
-    return matchesSearch && matchesFilter && matchesOpenedDate && matchesClosedDate;
-  });
+      return matchesSearch && matchesFilter && matchesOpenedDate && matchesClosedDate;
+    })
+    // NEW: pin tickets the user has sent a reminder for to the very top,
+    // most recently reminded first. Everything else keeps the server's
+    // existing order (newest created first) because Array.sort is stable.
+    .sort((a, b) => {
+      const ra = hasActiveReminder(a);
+      const rb = hasActiveReminder(b);
+      if (ra !== rb) return ra ? -1 : 1;
+      if (ra && rb) {
+        return new Date(b.lastReminderAt || 0) - new Date(a.lastReminderAt || 0);
+      }
+      return 0;
+    });
 
   const breachedCount = tickets.filter(
     (t) => getOverallSlaState(t, now).level === "breached"
   ).length;
+
+  // NEW: how many tickets currently have an active user reminder
+  const remindedCount = tickets.filter(hasActiveReminder).length;
 
   // client-side pagination over the FILTERED set, so page counts and
   // page contents always reflect the active search/stat-card filter, not
@@ -1045,6 +1074,8 @@ export default function AdminTickets() {
     { key: "total", label: "Total", value: stats.total, theme: "slate", icon: <IconLayers className="w-4 h-4" />, filterKey: null },
     { key: "open", label: "Open", value: stats.open, theme: "blue", icon: <IconCircleDot className="w-4 h-4" />, filterKey: "Open" },
     { key: "inProgress", label: "In Progress", value: stats.inProgress, theme: "amber", icon: <IconClock className="w-4 h-4" />, filterKey: "In Progress" },
+    // NEW: tickets the user has sent a reminder for (still In Progress)
+    { key: "reminded", label: "Reminders", value: remindedCount, theme: "orange", icon: <IconBell className="w-4 h-4" />, filterKey: "reminded" },
     { key: "resolved", label: "Resolved", value: stats.resolved, theme: "emerald", icon: <IconCheck className="w-4 h-4" />, filterKey: "Resolved" },
     { key: "closed", label: "Closed", value: stats.closed, theme: "slate", icon: <IconLock className="w-4 h-4" />, filterKey: "Closed" },
     { key: "breached", label: "SLA Breached", value: breachedCount, theme: "red", icon: <IconAlertTriangle className="w-4 h-4" />, filterKey: "breached" },
@@ -1054,6 +1085,7 @@ export default function AdminTickets() {
     slate: "bg-slate-400",
     blue: "bg-blue-500",
     amber: "bg-amber-400",
+    orange: "bg-orange-500",
     emerald: "bg-emerald-500",
     red: "bg-red-500",
   };
@@ -1061,12 +1093,13 @@ export default function AdminTickets() {
     slate: "bg-slate-100 text-slate-500",
     blue: "bg-blue-50 text-blue-600",
     amber: "bg-amber-50 text-amber-600",
+    orange: "bg-orange-50 text-orange-600",
     emerald: "bg-emerald-50 text-emerald-600",
     red: "bg-red-50 text-red-600",
   };
 
   // Shared status <select> used in both the table row and the mobile card.
-  // NEW: `isSuperAdmin` gates whether the "Rejected" option even appears —
+  // `isSuperAdmin` gates whether the "Rejected" option even appears —
   // it_support/company_admin never see it in the dropdown at all.
   const StatusSelect = ({ t, theme, isSuperAdmin }) => (
     <div className="relative inline-block">
@@ -1085,7 +1118,23 @@ export default function AdminTickets() {
     </div>
   );
 
-  // NEW: shared editable priority <select>, used in the table, the
+  // NEW: small pill shown on tickets the user has sent a reminder for.
+  // Renders nothing for tickets without an active reminder.
+  const ReminderBadge = ({ t }) => {
+    if (!hasActiveReminder(t)) return null;
+    const count = t.reminderCount || 0;
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border bg-orange-50 text-orange-700 border-orange-200"
+        title={`Last reminder: ${formatDateTime(t.lastReminderAt)}`}
+      >
+        <IconBell className="w-3 h-3" />
+        {count} reminder{count > 1 ? "s" : ""}
+      </span>
+    );
+  };
+
+  // shared editable priority <select>, used in the table, the
   // mobile card, and the detail panel. Falls back to a plain read-only
   // badge for roles that aren't allowed to change priority.
   const PrioritySelect = ({ t, size = "table" }) => {
@@ -1178,11 +1227,39 @@ export default function AdminTickets() {
                       <span className={`w-1.5 h-1.5 rounded-full ${STATUS_THEME[selected.status]?.accent}`} />
                       {selected.status}
                     </span>
-                    {/* NEW: editable priority right next to the status pill */}
+                    {/* editable priority right next to the status pill */}
                     <PrioritySelect t={selected} />
                   </div>
                 </div>
               </div>
+
+              {/* NEW: user reminder banner — shown whenever the user has
+                  nudged support on this ticket at least once. Highlighted
+                  while the ticket is still In Progress. */}
+              {(selected.reminderCount || 0) > 0 && (
+                <div
+                  className={`rounded-lg border p-3 flex items-start gap-2.5 ${hasActiveReminder(selected)
+                      ? "bg-orange-50 border-orange-200"
+                      : "bg-slate-50 border-slate-200"
+                    }`}
+                >
+                  <IconBell
+                    className={`w-4 h-4 shrink-0 mt-0.5 ${hasActiveReminder(selected) ? "text-orange-600" : "text-slate-400"
+                      }`}
+                  />
+                  <div className="min-w-0">
+                    <p
+                      className={`text-xs font-semibold ${hasActiveReminder(selected) ? "text-orange-700" : "text-slate-600"
+                        }`}
+                    >
+                      User sent {selected.reminderCount} reminder{selected.reminderCount > 1 ? "s" : ""}
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Last reminder: {formatDateTime(selected.lastReminderAt)}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
@@ -1226,7 +1303,7 @@ export default function AdminTickets() {
                 )}
               </div>
 
-              {/* NEW: rejection reason — only rendered once the ticket has
+              {/* rejection reason — only rendered once the ticket has
                   actually been rejected by a super_admin. */}
               {selected.status === "Rejected" && selected.rejectionReason && (
                 <div>
@@ -1501,8 +1578,8 @@ export default function AdminTickets() {
           </div>
         </div>
 
-        {/* STATS — 2 columns on phones so labels/numbers stay readable, not squeezed to 6-across */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        {/* STATS — 2 columns on phones so labels/numbers stay readable, not squeezed to 7-across */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-6">
           {statCards.map((s) => {
             // a card is "active" if it's the currently applied filter, or
             // if it's the Total card and no filter is applied at all.
@@ -1541,7 +1618,11 @@ export default function AdminTickets() {
             )}
             {statusFilter && (
               <span className="inline-flex items-center gap-1.5 text-xs bg-slate-100 border border-slate-200 text-slate-700 font-medium px-2.5 py-1 rounded-full">
-                {statusFilter === "breached" ? "SLA Breached" : statusFilter}
+                {statusFilter === "breached"
+                  ? "SLA Breached"
+                  : statusFilter === "reminded"
+                    ? "User Reminders"
+                    : statusFilter}
                 <button onClick={() => setStatusFilter(null)} className="text-slate-400 hover:text-slate-600">
                   <IconX className="w-3 h-3" />
                 </button>
@@ -1589,14 +1670,19 @@ export default function AdminTickets() {
                 const theme = STATUS_THEME[t.status] || STATUS_THEME.Open;
                 const reporterName = getReporterName(t);
                 const reporterSubtext = getReporterSubtext(t);
+                const reminded = hasActiveReminder(t);
                 return (
-                  <div key={t._id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                  <div
+                    key={t._id}
+                    className={`bg-white border rounded-xl p-4 shadow-sm ${reminded ? "border-orange-300 ring-1 ring-orange-200" : "border-slate-200"
+                      }`}
+                  >
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className="min-w-0">
                         <p className="font-semibold text-slate-800 text-sm leading-snug break-words">{t.title}</p>
                         <p className="text-[11px] font-mono text-slate-400 mt-0.5">{t.ticketNumber}</p>
                       </div>
-                      {/* NEW: editable priority select replaces the static badge */}
+                      {/* editable priority select replaces the static badge */}
                       <PrioritySelect t={t} size="card" />
                     </div>
 
@@ -1619,6 +1705,13 @@ export default function AdminTickets() {
                       <SlaBadge ticket={t} now={now} onOpenReason={openBreachModal} />
                     </div>
 
+                    {/* NEW: user reminder badge */}
+                    {reminded && (
+                      <div className="mb-3">
+                        <ReminderBadge t={t} />
+                      </div>
+                    )}
+
                     {t.resolutionNote && (
                       <p className="text-xs text-slate-400 mb-3 flex items-start gap-1">
                         <IconNote className="w-3 h-3 shrink-0 mt-0.5" />
@@ -1626,7 +1719,7 @@ export default function AdminTickets() {
                       </p>
                     )}
 
-                    {/* NEW: rejection reason preview on the mobile card */}
+                    {/* rejection reason preview on the mobile card */}
                     {t.status === "Rejected" && t.rejectionReason && (
                       <p className="text-xs text-rose-600 mb-3 flex items-start gap-1">
                         <IconX className="w-3 h-3 shrink-0 mt-0.5" />
@@ -1717,8 +1810,15 @@ export default function AdminTickets() {
                       const theme = STATUS_THEME[t.status] || STATUS_THEME.Open;
                       const reporterName = getReporterName(t);
                       const reporterSubtext = getReporterSubtext(t);
+                      const reminded = hasActiveReminder(t);
                       return (
-                        <tr key={t._id} className="hover:bg-slate-50/70 transition-colors">
+                        <tr
+                          key={t._id}
+                          className={`transition-colors ${reminded
+                              ? "bg-orange-50/50 hover:bg-orange-50"
+                              : "hover:bg-slate-50/70"
+                            }`}
+                        >
                           <td className="p-3.5">
                             <p className="font-mono text-xs text-slate-500 whitespace-nowrap">{t.ticketNumber || "—"}</p>
                           </td>
@@ -1741,7 +1841,7 @@ export default function AdminTickets() {
 
                           <td className="p-3.5 text-slate-600">{t.companyId?.name || "—"}</td>
 
-                          {/* NEW: editable priority column */}
+                          {/* editable priority column */}
                           <td className="p-3.5 text-center">
                             <PrioritySelect t={t} />
                           </td>
@@ -1749,6 +1849,8 @@ export default function AdminTickets() {
                           <td className="p-3.5 text-center">
                             <div className="flex flex-col items-center gap-1">
                               <StatusSelect t={t} theme={theme} isSuperAdmin={isSuperAdmin} />
+                              {/* NEW: user reminder badge under the status pill */}
+                              <ReminderBadge t={t} />
                               {t.resolutionNote && (
                                 <p
                                   className="text-[10px] text-slate-400 max-w-[140px] truncate flex items-center gap-1"
@@ -1757,7 +1859,7 @@ export default function AdminTickets() {
                                   <IconNote className="w-2.5 h-2.5 shrink-0" /> {t.resolutionNote}
                                 </p>
                               )}
-                              {/* NEW: rejection reason preview under the status pill */}
+                              {/* rejection reason preview under the status pill */}
                               {t.status === "Rejected" && t.rejectionReason && (
                                 <p
                                   className="text-[10px] text-rose-500 max-w-[140px] truncate flex items-center gap-1"
@@ -1789,7 +1891,10 @@ export default function AdminTickets() {
                             {t.rating ? renderStars(t.rating) : <span className="text-slate-300 text-xs">—</span>}
                           </td>
 
-                          <td className="p-3.5 text-center sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
+                          <td
+                            className={`p-3.5 text-center sticky right-0 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] ${reminded ? "bg-orange-50" : "bg-white"
+                              }`}
+                          >
                             <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={() => setSelected(t)}

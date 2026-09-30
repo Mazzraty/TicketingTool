@@ -9,7 +9,15 @@ const notificationSchema = new mongoose.Schema(
     message: String,
     type: {
       type: String,
-      enum: ["ticket", "ticket_created", "ticket_escalated", "status", "system", "comment"],
+      enum: [
+        "ticket",
+        "ticket_created",
+        "ticket_escalated",
+        "ticket_reminder", // NEW
+        "status",
+        "system",
+        "comment",
+      ],
       default: "ticket",
     },
     isRead: { type: Boolean, default: false },

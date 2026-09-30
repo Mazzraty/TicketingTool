@@ -11,27 +11,35 @@ import Notification from "../models/notifcationSchema.js";
 import { generateTicketNumber } from "../utils/generateTicketNumber.js";
 
 /* ======================================================
+   HELPERS
+====================================================== */
+
+// Keep in sync with REMINDER_COOLDOWN_HOURS in MyTickets.jsx
+const REMINDER_COOLDOWN_HOURS = 4;
+
+// Escape user-typed text before putting it inside email HTML
+const escapeHtml = (value = "") =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+/* ======================================================
    ✅ CREATE TICKET
 ====================================================== */
 export const createTicket = async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      department,
-      relatedTo,
-      priority,
-    } = req.body;
+    const { title, description, department, relatedTo, priority } = req.body;
 
     // ==================================================
     // COMPANY ID
     // ==================================================
-
     const companyId =
       req.user.companyId ||
-      req.user.companyAccess?.find(
-        (c) => c.isActive && c.companyId
-      )?.companyId ||
+      req.user.companyAccess?.find((c) => c.isActive && c.companyId)
+        ?.companyId ||
       req.user.companyAccess?.[0]?.companyId;
 
     if (!companyId) {
@@ -44,7 +52,6 @@ export const createTicket = async (req, res) => {
     // ==================================================
     // FIND COMPANY
     // ==================================================
-
     const company = await Company.findById(companyId);
 
     if (!company) {
@@ -57,7 +64,6 @@ export const createTicket = async (req, res) => {
     // ==================================================
     // COMPANY CODE
     // ==================================================
-
     const companyCode =
       company.code ||
       company.companyCode ||
@@ -76,214 +82,108 @@ export const createTicket = async (req, res) => {
     // ==================================================
     // GENERATE COMPANY-WISE TICKET NUMBER
     // ==================================================
-
-    const ticketNumber =
-      await generateTicketNumber(
-        companyId,
-        companyCode
-      );
+    const ticketNumber = await generateTicketNumber(companyId, companyCode);
 
     // ==================================================
     // SLA POLICY
     // ==================================================
-
     const slaPolicy = {
-      Low: {
-        firstResponse: 8,
-        resolution: 72,
-      },
-
-      Medium: {
-        firstResponse: 4,
-        resolution: 48,
-      },
-
-      High: {
-        firstResponse: 2,
-        resolution: 24,
-      },
-
-      Critical: {
-        firstResponse: 0.5,
-        resolution: 8,
-      },
+      Low: { firstResponse: 8, resolution: 72 },
+      Medium: { firstResponse: 4, resolution: 48 },
+      High: { firstResponse: 2, resolution: 24 },
+      Critical: { firstResponse: 0.5, resolution: 8 },
     };
 
-    const policy =
-      slaPolicy[priority] ||
-      slaPolicy.Low;
+    const policy = slaPolicy[priority] || slaPolicy.Low;
 
     // ==================================================
     // ATTACHMENTS
     // ==================================================
-
-    const attachments = (
-      req.files || []
-    ).map((file) => file.path);
+    const attachments = (req.files || []).map((file) => file.path);
 
     // ==================================================
     // CREATE TICKET
     // ==================================================
-
     const ticket = await Ticket.create({
-      // ==========================
-      // TICKET NUMBER
-      // ==========================
-
       ticketNumber,
-
-      // ==========================
-      // COMPANY
-      // ==========================
-
       companyId,
 
-      // ==========================
       // BASIC INFORMATION
-      // ==========================
-
       title,
-
       description,
-
       department,
-
-      relatedTo:
-        relatedTo || "Others",
-
+      relatedTo: relatedTo || "Others",
       priority,
-
       attachments,
 
-      // ==========================
       // USER
-      // ==========================
-
       userId: req.user.id,
 
-      // ==========================
       // STATUS
-      // ==========================
-
       status: "Open",
 
-      // ==========================
       // ASSIGNMENT
-      // ==========================
-
       assignedRole: "it_support",
-
       assignedTo: null,
 
-      // ==========================
       // ESCALATION
-      // ==========================
-
       escalation: {
         isEscalated: false,
-
         level: 0,
-
         reason: "",
-
         escalatedBy: null,
-
         escalatedTo: null,
-
         escalatedAt: null,
       },
 
-      // ==========================
       // SLA
-      // ==========================
-
       sla: {
         priority,
-
         firstResponseDue: new Date(
-          Date.now() +
-          policy.firstResponse *
-          60 *
-          60 *
-          1000
+          Date.now() + policy.firstResponse * 60 * 60 * 1000
         ),
-
         resolutionDue: new Date(
-          Date.now() +
-          policy.resolution *
-          60 *
-          60 *
-          1000
+          Date.now() + policy.resolution * 60 * 60 * 1000
         ),
-
         firstRespondedAt: null,
-
         resolvedAt: null,
-
         firstResponseBreached: false,
-
         resolutionBreached: false,
-
         escalationLevel: 0,
-
         escalated: false,
-
         escalatedAt: null,
-
         status: "Running",
       },
 
-      // ==========================
       // REVIEW
-      // ==========================
-
       review: "",
-
       rating: 0,
-
       reviewedAt: null,
 
-      // ==========================
       // TIMESTAMPS
-      // ==========================
-
       inProgressAt: null,
-
       resolvedAt: null,
-
       closedAt: null,
-
       reopened: false,
-
       reopenedAt: null,
 
-      // ==========================
-      // INCIDENT DATE
-      // ==========================
+      // REMINDERS
+      lastReminderAt: null,
+      reminderCount: 0,
 
+      // INCIDENT DATE
       incidentDate: new Date(),
 
-      // ==========================
       // SOURCE
-      // ==========================
-
       source: "Portal",
+      createdByType: req.user.role || "user",
 
-      createdByType:
-        req.user.role || "user",
-
-      // ==========================
       // STATUS HISTORY
-      // ==========================
-
       statusHistory: [
         {
           status: "Open",
-
           changedAt: new Date(),
-
           changedBy: req.user.id,
-
           note: "Ticket created",
         },
       ],
@@ -292,168 +192,95 @@ export const createTicket = async (req, res) => {
     // ==================================================
     // FIND COMPANY USERS
     // ==================================================
-
-    const companyUsers =
-      await User.find({
-        companyId,
-
-        role: {
-          $in: [
-            "company_admin",
-            "it_support",
-          ],
-        },
-      });
+    const companyUsers = await User.find({
+      companyId,
+      role: { $in: ["company_admin", "it_support"] },
+    });
 
     // ==================================================
     // FIND SUPER ADMINS
     // ==================================================
-
-    const superAdmins =
-      await User.find({
-        role: "super_admin",
-      });
+    const superAdmins = await User.find({ role: "super_admin" });
 
     // ==================================================
     // REMOVE DUPLICATE USERS
     // ==================================================
-
     const uniqueUsers = new Map();
 
-    [
-      ...companyUsers,
-      ...superAdmins,
-    ].forEach((user) => {
-      uniqueUsers.set(
-        user._id.toString(),
-        user
-      );
+    [...companyUsers, ...superAdmins].forEach((user) => {
+      uniqueUsers.set(user._id.toString(), user);
     });
 
     // ==================================================
     // CREATE NOTIFICATIONS
     // ==================================================
-
-    const notifications = [
-      ...uniqueUsers.values(),
-    ].map((user) => ({
+    const notifications = [...uniqueUsers.values()].map((user) => ({
       userId: user._id,
       companyId,
-
       title: "New Ticket",
-
-      message:
-        `${ticketNumber} - ${title}`,
-
+      message: `${ticketNumber} - ${title}`,
       type: "ticket_created",
     }));
 
-    if (
-      notifications.length > 0
-    ) {
-      await Notification.insertMany(
-        notifications
-      );
+    if (notifications.length > 0) {
+      await Notification.insertMany(notifications);
     }
 
     // ==================================================
     // SEND EMAILS
     // ==================================================
-
     try {
-      const ticketUser =
-        await User.findById(
-          req.user.id
-        );
+      const ticketUser = await User.findById(req.user.id);
 
-      // ----------------------------------------------
       // USER EMAIL
-      // ----------------------------------------------
-
       if (ticketUser?.email) {
         await sendEmail({
           to: ticketUser.email,
-
-          subject:
-            `Ticket ${ticketNumber} created successfully`,
-
+          subject: `Ticket ${ticketNumber} created successfully`,
           html: ticketUserEmail({
             ...ticket._doc,
-
-            userEmail:
-              ticketUser.email,
+            userEmail: ticketUser.email,
           }),
         });
       }
 
-      // ----------------------------------------------
       // ADMIN EMAILS
-      // ----------------------------------------------
-
-      const adminRecipients = [
-        ...companyUsers,
-        ...superAdmins,
-      ]
+      const adminRecipients = [...companyUsers, ...superAdmins]
         .filter(
           (user, index, arr) =>
-            arr.findIndex(
-              (u) =>
-                u.email === user.email
-            ) === index
+            arr.findIndex((u) => u.email === user.email) === index
         )
-        .map(
-          (user) => user.email
-        )
+        .map((user) => user.email)
         .filter(Boolean);
 
-      if (
-        adminRecipients.length > 0
-      ) {
+      if (adminRecipients.length > 0) {
         await sendEmail({
           to: adminRecipients,
-
-          subject:
-            `New Ticket Created - ${ticketNumber}`,
-
+          subject: `New Ticket Created - ${ticketNumber}`,
           html: ticketAdminEmail({
             ...ticket._doc,
-
-            userEmail:
-              ticketUser?.email || "",
+            userEmail: ticketUser?.email || "",
           }),
         });
       }
     } catch (emailError) {
-      console.error(
-        "Failed to send ticket emails:",
-        emailError.message
-      );
+      console.error("Failed to send ticket emails:", emailError.message);
     }
 
     // ==================================================
     // RESPONSE
     // ==================================================
-
     return res.status(201).json({
       success: true,
-
-      message:
-        "Ticket created successfully",
-
+      message: "Ticket created successfully",
       data: ticket,
     });
   } catch (error) {
-    console.error(
-      "Create ticket error:",
-      error
-    );
+    console.error("Create ticket error:", error);
 
     return res.status(500).json({
       success: false,
-
-      message:
-        error.message ||
-        "Failed to create ticket",
+      message: error.message || "Failed to create ticket",
     });
   }
 };
@@ -509,7 +336,11 @@ export const getAllTickets = async (req, res) => {
       .populate("userId", "name email employeeId department position")
       .populate("employeeId", "name staffCode department designation")
       .populate("companyId", "name code")
-      .populate({ path: "escalation.escalatedBy", select: "name email", strictPopulate: false })
+      .populate({
+        path: "escalation.escalatedBy",
+        select: "name email",
+        strictPopulate: false,
+      })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -532,6 +363,7 @@ export const getAllTickets = async (req, res) => {
     });
   }
 };
+
 /* ======================================================
    ✅ GET SINGLE TICKET
 ====================================================== */
@@ -541,7 +373,11 @@ export const getTicketById = async (req, res) => {
       .populate("userId", "name email employeeId")
       .populate("employeeId", "name staffCode department designation")
       .populate("companyId", "name code")
-      .populate({ path: "escalation.escalatedBy", select: "name email", strictPopulate: false });
+      .populate({
+        path: "escalation.escalatedBy",
+        select: "name email",
+        strictPopulate: false,
+      });
 
     if (!ticket) {
       return res.status(404).json({
@@ -578,6 +414,7 @@ export const getTicketById = async (req, res) => {
     });
   }
 };
+
 /* ======================================================
    ✅ UPDATE STATUS (ADMIN)
 ====================================================== */
@@ -587,7 +424,7 @@ export const updateStatus = async (req, res) => {
       status,
       slaBreachReason,
       resolutionNote,
-      rejectionReason, // NEW
+      rejectionReason,
       resolutionType,
       vendorName,
       complaintDescription,
@@ -604,7 +441,7 @@ export const updateStatus = async (req, res) => {
       });
     }
 
-    // NEW: only super_admin can reject a ticket
+    // only super_admin can reject a ticket
     if (status === "Rejected" && req.user.role !== "super_admin") {
       return res.status(403).json({
         success: false,
@@ -709,13 +546,10 @@ export const updateStatus = async (req, res) => {
       if (!ticket.sla.firstRespondedAt) {
         ticket.sla.firstRespondedAt = new Date();
 
-        if (
-          ticket.sla.firstRespondedAt >
-          ticket.sla.firstResponseDue
-        ) {
+        if (ticket.sla.firstRespondedAt > ticket.sla.firstResponseDue) {
           ticket.sla.firstResponseBreached = true;
 
-          // ADDED: capture reason for first-response breach, if provided
+          // capture reason for first-response breach, if provided
           if (slaBreachReason?.trim()) {
             ticket.sla.firstResponseBreachReason = slaBreachReason.trim();
           }
@@ -731,14 +565,11 @@ export const updateStatus = async (req, res) => {
 
       ticket.sla.resolvedAt = ticket.resolvedAt;
 
-      if (
-        ticket.resolvedAt >
-        ticket.sla.resolutionDue
-      ) {
+      if (ticket.resolvedAt > ticket.sla.resolutionDue) {
         ticket.sla.resolutionBreached = true;
         ticket.sla.status = "Breached";
 
-        // ADDED: only overwrite if a reason was actually provided
+        // only overwrite if a reason was actually provided
         if (slaBreachReason?.trim()) {
           ticket.sla.breachReason = slaBreachReason.trim();
         }
@@ -746,6 +577,7 @@ export const updateStatus = async (req, res) => {
         ticket.sla.status = "Completed";
       }
     }
+
     // ============================
     // REJECTED
     // ============================
@@ -759,6 +591,7 @@ export const updateStatus = async (req, res) => {
       ticket.rejectedAt = new Date();
       ticket.rejectionReason = rejectionReason.trim();
     }
+
     // ============================
     // CLOSED
     // ============================
@@ -781,7 +614,7 @@ export const updateStatus = async (req, res) => {
       ticket.sla.resolutionBreached = false;
       ticket.sla.status = "Running";
 
-      // ADDED: clear the old breach reason on reopen since resolution
+      // clear the old breach reason on reopen since resolution
       // is being redone from scratch
       ticket.sla.breachReason = "";
     }
@@ -827,22 +660,23 @@ export const updateStatus = async (req, res) => {
     }
 
     // ============================
-    // NOTIFICATION
+    // NOTIFICATION (portal tickets only — manual tickets have no userId)
     // ============================
-    await Notification.create({
-      userId: ticket.userId,
-      companyId: ticket.companyId,
-      title: "Ticket Status Updated",
-      message: `Your ticket "${ticket.title}" is now ${status}`,
-      type: "status",
-    });
+    if (ticket.userId) {
+      await Notification.create({
+        userId: ticket.userId,
+        companyId: ticket.companyId,
+        title: "Ticket Status Updated",
+        message: `Your ticket "${ticket.title}" is now ${status}`,
+        type: "status",
+      });
+    }
 
     res.json({
       success: true,
       message: "Status updated successfully",
       data: ticket,
     });
-
   } catch (err) {
     console.error(err);
 
@@ -852,6 +686,7 @@ export const updateStatus = async (req, res) => {
     });
   }
 };
+
 /* ======================================================
    ✅ EDIT TICKET (USER)
 ====================================================== */
@@ -866,7 +701,7 @@ export const editTicket = async (req, res) => {
       });
     }
 
-    if (ticket.userId.toString() !== req.user.id) {
+    if (!ticket.userId || ticket.userId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized",
@@ -921,9 +756,7 @@ export const deleteAttachment = async (req, res) => {
       });
     }
 
-    ticket.attachments = ticket.attachments.filter(
-      (a) => a !== attachment
-    );
+    ticket.attachments = ticket.attachments.filter((a) => a !== attachment);
 
     await ticket.save();
 
@@ -951,7 +784,7 @@ export const confirmResolution = async (req, res) => {
       });
     }
 
-    if (ticket.userId.toString() !== req.user.id) {
+    if (!ticket.userId || ticket.userId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized",
@@ -962,6 +795,7 @@ export const confirmResolution = async (req, res) => {
     ticket.closedAt = new Date();
 
     await ticket.save();
+
     // Create notification for admins
     const admins = await User.find({
       companyId: ticket.companyId,
@@ -976,7 +810,6 @@ export const confirmResolution = async (req, res) => {
         type: "status",
       });
     }
-
 
     res.json({
       success: true,
@@ -1002,7 +835,7 @@ export const reopenTicket = async (req, res) => {
       });
     }
 
-    if (ticket.userId.toString() !== req.user.id) {
+    if (!ticket.userId || ticket.userId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized",
@@ -1044,6 +877,138 @@ export const reopenTicket = async (req, res) => {
 };
 
 /* ======================================================
+   ✅ SEND REMINDER (USER) — only while ticket is In Progress
+====================================================== */
+export const sendTicketReminder = async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    if (!ticket.userId || ticket.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (ticket.status !== "In Progress") {
+      return res.status(400).json({
+        success: false,
+        message: "Reminders can only be sent for tickets that are In Progress",
+      });
+    }
+
+    // Cooldown so the support team doesn't get spammed
+    if (ticket.lastReminderAt) {
+      const cooldownMs = REMINDER_COOLDOWN_HOURS * 60 * 60 * 1000;
+      const elapsed = Date.now() - new Date(ticket.lastReminderAt).getTime();
+
+      if (elapsed < cooldownMs) {
+        const minsLeft = Math.ceil((cooldownMs - elapsed) / 60000);
+        return res.status(429).json({
+          success: false,
+          message: `You already sent a reminder recently. Try again in ${
+            minsLeft >= 60
+              ? `${Math.ceil(minsLeft / 60)} hour(s)`
+              : `${minsLeft} minute(s)`
+          }.`,
+        });
+      }
+    }
+
+    const note = req.body?.message?.trim() || "";
+
+    ticket.lastReminderAt = new Date();
+    ticket.reminderCount = (ticket.reminderCount || 0) + 1;
+
+    ticket.statusHistory.push({
+      status: ticket.status,
+      changedAt: new Date(),
+      changedBy: req.user.id,
+      note: `Reminder #${ticket.reminderCount} sent by user${
+        note ? `: ${note}` : ""
+      }`,
+    });
+
+    await ticket.save();
+
+    // ---------- Who to notify ----------
+    let recipients = [];
+
+    if (ticket.assignedTo) {
+      const assignee = await User.findById(ticket.assignedTo);
+      if (assignee) recipients.push(assignee);
+    }
+
+    if (recipients.length === 0) {
+      recipients = await User.find({
+        companyId: ticket.companyId,
+        role: { $in: ["it_support", "company_admin"] },
+      });
+    }
+
+    // If escalated, super admins own it now
+    if (ticket.assignedRole === "super_admin") {
+      const superAdmins = await User.find({ role: "super_admin" });
+      recipients.push(...superAdmins);
+    }
+
+    const unique = new Map();
+    recipients.forEach((u) => unique.set(u._id.toString(), u));
+    const finalRecipients = [...unique.values()];
+
+    if (finalRecipients.length > 0) {
+      await Notification.insertMany(
+        finalRecipients.map((u) => ({
+          userId: u._id,
+          companyId: ticket.companyId,
+          title: "Ticket Reminder",
+          message: `Reminder on ${ticket.ticketNumber} - ${ticket.title}`,
+          type: "ticket_reminder",
+        }))
+      );
+
+      // Email (failure must not break the request)
+      try {
+        const emails = finalRecipients.map((u) => u.email).filter(Boolean);
+        if (emails.length > 0) {
+          await sendEmail({
+            to: emails,
+            subject: `Reminder: Ticket ${ticket.ticketNumber} is still pending`,
+            html: `
+              <p>The user has sent a reminder for ticket <b>${escapeHtml(
+                ticket.ticketNumber
+              )}</b>.</p>
+              <p><b>Title:</b> ${escapeHtml(ticket.title)}</p>
+              <p><b>Priority:</b> ${escapeHtml(ticket.priority)}</p>
+              <p><b>Reminders sent so far:</b> ${ticket.reminderCount}</p>
+              ${note ? `<p><b>User note:</b> ${escapeHtml(note)}</p>` : ""}
+            `,
+          });
+        }
+      } catch (emailError) {
+        console.error("Failed to send reminder email:", emailError.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "Reminder sent to the support team",
+      data: ticket,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
    ✅ ADD REVIEW
 ====================================================== */
 export const addReview = async (req, res) => {
@@ -1078,7 +1043,6 @@ export const addReview = async (req, res) => {
       message: "Review saved successfully",
       data: ticket,
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -1086,6 +1050,7 @@ export const addReview = async (req, res) => {
     });
   }
 };
+
 /* ======================================================
    ✅ STATS
 ====================================================== */
@@ -1095,7 +1060,9 @@ export const getTicketStats = async (req, res) => {
     // via ?companyId=..., matching the same behaviour as getAllTickets
     const filter =
       req.user.role === "super_admin"
-        ? (req.query.companyId ? { companyId: req.query.companyId } : {})
+        ? req.query.companyId
+          ? { companyId: req.query.companyId }
+          : {}
         : { companyId: req.user.companyId };
 
     const total = await Ticket.countDocuments(filter);
@@ -1156,8 +1123,7 @@ export const deleteTicket = async (req, res) => {
 
     if (
       req.user.role !== "super_admin" &&
-      ticket.companyId.toString() !==
-      req.user.companyId.toString()
+      ticket.companyId.toString() !== req.user.companyId.toString()
     ) {
       return res.status(403).json({
         success: false,
@@ -1179,10 +1145,11 @@ export const deleteTicket = async (req, res) => {
   }
 };
 
-
+/* ======================================================
+   ✅ CREATE MANUAL TICKET (SUPER ADMIN / IT SUPPORT)
+====================================================== */
 export const createManualTicket = async (req, res) => {
   try {
-
     const {
       title,
       description,
@@ -1194,7 +1161,6 @@ export const createManualTicket = async (req, res) => {
       incidentDate,
       companyId: bodyCompanyId,
     } = req.body;
-
 
     // ==================================================
     // COMPANY ID
@@ -1215,7 +1181,8 @@ export const createManualTicket = async (req, res) => {
     } else {
       companyId =
         req.user.companyId ||
-        req.user.companyAccess?.find((c) => c.isActive && c.companyId)?.companyId ||
+        req.user.companyAccess?.find((c) => c.isActive && c.companyId)
+          ?.companyId ||
         req.user.companyAccess?.[0]?.companyId;
     }
 
@@ -1239,7 +1206,10 @@ export const createManualTicket = async (req, res) => {
     const companyCode =
       company.code ||
       company.companyCode ||
-      company.name?.replace(/[^a-zA-Z0-9]/g, "").substring(0, 3).toUpperCase();
+      company.name
+        ?.replace(/[^a-zA-Z0-9]/g, "")
+        .substring(0, 3)
+        .toUpperCase();
 
     if (!companyCode) {
       return res.status(400).json({
@@ -1248,10 +1218,8 @@ export const createManualTicket = async (req, res) => {
       });
     }
 
-    // Generate ticket number for manual tickets as well
-    const ticketNumber = await generateTicketNumber(companyId, companyCode);
-
-    // Validation
+    // Validation (runs BEFORE generating a ticket number so a failed
+    // request doesn't burn a number and leave a gap in the sequence)
     if (!title || !description) {
       return res.status(400).json({
         success: false,
@@ -1268,20 +1236,18 @@ export const createManualTicket = async (req, res) => {
 
     // Guard against a super admin picking an employee/asset that doesn't
     // actually belong to the selected company (e.g. stale client state).
-    if (employeeId) {
-      const employee = await Employee.findById(employeeId);
-      if (!employee) {
-        return res.status(404).json({
-          success: false,
-          message: "Employee not found",
-        });
-      }
-      if (String(employee.companyId) !== String(companyId)) {
-        return res.status(400).json({
-          success: false,
-          message: "Selected employee does not belong to the selected company",
-        });
-      }
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found",
+      });
+    }
+    if (String(employee.companyId) !== String(companyId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected employee does not belong to the selected company",
+      });
     }
 
     if (assetId) {
@@ -1294,128 +1260,86 @@ export const createManualTicket = async (req, res) => {
       }
     }
 
+    // Generate ticket number for manual tickets as well
+    const ticketNumber = await generateTicketNumber(companyId, companyCode);
 
     const ticket = await Ticket.create({
-
-      // =========================
       // COMPANY
-      // =========================
       companyId,
 
-      // =========================
       // TICKET NUMBER
-      // =========================
       ticketNumber,
 
-
-      // =========================
       // BASIC INFO
-      // =========================
       title,
-
       description,
-
       department: department || "General",
-
       relatedTo: relatedTo || "Others",
 
-
-      // =========================
       // PRIORITY
-      // =========================
       priority: priority || "Low",
 
-
-      // =========================
       // STATUS
-      // =========================
       status: "Open",
       assignedRole: "it_support",
       assignedTo: req.user.id,
 
-
-      // =========================
       // ASSET LINK
-      // =========================
       assetId: assetId || null,
 
-
-      // =========================
       // EMPLOYEE LINK (who the ticket is for)
-      // =========================
-      employeeId: employeeId,
+      employeeId,
 
-
-      // =========================
       // MANUAL TICKET
-      // =========================
       source: "Manual",
-
-      createdByType: req.user.role === "super_admin" ? "super_admin" : "it_support",
-
+      createdByType:
+        req.user.role === "super_admin" ? "super_admin" : "it_support",
 
       // No portal end user — this was raised on behalf of an employee
       userId: null,
 
-
-      // =========================
       // INCIDENT DATE
-      // =========================
       incidentDate: incidentDate || new Date(),
 
-
-
-      // =========================
       // STATUS HISTORY
-      // =========================
       statusHistory: [
         {
           status: "Open",
-
           changedBy: req.user.id,
-
           note:
             req.user.role === "super_admin"
               ? "Ticket created manually by Super Admin"
               : "Ticket created manually by IT Support",
-
-          changedAt: new Date()
-        }
-      ]
-
+          changedAt: new Date(),
+        },
+      ],
     });
 
     // Populate the employee so the response (and any caller re-rendering
     // the list from this response) has the name/staffCode immediately.
-    await ticket.populate("employeeId", "name staffCode department designation");
+    await ticket.populate(
+      "employeeId",
+      "name staffCode department designation"
+    );
 
     return res.status(201).json({
-
       success: true,
-
       message: "Manual ticket created successfully",
-
-      ticket
-
+      ticket,
     });
-
-
-
   } catch (error) {
-
     console.error("Create Manual Ticket Error:", error);
 
-
     return res.status(500).json({
-
       success: false,
-
-      message: error.message
-
+      message: error.message,
     });
-
   }
 };
+
+/* ======================================================
+   ✅ ESCALATE TICKET (IT SUPPORT -> SUPER ADMIN)
+====================================================== */
 export const escalateTicket = async (req, res) => {
   try {
     const { reason } = req.body;
@@ -1438,18 +1362,17 @@ export const escalateTicket = async (req, res) => {
 
     ticket.assignedRole = "super_admin";
 
-    ticket.escalated = true;
-
-    ticket.escalatedAt = new Date();
-
-    ticket.escalatedBy = req.user.id;
-
-    ticket.escalationReason = reason;
+    // Nested `escalation` object (matches ticketSchema). The old
+    // top-level fields (ticket.escalated, ticket.escalatedAt, etc.)
+    // are not in the schema, so Mongoose silently dropped them.
+    ticket.escalation.isEscalated = true;
+    ticket.escalation.level = (ticket.escalation.level || 0) + 1;
+    ticket.escalation.reason = reason || "";
+    ticket.escalation.escalatedBy = req.user.id;
+    ticket.escalation.escalatedAt = new Date();
 
     ticket.sla.escalated = true;
-
-    ticket.sla.escalationLevel += 1;
-
+    ticket.sla.escalationLevel = (ticket.sla.escalationLevel || 0) + 1;
     ticket.sla.escalatedAt = new Date();
 
     ticket.statusHistory.push({
@@ -1464,22 +1387,23 @@ export const escalateTicket = async (req, res) => {
     // Notify Super Admins
     const admins = await User.find({ role: "super_admin" });
 
-    await Notification.insertMany(
-      admins.map((admin) => ({
-        userId: admin._id,
-        companyId: ticket.companyId,
-        title: "Ticket Escalated",
-        message: `${ticket.title} requires Super Admin attention`,
-        type: "ticket_escalated",
-      }))
-    );
+    if (admins.length > 0) {
+      await Notification.insertMany(
+        admins.map((admin) => ({
+          userId: admin._id,
+          companyId: ticket.companyId,
+          title: "Ticket Escalated",
+          message: `${ticket.title} requires Super Admin attention`,
+          type: "ticket_escalated",
+        }))
+      );
+    }
 
     res.json({
       success: true,
       message: "Ticket escalated successfully",
       data: ticket,
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -1488,8 +1412,9 @@ export const escalateTicket = async (req, res) => {
   }
 };
 
-
-
+/* ======================================================
+   ✅ ADD SLA BREACH REASON
+====================================================== */
 export const addSlaBreachReason = async (req, res) => {
   try {
     const { reason, leg } = req.body; // leg: "response" | "resolution"
@@ -1532,7 +1457,6 @@ export const addSlaBreachReason = async (req, res) => {
     });
   }
 };
-
 
 /* ======================================================
    ✅ UPDATE PRIORITY (SUPER ADMIN / IT SUPPORT)

@@ -316,7 +316,18 @@ const ticketSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // =========================
+    // REMINDERS (user nudges while In Progress)
+    // =========================
+    lastReminderAt: {
+      type: Date,
+      default: null,
+    },
 
+    reminderCount: {
+      type: Number,
+      default: 0,
+    },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

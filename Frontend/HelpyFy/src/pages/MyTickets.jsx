@@ -15,6 +15,7 @@ import {
   Clock,
   Ticket as TicketIcon,
   Wrench,
+  Bell, // NEW: reminder button icon
 } from "lucide-react";
 
 /* =========================
@@ -27,7 +28,7 @@ const STATUS_META = {
   resolved: { label: "Resolved", bg: "#E7F5EC", text: "#1B6B43", dot: "#1F7A4D" },
   reopened: { label: "Reopened", bg: "#F1ECFB", text: "#5B37AF", dot: "#6B46C1" },
   closed: { label: "Closed", bg: "#EEF0F2", text: "#4A5260", dot: "#5B6472" },
-  // NEW: super_admin-only rejection status, surfaced read-only here
+  // super_admin-only rejection status, surfaced read-only here
   rejected: { label: "Rejected", bg: "#FCEAEF", text: "#9F1239", dot: "#E11D48" },
 };
 
@@ -46,6 +47,21 @@ const getPriorityMeta = (priority) =>
     bg: "#EEF0F2",
     text: "#4A5260",
   };
+
+/* =========================
+   REMINDER (NEW)
+   Keep cooldown in sync with REMINDER_COOLDOWN_HOURS in ticketController.js.
+   The backend enforces it; this only disables the button as a UX aid.
+========================= */
+const REMINDER_COOLDOWN_HOURS = 4;
+
+const getReminderState = (ticket) => {
+  if (!ticket.lastReminderAt) return { locked: false };
+  const nextAt =
+    new Date(ticket.lastReminderAt).getTime() +
+    REMINDER_COOLDOWN_HOURS * 60 * 60 * 1000;
+  return { locked: Date.now() < nextAt, nextAt };
+};
 
 export default function MyTickets() {
   const navigate = useNavigate();
@@ -67,6 +83,9 @@ export default function MyTickets() {
   const [image, setImage] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // NEW: id of the ticket a reminder is currently being sent for
+  const [remindingId, setRemindingId] = useState(null);
 
   /* ================= LOAD ================= */
   useEffect(() => {
@@ -129,6 +148,20 @@ export default function MyTickets() {
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to reopen ticket");
+    }
+  };
+
+  /* ================= SEND REMINDER (NEW) ================= */
+  const sendReminder = async (id) => {
+    try {
+      setRemindingId(id);
+      await api.put(`/tickets/${id}/remind`);
+      toast.success("Reminder sent to the support team");
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send reminder");
+    } finally {
+      setRemindingId(null);
     }
   };
 
@@ -490,7 +523,9 @@ export default function MyTickets() {
                           ? `Rejected ${formatDateTime(ticket.rejectedAt)}`
                           : ticket.closedAt
                             ? `Closed ${formatDateTime(ticket.closedAt)}`
-                            : "Not closed"}
+                            : ticket.status === "In Progress" && ticket.lastReminderAt
+                              ? `Last reminder ${formatDateTime(ticket.lastReminderAt)}`
+                              : "Not closed"}
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -499,6 +534,27 @@ export default function MyTickets() {
                             Edit
                           </Button>
                         )}
+
+                        {/* SEND REMINDER — only while the ticket is In Progress */}
+                        {ticket.status === "In Progress" &&
+                          (() => {
+                            const { locked } = getReminderState(ticket);
+                            return (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                icon={Bell}
+                                onClick={() => sendReminder(ticket._id)}
+                                disabled={locked || remindingId === ticket._id}
+                              >
+                                {remindingId === ticket._id
+                                  ? "Sending..."
+                                  : locked
+                                    ? "Reminder Sent"
+                                    : "Send Reminder"}
+                              </Button>
+                            );
+                          })()}
 
                         {(ticket.status === "Resolved" || ticket.status === "Closed") && (
                           <>
