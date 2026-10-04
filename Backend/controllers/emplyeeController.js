@@ -1,6 +1,7 @@
 import EmployeeMaster from "../models/employeeMasterSchema.js";
 import Asset from "../models/assetSchema.js";
 import Company from "../models/comapnySchema.js";
+import mongoose from "mongoose";
 
 const normalizeCompanyId = (value) => {
   if (!value) return null;
@@ -214,7 +215,12 @@ export const bulkUploadEmployees = async (req, res) => {
     const employees = req.body.employees || [];
     const assets = req.body.assets || [];
 
-    const targetCompanyId = req.body.companyId || req.user.companyId;
+    const requestedCompanyId = req.body.companyId || req.user.companyId;
+    const allowedCompanyIds = getAllowedCompanyIds(req.user);
+    const targetCompanyId =
+      requestedCompanyId ||
+      req.user.companyAccess?.find((entry) => entry?.isActive)?.companyId;
+
     if (!targetCompanyId) {
       return res.status(400).json({
         success: false,
@@ -222,11 +228,32 @@ export const bulkUploadEmployees = async (req, res) => {
       });
     }
 
-    let targetCompanyName = req.user.companyName || "";
-    if (req.user.role === "super_admin" && req.body.companyId) {
-      const company = await Company.findById(req.body.companyId).select("name");
-      targetCompanyName = company?.name || targetCompanyName;
+    const targetCompanyIdString = normalizeCompanyId(targetCompanyId);
+    if (!mongoose.Types.ObjectId.isValid(targetCompanyIdString)) {
+      return res.status(400).json({
+        success: false,
+        message: "Target company ID is invalid",
+      });
     }
+
+    if (
+      allowedCompanyIds &&
+      !allowedCompanyIds.includes(targetCompanyIdString)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have access to the target company",
+      });
+    }
+
+    const company = await Company.findById(targetCompanyIdString).select("name");
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Target company not found",
+      });
+    }
+    const targetCompanyName = company.name || req.user.companyName || "";
 
     const clean = (v) => (v ? v.toString().trim() : "");
 
@@ -252,15 +279,16 @@ export const bulkUploadEmployees = async (req, res) => {
           continue;
         }
 
-        // 🔥 CHANGED: staffCode is now checked GLOBALLY (no companyId filter),
-        // so the same staffCode can't exist under any company.
-        const exists = await EmployeeMaster.findOne({ staffCode });
+        const exists = await EmployeeMaster.findOne({
+          staffCode,
+          companyId: targetCompanyIdString,
+        });
 
         if (exists) {
           skipped++;
           failedRows.push({
             row: e,
-            reason: `staffCode "${staffCode}" already exists (company: ${exists.company || exists.companyId})`,
+            reason: `staffCode "${staffCode}" already exists in this company`,
           });
           continue;
         }
@@ -278,7 +306,7 @@ export const bulkUploadEmployees = async (req, res) => {
             : null,
           status: "active",
 
-          companyId: targetCompanyId,
+          companyId: targetCompanyIdString,
           company: targetCompanyName,
         });
 
@@ -305,7 +333,7 @@ export const bulkUploadEmployees = async (req, res) => {
 
         const exists = await Asset.findOne({
           assetCode,
-          companyId: targetCompanyId,
+          companyId: targetCompanyIdString,
         });
 
         if (exists) {

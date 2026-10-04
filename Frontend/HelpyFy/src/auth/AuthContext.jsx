@@ -61,8 +61,14 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
-  const companyId = activeCompany?._id || null;
-  const companyName = activeCompany?.name || null;
+  const activeCompanyDetails = activeCompany?.companyId || activeCompany;
+  const activeCompanyId = activeCompanyDetails?._id || activeCompanyDetails;
+  const companyId =
+    activeCompanyId && typeof activeCompanyId.toString === "function"
+      ? activeCompanyId.toString()
+      : activeCompanyId || null;
+  const companyName =
+    activeCompanyDetails?.name || activeCompany?.companyName || null;
 
   useEffect(() => {
     const restoreSession = async () => {

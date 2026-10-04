@@ -284,6 +284,10 @@ export default function EmployeeExcelUpload() {
 
       if (companyId) {
         payload.companyId = companyId;
+      } else if (user?.role !== "super_admin") {
+        toast.error("No active company selected for this account");
+        setLoading(false);
+        return;
       }
 
       const res = await api.post(
