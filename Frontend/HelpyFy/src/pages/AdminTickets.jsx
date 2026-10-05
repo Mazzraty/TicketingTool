@@ -855,7 +855,7 @@ export default function AdminTickets() {
   const renderAttachments = (files = []) => {
     if (!files || files.length === 0) return null;
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col items-start gap-0.5">
         {files.map((file, i) => (
           <a
             key={i}
@@ -1139,7 +1139,7 @@ export default function AdminTickets() {
                   <div className="space-y-1.5">
                     {selected.files.map((file, i) => (
                       <a key={i} href={file.url || file} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[#0C66E4] hover:underline text-sm font-medium">
-                        <IconClip className="w-3.5 h-3.5" /> Download file {i + 1}
+                        <IconClip className="w-3.5 h-3.5" /> View file {i + 1}
                       </a>
                     ))}
                   </div>
@@ -1362,6 +1362,10 @@ export default function AdminTickets() {
                       </p>
                     )}
 
+                    {(t.files || t.attachments)?.length > 0 && (
+                      <div className="mb-2">{renderAttachments(t.files || t.attachments)}</div>
+                    )}
+
                     <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#EBECF0]">
                       <div className="text-xs text-[#626F86] min-w-0">
                         <p>Created {formatDateOnly(t.createdAt)}</p>
@@ -1377,7 +1381,7 @@ export default function AdminTickets() {
             {/* DESKTOP TABLE (>= md) */}
             <div className="hidden md:block bg-white border border-[#DCDFE4] rounded-[3px] overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[1100px]">
+                <table className="w-full text-sm min-w-[1180px]">
                   <thead>
                     <tr className="border-b-2 border-[#DCDFE4] text-xs font-semibold text-[#626F86]">
                       <th className="py-2.5 pl-4 pr-3 text-left whitespace-nowrap">Key</th>
@@ -1387,6 +1391,7 @@ export default function AdminTickets() {
                       <th className="py-2.5 px-3 text-left whitespace-nowrap">Priority</th>
                       <th className="py-2.5 px-3 text-left whitespace-nowrap">Status</th>
                       <th className="py-2.5 px-3 text-left whitespace-nowrap">SLA</th>
+                      <th className="py-2.5 px-3 text-left whitespace-nowrap">Files</th>
                       <th className="py-2.5 px-3 text-left whitespace-nowrap">Created</th>
                       <th className="py-2.5 px-3 text-left whitespace-nowrap">Closed</th>
                       <th className="py-2.5 pl-3 pr-4 text-right whitespace-nowrap">Actions</th>
@@ -1399,7 +1404,6 @@ export default function AdminTickets() {
                       const reminded = hasActiveReminder(t);
                       const isSelected = selected?._id === t._id;
                       const closedDate = t.closedAt || t.resolvedAt;
-                      const fileCount = (t.files || t.attachments || []).length;
                       return (
                         <tr
                           key={t._id}
@@ -1418,9 +1422,6 @@ export default function AdminTickets() {
                               </button>
                               <div className="flex items-center gap-2 mt-0.5 text-xs text-[#626F86]">
                                 {renderReminderBadge(t)}
-                                {fileCount > 0 && (
-                                  <span className="inline-flex items-center gap-0.5"><IconClip className="w-3 h-3" />{fileCount}</span>
-                                )}
                                 {t.rating ? <span className="text-[#F5CD47]">★ {t.rating}</span> : null}
                                 {t.resolutionType === "External Vendor" && (
                                   <span className="inline-flex items-center gap-0.5 text-[#5E4DB2]" title={t.vendorDetails?.vendorName}>
@@ -1451,6 +1452,10 @@ export default function AdminTickets() {
                           <td className="py-3 px-3">{renderPriority(t)}</td>
                           <td className="py-3 px-3">{renderStatusSelect(t)}</td>
                           <td className="py-3 px-3"><SlaBadge ticket={t} now={now} onOpenReason={openBreachModal} /></td>
+
+                          <td className="py-3 px-3">
+                            {renderAttachments(t.files || t.attachments) || <span className="text-[#626F86]">—</span>}
+                          </td>
 
                           <td className="py-3 px-3 whitespace-nowrap">
                             <p className="text-[#172B4D]">{formatDateOnly(t.createdAt)}</p>
