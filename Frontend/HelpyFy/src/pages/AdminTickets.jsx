@@ -2,17 +2,10 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
-/* ================= ICONS (inline, no extra dependency) ================= */
+/* ================= ICONS ================= */
 const Icon = ({ children, className = "w-4 h-4" }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
     {children}
   </svg>
 );
@@ -22,45 +15,75 @@ const IconEye = (p) => <Icon {...p}><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-1
 const IconX = (p) => <Icon {...p}><path d="M18 6 6 18M6 6l12 12" /></Icon>;
 const IconChevronLeft = (p) => <Icon {...p}><path d="m15 18-6-6 6-6" /></Icon>;
 const IconChevronRight = (p) => <Icon {...p}><path d="m9 18 6-6-6-6" /></Icon>;
+const IconChevronDown = (p) => <Icon {...p}><path d="m6 9 6 6 6-6" /></Icon>;
 const IconCheck = (p) => <Icon {...p}><path d="M20 6 9 17l-5-5" /></Icon>;
 const IconLock = (p) => <Icon {...p}><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></Icon>;
 const IconNote = (p) => <Icon {...p}><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z" /><path d="M9 13h6M9 17h6" /></Icon>;
-const IconLayers = (p) => <Icon {...p}><path d="m12 2 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5" /><path d="m3 17 9 5 9-5" /></Icon>;
-const IconCircleDot = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3" fill="currentColor" /></Icon>;
 const IconClock = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></Icon>;
 const IconAlertTriangle = (p) => <Icon {...p}><path d="m10.29 3.86-8.18 14.18A2 2 0 0 0 4 21h16a2 2 0 0 0 1.89-2.96L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4M12 17h.01" /></Icon>;
 const IconZap = (p) => <Icon {...p}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" /></Icon>;
-const IconUser = (p) => <Icon {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></Icon>;
-const IconMenu = (p) => <Icon {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Icon>;
 const IconWrench = (p) => <Icon {...p}><path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L2 19l3 3 7.1-7.1a4 4 0 0 0 5.6-5.6l-2.8 2.8-2-2 2.8-2.8Z" /></Icon>;
-// trash icon for the delete action (super_admin only)
 const IconTrash = (p) => <Icon {...p}><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></Icon>;
-// calendar icon for the date-range filter
 const IconCalendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Icon>;
-// flag icon used next to the editable priority dropdown
-const IconFlag = (p) => <Icon {...p}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><path d="M4 22V3" /></Icon>;
-// building icon for the company filter
 const IconBuilding = (p) => <Icon {...p}><rect x="4" y="2" width="16" height="20" rx="1" /><path d="M9 22v-4h6v4M8 6h.01M8 10h.01M8 14h.01M16 6h.01M16 10h.01M16 14h.01" /></Icon>;
-// NEW: bell icon for user reminders
 const IconBell = (p) => <Icon {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></Icon>;
 
-/* ================= STATUS THEME (single source of truth) ================= */
-const STATUS_THEME = {
-  Open: { text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", solid: "bg-blue-600", accent: "bg-blue-500" },
-  "In Progress": { text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", solid: "bg-amber-500", accent: "bg-amber-400" },
-  Resolved: { text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", solid: "bg-emerald-600", accent: "bg-emerald-500" },
-  Closed: { text: "text-slate-600", bg: "bg-slate-100", border: "border-slate-200", solid: "bg-slate-500", accent: "bg-slate-400" },
-  // super_admin-only rejection status
-  Rejected: { text: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200", solid: "bg-rose-600", accent: "bg-rose-500" },
+/* ================= DESIGN TOKENS (Atlassian-style) ================= */
+const BTN = "inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-[3px] text-sm font-medium whitespace-nowrap transition focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:opacity-60 disabled:cursor-not-allowed";
+const BTN_PRIMARY = `${BTN} bg-[#0C66E4] hover:bg-[#0055CC] text-white`;
+const BTN_DANGER = `${BTN} bg-[#C9372C] hover:bg-[#AE2E24] text-white`;
+const BTN_SUBTLE = `${BTN} bg-[#091E420F] hover:bg-[#091E4224] text-[#172B4D]`;
+const ICON_BTN = "inline-flex items-center justify-center w-8 h-8 rounded-[3px] text-[#44546F] hover:bg-[#091E4214] focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] transition";
+const FIELD = "w-full border border-[#8590A2] bg-white rounded-[3px] px-2.5 text-sm text-[#172B4D] outline-none hover:bg-[#F7F8F9] focus:bg-white focus:ring-2 focus:ring-[#4C9AFF] placeholder:text-[#626F86]";
+const LABEL = "block text-xs font-semibold text-[#44546F] mb-1";
+const SECTION_TITLE = "text-xs font-semibold text-[#44546F] mb-2 flex items-center gap-1.5";
+
+// Lozenge palette: [background, text]
+const STATUS_LOZ = {
+  Open: ["#DEEBFF", "#0747A6"],
+  "In Progress": ["#FFF0B3", "#7F5F01"],
+  Resolved: ["#DCFFF1", "#216E4E"],
+  Closed: ["#DFE1E6", "#42526E"],
+  Rejected: ["#FFEDEB", "#AE2E24"],
 };
 
-/* ================= SLA THEME ================= */
-const SLA_THEME = {
-  ok: { text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", dot: "bg-emerald-500" },
-  warning: { text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", dot: "bg-amber-500" },
-  breached: { text: "text-red-700", bg: "bg-red-50", border: "border-red-200", dot: "bg-red-500" },
-  done: { text: "text-slate-500", bg: "bg-slate-100", border: "border-slate-200", dot: "bg-slate-400" },
+const SLA_LOZ = {
+  ok: { bg: "#DCFFF1", fg: "#216E4E", bar: "#22A06B", border: "#BAF3DB" },
+  warning: { bg: "#FFF7D6", fg: "#7F5F01", bar: "#F5CD47", border: "#F8E6A0" },
+  breached: { bg: "#FFEDEB", fg: "#AE2E24", bar: "#E2483D", border: "#FFD5D2" },
+  done: { bg: "#F1F2F4", fg: "#626F86", bar: "#8590A2", border: "#DCDFE4" },
 };
+
+const PRIORITY_COLOR = { Low: "#2684FF", Medium: "#E56910", High: "#E2483D", Critical: "#C9372C" };
+const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Critical"];
+
+const PriorityIcon = ({ p, className = "w-4 h-4" }) => {
+  const color = PRIORITY_COLOR[p] || "#8590A2";
+  const paths = {
+    Critical: <path d="m6 11 6-6 6 6M6 18l6-6 6 6" />,
+    High: <path d="m6 15 6-6 6 6" />,
+    Medium: <path d="M5 9h14M5 15h14" />,
+    Low: <path d="m6 9 6 6 6-6" />,
+  };
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round"
+      strokeLinejoin="round" className={className} aria-hidden="true">
+      {paths[p] || <path d="M5 12h14" />}
+    </svg>
+  );
+};
+
+/* ================= DATE HELPERS ================= */
+const formatDateTime = (date) =>
+  date ? new Date(date).toLocaleString(undefined, {
+    month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
+  }) : "—";
+
+const formatDateOnly = (date) =>
+  date ? new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+
+const formatTimeOnly = (date) =>
+  date ? new Date(date).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "";
 
 /* ================= SLA HELPERS ================= */
 const formatDuration = (ms) => {
@@ -69,44 +92,27 @@ const formatDuration = (ms) => {
   const days = Math.floor(minutes / (60 * 24));
   const hours = Math.floor((minutes % (60 * 24)) / 60);
   const mins = minutes % 60;
-
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${mins}m`;
   return `${mins}m`;
 };
 
 const getSlaLegState = ({ due, achievedAt, breached, now }) => {
-  if (!due) {
-    return { level: "done", label: "No SLA", detail: "—" };
-  }
-
+  if (!due) return { level: "done", label: "No SLA", detail: "—" };
   const dueDate = new Date(due);
 
   if (achievedAt) {
     const achievedDate = new Date(achievedAt);
     if (breached || achievedDate > dueDate) {
-      return {
-        level: "breached",
-        label: "Breached",
-        detail: `${formatDuration(achievedDate - dueDate)} late`,
-      };
+      return { level: "breached", label: "Breached", detail: `${formatDuration(achievedDate - dueDate)} late` };
     }
-    return {
-      level: "ok",
-      label: "Met",
-      detail: `${formatDuration(dueDate - achievedDate)} to spare`,
-    };
+    return { level: "ok", label: "Met", detail: `${formatDuration(dueDate - achievedDate)} to spare` };
   }
 
   const diff = dueDate - now;
   if (diff <= 0) {
-    return {
-      level: "breached",
-      label: "Overdue",
-      detail: `${formatDuration(diff)} over`,
-    };
+    return { level: "breached", label: "Overdue", detail: `${formatDuration(diff)} over` };
   }
-
   const isSoon = diff < 60 * 60 * 1000;
   return {
     level: isSoon ? "warning" : "ok",
@@ -118,189 +124,140 @@ const getSlaLegState = ({ due, achievedAt, breached, now }) => {
 const getOverallSlaState = (ticket, now) => {
   const sla = ticket.sla;
   if (!sla) return { level: "done", label: "No SLA" };
-
-  if (sla.status === "Breached") {
-    return { level: "breached", label: "SLA Breached" };
-  }
-  if (sla.status === "Completed") {
-    return { level: "ok", label: "SLA Met" };
-  }
+  if (sla.status === "Breached") return { level: "breached", label: "SLA Breached" };
+  if (sla.status === "Completed") return { level: "ok", label: "SLA Met" };
 
   const resolutionState = getSlaLegState({
-    due: sla.resolutionDue,
-    achievedAt: sla.resolvedAt,
-    breached: sla.resolutionBreached,
-    now,
+    due: sla.resolutionDue, achievedAt: sla.resolvedAt, breached: sla.resolutionBreached, now,
   });
-
-  if (resolutionState.level === "breached") {
-    return { level: "breached", label: "SLA Breached" };
-  }
+  if (resolutionState.level === "breached") return { level: "breached", label: "SLA Breached" };
 
   if (!sla.firstRespondedAt) {
     const responseState = getSlaLegState({
-      due: sla.firstResponseDue,
-      achievedAt: sla.firstRespondedAt,
-      breached: sla.firstResponseBreached,
-      now,
+      due: sla.firstResponseDue, achievedAt: sla.firstRespondedAt, breached: sla.firstResponseBreached, now,
     });
-    if (responseState.level === "breached") {
-      return { level: "breached", label: "Response overdue" };
-    }
-    if (responseState.level === "warning") {
-      return { level: "warning", label: "Response due soon" };
-    }
+    if (responseState.level === "breached") return { level: "breached", label: "Response overdue" };
+    if (responseState.level === "warning") return { level: "warning", label: "Response due soon" };
   }
 
-  if (resolutionState.level === "warning") {
-    return { level: "warning", label: "Resolution due soon" };
-  }
-
+  if (resolutionState.level === "warning") return { level: "warning", label: "Resolution due soon" };
   return { level: "ok", label: "On track" };
 };
 
-const priorityDot = {
-  Low: "bg-blue-500",
-  Medium: "bg-amber-500",
-  High: "bg-orange-500",
-  Critical: "bg-red-500",
-};
-
-// the four valid priority values, in the order they should
-// appear in every priority <select>.
-const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Critical"];
-
-/* ================= REMINDER HELPERS (NEW) =================
-   A ticket has an "active reminder" when the user has nudged support
-   at least once AND the ticket is still In Progress (reminders can only
-   be sent in that status, and once it moves on the nudge is moot).
-   These tickets are pinned to the top of the list. */
+// Active reminder = user nudged support at least once AND ticket is still In Progress.
 const hasActiveReminder = (ticket) =>
   ticket.status === "In Progress" && (ticket.reminderCount || 0) > 0;
 
-/* ================= SLA UI COMPONENTS ================= */
-
-// figures out which SLA leg is currently breached on a ticket
-// (resolution takes priority over response) and returns its existing
-// reason, if any, so the badge/modal know what to show.
 const getBreachLegInfo = (ticket, now) => {
   const sla = ticket.sla;
   if (!sla) return null;
 
   const resolutionState = getSlaLegState({
-    due: sla.resolutionDue,
-    achievedAt: sla.resolvedAt,
-    breached: sla.resolutionBreached,
-    now,
+    due: sla.resolutionDue, achievedAt: sla.resolvedAt, breached: sla.resolutionBreached, now,
   });
-
   if (resolutionState.level === "breached") {
     return { leg: "resolution", reason: sla.breachReason || "" };
   }
 
   if (!sla.firstRespondedAt) {
     const responseState = getSlaLegState({
-      due: sla.firstResponseDue,
-      achievedAt: sla.firstRespondedAt,
-      breached: sla.firstResponseBreached,
-      now,
+      due: sla.firstResponseDue, achievedAt: sla.firstRespondedAt, breached: sla.firstResponseBreached, now,
     });
     if (responseState.level === "breached") {
       return { leg: "response", reason: sla.firstResponseBreachReason || "" };
     }
   }
-
   return null;
 };
 
-// onOpenReason — called when the badge is clicked on a breached
-// ticket. Optional so SlaBadge still works anywhere it's used without it.
+/* ================= SLA UI ================= */
 const SlaBadge = ({ ticket, now, onOpenReason }) => {
   const state = getOverallSlaState(ticket, now);
-  const theme = SLA_THEME[state.level];
+  const c = SLA_LOZ[state.level];
   const breachInfo = state.level === "breached" ? getBreachLegInfo(ticket, now) : null;
   const clickable = state.level === "breached" && onOpenReason && breachInfo;
 
-  return (
+  const pill = (
     <span
-      onClick={clickable ? () => onOpenReason(ticket, breachInfo) : undefined}
-      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${theme.bg} ${theme.text} ${theme.border} ${clickable ? "cursor-pointer hover:brightness-95" : ""
-        }`}
-      title={clickable ? (breachInfo.reason ? "Click to edit breach reason" : "Click to add breach reason") : undefined}
+      className="inline-flex items-center gap-1 h-5 px-1.5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide whitespace-nowrap"
+      style={{ backgroundColor: c.bg, color: c.fg }}
     >
       {state.level === "breached" ? (
         <IconAlertTriangle className="w-3 h-3" />
       ) : (
-        <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`} />
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: c.bar }} />
       )}
       {state.label}
-      {clickable && !breachInfo.reason && (
-        <span className="text-[10px] underline decoration-dotted ml-0.5">add reason</span>
-      )}
     </span>
+  );
+
+  if (!clickable) return pill;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpenReason(ticket, breachInfo)}
+      title={breachInfo.reason ? "Edit breach reason" : "Add breach reason"}
+      className="inline-flex flex-col items-start gap-0.5 text-left focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] rounded-[3px]"
+    >
+      {pill}
+      <span className="text-[11px] text-[#0C66E4] hover:underline">
+        {breachInfo.reason ? "Edit reason" : "Add reason"}
+      </span>
+    </button>
   );
 };
 
-// leg ("response" | "resolution"), ticket, onOpenReason — lets this
-// row show/add a reason based on the LIVE computed breach state (overdue
-// counts as breached even if the ticket was closed without ever formally
-// triggering the persisted resolutionBreached/firstResponseBreached flag).
 const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now, breachReason, leg, ticket, onOpenReason }) => {
   const state = getSlaLegState({ due, achievedAt, breached, now });
-  const theme = SLA_THEME[state.level];
-  const isBreached = state.level === "breached"; // live state, not just the persisted flag
+  const c = SLA_LOZ[state.level];
+  const isBreached = state.level === "breached";
 
   let progressPct = 100;
   if (!achievedAt && due) {
-    const dueDate = new Date(due);
-    const remaining = dueDate - now;
+    const remaining = new Date(due) - now;
     const totalGuess = 1000 * 60 * 60 * 24;
     progressPct = Math.min(100, Math.max(0, 100 - (remaining / totalGuess) * 100));
   }
 
   return (
-    <div className={`rounded-lg border p-3 ${theme.bg} ${theme.border}`}>
+    <div className="rounded-[3px] border p-3" style={{ backgroundColor: c.bg, borderColor: c.border }}>
       <div className="flex items-center justify-between mb-1.5">
-        <p className={`text-xs font-semibold flex items-center gap-1.5 ${theme.text}`}>
+        <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: c.fg }}>
           {icon} {label}
         </p>
-        <span className={`text-[11px] font-semibold ${theme.text}`}>{state.label}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: c.fg }}>{state.label}</span>
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
-        <span>Due {due ? new Date(due).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}</span>
-        <span className={theme.text}>{state.detail}</span>
+      <div className="flex items-center justify-between text-xs text-[#44546F] mb-1.5">
+        <span>
+          Due {due ? new Date(due).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
+        </span>
+        <span style={{ color: c.fg }}>{state.detail}</span>
       </div>
 
       {!achievedAt && due && (
         <div className="h-1.5 w-full rounded-full bg-white/70 overflow-hidden">
-          <div
-            className={`h-full rounded-full ${theme.dot}`}
-            style={{ width: `${progressPct}%` }}
-          />
+          <div className="h-full rounded-full" style={{ width: `${progressPct}%`, backgroundColor: c.bar }} />
         </div>
       )}
 
       {achievedAt && (
-        <p className="text-[11px] text-slate-500 mt-1">
+        <p className="text-xs text-[#44546F] mt-1">
           {achievedLabel} {new Date(achievedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
         </p>
       )}
 
-      {/* reason section — shows on ANY breach (live state), with an
-          inline "add reason" action if nothing's been recorded yet */}
       {isBreached && (
-        <div className="mt-2 pt-2 border-t border-red-200/70">
-          <p className="text-[10px] font-semibold text-red-700 uppercase tracking-wide mb-0.5">
-            Reason
-          </p>
+        <div className="mt-2 pt-2 border-t border-[#FFD5D2]">
+          <p className="text-xs font-semibold text-[#AE2E24] mb-0.5">Reason</p>
           {breachReason ? (
             <div className="flex items-start justify-between gap-2">
-              <p className="text-[11px] text-red-700 leading-relaxed">{breachReason}</p>
+              <p className="text-xs text-[#AE2E24] leading-relaxed">{breachReason}</p>
               {onOpenReason && ticket && (
                 <button
                   onClick={() => onOpenReason(ticket, { leg, reason: breachReason })}
-                  className="text-[10px] text-red-600 hover:text-red-800 underline shrink-0"
+                  className="text-xs text-[#0C66E4] hover:underline shrink-0"
                 >
                   Edit
                 </button>
@@ -309,12 +266,12 @@ const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now,
           ) : onOpenReason && ticket ? (
             <button
               onClick={() => onOpenReason(ticket, { leg, reason: "" })}
-              className="text-[11px] text-red-600 hover:text-red-800 underline"
+              className="text-xs text-[#0C66E4] hover:underline"
             >
               Add reason
             </button>
           ) : (
-            <p className="text-[11px] text-slate-400">No reason recorded</p>
+            <p className="text-xs text-[#626F86]">No reason recorded</p>
           )}
         </div>
       )}
@@ -324,33 +281,27 @@ const SlaLegRow = ({ icon, label, due, achievedAt, breached, achievedLabel, now,
 
 const SlaDetailPanel = ({ ticket, now, onOpenReason }) => {
   const sla = ticket.sla;
-  if (!sla) {
-    return <p className="text-xs text-slate-400">No SLA policy on this ticket</p>;
-  }
+  if (!sla) return <p className="text-sm text-[#626F86]">No SLA policy on this ticket</p>;
 
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
-        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${priorityDot[sla.priority] || "bg-slate-400"} text-white`}>
-          {sla.priority || "—"} priority
+        <span className="inline-flex items-center gap-1.5 text-xs text-[#44546F]">
+          <PriorityIcon p={sla.priority} className="w-3.5 h-3.5" /> {sla.priority || "—"} priority policy
         </span>
         <SlaBadge ticket={ticket} now={now} onOpenReason={onOpenReason} />
       </div>
 
       <SlaLegRow
         icon={<IconZap className="w-3.5 h-3.5" />}
-        label="First Response"
+        label="First response"
         due={sla.firstResponseDue}
         achievedAt={sla.firstRespondedAt}
         breached={sla.firstResponseBreached}
         breachReason={sla.firstResponseBreachReason}
         achievedLabel="Responded at"
-        now={now}
-        leg="response"
-        ticket={ticket}
-        onOpenReason={onOpenReason}
+        now={now} leg="response" ticket={ticket} onOpenReason={onOpenReason}
       />
-
       <SlaLegRow
         icon={<IconCheck className="w-3.5 h-3.5" />}
         label="Resolution"
@@ -359,16 +310,13 @@ const SlaDetailPanel = ({ ticket, now, onOpenReason }) => {
         breached={sla.resolutionBreached}
         breachReason={sla.breachReason}
         achievedLabel="Resolved at"
-        now={now}
-        leg="resolution"
-        ticket={ticket}
-        onOpenReason={onOpenReason}
+        now={now} leg="resolution" ticket={ticket} onOpenReason={onOpenReason}
       />
 
       {sla.escalated && (
-        <div className="rounded-lg border border-orange-200 bg-orange-50 p-2.5 flex items-center gap-2">
-          <IconAlertTriangle className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-          <p className="text-[11px] text-orange-700 font-medium">
+        <div className="rounded-[3px] border border-[#FCE4A6] bg-[#FFF7D6] p-2.5 flex items-center gap-2">
+          <IconAlertTriangle className="w-3.5 h-3.5 text-[#B65C02] shrink-0" />
+          <p className="text-xs text-[#7F5F01] font-medium">
             Escalated (level {sla.escalationLevel || 1})
             {sla.escalatedAt && ` on ${new Date(sla.escalatedAt).toLocaleDateString()}`}
           </p>
@@ -383,16 +331,10 @@ const getReporterName = (ticket) => {
   if (ticket.userId?.name) return ticket.userId.name;
   if (ticket.employeeId?.name) return ticket.employeeId.name;
   if (ticket.assignedTo?.name) return ticket.assignedTo.name;
-
   const creatorLabel =
-    ticket.createdByType === "super_admin"
-      ? "Super Admin"
-      : ticket.createdByType === "it_support"
-        ? "IT Support"
-        : ticket.createdByType === "company_admin"
-          ? "Company Admin"
-          : null;
-
+    ticket.createdByType === "super_admin" ? "Super Admin"
+      : ticket.createdByType === "it_support" ? "IT Support"
+        : ticket.createdByType === "company_admin" ? "Company Admin" : null;
   return creatorLabel || "Unknown";
 };
 
@@ -407,6 +349,41 @@ const getReporterSubtext = (ticket) => {
   return "—";
 };
 
+/* ================= SMALL SHARED PIECES ================= */
+const Avatar = ({ name, size = "w-8 h-8 text-xs" }) => (
+  <span className={`${size} rounded-full bg-[#E9F2FF] text-[#0055CC] flex items-center justify-center font-semibold shrink-0`}>
+    {name ? name.charAt(0).toUpperCase() : "?"}
+  </span>
+);
+
+const Lozenge = ({ status, children }) => {
+  const [bg, fg] = STATUS_LOZ[status] || STATUS_LOZ.Closed;
+  return (
+    <span
+      className="inline-flex items-center h-5 px-1.5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide whitespace-nowrap"
+      style={{ backgroundColor: bg, color: fg }}
+    >
+      {children || status}
+    </span>
+  );
+};
+
+const Modal = ({ icon, iconTone = "bg-[#F1F2F4] text-[#44546F]", title, subtitle, children, footer, maxWidth = "max-w-md" }) => (
+  <div className="fixed inset-0 bg-[#091E42]/50 flex items-center justify-center z-[60] p-4">
+    <div role="dialog" aria-modal="true" className={`bg-white rounded-[3px] shadow-[0_8px_12px_#091E4226,0_0_1px_#091E424F] w-full ${maxWidth} max-h-[90vh] flex flex-col`}>
+      <div className="flex items-start gap-3 px-6 pt-5 pb-3">
+        <span className={`w-8 h-8 rounded-[3px] flex items-center justify-center shrink-0 ${iconTone}`}>{icon}</span>
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-[#172B4D]">{title}</h3>
+          {subtitle && <p className="text-xs text-[#626F86] mt-0.5 truncate">{subtitle}</p>}
+        </div>
+      </div>
+      <div className="px-6 py-2 overflow-y-auto">{children}</div>
+      <div className="flex justify-end gap-2 px-6 py-4">{footer}</div>
+    </div>
+  </div>
+);
+
 export default function AdminTickets() {
   const [tickets, setTickets] = useState([]);
   const [page, setPage] = useState(1);
@@ -416,10 +393,6 @@ export default function AdminTickets() {
   const [statusFilter, setStatusFilter] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // independent date-range filters for Opened (createdAt) and
-  // Closed (closedAt, falling back to resolvedAt to match the "Closed"
-  // column shown in the table/cards). Stored as "YYYY-MM-DD" strings
-  // straight from <input type="date">.
   const [dateFilterOpen, setDateFilterOpen] = useState(false);
   const [openedFrom, setOpenedFrom] = useState("");
   const [openedTo, setOpenedTo] = useState("");
@@ -431,64 +404,40 @@ export default function AdminTickets() {
   const [breachReason, setBreachReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // resolution-type + external-vendor repair fields, used inside
-  // the Resolve/Close modal.
   const [resolutionType, setResolutionType] = useState("Internal");
   const [vendorName, setVendorName] = useState("");
   const [vendorComplaint, setVendorComplaint] = useState("");
   const [vendorRepairDate, setVendorRepairDate] = useState("");
   const [vendorCost, setVendorCost] = useState("");
-  const [vendorReceipt, setVendorReceipt] = useState(null); // File object
+  const [vendorReceipt, setVendorReceipt] = useState(null);
 
-  // reason field used only when the target status is "Rejected"
-  // (super_admin only flow, reuses the same status modal).
   const [rejectionReason, setRejectionReason] = useState("");
 
-  // quick "add reason immediately" modal, independent of resolve/close flow
-  const [breachModal, setBreachModal] = useState(null); // { ticket, leg }
+  const [breachModal, setBreachModal] = useState(null);
   const [breachModalText, setBreachModalText] = useState("");
   const [breachSubmitting, setBreachSubmitting] = useState(false);
 
-  // delete-ticket confirmation. Holds the ticket pending deletion
-  // (or null when the modal is closed). Kept separate from statusModal
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // tracks which ticket's priority is currently mid-save, so the
-  // dropdown for that specific row can show a disabled/saving state
-  // without freezing the whole table.
   const [priorityUpdatingId, setPriorityUpdatingId] = useState(null);
 
-  // super_admin company-wise filter
   const [companyFilter, setCompanyFilter] = useState("All");
   const [companies, setCompanies] = useState([]);
 
-  const user = JSON.parse(localStorage.getItem("user"))
-
+  const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
-  // both super_admin and it_support are allowed to edit priority
   const canEditPriority = user?.role === "super_admin" || user?.role === "it_support";
   const [now, setNow] = useState(() => new Date());
 
-  const initialStats = {
-    total: 0,
-    open: 0,
-    inProgress: 0,
-    resolved: 0,
-    closed: 0,
-  };
-
+  const initialStats = { total: 0, open: 0, inProgress: 0, resolved: 0, closed: 0 };
   const [stats, setStats] = useState(initialStats);
 
   useEffect(() => {
-    if (isSuperAdmin) {
-      loadCompanies();
-    }
+    if (isSuperAdmin) loadCompanies();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // reload tickets + stats whenever the super-admin company filter
-  // changes (also fires once on mount for everyone else)
   useEffect(() => {
     load();
     loadStats();
@@ -500,28 +449,16 @@ export default function AdminTickets() {
     return () => clearInterval(interval);
   }, []);
 
-  // Lock background scroll only while the MOBILE full-screen detail sheet
-  // is open. On desktop (md:static panel, part of the normal flex layout)
-  // we must NOT lock the body, or the ticket list behind it becomes
-  // unscrollable and other tickets/rows become unreachable.
+  // Lock background scroll only while the MOBILE full-screen detail sheet is open.
   useEffect(() => {
     if (!selected) return;
-
     const mql = window.matchMedia("(max-width: 767px)");
-
     const applyLock = (isMobile) => {
-      if (isMobile) {
-        document.body.style.overflow = "hidden";
-      } else {
-        document.body.style.overflow = "";
-      }
+      document.body.style.overflow = isMobile ? "hidden" : "";
     };
-
     applyLock(mql.matches);
-
     const handleChange = (e) => applyLock(e.matches);
     mql.addEventListener("change", handleChange);
-
     return () => {
       document.body.style.overflow = "";
       mql.removeEventListener("change", handleChange);
@@ -540,16 +477,11 @@ export default function AdminTickets() {
   const load = async () => {
     try {
       setLoading(true);
-      // fetch everything in one go (high limit) instead of one page at a
-      // time, so client-side filters (search + stat cards) can see every
-      // ticket, not just the 10 on the current server page.
       const res = await api.get(`/tickets`, {
         params: {
           page: 1,
           limit: 1000,
-          ...(isSuperAdmin && companyFilter && companyFilter !== "All"
-            ? { companyId: companyFilter }
-            : {}),
+          ...(isSuperAdmin && companyFilter && companyFilter !== "All" ? { companyId: companyFilter } : {}),
         },
       });
       setTickets(res?.data?.data || []);
@@ -563,10 +495,7 @@ export default function AdminTickets() {
   const loadStats = async () => {
     try {
       const res = await api.get("/tickets/stats", {
-        params:
-          isSuperAdmin && companyFilter && companyFilter !== "All"
-            ? { companyId: companyFilter }
-            : {},
+        params: isSuperAdmin && companyFilter && companyFilter !== "All" ? { companyId: companyFilter } : {},
       });
       const data = res?.data?.data;
       setStats({
@@ -583,10 +512,6 @@ export default function AdminTickets() {
   };
 
   const handleStatusChange = (ticket, targetStatus) => {
-    // Resolved / Closed / Rejected all go through the same confirmation
-    // modal — Rejected only shows the rejection-reason field inside it
-    // (super_admin only; the option itself is hidden from the <select>
-    // for anyone else, but we still guard here defensively).
     if (targetStatus === "Resolved" || targetStatus === "Closed" || targetStatus === "Rejected") {
       if (targetStatus === "Rejected" && !isSuperAdmin) {
         toast.error("Only Super Admin can reject a ticket");
@@ -597,8 +522,6 @@ export default function AdminTickets() {
       setBreachReason(ticket.sla?.breachReason || "");
       setRejectionReason(ticket.rejectionReason || "");
 
-      // pre-fill resolution type / vendor fields from whatever's
-      // already on the ticket (lets IT support edit a previous entry).
       setResolutionType(ticket.resolutionType || "Internal");
       setVendorName(ticket.vendorDetails?.vendorName || "");
       setVendorComplaint(ticket.vendorDetails?.complaintDescription || "");
@@ -622,12 +545,8 @@ export default function AdminTickets() {
 
   const handleEscalate = async (id) => {
     try {
-      await api.put(`/tickets/${id}/escalate`, {
-        reason: "Escalated by IT Support",
-      });
-
+      await api.put(`/tickets/${id}/escalate`, { reason: "Escalated by IT Support" });
       toast.success("Ticket escalated successfully");
-
       load();
       loadStats();
     } catch (err) {
@@ -635,52 +554,31 @@ export default function AdminTickets() {
     }
   };
 
-  // fires the priority update against the backend, with a small
-  // local "saving" flag so the specific row's dropdown reflects it.
   const handlePriorityChange = async (ticket, newPriority) => {
     if (newPriority === ticket.priority) return;
 
-    // optimistic update so the select doesn't snap back while the
-    // request is in flight
-    setTickets((prev) =>
-      prev.map((t) => (t._id === ticket._id ? { ...t, priority: newPriority } : t))
-    );
+    setTickets((prev) => prev.map((t) => (t._id === ticket._id ? { ...t, priority: newPriority } : t)));
     setPriorityUpdatingId(ticket._id);
 
     try {
-      const res = await api.put(`/tickets/${ticket._id}/priority`, {
-        priority: newPriority,
-      });
+      const res = await api.put(`/tickets/${ticket._id}/priority`, { priority: newPriority });
       const updated = res?.data?.data;
 
       if (updated) {
-        setTickets((prev) =>
-          prev.map((t) => (t._id === ticket._id ? { ...t, ...updated } : t))
-        );
-        // keep the detail panel in sync if this ticket is open there
+        setTickets((prev) => prev.map((t) => (t._id === ticket._id ? { ...t, ...updated } : t)));
         setSelected((prevSelected) =>
-          prevSelected && prevSelected._id === ticket._id
-            ? { ...prevSelected, ...updated }
-            : prevSelected
+          prevSelected && prevSelected._id === ticket._id ? { ...prevSelected, ...updated } : prevSelected
         );
       }
-
       toast.success(`Priority updated to ${newPriority}`);
     } catch (err) {
-      // roll back the optimistic change on failure
-      setTickets((prev) =>
-        prev.map((t) => (t._id === ticket._id ? { ...t, priority: ticket.priority } : t))
-      );
+      setTickets((prev) => prev.map((t) => (t._id === ticket._id ? { ...t, priority: ticket.priority } : t)));
       toast.error(err.response?.data?.message || "Failed to update priority");
     } finally {
       setPriorityUpdatingId(null);
     }
   };
 
-  // `extra` can be a plain object (JSON, used for the quick
-  // Open/In Progress status changes) OR a FormData instance (used by the
-  // Resolve/Close/Reject modal so the optional vendor receipt file can
-  // travel alongside the other fields in one multipart request).
   const updateStatus = async (id, status, extra = {}) => {
     try {
       let payload;
@@ -707,11 +605,8 @@ export default function AdminTickets() {
     }
   };
 
-  // whether the ticket currently in the modal is in a breached SLA state
   const isModalTicketBreached =
     statusModal && getOverallSlaState(statusModal.ticket, now).level === "breached";
-
-  // whether the modal currently open is the reject flow
   const isRejectModal = statusModal?.targetStatus === "Rejected";
 
   const resetStatusModalFields = () => {
@@ -727,22 +622,14 @@ export default function AdminTickets() {
   };
 
   const confirmStatusModal = async () => {
-    // ============================
-    // REJECTED — its own lightweight validation/payload, skips the
-    // resolution-note / vendor / breach-reason requirements entirely.
-    // ============================
     if (isRejectModal) {
       if (!rejectionReason.trim()) {
         return toast.error("Please provide a reason for rejecting this ticket");
       }
-
       setSubmitting(true);
-
       const formData = new FormData();
       formData.append("rejectionReason", rejectionReason.trim());
-
       await updateStatus(statusModal.ticket._id, statusModal.targetStatus, formData);
-
       setSubmitting(false);
       setStatusModal(null);
       resetStatusModalFields();
@@ -752,23 +639,13 @@ export default function AdminTickets() {
     if (!resolutionNote.trim()) {
       return toast.error("Please add a resolution note before continuing");
     }
-
-    // require a breach reason when the SLA is currently breached
     if (isModalTicketBreached && !breachReason.trim()) {
       return toast.error("Please explain why the SLA was breached");
     }
-
-    // validate vendor/repair fields when External Vendor is selected
     if (resolutionType === "External Vendor") {
-      if (!vendorName.trim()) {
-        return toast.error("Vendor name is required");
-      }
-      if (!vendorComplaint.trim()) {
-        return toast.error("Please describe the complaint / repair");
-      }
-      if (!vendorRepairDate) {
-        return toast.error("Repair date is required");
-      }
+      if (!vendorName.trim()) return toast.error("Vendor name is required");
+      if (!vendorComplaint.trim()) return toast.error("Please describe the complaint / repair");
+      if (!vendorRepairDate) return toast.error("Repair date is required");
       if (vendorCost === "" || isNaN(Number(vendorCost)) || Number(vendorCost) < 0) {
         return toast.error("Please enter a valid repair cost");
       }
@@ -776,24 +653,18 @@ export default function AdminTickets() {
 
     setSubmitting(true);
 
-    // always build a FormData payload for this flow so the optional
-    // receipt file can ride along with the rest of the fields.
     const formData = new FormData();
     formData.append("resolutionNote", resolutionNote.trim());
     formData.append("resolutionType", resolutionType);
 
-    if (isModalTicketBreached) {
-      formData.append("slaBreachReason", breachReason.trim());
-    }
+    if (isModalTicketBreached) formData.append("slaBreachReason", breachReason.trim());
 
     if (resolutionType === "External Vendor") {
       formData.append("vendorName", vendorName.trim());
       formData.append("complaintDescription", vendorComplaint.trim());
       formData.append("repairDate", vendorRepairDate);
       formData.append("cost", vendorCost);
-      if (vendorReceipt) {
-        formData.append("receipt", vendorReceipt);
-      }
+      if (vendorReceipt) formData.append("receipt", vendorReceipt);
     }
 
     await updateStatus(statusModal.ticket._id, statusModal.targetStatus, formData);
@@ -808,7 +679,6 @@ export default function AdminTickets() {
     resetStatusModalFields();
   };
 
-  // open the quick reason modal when the breached badge is clicked
   const openBreachModal = (ticket, breachInfo) => {
     setBreachModal({ ticket, leg: breachInfo.leg });
     setBreachModalText(breachInfo.reason || "");
@@ -820,9 +690,7 @@ export default function AdminTickets() {
   };
 
   const saveBreachReason = async () => {
-    if (!breachModalText.trim()) {
-      return toast.error("Please enter a reason");
-    }
+    if (!breachModalText.trim()) return toast.error("Please enter a reason");
     try {
       setBreachSubmitting(true);
       await api.put(`/tickets/${breachModal.ticket._id}/sla-breach-reason`, {
@@ -839,32 +707,20 @@ export default function AdminTickets() {
     }
   };
 
-  // delete-ticket flow. Opens a confirmation modal instead of
-  // deleting immediately — the backend route is a hard delete with no
-  // undo, so we don't want a stray click to remove a ticket.
-  const handleDeleteClick = (ticket) => {
-    setDeleteModal(ticket);
-  };
+  const handleDeleteClick = (ticket) => setDeleteModal(ticket);
 
   const cancelDeleteModal = () => {
-    if (deleting) return; // ignore stray closes mid-request
+    if (deleting) return;
     setDeleteModal(null);
   };
 
   const confirmDelete = async () => {
     if (!deleteModal) return;
-
     try {
       setDeleting(true);
       await api.delete(`/tickets/${deleteModal._id}`);
       toast.success("Ticket deleted");
-
-      // if the ticket being deleted is currently open in the detail
-      // panel, close the panel so it doesn't show stale data
-      if (selected?._id === deleteModal._id) {
-        setSelected(null);
-      }
-
+      if (selected?._id === deleteModal._id) setSelected(null);
       setDeleteModal(null);
       load();
       loadStats();
@@ -875,22 +731,13 @@ export default function AdminTickets() {
     }
   };
 
-  // date-range filter helpers ------------------------------------
-
-  // "YYYY-MM-DD" -> local midnight / end-of-day Date, so the picked day
-  // is always inclusive regardless of the ticket's exact timestamp.
-  const startOfDay = (ymd) => {
-    const d = new Date(`${ymd}T00:00:00`);
-    return d;
-  };
-  const endOfDay = (ymd) => {
-    const d = new Date(`${ymd}T23:59:59.999`);
-    return d;
-  };
+  /* ---------- date-range filter helpers ---------- */
+  const startOfDay = (ymd) => new Date(`${ymd}T00:00:00`);
+  const endOfDay = (ymd) => new Date(`${ymd}T23:59:59.999`);
 
   const isWithinDateRange = (value, fromStr, toStr) => {
-    if (!fromStr && !toStr) return true; // no filter set on this leg
-    if (!value) return false; // filter set but ticket has no such date
+    if (!fromStr && !toStr) return true;
+    if (!value) return false;
     const d = new Date(value);
     if (fromStr && d < startOfDay(fromStr)) return false;
     if (toStr && d > endOfDay(toStr)) return false;
@@ -899,19 +746,11 @@ export default function AdminTickets() {
 
   const toISODate = (d) => d.toISOString().slice(0, 10);
 
-  // quick presets (Jira/ServiceNow-style relative ranges), applied to
-  // whichever section ("opened" | "closed") the user clicked from.
   const applyDatePreset = (section, preset) => {
     const today = new Date();
     const from = new Date(today);
-
-    if (preset === "today") {
-      // from === to === today
-    } else if (preset === "week") {
-      from.setDate(today.getDate() - 6);
-    } else if (preset === "month") {
-      from.setDate(today.getDate() - 29);
-    }
+    if (preset === "week") from.setDate(today.getDate() - 6);
+    else if (preset === "month") from.setDate(today.getDate() - 29);
 
     const fromStr = toISODate(from);
     const toStr = toISODate(today);
@@ -942,8 +781,7 @@ export default function AdminTickets() {
     setClosedTo("");
   };
 
-  const activeDateFilterCount =
-    (openedFrom || openedTo ? 1 : 0) + (closedFrom || closedTo ? 1 : 0);
+  const activeDateFilterCount = (openedFrom || openedTo ? 1 : 0) + (closedFrom || closedTo ? 1 : 0);
 
   const formatDateRangeLabel = (fromStr, toStr) => {
     if (!fromStr && !toStr) return "";
@@ -953,8 +791,7 @@ export default function AdminTickets() {
     return `Until ${formatDateOnly(toStr)}`;
   };
 
-  // ---------------------------------------------------------------------
-
+  /* ---------- filtering / sorting / paging ---------- */
   const filtered = tickets
     .filter((t) => {
       const s = search.toLowerCase();
@@ -969,7 +806,6 @@ export default function AdminTickets() {
         t.status?.toLowerCase().includes(s) ||
         slaState.includes(s);
 
-      // stat-card filter (status, SLA breached, or user reminders)
       const matchesFilter =
         !statusFilter ||
         (statusFilter === "breached"
@@ -978,90 +814,55 @@ export default function AdminTickets() {
             ? hasActiveReminder(t)
             : t.status === statusFilter);
 
-      // date-range filters, independent for Opened and Closed
       const matchesOpenedDate = isWithinDateRange(t.createdAt, openedFrom, openedTo);
       const matchesClosedDate = isWithinDateRange(t.closedAt || t.resolvedAt, closedFrom, closedTo);
 
       return matchesSearch && matchesFilter && matchesOpenedDate && matchesClosedDate;
     })
-    // NEW: pin tickets the user has sent a reminder for to the very top,
-    // most recently reminded first. Everything else keeps the server's
-    // existing order (newest created first) because Array.sort is stable.
+    // Tickets with an active user reminder float to the top, most recent first.
     .sort((a, b) => {
       const ra = hasActiveReminder(a);
       const rb = hasActiveReminder(b);
       if (ra !== rb) return ra ? -1 : 1;
-      if (ra && rb) {
-        return new Date(b.lastReminderAt || 0) - new Date(a.lastReminderAt || 0);
-      }
+      if (ra && rb) return new Date(b.lastReminderAt || 0) - new Date(a.lastReminderAt || 0);
       return 0;
     });
 
-  const breachedCount = tickets.filter(
-    (t) => getOverallSlaState(t, now).level === "breached"
-  ).length;
-
-  // NEW: how many tickets currently have an active user reminder
+  const breachedCount = tickets.filter((t) => getOverallSlaState(t, now).level === "breached").length;
   const remindedCount = tickets.filter(hasActiveReminder).length;
 
-  // client-side pagination over the FILTERED set, so page counts and
-  // page contents always reflect the active search/stat-card filter, not
-  // just whichever 10 tickets the server happened to send for page N.
   const PAGE_SIZE = 10;
   const totalFilteredPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageTickets = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const rangeStart = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, filtered.length);
 
-  // whenever the filter/search narrows the result set, jump back to page
-  // 1 so you don't land on a now-empty page.
   useEffect(() => {
     setPage(1);
   }, [search, statusFilter, openedFrom, openedTo, closedFrom, closedTo, companyFilter]);
 
-  // if data reloads and the current page no longer exists (e.g. fewer
-  // results after a filter), clamp back into range.
   useEffect(() => {
     if (page > totalFilteredPages) setPage(totalFilteredPages);
-  }, [totalFilteredPages]);
-
-  const priorityColor = (p) => {
-    if (p === "Critical") return "bg-red-50 text-red-700 border border-red-200";
-    if (p === "High") return "bg-orange-50 text-orange-700 border border-orange-200";
-    if (p === "Medium") return "bg-amber-50 text-amber-700 border border-amber-200";
-    if (p === "Low") return "bg-blue-50 text-blue-700 border border-blue-200";
-    return "bg-slate-100 text-slate-600 border border-slate-200";
-  };
-
-  const formatDateTime = (date) =>
-    date ? new Date(date).toLocaleString(undefined, {
-      month: "short", day: "numeric", year: "numeric",
-      hour: "numeric", minute: "2-digit",
-    }) : "—";
-
-  const formatDateOnly = (date) =>
-    date ? new Date(date).toLocaleDateString(undefined, {
-      month: "short", day: "numeric", year: "numeric",
-    }) : "—";
+  }, [totalFilteredPages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const renderStars = (rating) => (
-    <span className="text-amber-400 text-sm tracking-tight">
+    <span className="text-[#F5CD47] text-sm tracking-tight">
       {"★".repeat(rating || 0)}
-      <span className="text-slate-200">{"★".repeat(5 - (rating || 0))}</span>
+      <span className="text-[#DCDFE4]">{"★".repeat(5 - (rating || 0))}</span>
     </span>
   );
 
-  const initials = (nameOrEmail) => (nameOrEmail ? nameOrEmail.charAt(0).toUpperCase() : "?");
-
   const renderAttachments = (files = []) => {
-    if (!files || files.length === 0) return <span className="text-slate-300 text-xs">—</span>;
+    if (!files || files.length === 0) return null;
     return (
-      <div className="flex flex-col gap-1 items-start sm:items-center">
+      <div className="flex flex-wrap gap-2">
         {files.map((file, i) => (
           <a
             key={i}
             href={file.url || file}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs font-medium"
+            className="inline-flex items-center gap-1 text-[#0C66E4] hover:underline text-xs font-medium"
           >
             <IconClip className="w-3 h-3" /> File {i + 1}
           </a>
@@ -1070,62 +871,46 @@ export default function AdminTickets() {
     );
   };
 
+  /* ---------- stat tiles (also act as filters) ---------- */
   const statCards = [
-    { key: "total", label: "Total", value: stats.total, theme: "slate", icon: <IconLayers className="w-4 h-4" />, filterKey: null },
-    { key: "open", label: "Open", value: stats.open, theme: "blue", icon: <IconCircleDot className="w-4 h-4" />, filterKey: "Open" },
-    { key: "inProgress", label: "In Progress", value: stats.inProgress, theme: "amber", icon: <IconClock className="w-4 h-4" />, filterKey: "In Progress" },
-    // NEW: tickets the user has sent a reminder for (still In Progress)
-    { key: "reminded", label: "Reminders", value: remindedCount, theme: "orange", icon: <IconBell className="w-4 h-4" />, filterKey: "reminded" },
-    { key: "resolved", label: "Resolved", value: stats.resolved, theme: "emerald", icon: <IconCheck className="w-4 h-4" />, filterKey: "Resolved" },
-    { key: "closed", label: "Closed", value: stats.closed, theme: "slate", icon: <IconLock className="w-4 h-4" />, filterKey: "Closed" },
-    { key: "breached", label: "SLA Breached", value: breachedCount, theme: "red", icon: <IconAlertTriangle className="w-4 h-4" />, filterKey: "breached" },
+    { key: "total", label: "All tickets", value: stats.total, dot: "#8590A2", filterKey: null },
+    { key: "open", label: "Open", value: stats.open, dot: "#4C9AFF", filterKey: "Open" },
+    { key: "inProgress", label: "In progress", value: stats.inProgress, dot: "#F5CD47", filterKey: "In Progress" },
+    { key: "reminded", label: "Reminders", value: remindedCount, dot: "#E56910", filterKey: "reminded" },
+    { key: "resolved", label: "Resolved", value: stats.resolved, dot: "#4BCE97", filterKey: "Resolved" },
+    { key: "closed", label: "Closed", value: stats.closed, dot: "#626F86", filterKey: "Closed" },
+    { key: "breached", label: "SLA breached", value: breachedCount, dot: "#C9372C", filterKey: "breached" },
   ];
 
-  const statBarClass = {
-    slate: "bg-slate-400",
-    blue: "bg-blue-500",
-    amber: "bg-amber-400",
-    orange: "bg-orange-500",
-    emerald: "bg-emerald-500",
-    red: "bg-red-500",
-  };
-  const statIconClass = {
-    slate: "bg-slate-100 text-slate-500",
-    blue: "bg-blue-50 text-blue-600",
-    amber: "bg-amber-50 text-amber-600",
-    orange: "bg-orange-50 text-orange-600",
-    emerald: "bg-emerald-50 text-emerald-600",
-    red: "bg-red-50 text-red-600",
+  /* ---------- shared render helpers (plain functions, so selects keep focus across re-renders) ---------- */
+  const renderStatusSelect = (t) => {
+    const [bg, fg] = STATUS_LOZ[t.status] || STATUS_LOZ.Open;
+    return (
+      <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
+        <select
+          aria-label="Change status"
+          className="appearance-none h-6 pl-1.5 pr-5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide cursor-pointer outline-none focus:ring-2 focus:ring-[#4C9AFF] hover:brightness-95"
+          style={{ backgroundColor: bg, color: fg }}
+          value={t.status}
+          onChange={(e) => handleStatusChange(t, e.target.value)}
+        >
+          <option>Open</option>
+          <option>In Progress</option>
+          <option>Resolved</option>
+          <option>Closed</option>
+          {isSuperAdmin && <option>Rejected</option>}
+        </select>
+        <IconChevronDown className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3" style={{ color: fg }} />
+      </div>
+    );
   };
 
-  // Shared status <select> used in both the table row and the mobile card.
-  // `isSuperAdmin` gates whether the "Rejected" option even appears —
-  // it_support/company_admin never see it in the dropdown at all.
-  const StatusSelect = ({ t, theme, isSuperAdmin }) => (
-    <div className="relative inline-block">
-      <select
-        className={`appearance-none pl-3 pr-7 py-1.5 rounded-full text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/20 ${theme.bg} ${theme.text} ${theme.border}`}
-        value={t.status}
-        onChange={(e) => handleStatusChange(t, e.target.value)}
-      >
-        <option>Open</option>
-        <option>In Progress</option>
-        <option>Resolved</option>
-        <option>Closed</option>
-        {isSuperAdmin && <option>Rejected</option>}
-      </select>
-      <span className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${theme.accent}`} />
-    </div>
-  );
-
-  // NEW: small pill shown on tickets the user has sent a reminder for.
-  // Renders nothing for tickets without an active reminder.
-  const ReminderBadge = ({ t }) => {
+  const renderReminderBadge = (t) => {
     if (!hasActiveReminder(t)) return null;
     const count = t.reminderCount || 0;
     return (
       <span
-        className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border bg-orange-50 text-orange-700 border-orange-200"
+        className="inline-flex items-center gap-1 text-[11px] font-medium text-[#B65C02]"
         title={`Last reminder: ${formatDateTime(t.lastReminderAt)}`}
       >
         <IconBell className="w-3 h-3" />
@@ -1134,30 +919,26 @@ export default function AdminTickets() {
     );
   };
 
-  // shared editable priority <select>, used in the table, the
-  // mobile card, and the detail panel. Falls back to a plain read-only
-  // badge for roles that aren't allowed to change priority.
-  const PrioritySelect = ({ t, size = "table" }) => {
+  const renderPriority = (t) => {
     const isSaving = priorityUpdatingId === t._id;
-    const padding = size === "card" ? "pl-2.5 pr-6 py-1" : "pl-2.5 pr-6 py-1";
-
     if (!canEditPriority) {
       return (
-        <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${priorityColor(t.priority)}`}>
-          {t.priority}
+        <span className="inline-flex items-center gap-1.5 text-sm text-[#172B4D]">
+          <PriorityIcon p={t.priority} /> {t.priority}
         </span>
       );
     }
-
     return (
       <div
-        className="relative inline-block"
+        className="relative inline-flex items-center rounded-[3px] hover:bg-[#091E4214] focus-within:ring-2 focus-within:ring-[#4C9AFF]"
         onClick={(e) => e.stopPropagation()}
         title="Change priority"
       >
+        <PriorityIcon p={t.priority} className="w-4 h-4 absolute left-1.5 pointer-events-none" />
         <select
+          aria-label="Change priority"
           disabled={isSaving}
-          className={`appearance-none ${padding} rounded-full text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-60 disabled:cursor-wait ${priorityColor(t.priority)}`}
+          className="appearance-none bg-transparent h-7 pl-7 pr-5 text-sm text-[#172B4D] cursor-pointer outline-none disabled:opacity-60 disabled:cursor-wait"
           value={t.priority}
           onChange={(e) => handlePriorityChange(t, e.target.value)}
         >
@@ -1165,768 +946,528 @@ export default function AdminTickets() {
             <option key={p} value={p}>{p}</option>
           ))}
         </select>
-        <IconFlag className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" />
+        <IconChevronDown className="pointer-events-none absolute right-1 w-3 h-3 text-[#626F86]" />
       </div>
     );
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 flex font-sans">
+  const renderActions = (t) => (
+    <div className="flex items-center justify-end gap-1">
+      {user?.role === "it_support" && !t.sla?.escalated && t.status !== "Closed" && (
+        <button onClick={() => handleEscalate(t._id)} className="h-7 px-2 rounded-[3px] text-xs font-medium bg-[#C9372C] hover:bg-[#AE2E24] text-white">
+          Escalate
+        </button>
+      )}
+      <button onClick={() => setSelected(t)} title="View ticket" aria-label="View ticket" className={ICON_BTN}>
+        <IconEye className="w-4 h-4" />
+      </button>
+      {isSuperAdmin && (
+        <button onClick={() => handleDeleteClick(t)} title="Delete ticket" aria-label="Delete ticket" className={`${ICON_BTN} hover:!bg-[#FFEDEB] hover:!text-[#C9372C]`}>
+          <IconTrash className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
 
-      {/* ================= TICKET DETAIL PANEL =================
-          Mobile (< md): full-screen sheet that overlays everything.
-          Desktop (>= md): fixed-width side panel next to the content. */}
+  const hasActiveFilters = statusFilter || activeDateFilterCount > 0 || (isSuperAdmin && companyFilter !== "All");
+
+  const chip = "inline-flex items-center gap-1 h-6 pl-2 pr-1 rounded-[3px] bg-[#091E420F] text-xs font-medium text-[#172B4D]";
+  const chipX = "w-4 h-4 inline-flex items-center justify-center rounded-[3px] text-[#44546F] hover:bg-[#091E4224]";
+
+  const dateSection = (title, section, from, setFrom, to, setTo) => (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-xs font-semibold text-[#44546F]">{title}</p>
+        {(from || to) && (
+          <button onClick={() => clearDateSection(section)} className="text-xs text-[#0C66E4] hover:underline">Clear</button>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <input type="date" aria-label={`${title} from`} value={from} onChange={(e) => setFrom(e.target.value)} className={`${FIELD} h-8 text-xs`} />
+        <input type="date" aria-label={`${title} to`} value={to} onChange={(e) => setTo(e.target.value)} className={`${FIELD} h-8 text-xs`} />
+      </div>
+      <div className="flex gap-1.5">
+        {[["today", "Today"], ["week", "7 days"], ["month", "30 days"]].map(([key, label]) => (
+          <button key={key} onClick={() => applyDatePreset(section, key)} className="h-6 px-2 rounded-[3px] text-xs font-medium bg-[#091E420F] hover:bg-[#091E4224] text-[#172B4D]">
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const detailRow = (label, value) => (
+    <div className="grid grid-cols-[110px_1fr] gap-2 items-center min-h-[32px] text-sm">
+      <dt className="text-[#626F86] text-xs font-semibold">{label}</dt>
+      <dd className="text-[#172B4D] min-w-0">{value}</dd>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#F7F8F9] flex" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Helvetica Neue', sans-serif" }}>
+
+      {/* ================= TICKET DETAIL PANEL ================= */}
       {selected && (
         <>
-          {/* backdrop, mobile only */}
-          <div
-            className="md:hidden fixed inset-0 bg-slate-900/40 z-40"
-            onClick={() => setSelected(null)}
-          />
-          <div className="fixed inset-0 z-50 md:static md:z-auto w-full md:w-[400px] bg-white md:border-l md:border-slate-200 flex flex-col shrink-0">
-            <div className="flex justify-between items-center px-4 sm:px-5 py-4 border-b border-slate-100 shrink-0">
+          <div className="md:hidden fixed inset-0 bg-[#091E42]/50 z-40" onClick={() => setSelected(null)} />
+          <aside className="fixed inset-0 z-50 md:static md:z-auto w-full md:w-[440px] bg-white md:border-l border-[#DCDFE4] flex flex-col shrink-0 order-2">
+            <div className="flex justify-between items-start gap-3 px-5 pt-4 pb-3 border-b border-[#EBECF0] shrink-0">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-slate-400 tracking-wide uppercase">Ticket Preview</p>
-                <h2 className="font-bold text-slate-900 leading-snug mt-0.5 truncate">{selected.title}</h2>
-                <p className="text-xs font-mono text-slate-400 mt-0.5">{selected.ticketNumber}</p>
+                <p className="text-xs font-semibold text-[#0C66E4]">{selected.ticketNumber}</p>
+                <h2 className="text-lg font-medium text-[#172B4D] leading-snug mt-0.5 break-words">{selected.title}</h2>
               </div>
-
-              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                {/* delete action inside the detail panel too, super_admin only */}
+              <div className="flex items-center gap-0.5 shrink-0">
                 {isSuperAdmin && (
-                  <button
-                    onClick={() => handleDeleteClick(selected)}
-                    title="Delete ticket"
-                    className="w-9 h-9 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition"
-                  >
+                  <button onClick={() => handleDeleteClick(selected)} title="Delete ticket" aria-label="Delete ticket" className={`${ICON_BTN} hover:!bg-[#FFEDEB] hover:!text-[#C9372C]`}>
                     <IconTrash className="w-4 h-4" />
                   </button>
                 )}
-                <button
-                  onClick={() => setSelected(null)}
-                  className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
-                >
+                <button onClick={() => setSelected(null)} aria-label="Close" className={ICON_BTN}>
                   <IconX className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="p-4 sm:p-5 flex flex-col gap-5 overflow-y-auto flex-1">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm shrink-0">
-                  {initials(getReporterName(selected))}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-800 truncate flex items-center gap-1.5">
-                    <IconUser className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    {getReporterName(selected)}
-                  </p>
-                  <p className="text-xs text-slate-400 truncate">{getReporterSubtext(selected)}</p>
-                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                    <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${STATUS_THEME[selected.status]?.bg} ${STATUS_THEME[selected.status]?.text}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_THEME[selected.status]?.accent}`} />
-                      {selected.status}
-                    </span>
-                    {/* editable priority right next to the status pill */}
-                    <PrioritySelect t={selected} />
-                  </div>
+            <div className="p-5 flex flex-col gap-6 overflow-y-auto flex-1">
+              {/* Description */}
+              <div>
+                <p className={SECTION_TITLE}>Description</p>
+                <div className="text-sm text-[#172B4D] leading-relaxed whitespace-pre-wrap">
+                  {selected.description || <span className="text-[#626F86]">No description provided.</span>}
                 </div>
               </div>
 
-              {/* NEW: user reminder banner — shown whenever the user has
-                  nudged support on this ticket at least once. Highlighted
-                  while the ticket is still In Progress. */}
+              {/* Reminder banner */}
               {(selected.reminderCount || 0) > 0 && (
-                <div
-                  className={`rounded-lg border p-3 flex items-start gap-2.5 ${hasActiveReminder(selected)
-                      ? "bg-orange-50 border-orange-200"
-                      : "bg-slate-50 border-slate-200"
-                    }`}
-                >
-                  <IconBell
-                    className={`w-4 h-4 shrink-0 mt-0.5 ${hasActiveReminder(selected) ? "text-orange-600" : "text-slate-400"
-                      }`}
-                  />
+                <div className={`rounded-[3px] border p-3 flex items-start gap-2.5 ${hasActiveReminder(selected) ? "bg-[#FFF7D6] border-[#F8E6A0]" : "bg-[#F7F8F9] border-[#DCDFE4]"}`}>
+                  <IconBell className={`w-4 h-4 shrink-0 mt-0.5 ${hasActiveReminder(selected) ? "text-[#B65C02]" : "text-[#626F86]"}`} />
                   <div className="min-w-0">
-                    <p
-                      className={`text-xs font-semibold ${hasActiveReminder(selected) ? "text-orange-700" : "text-slate-600"
-                        }`}
-                    >
+                    <p className="text-sm font-semibold text-[#172B4D]">
                       User sent {selected.reminderCount} reminder{selected.reminderCount > 1 ? "s" : ""}
                     </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Last reminder: {formatDateTime(selected.lastReminderAt)}
-                    </p>
+                    <p className="text-xs text-[#44546F] mt-0.5">Last reminder: {formatDateTime(selected.lastReminderAt)}</p>
                   </div>
                 </div>
               )}
 
+              {/* Details */}
               <div>
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                  <IconClock className="w-3.5 h-3.5" /> SLA Tracking
-                </p>
+                <p className={SECTION_TITLE}>Details</p>
+                <dl className="border border-[#DCDFE4] rounded-[3px] px-3 py-1 divide-y divide-[#EBECF0]">
+                  {detailRow("Status", renderStatusSelect(selected))}
+                  {detailRow("Priority", renderPriority(selected))}
+                  {detailRow("Reporter", (
+                    <div className="flex items-center gap-2 py-1">
+                      <Avatar name={getReporterName(selected)} size="w-6 h-6 text-[11px]" />
+                      <div className="min-w-0">
+                        <p className="text-sm truncate">{getReporterName(selected)}</p>
+                        <p className="text-xs text-[#626F86] truncate">{getReporterSubtext(selected)}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {detailRow("Company", selected.companyId?.name || "—")}
+                  {detailRow("Created", formatDateTime(selected.createdAt))}
+                  {detailRow("Resolved", formatDateTime(selected.resolvedAt))}
+                  {detailRow("Closed", formatDateTime(selected.closedAt))}
+                </dl>
+              </div>
+
+              {/* SLA */}
+              <div>
+                <p className={SECTION_TITLE}><IconClock className="w-3.5 h-3.5" /> SLA tracking</p>
                 <SlaDetailPanel ticket={selected} now={now} onOpenReason={openBreachModal} />
               </div>
 
+              {/* Resolution note */}
               <div>
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Description</p>
-                <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg text-sm text-slate-700 leading-relaxed">
-                  {selected.description || "No description provided."}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Opened</p>
-                  <p className="text-xs font-medium text-slate-700">{formatDateTime(selected.createdAt)}</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Resolved</p>
-                  <p className="text-xs font-medium text-slate-700">{formatDateTime(selected.resolvedAt)}</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Closed</p>
-                  <p className="text-xs font-medium text-slate-700">{formatDateTime(selected.closedAt)}</p>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                  <IconNote className="w-3.5 h-3.5" /> Resolution Note
-                </p>
+                <p className={SECTION_TITLE}><IconNote className="w-3.5 h-3.5" /> Resolution note</p>
                 {selected.resolutionNote ? (
-                  <div className="bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm p-3 rounded-lg leading-relaxed">
+                  <div className="bg-[#DCFFF1] border border-[#BAF3DB] text-[#216E4E] text-sm p-3 rounded-[3px] leading-relaxed">
                     {selected.resolutionNote}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400">Not resolved yet</p>
+                  <p className="text-sm text-[#626F86]">Not resolved yet</p>
                 )}
               </div>
 
-              {/* rejection reason — only rendered once the ticket has
-                  actually been rejected by a super_admin. */}
+              {/* Rejection */}
               {selected.status === "Rejected" && selected.rejectionReason && (
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                    <IconX className="w-3.5 h-3.5" /> Rejection Reason
-                  </p>
-                  <div className="bg-rose-50 border border-rose-100 text-rose-800 text-sm p-3 rounded-lg leading-relaxed">
+                  <p className={SECTION_TITLE}><IconX className="w-3.5 h-3.5" /> Rejection reason</p>
+                  <div className="bg-[#FFEDEB] border border-[#FFD5D2] text-[#AE2E24] text-sm p-3 rounded-[3px] leading-relaxed">
                     {selected.rejectionReason}
                   </div>
                   {selected.rejectedAt && (
-                    <p className="text-[11px] text-slate-400 mt-1.5">
-                      Rejected on {formatDateTime(selected.rejectedAt)}
-                    </p>
+                    <p className="text-xs text-[#626F86] mt-1.5">Rejected on {formatDateTime(selected.rejectedAt)}</p>
                   )}
                 </div>
               )}
 
-              {/* Vendor / repair information — only rendered once a
-                  resolution type has actually been recorded on the ticket. */}
+              {/* Vendor */}
               {selected.resolutionType && (
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                    <IconWrench className="w-3.5 h-3.5" /> Resolution Type
-                  </p>
-                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${selected.resolutionType === "External Vendor"
-                      ? "bg-purple-50 text-purple-700 border-purple-200"
-                      : "bg-slate-100 text-slate-600 border-slate-200"
-                    }`}>
+                  <p className={SECTION_TITLE}><IconWrench className="w-3.5 h-3.5" /> Resolution type</p>
+                  <span
+                    className="inline-flex items-center h-5 px-1.5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide"
+                    style={selected.resolutionType === "External Vendor"
+                      ? { backgroundColor: "#F8EEFE", color: "#5E4DB2" }
+                      : { backgroundColor: "#DFE1E6", color: "#42526E" }}
+                  >
                     {selected.resolutionType}
                   </span>
 
                   {selected.resolutionType === "External Vendor" && selected.vendorDetails && (
-                    <div className="mt-2 bg-purple-50/60 border border-purple-100 rounded-lg p-3 flex flex-col gap-1.5 text-sm">
-                      <p className="text-slate-700">
-                        <span className="font-medium text-slate-500">Vendor:</span>{" "}
-                        {selected.vendorDetails.vendorName || "—"}
-                      </p>
-                      <p className="text-slate-700">
-                        <span className="font-medium text-slate-500">Repair date:</span>{" "}
-                        {formatDateOnly(selected.vendorDetails.repairDate)}
-                      </p>
-                      <p className="text-slate-700">
-                        <span className="font-medium text-slate-500">Cost:</span>{" "}
-                        {selected.vendorDetails.cost !== null && selected.vendorDetails.cost !== undefined
-                          ? selected.vendorDetails.cost
-                          : "—"}
-                      </p>
-                      <p className="text-slate-700">
-                        <span className="font-medium text-slate-500">Details:</span>{" "}
-                        {selected.vendorDetails.complaintDescription || "—"}
-                      </p>
-                      {selected.vendorDetails.receiptUrl ? (
-                        <a
-                          href={selected.vendorDetails.receiptUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 text-purple-700 hover:text-purple-800 text-xs font-semibold mt-1"
-                        >
-                          <IconClip className="w-3.5 h-3.5" /> View Receipt
+                    <dl className="mt-2 border border-[#DCDFE4] rounded-[3px] px-3 py-1 divide-y divide-[#EBECF0]">
+                      {detailRow("Vendor", selected.vendorDetails.vendorName || "—")}
+                      {detailRow("Repair date", formatDateOnly(selected.vendorDetails.repairDate))}
+                      {detailRow("Cost", selected.vendorDetails.cost !== null && selected.vendorDetails.cost !== undefined ? selected.vendorDetails.cost : "—")}
+                      {detailRow("Details", <span className="py-1.5 block">{selected.vendorDetails.complaintDescription || "—"}</span>)}
+                      {detailRow("Receipt", selected.vendorDetails.receiptUrl ? (
+                        <a href={selected.vendorDetails.receiptUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[#0C66E4] hover:underline text-sm font-medium">
+                          <IconClip className="w-3.5 h-3.5" /> View receipt
                         </a>
-                      ) : (
-                        <p className="text-xs text-slate-400">No receipt uploaded</p>
-                      )}
-                    </div>
+                      ) : <span className="text-[#626F86]">None uploaded</span>)}
+                    </dl>
                   )}
                 </div>
               )}
 
+              {/* Attachments */}
               <div>
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Attachments</p>
+                <p className={SECTION_TITLE}><IconClip className="w-3.5 h-3.5" /> Attachments</p>
                 {selected.files?.length > 0 ? (
                   <div className="space-y-1.5">
                     {selected.files.map((file, i) => (
-                      <a
-                        key={i}
-                        href={file.url || file}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium"
-                      >
-                        <IconClip className="w-3.5 h-3.5" /> Download File {i + 1}
+                      <a key={i} href={file.url || file} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[#0C66E4] hover:underline text-sm font-medium">
+                        <IconClip className="w-3.5 h-3.5" /> Download file {i + 1}
                       </a>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400">No attachments</p>
+                  <p className="text-sm text-[#626F86]">No attachments</p>
                 )}
               </div>
 
+              {/* Review */}
               <div>
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Review</p>
+                <p className={SECTION_TITLE}>Review</p>
                 {selected.rating ? (
-                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                  <div className="border border-[#DCDFE4] rounded-[3px] p-3">
                     {renderStars(selected.rating)}
-                    <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{selected.review}</p>
+                    <p className="text-sm text-[#44546F] mt-1.5 leading-relaxed">{selected.review}</p>
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400">No review submitted</p>
+                  <p className="text-sm text-[#626F86]">No review submitted</p>
                 )}
               </div>
             </div>
-          </div>
+          </aside>
         </>
       )}
 
       {/* ================= MAIN ================= */}
-      <div className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1400px] mx-auto w-full min-w-0">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1500px] mx-auto w-full min-w-0 order-1">
 
-        {/* HEADER */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        {/* TITLE */}
+        <nav className="text-xs text-[#626F86] mb-2">Service desk <span className="mx-1">/</span> Queues</nav>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-4">
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Ticket Management</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Track, resolve, and review support requests</p>
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-            <div className="relative flex-1 sm:w-72">
-              <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                className="w-full border border-slate-200 bg-white pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition placeholder:text-slate-400"
-                placeholder="Search tickets, users, status, SLA..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            {/* COMPANY FILTER — super_admin only */}
-            {isSuperAdmin && (
-              <div className="relative shrink-0 w-full sm:w-52">
-                <IconBuilding className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                <select
-                  value={companyFilter}
-                  onChange={(e) => setCompanyFilter(e.target.value)}
-                  className="w-full truncate border border-slate-200 bg-white pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition cursor-pointer"
-                >
-                  <option value="All">All companies</option>
-                  {companies.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Opened / Closed date-range filter (Jira/ServiceNow style) */}
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => setDateFilterOpen((v) => !v)}
-                className={`relative flex items-center gap-1.5 border rounded-lg px-3 py-2.5 text-sm font-medium transition ${activeDateFilterCount > 0
-                    ? "border-blue-300 bg-blue-50 text-blue-700"
-                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-              >
-                <IconCalendar className="w-4 h-4" />
-                <span className="hidden sm:inline">Filter Ticket</span>
-                {activeDateFilterCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
-                    {activeDateFilterCount}
-                  </span>
-                )}
-              </button>
-
-              {dateFilterOpen && (
-                <>
-                  {/* click-outside catcher */}
-                  <div className="fixed inset-0 z-40" onClick={() => setDateFilterOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-[300px] bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-semibold text-slate-700">Filter by date</p>
-                      {activeDateFilterCount > 0 && (
-                        <button
-                          onClick={clearAllDateFilters}
-                          className="text-[11px] text-blue-600 hover:text-blue-700 font-medium underline"
-                        >
-                          Clear all
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Opened section */}
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Opened</p>
-                        {(openedFrom || openedTo) && (
-                          <button
-                            onClick={() => clearDateSection("opened")}
-                            className="text-[10px] text-slate-400 hover:text-slate-600 underline"
-                          >
-                            Clear
-                          </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 mb-2">
-                        <input
-                          type="date"
-                          value={openedFrom}
-                          onChange={(e) => setOpenedFrom(e.target.value)}
-                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                        />
-                        <input
-                          type="date"
-                          value={openedTo}
-                          onChange={(e) => setOpenedTo(e.target.value)}
-                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                        />
-                      </div>
-                      <div className="flex gap-1.5">
-                        {[["today", "Today"], ["week", "7 Days"], ["month", "30 Days"]].map(([key, label]) => (
-                          <button
-                            key={key}
-                            onClick={() => applyDatePreset("opened", key)}
-                            className="text-[11px] px-2 py-1 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition"
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Closed section */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Closed</p>
-                        {(closedFrom || closedTo) && (
-                          <button
-                            onClick={() => clearDateSection("closed")}
-                            className="text-[10px] text-slate-400 hover:text-slate-600 underline"
-                          >
-                            Clear
-                          </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 mb-2">
-                        <input
-                          type="date"
-                          value={closedFrom}
-                          onChange={(e) => setClosedFrom(e.target.value)}
-                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                        />
-                        <input
-                          type="date"
-                          value={closedTo}
-                          onChange={(e) => setClosedTo(e.target.value)}
-                          className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                        />
-                      </div>
-                      <div className="flex gap-1.5">
-                        {[["today", "Today"], ["week", "7 Days"], ["month", "30 Days"]].map(([key, label]) => (
-                          <button
-                            key={key}
-                            onClick={() => applyDatePreset("closed", key)}
-                            className="text-[11px] px-2 py-1 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition"
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setDateFilterOpen(false)}
-                      className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 rounded-lg transition"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <h1 className="text-2xl font-medium text-[#172B4D]">Tickets</h1>
+            <p className="text-sm text-[#626F86] mt-1">Track, resolve and review support requests</p>
           </div>
         </div>
 
-        {/* STATS — 2 columns on phones so labels/numbers stay readable, not squeezed to 7-across */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-6">
+        {/* SUMMARY / QUICK FILTERS */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-px bg-[#DCDFE4] border border-[#DCDFE4] rounded-[3px] overflow-hidden mb-4">
           {statCards.map((s) => {
-            // a card is "active" if it's the currently applied filter, or
-            // if it's the Total card and no filter is applied at all.
             const isActive = s.filterKey === null ? statusFilter === null : statusFilter === s.filterKey;
             return (
               <button
                 key={s.key}
                 type="button"
+                aria-pressed={isActive}
                 onClick={() => setStatusFilter(isActive && s.filterKey !== null ? null : s.filterKey)}
-                className={`relative bg-white border rounded-xl p-3.5 sm:p-4 overflow-hidden shadow-sm text-left transition ${isActive ? "border-slate-400 ring-2 ring-slate-200" : "border-slate-200 hover:border-slate-300"
-                  }`}
+                className={`text-left px-4 py-3 transition focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#4C9AFF] ${isActive ? "bg-[#E9F2FF] shadow-[inset_0_-2px_0_#0C66E4]" : "bg-white hover:bg-[#F7F8F9]"}`}
               >
-                <span className={`absolute left-0 top-0 bottom-0 w-1 ${statBarClass[s.theme]}`} />
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-slate-400">{s.label}</p>
-                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${statIconClass[s.theme]}`}>
-                    {s.icon}
-                  </span>
-                </div>
-                <p className="text-2xl font-bold text-slate-900 tabular-nums">{s.value}</p>
+                <span className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.dot }} />
+                  <span className={`text-xs font-medium truncate ${isActive ? "text-[#0C66E4]" : "text-[#626F86]"}`}>{s.label}</span>
+                </span>
+                <span className="text-2xl font-semibold text-[#172B4D] tabular-nums">{s.value}</span>
               </button>
             );
           })}
         </div>
 
-        {/* active filter indicator + clear button */}
-        {(statusFilter || activeDateFilterCount > 0 || (isSuperAdmin && companyFilter !== "All")) && (
-          <div className="flex flex-wrap items-center gap-2 mb-4 -mt-2">
-            {isSuperAdmin && companyFilter !== "All" && (
-              <span className="inline-flex items-center gap-1.5 text-xs bg-indigo-50 border border-indigo-200 text-indigo-700 font-medium px-2.5 py-1 rounded-full">
-                {companies.find((c) => c._id === companyFilter)?.name || "Company"}
-                <button onClick={() => setCompanyFilter("All")} className="text-indigo-400 hover:text-indigo-600">
-                  <IconX className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-            {statusFilter && (
-              <span className="inline-flex items-center gap-1.5 text-xs bg-slate-100 border border-slate-200 text-slate-700 font-medium px-2.5 py-1 rounded-full">
-                {statusFilter === "breached"
-                  ? "SLA Breached"
-                  : statusFilter === "reminded"
-                    ? "User Reminders"
-                    : statusFilter}
-                <button onClick={() => setStatusFilter(null)} className="text-slate-400 hover:text-slate-600">
-                  <IconX className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-            {(openedFrom || openedTo) && (
-              <span className="inline-flex items-center gap-1.5 text-xs bg-blue-50 border border-blue-200 text-blue-700 font-medium px-2.5 py-1 rounded-full">
-                Opened: {formatDateRangeLabel(openedFrom, openedTo)}
-                <button onClick={() => clearDateSection("opened")} className="text-blue-400 hover:text-blue-600">
-                  <IconX className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-            {(closedFrom || closedTo) && (
-              <span className="inline-flex items-center gap-1.5 text-xs bg-blue-50 border border-blue-200 text-blue-700 font-medium px-2.5 py-1 rounded-full">
-                Closed: {formatDateRangeLabel(closedFrom, closedTo)}
-                <button onClick={() => clearDateSection("closed")} className="text-blue-400 hover:text-blue-600">
-                  <IconX className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-            <button
-              onClick={() => { setStatusFilter(null); clearAllDateFilters(); setCompanyFilter("All"); }}
-              className="text-xs text-slate-400 hover:text-slate-600 underline"
-            >
-              Clear all
-            </button>
+        {/* TOOLBAR */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div className="relative w-full sm:w-80">
+            <IconSearch className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#626F86] pointer-events-none" />
+            <input
+              className={`${FIELD} h-8 pl-8`}
+              placeholder="Search tickets, users, status, SLA"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-        )}
 
+          {isSuperAdmin && (
+            <div className="relative w-full sm:w-56">
+              <IconBuilding className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#626F86] pointer-events-none" />
+              <select
+                aria-label="Company"
+                value={companyFilter}
+                onChange={(e) => setCompanyFilter(e.target.value)}
+                className={`${FIELD} h-8 pl-8 truncate cursor-pointer`}
+              >
+                <option value="All">All companies</option>
+                {companies.map((c) => (
+                  <option key={c._id} value={c._id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setDateFilterOpen((v) => !v)}
+              aria-expanded={dateFilterOpen}
+              className={`${BTN} ${activeDateFilterCount > 0 ? "bg-[#E9F2FF] text-[#0C66E4] hover:bg-[#CFE1FD]" : "bg-[#091E420F] hover:bg-[#091E4224] text-[#172B4D]"}`}
+            >
+              <IconCalendar className="w-4 h-4" />
+              Date
+              {activeDateFilterCount > 0 && (
+                <span className="min-w-[16px] h-4 px-1 rounded-full bg-[#0C66E4] text-white text-[10px] font-bold flex items-center justify-center">
+                  {activeDateFilterCount}
+                </span>
+              )}
+              <IconChevronDown className="w-3.5 h-3.5" />
+            </button>
+
+            {dateFilterOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setDateFilterOpen(false)} />
+                <div className="absolute left-0 mt-1 w-[300px] bg-white rounded-[3px] shadow-[0_8px_12px_#091E4226,0_0_1px_#091E424F] z-50 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-[#172B4D]">Filter by date</p>
+                    {activeDateFilterCount > 0 && (
+                      <button onClick={clearAllDateFilters} className="text-xs text-[#0C66E4] hover:underline">Clear all</button>
+                    )}
+                  </div>
+                  {dateSection("Opened", "opened", openedFrom, setOpenedFrom, openedTo, setOpenedTo)}
+                  {dateSection("Closed", "closed", closedFrom, setClosedFrom, closedTo, setClosedTo)}
+                  <button onClick={() => setDateFilterOpen(false)} className={`${BTN_PRIMARY} w-full`}>Apply</button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {isSuperAdmin && companyFilter !== "All" && (
+                <span className={chip}>
+                  {companies.find((c) => c._id === companyFilter)?.name || "Company"}
+                  <button onClick={() => setCompanyFilter("All")} aria-label="Remove company filter" className={chipX}><IconX className="w-3 h-3" /></button>
+                </span>
+              )}
+              {statusFilter && (
+                <span className={chip}>
+                  {statusFilter === "breached" ? "SLA breached" : statusFilter === "reminded" ? "User reminders" : statusFilter}
+                  <button onClick={() => setStatusFilter(null)} aria-label="Remove status filter" className={chipX}><IconX className="w-3 h-3" /></button>
+                </span>
+              )}
+              {(openedFrom || openedTo) && (
+                <span className={chip}>
+                  Opened: {formatDateRangeLabel(openedFrom, openedTo)}
+                  <button onClick={() => clearDateSection("opened")} aria-label="Remove opened filter" className={chipX}><IconX className="w-3 h-3" /></button>
+                </span>
+              )}
+              {(closedFrom || closedTo) && (
+                <span className={chip}>
+                  Closed: {formatDateRangeLabel(closedFrom, closedTo)}
+                  <button onClick={() => clearDateSection("closed")} aria-label="Remove closed filter" className={chipX}><IconX className="w-3 h-3" /></button>
+                </span>
+              )}
+              <button
+                onClick={() => { setStatusFilter(null); clearAllDateFilters(); setCompanyFilter("All"); }}
+                className="text-xs text-[#0C66E4] hover:underline px-1"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* LIST */}
         {loading ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-16 text-center text-sm text-slate-400 shadow-sm">
-            Loading tickets…
+          <div className="bg-white border border-[#DCDFE4] rounded-[3px] divide-y divide-[#EBECF0] animate-pulse">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-4">
+                <div className="h-3 w-24 bg-[#EBECF0] rounded" />
+                <div className="h-3 flex-1 bg-[#EBECF0] rounded" />
+                <div className="h-3 w-28 bg-[#EBECF0] rounded" />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-16 text-center shadow-sm">
-            <p className="text-sm font-medium text-slate-600">No tickets match your filters</p>
-            <p className="text-xs text-slate-400 mt-1">Try a different keyword, or clear the active filter above</p>
+          <div className="bg-white border border-[#DCDFE4] rounded-[3px] py-16 text-center">
+            <p className="text-base font-semibold text-[#172B4D]">No tickets match your filters</p>
+            <p className="text-sm text-[#626F86] mt-1">Try a different keyword or clear the active filters.</p>
           </div>
         ) : (
           <>
-            {/* ================= MOBILE CARD LIST (< md) ================= */}
-            <div className="md:hidden flex flex-col gap-3">
+            {/* MOBILE CARDS (< md) */}
+            <div className="md:hidden flex flex-col gap-2">
               {pageTickets.map((t) => {
-                const theme = STATUS_THEME[t.status] || STATUS_THEME.Open;
                 const reporterName = getReporterName(t);
-                const reporterSubtext = getReporterSubtext(t);
                 const reminded = hasActiveReminder(t);
                 return (
-                  <div
-                    key={t._id}
-                    className={`bg-white border rounded-xl p-4 shadow-sm ${reminded ? "border-orange-300 ring-1 ring-orange-200" : "border-slate-200"
-                      }`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-3">
+                  <div key={t._id} className={`bg-white border border-[#DCDFE4] rounded-[3px] p-3 ${reminded ? "shadow-[inset_3px_0_0_#E56910]" : ""}`}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="min-w-0">
-                        <p className="font-semibold text-slate-800 text-sm leading-snug break-words">{t.title}</p>
-                        <p className="text-[11px] font-mono text-slate-400 mt-0.5">{t.ticketNumber}</p>
+                        <button onClick={() => setSelected(t)} className="text-left text-sm font-medium text-[#0C66E4] hover:underline break-words">{t.title}</button>
+                        <p className="text-xs text-[#626F86] mt-0.5">{t.ticketNumber}</p>
                       </div>
-                      {/* editable priority select replaces the static badge */}
-                      <PrioritySelect t={t} size="card" />
+                      {renderPriority(t)}
                     </div>
 
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xs shrink-0">
-                        {initials(reporterName)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-slate-800 text-sm truncate">{reporterName}</p>
-                        <p className="text-xs text-slate-400 truncate">{reporterSubtext}</p>
-                      </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Avatar name={reporterName} size="w-6 h-6 text-[11px]" />
+                      <p className="text-sm text-[#172B4D] truncate">{reporterName}</p>
+                      {t.companyId?.name && <p className="text-xs text-[#626F86] truncate">· {t.companyId.name}</p>}
                     </div>
 
-                    {t.companyId?.name && (
-                      <p className="text-xs text-slate-500 mb-3">{t.companyId.name}</p>
-                    )}
-
-                    <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                      <StatusSelect t={t} theme={theme} isSuperAdmin={isSuperAdmin} />
+                    <div className="flex items-center gap-3 flex-wrap mb-2">
+                      {renderStatusSelect(t)}
                       <SlaBadge ticket={t} now={now} onOpenReason={openBreachModal} />
+                      {renderReminderBadge(t)}
                     </div>
-
-                    {/* NEW: user reminder badge */}
-                    {reminded && (
-                      <div className="mb-3">
-                        <ReminderBadge t={t} />
-                      </div>
-                    )}
 
                     {t.resolutionNote && (
-                      <p className="text-xs text-slate-400 mb-3 flex items-start gap-1">
+                      <p className="text-xs text-[#626F86] mb-2 flex items-start gap-1">
                         <IconNote className="w-3 h-3 shrink-0 mt-0.5" />
                         <span className="line-clamp-2">{t.resolutionNote}</span>
                       </p>
                     )}
-
-                    {/* rejection reason preview on the mobile card */}
                     {t.status === "Rejected" && t.rejectionReason && (
-                      <p className="text-xs text-rose-600 mb-3 flex items-start gap-1">
+                      <p className="text-xs text-[#AE2E24] mb-2 flex items-start gap-1">
                         <IconX className="w-3 h-3 shrink-0 mt-0.5" />
                         <span className="line-clamp-2">{t.rejectionReason}</span>
                       </p>
                     )}
-
-                    {/* small vendor badge on the mobile card */}
                     {t.resolutionType === "External Vendor" && (
-                      <p className="text-[11px] text-purple-700 bg-purple-50 border border-purple-100 rounded-md px-2 py-1 mb-3 inline-flex items-center gap-1">
-                        <IconWrench className="w-3 h-3" /> {t.vendorDetails?.vendorName || "External Vendor"}
+                      <p className="text-xs text-[#5E4DB2] mb-2 inline-flex items-center gap-1">
+                        <IconWrench className="w-3 h-3" /> {t.vendorDetails?.vendorName || "External vendor"}
                       </p>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 mb-3">
-                      <p>Opened: {formatDateTime(t.createdAt)}</p>
-                      <p>Closed: {formatDateTime(t.closedAt || t.resolvedAt)}</p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        {renderAttachments(t.files || t.attachments)}
-                        {t.rating ? renderStars(t.rating) : null}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#EBECF0]">
+                      <div className="text-xs text-[#626F86] min-w-0">
+                        <p>Created {formatDateOnly(t.createdAt)}</p>
+                        {(t.closedAt || t.resolvedAt) && <p>Closed {formatDateOnly(t.closedAt || t.resolvedAt)}</p>}
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setSelected(t)}
-                          className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition"
-                        >
-                          <IconEye className="w-3.5 h-3.5" />
-                          View
-                        </button>
-
-                        {user?.role === "it_support" &&
-                          !t.sla?.escalated &&
-                          t.status !== "Closed" && (
-                            <button
-                              onClick={() => handleEscalate(t._id)}
-                              className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap"
-                            >
-                              Escalate
-                            </button>
-                          )}
-
-                        {/* delete, super_admin only */}
-                        {isSuperAdmin && (
-                          <button
-                            onClick={() => handleDeleteClick(t)}
-                            title="Delete ticket"
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition shrink-0"
-                          >
-                            <IconTrash className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
+                      {renderActions(t)}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* ================= DESKTOP TABLE (>= md) ================= */}
-            <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            {/* DESKTOP TABLE (>= md) */}
+            <div className="hidden md:block bg-white border border-[#DCDFE4] rounded-[3px] overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[1100px]">
                   <thead>
-                    <tr className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-200">
-                      <th className="p-3.5 text-left font-semibold">Ticket #</th>
-                      <th className="p-3.5 text-left font-semibold">Details</th>
-                      <th className="p-3.5 text-left font-semibold">Reported By</th>
-                      <th className="p-3.5 text-left font-semibold">Company</th>
-                      <th className="p-3.5 text-center font-semibold">Priority</th>
-                      <th className="p-3.5 text-center font-semibold">Status</th>
-                      <th className="p-3.5 text-center font-semibold">SLA</th>
-                      <th className="p-3.5 text-center font-semibold">Opened</th>
-                      <th className="p-3.5 text-center font-semibold">Closed</th>
-                      <th className="p-3.5 text-center font-semibold">Files</th>
-                      <th className="p-3.5 text-center font-semibold">Review</th>
-                      <th className="p-3.5 text-center font-semibold sticky right-0 bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
-                        Actions
-                      </th>
+                    <tr className="border-b-2 border-[#DCDFE4] text-xs font-semibold text-[#626F86]">
+                      <th className="py-2.5 pl-4 pr-3 text-left whitespace-nowrap">Key</th>
+                      <th className="py-2.5 px-3 text-left">Summary</th>
+                      <th className="py-2.5 px-3 text-left whitespace-nowrap">Reporter</th>
+                      <th className="py-2.5 px-3 text-left whitespace-nowrap">Company</th>
+                      <th className="py-2.5 px-3 text-left whitespace-nowrap">Priority</th>
+                      <th className="py-2.5 px-3 text-left whitespace-nowrap">Status</th>
+                      <th className="py-2.5 px-3 text-left whitespace-nowrap">SLA</th>
+                      <th className="py-2.5 px-3 text-left whitespace-nowrap">Created</th>
+                      <th className="py-2.5 px-3 text-left whitespace-nowrap">Closed</th>
+                      <th className="py-2.5 pl-3 pr-4 text-right whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-[#EBECF0]">
                     {pageTickets.map((t) => {
-                      const theme = STATUS_THEME[t.status] || STATUS_THEME.Open;
                       const reporterName = getReporterName(t);
-                      const reporterSubtext = getReporterSubtext(t);
                       const reminded = hasActiveReminder(t);
+                      const isSelected = selected?._id === t._id;
+                      const closedDate = t.closedAt || t.resolvedAt;
+                      const fileCount = (t.files || t.attachments || []).length;
                       return (
                         <tr
                           key={t._id}
-                          className={`transition-colors ${reminded
-                              ? "bg-orange-50/50 hover:bg-orange-50"
-                              : "hover:bg-slate-50/70"
-                            }`}
+                          className={`align-middle transition-colors ${isSelected ? "bg-[#E9F2FF]" : "hover:bg-[#F7F8F9]"} ${reminded ? "shadow-[inset_3px_0_0_#E56910]" : ""}`}
                         >
-                          <td className="p-3.5">
-                            <p className="font-mono text-xs text-slate-500 whitespace-nowrap">{t.ticketNumber || "—"}</p>
+                          <td className="py-3 pl-4 pr-3 whitespace-nowrap">
+                            <button onClick={() => setSelected(t)} className="text-xs font-medium text-[#44546F] hover:text-[#0C66E4] hover:underline">
+                              {t.ticketNumber || "—"}
+                            </button>
                           </td>
 
-                          <td className="p-3.5">
-                            <p className="font-semibold text-slate-800 truncate max-w-[220px]">{t.title}</p>
-                          </td>
-
-                          <td className="p-3.5">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xs shrink-0">
-                                {initials(reporterName)}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-medium text-slate-800 truncate max-w-[180px]">{reporterName}</p>
-                                <p className="text-xs text-slate-400 truncate max-w-[180px]">{reporterSubtext}</p>
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="p-3.5 text-slate-600">{t.companyId?.name || "—"}</td>
-
-                          {/* editable priority column */}
-                          <td className="p-3.5 text-center">
-                            <PrioritySelect t={t} />
-                          </td>
-
-                          <td className="p-3.5 text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <StatusSelect t={t} theme={theme} isSuperAdmin={isSuperAdmin} />
-                              {/* NEW: user reminder badge under the status pill */}
-                              <ReminderBadge t={t} />
-                              {t.resolutionNote && (
-                                <p
-                                  className="text-[10px] text-slate-400 max-w-[140px] truncate flex items-center gap-1"
-                                  title={t.resolutionNote}
-                                >
-                                  <IconNote className="w-2.5 h-2.5 shrink-0" /> {t.resolutionNote}
-                                </p>
-                              )}
-                              {/* rejection reason preview under the status pill */}
-                              {t.status === "Rejected" && t.rejectionReason && (
-                                <p
-                                  className="text-[10px] text-rose-500 max-w-[140px] truncate flex items-center gap-1"
-                                  title={t.rejectionReason}
-                                >
-                                  <IconX className="w-2.5 h-2.5 shrink-0" /> {t.rejectionReason}
-                                </p>
-                              )}
-                              {/* quick vendor indicator under the status pill */}
-                              {t.resolutionType === "External Vendor" && (
-                                <span
-                                  className="text-[10px] text-purple-700 bg-purple-50 border border-purple-100 rounded-full px-2 py-0.5 flex items-center gap-1"
-                                  title={t.vendorDetails?.vendorName}
-                                >
-                                  <IconWrench className="w-2.5 h-2.5" /> Vendor
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          <td className="p-3.5 text-center">
-                            <SlaBadge ticket={t} now={now} onOpenReason={openBreachModal} />
-                          </td>
-
-                          <td className="p-3.5 text-center text-xs text-slate-500">{formatDateTime(t.createdAt)}</td>
-                          <td className="p-3.5 text-center text-xs text-slate-500">{formatDateTime(t.closedAt || t.resolvedAt)}</td>
-                          <td className="p-3.5 text-center">{renderAttachments(t.files || t.attachments)}</td>
-                          <td className="p-3.5 text-center">
-                            {t.rating ? renderStars(t.rating) : <span className="text-slate-300 text-xs">—</span>}
-                          </td>
-
-                          <td
-                            className={`p-3.5 text-center sticky right-0 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] ${reminded ? "bg-orange-50" : "bg-white"
-                              }`}
-                          >
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => setSelected(t)}
-                                className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition"
-                              >
-                                <IconEye className="w-3.5 h-3.5" />
-                                View
+                          <td className="py-3 px-3">
+                            <div className="max-w-[300px]">
+                              <button onClick={() => setSelected(t)} className="block max-w-full truncate text-left font-medium text-[#172B4D] hover:text-[#0C66E4] hover:underline" title={t.title}>
+                                {t.title}
                               </button>
-
-                              {user?.role === "it_support" &&
-                                !t.sla?.escalated &&
-                                t.status !== "Closed" && (
-                                  <button
-                                    onClick={() => handleEscalate(t._id)}
-                                    className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap"
-                                  >
-                                    Escalate
-                                  </button>
+                              <div className="flex items-center gap-2 mt-0.5 text-xs text-[#626F86]">
+                                {renderReminderBadge(t)}
+                                {fileCount > 0 && (
+                                  <span className="inline-flex items-center gap-0.5"><IconClip className="w-3 h-3" />{fileCount}</span>
                                 )}
-
-                              {/* delete, super_admin only */}
-                              {isSuperAdmin && (
-                                <button
-                                  onClick={() => handleDeleteClick(t)}
-                                  title="Delete ticket"
-                                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition"
-                                >
-                                  <IconTrash className="w-3.5 h-3.5" />
-                                </button>
-                              )}
+                                {t.rating ? <span className="text-[#F5CD47]">★ {t.rating}</span> : null}
+                                {t.resolutionType === "External Vendor" && (
+                                  <span className="inline-flex items-center gap-0.5 text-[#5E4DB2]" title={t.vendorDetails?.vendorName}>
+                                    <IconWrench className="w-3 h-3" /> Vendor
+                                  </span>
+                                )}
+                                {t.resolutionNote && (
+                                  <span className="truncate max-w-[160px]" title={t.resolutionNote}>{t.resolutionNote}</span>
+                                )}
+                                {t.status === "Rejected" && t.rejectionReason && (
+                                  <span className="truncate max-w-[160px] text-[#AE2E24]" title={t.rejectionReason}>{t.rejectionReason}</span>
+                                )}
+                              </div>
                             </div>
                           </td>
+
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Avatar name={reporterName} size="w-6 h-6 text-[11px]" />
+                              <span className="truncate max-w-[150px]" title={getReporterSubtext(t)}>{reporterName}</span>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3 text-[#44546F]">
+                            <span className="block truncate max-w-[150px]" title={t.companyId?.name}>{t.companyId?.name || "—"}</span>
+                          </td>
+
+                          <td className="py-3 px-3">{renderPriority(t)}</td>
+                          <td className="py-3 px-3">{renderStatusSelect(t)}</td>
+                          <td className="py-3 px-3"><SlaBadge ticket={t} now={now} onOpenReason={openBreachModal} /></td>
+
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <p className="text-[#172B4D]">{formatDateOnly(t.createdAt)}</p>
+                            <p className="text-xs text-[#626F86]">{formatTimeOnly(t.createdAt)}</p>
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            {closedDate ? (
+                              <>
+                                <p className="text-[#172B4D]">{formatDateOnly(closedDate)}</p>
+                                <p className="text-xs text-[#626F86]">{formatTimeOnly(closedDate)}</p>
+                              </>
+                            ) : (
+                              <span className="text-[#626F86]">—</span>
+                            )}
+                          </td>
+
+                          <td className="py-3 pl-3 pr-4">{renderActions(t)}</td>
                         </tr>
                       );
                     })}
@@ -1938,342 +1479,196 @@ export default function AdminTickets() {
         )}
 
         {/* PAGINATION */}
-        <div className="flex justify-center items-center gap-3 mt-5">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-            className="w-8 h-8 flex items-center justify-center border border-slate-200 bg-white rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition"
-          >
-            <IconChevronLeft className="w-4 h-4" />
-          </button>
-
-          <span className="text-xs font-medium text-slate-500 tabular-nums">Page {page} of {totalFilteredPages}</span>
-
-          <button
-            disabled={page === totalFilteredPages}
-            onClick={() => setPage(page + 1)}
-            className="w-8 h-8 flex items-center justify-center border border-slate-200 bg-white rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition"
-          >
-            <IconChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+        {!loading && filtered.length > 0 && (
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-xs text-[#626F86] tabular-nums">
+              Showing {rangeStart}–{rangeEnd} of {filtered.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button disabled={page === 1} onClick={() => setPage(page - 1)} aria-label="Previous page" className={`${BTN_SUBTLE} !px-2`}>
+                <IconChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-xs font-medium text-[#44546F] tabular-nums">Page {page} of {totalFilteredPages}</span>
+              <button disabled={page === totalFilteredPages} onClick={() => setPage(page + 1)} aria-label="Next page" className={`${BTN_SUBTLE} !px-2`}>
+                <IconChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ================= RESOLVE / CLOSE / REJECT MODAL =================
-          Reused for all three terminal-ish transitions. "Rejected" only
-          shows a single required reason field and skips the resolution
-          note / resolution type / vendor / breach-reason sections. */}
+      {/* ================= RESOLVE / CLOSE / REJECT MODAL ================= */}
       {statusModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center gap-3 mb-1">
-              <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${statusModal.targetStatus === "Resolved"
-                  ? "bg-emerald-50 text-emerald-600"
-                  : statusModal.targetStatus === "Rejected"
-                    ? "bg-rose-50 text-rose-600"
-                    : "bg-slate-100 text-slate-600"
-                }`}>
-                {statusModal.targetStatus === "Resolved" ? (
-                  <IconCheck className="w-4 h-4" />
-                ) : statusModal.targetStatus === "Rejected" ? (
-                  <IconX className="w-4 h-4" />
-                ) : (
-                  <IconLock className="w-4 h-4" />
-                )}
-              </span>
-              <h3 className="font-bold text-base text-slate-900">
-                Mark as {statusModal.targetStatus}
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400 mb-4 ml-12 -mt-1 truncate">
-              "{statusModal.ticket.title}"
-            </p>
-
-            {!isRejectModal && (
-              <div className="ml-12 -mt-1 mb-4">
-                <SlaBadge ticket={statusModal.ticket} now={now} />
-              </div>
-            )}
-
-            {isRejectModal ? (
-              // ============================
-              // REJECT — single required reason field
-              // ============================
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
-                  Reason for rejection <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  className="w-full border border-rose-200 bg-rose-50/40 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 transition resize-none placeholder:text-slate-400"
-                  rows={4}
-                  placeholder="e.g. Duplicate of TCK-0123, or not a valid support request."
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  autoFocus
-                />
-                <p className="text-[11px] text-slate-400 mt-1.5">
-                  This ticket will be marked Rejected and the reason recorded on its history.
-                </p>
-              </div>
-            ) : (
-              <>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
-                  Resolution note <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  className="w-full border border-slate-200 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition resize-none placeholder:text-slate-400"
-                  rows={4}
-                  placeholder="e.g. Replaced faulty router, tested connection with user, confirmed working."
-                  value={resolutionNote}
-                  onChange={(e) => setResolutionNote(e.target.value)}
-                  autoFocus
-                />
-                <p className="text-[11px] text-slate-400 mt-1.5">
-                  This note is saved with the ticket so anyone can see how it was handled.
-                </p>
-
-                {/* Resolution Type toggle */}
-                <div className="mt-4">
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
-                    Resolution Type <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setResolutionType("Internal")}
-                      className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${resolutionType === "Internal"
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                        }`}
-                    >
-                      Internal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setResolutionType("External Vendor")}
-                      className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${resolutionType === "External Vendor"
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                        }`}
-                    >
-                      External Vendor
-                    </button>
-                  </div>
-                </div>
-
-                {/* External Vendor fields — only shown when relevant */}
-                {resolutionType === "External Vendor" && (
-                  <div className="mt-4 border border-purple-200 bg-purple-50/40 rounded-lg p-3 flex flex-col gap-3">
-                    <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide flex items-center gap-1.5">
-                      <IconWrench className="w-3.5 h-3.5" /> Vendor / Repair Details
-                    </p>
-
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">
-                        Vendor Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        value={vendorName}
-                        onChange={(e) => setVendorName(e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
-                        placeholder="e.g. ABC Computer Repairs"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">
-                        Complaint / Repair Description <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={vendorComplaint}
-                        onChange={(e) => setVendorComplaint(e.target.value)}
-                        rows={3}
-                        className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 resize-none bg-white"
-                        placeholder="e.g. Motherboard replaced due to short circuit"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-medium text-slate-500 mb-1 block">
-                          Repair Date <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="date"
-                          value={vendorRepairDate}
-                          onChange={(e) => setVendorRepairDate(e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-slate-500 mb-1 block">
-                          Cost <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={vendorCost}
-                          onChange={(e) => setVendorCost(e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-white"
-                          placeholder="0.00"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">
-                        Receipt / Invoice (optional)
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => setVendorReceipt(e.target.files?.[0] || null)}
-                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
-                      />
-                      {vendorReceipt && (
-                        <p className="text-[11px] text-slate-500 mt-1">Selected: {vendorReceipt.name}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* SLA breach reason field, only shown when this ticket is currently breached */}
-                {isModalTicketBreached && (
-                  <div className="mt-4">
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
-                      Reason for SLA breach <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      className="w-full border border-red-200 bg-red-50/40 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 transition resize-none placeholder:text-slate-400"
-                      rows={3}
-                      placeholder="e.g. Part was on backorder, awaiting vendor delivery."
-                      value={breachReason}
-                      onChange={(e) => setBreachReason(e.target.value)}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">
-                      This ticket missed its SLA — record why so it can be reviewed later.
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="flex justify-end gap-2 mt-5">
-              <button
-                onClick={cancelStatusModal}
-                disabled={submitting}
-                className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmStatusModal}
-                disabled={submitting}
-                className={`px-4 py-2 text-sm rounded-lg text-white font-semibold transition disabled:opacity-60 ${isRejectModal ? "bg-rose-600 hover:bg-rose-700" : "bg-blue-600 hover:bg-blue-700"
-                  }`}
-              >
+        <Modal
+          icon={statusModal.targetStatus === "Resolved" ? <IconCheck className="w-4 h-4" /> : statusModal.targetStatus === "Rejected" ? <IconX className="w-4 h-4" /> : <IconLock className="w-4 h-4" />}
+          iconTone={statusModal.targetStatus === "Resolved" ? "bg-[#DCFFF1] text-[#216E4E]" : statusModal.targetStatus === "Rejected" ? "bg-[#FFEDEB] text-[#AE2E24]" : "bg-[#F1F2F4] text-[#44546F]"}
+          title={`Mark as ${statusModal.targetStatus}`}
+          subtitle={`${statusModal.ticket.ticketNumber || ""} ${statusModal.ticket.title}`}
+          footer={
+            <>
+              <button onClick={cancelStatusModal} disabled={submitting} className={BTN_SUBTLE}>Cancel</button>
+              <button onClick={confirmStatusModal} disabled={submitting} className={isRejectModal ? BTN_DANGER : BTN_PRIMARY}>
                 {submitting ? "Saving…" : `Confirm ${statusModal.targetStatus}`}
               </button>
+            </>
+          }
+        >
+          {!isRejectModal && (
+            <div className="mb-3">
+              <SlaBadge ticket={statusModal.ticket} now={now} />
             </div>
-          </div>
-        </div>
+          )}
+
+          {isRejectModal ? (
+            <div>
+              <label className={LABEL}>Reason for rejection <span className="text-[#C9372C]">*</span></label>
+              <textarea
+                className={`${FIELD} py-2 resize-none`}
+                rows={4}
+                placeholder="e.g. Duplicate of TCK-0123, or not a valid support request."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                autoFocus
+              />
+              <p className="text-xs text-[#626F86] mt-1.5">The ticket will be marked Rejected and this reason recorded in its history.</p>
+            </div>
+          ) : (
+            <>
+              <label className={LABEL}>Resolution note <span className="text-[#C9372C]">*</span></label>
+              <textarea
+                className={`${FIELD} py-2 resize-none`}
+                rows={4}
+                placeholder="e.g. Replaced faulty router, tested connection with user, confirmed working."
+                value={resolutionNote}
+                onChange={(e) => setResolutionNote(e.target.value)}
+                autoFocus
+              />
+              <p className="text-xs text-[#626F86] mt-1.5">Saved with the ticket so anyone can see how it was handled.</p>
+
+              <div className="mt-4">
+                <label className={LABEL}>Resolution type <span className="text-[#C9372C]">*</span></label>
+                <div className="inline-flex w-full rounded-[3px] border border-[#8590A2] overflow-hidden" role="group">
+                  {["Internal", "External Vendor"].map((type, i) => (
+                    <button
+                      key={type}
+                      type="button"
+                      aria-pressed={resolutionType === type}
+                      onClick={() => setResolutionType(type)}
+                      className={`flex-1 h-8 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#4C9AFF] ${i ? "border-l border-[#8590A2]" : ""} ${resolutionType === type ? "bg-[#E9F2FF] text-[#0C66E4]" : "bg-white text-[#44546F] hover:bg-[#F7F8F9]"}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {resolutionType === "External Vendor" && (
+                <div className="mt-4 border border-[#DCDFE4] bg-[#F7F8F9] rounded-[3px] p-3 flex flex-col gap-3">
+                  <p className="text-sm font-semibold text-[#172B4D] flex items-center gap-1.5">
+                    <IconWrench className="w-3.5 h-3.5" /> Vendor / repair details
+                  </p>
+
+                  <div>
+                    <label className={LABEL}>Vendor name <span className="text-[#C9372C]">*</span></label>
+                    <input value={vendorName} onChange={(e) => setVendorName(e.target.value)} className={`${FIELD} h-8`} placeholder="e.g. ABC Computer Repairs" />
+                  </div>
+
+                  <div>
+                    <label className={LABEL}>Complaint / repair description <span className="text-[#C9372C]">*</span></label>
+                    <textarea value={vendorComplaint} onChange={(e) => setVendorComplaint(e.target.value)} rows={3} className={`${FIELD} py-2 resize-none`} placeholder="e.g. Motherboard replaced due to short circuit" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={LABEL}>Repair date <span className="text-[#C9372C]">*</span></label>
+                      <input type="date" value={vendorRepairDate} onChange={(e) => setVendorRepairDate(e.target.value)} className={`${FIELD} h-8`} />
+                    </div>
+                    <div>
+                      <label className={LABEL}>Cost <span className="text-[#C9372C]">*</span></label>
+                      <input type="number" min="0" step="0.01" value={vendorCost} onChange={(e) => setVendorCost(e.target.value)} className={`${FIELD} h-8`} placeholder="0.00" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={LABEL}>Receipt / invoice (optional)</label>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => setVendorReceipt(e.target.files?.[0] || null)}
+                      className="w-full text-xs text-[#44546F] file:mr-3 file:h-7 file:px-3 file:rounded-[3px] file:border-0 file:text-xs file:font-medium file:bg-[#091E420F] file:text-[#172B4D] hover:file:bg-[#091E4224]"
+                    />
+                    {vendorReceipt && <p className="text-xs text-[#626F86] mt-1">Selected: {vendorReceipt.name}</p>}
+                  </div>
+                </div>
+              )}
+
+              {isModalTicketBreached && (
+                <div className="mt-4">
+                  <label className={LABEL}>Reason for SLA breach <span className="text-[#C9372C]">*</span></label>
+                  <textarea
+                    className={`${FIELD} py-2 resize-none !border-[#E2483D]`}
+                    rows={3}
+                    placeholder="e.g. Part was on backorder, awaiting vendor delivery."
+                    value={breachReason}
+                    onChange={(e) => setBreachReason(e.target.value)}
+                  />
+                  <p className="text-xs text-[#626F86] mt-1.5">This ticket missed its SLA. Record why so it can be reviewed later.</p>
+                </div>
+              )}
+            </>
+          )}
+        </Modal>
       )}
 
-      {/* ================= QUICK SLA BREACH REASON MODAL =================
-          Opens the instant an admin clicks a breached SLA badge, so the
-          reason can be captured right when the breach happens — no need
-          to wait until the ticket is Resolved/Closed. */}
+      {/* ================= QUICK SLA BREACH REASON MODAL ================= */}
       {breachModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6">
-            <div className="flex items-center gap-3 mb-1">
-              <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-red-50 text-red-600">
-                <IconAlertTriangle className="w-4 h-4" />
-              </span>
-              <h3 className="font-bold text-base text-slate-900">
-                Why did the SLA breach?
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400 mb-4 ml-12 -mt-1 truncate">
-              "{breachModal.ticket.title}" — {breachModal.leg === "response" ? "First Response" : "Resolution"} SLA
-            </p>
-
-            <label className="text-xs font-medium text-slate-500 mb-1.5 block">
-              Reason <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              className="w-full border border-red-200 bg-red-50/40 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 transition resize-none placeholder:text-slate-400"
-              rows={4}
-              placeholder="e.g. Waiting on vendor part, technician unavailable, escalated to super admin."
-              value={breachModalText}
-              onChange={(e) => setBreachModalText(e.target.value)}
-              autoFocus
-            />
-
-            <div className="flex justify-end gap-2 mt-5">
-              <button
-                onClick={cancelBreachModal}
-                disabled={breachSubmitting}
-                className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition font-medium"
-              >
-                Cancel
+        <Modal
+          icon={<IconAlertTriangle className="w-4 h-4" />}
+          iconTone="bg-[#FFEDEB] text-[#AE2E24]"
+          title="Why did the SLA breach?"
+          subtitle={`${breachModal.ticket.title} — ${breachModal.leg === "response" ? "First response" : "Resolution"} SLA`}
+          footer={
+            <>
+              <button onClick={cancelBreachModal} disabled={breachSubmitting} className={BTN_SUBTLE}>Cancel</button>
+              <button onClick={saveBreachReason} disabled={breachSubmitting} className={BTN_PRIMARY}>
+                {breachSubmitting ? "Saving…" : "Save reason"}
               </button>
-              <button
-                onClick={saveBreachReason}
-                disabled={breachSubmitting}
-                className="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition disabled:opacity-60"
-              >
-                {breachSubmitting ? "Saving…" : "Save Reason"}
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <label className={LABEL}>Reason <span className="text-[#C9372C]">*</span></label>
+          <textarea
+            className={`${FIELD} py-2 resize-none`}
+            rows={4}
+            placeholder="e.g. Waiting on vendor part, technician unavailable, escalated to super admin."
+            value={breachModalText}
+            onChange={(e) => setBreachModalText(e.target.value)}
+            autoFocus
+          />
+        </Modal>
       )}
 
-      {/* ================= DELETE TICKET CONFIRMATION MODAL =================
-          super_admin only — the trigger buttons above are already
-          gated on isSuperAdmin, this is the confirmation step before the
-          irreversible DELETE /tickets/:id call fires. */}
+      {/* ================= DELETE CONFIRMATION MODAL ================= */}
       {deleteModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 sm:p-6">
-            <div className="flex items-center gap-3 mb-1">
-              <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-red-50 text-red-600">
-                <IconTrash className="w-4 h-4" />
-              </span>
-              <h3 className="font-bold text-base text-slate-900">
-                Delete this ticket?
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400 ml-12 -mt-1 mb-4 truncate">
-              "{deleteModal.title}" — {deleteModal.ticketNumber}
-            </p>
-
-            <p className="text-sm text-slate-600 leading-relaxed">
-              This permanently removes the ticket, including its status
-              history, resolution notes, and any vendor/repair details.
-              This cannot be undone.
-            </p>
-
-            <div className="flex justify-end gap-2 mt-5">
-              <button
-                onClick={cancelDeleteModal}
-                disabled={deleting}
-                className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition font-medium"
-              >
-                Cancel
+        <Modal
+          maxWidth="max-w-sm"
+          icon={<IconTrash className="w-4 h-4" />}
+          iconTone="bg-[#FFEDEB] text-[#AE2E24]"
+          title="Delete this ticket?"
+          subtitle={`${deleteModal.ticketNumber} — ${deleteModal.title}`}
+          footer={
+            <>
+              <button onClick={cancelDeleteModal} disabled={deleting} className={BTN_SUBTLE}>Cancel</button>
+              <button onClick={confirmDelete} disabled={deleting} className={BTN_DANGER}>
+                {deleting ? "Deleting…" : "Delete ticket"}
               </button>
-              <button
-                onClick={confirmDelete}
-                disabled={deleting}
-                className="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition disabled:opacity-60"
-              >
-                {deleting ? "Deleting…" : "Delete Ticket"}
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <p className="text-sm text-[#44546F] leading-relaxed">
+            This permanently removes the ticket, including its status history, resolution notes and any vendor or repair details. This can't be undone.
+          </p>
+        </Modal>
       )}
     </div>
   );
