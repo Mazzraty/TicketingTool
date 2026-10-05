@@ -34,19 +34,28 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { to: "/admin/it-support/create-ticket", icon: Plus, label: "Create Ticket" },
   ];
 
+  // IT SUPPORT: only the ticket features this role is allowed to use
+  const itSupportTicketChildren = [
+    { to: "/admin/tickets", icon: List, label: "Company Tickets" },
+    { to: "/admin/it-support/create-ticket", icon: Plus, label: "Create Ticket" },
+  ];
+
+  const ticketItems =
+    role === "it_support" ? itSupportTicketChildren : ticketChildren;
+
   const groupHasActive = (children) =>
     children.some((c) => location.pathname === c.to);
 
   const [openGroups, setOpenGroups] = useState({
     employees: groupHasActive(employeeChildren),
-    tickets: groupHasActive(ticketChildren),
+    tickets: groupHasActive(ticketItems),
   });
 
   // Auto-open the group that contains the current page
   useEffect(() => {
     setOpenGroups((prev) => ({
       employees: prev.employees || groupHasActive(employeeChildren),
-      tickets: prev.tickets || groupHasActive(ticketChildren),
+      tickets: prev.tickets || groupHasActive(ticketItems),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
@@ -204,7 +213,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <NavItem to="/admin/assets" icon={Package} label="Asset Management" />
 
               <NavGroup id="tickets" icon={Ticket} label="Tickets">
-                {ticketChildren}
+                {ticketItems}
               </NavGroup>
             </div>
           </div>
@@ -221,8 +230,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             <div className="space-y-2">
               <NavItem to="/admin/dashboard" icon={LayoutDashboard} label="Dashboard" />
               <NavItem to="/admin/it-support-users" icon={Users} label="Company Users" />
-              <NavItem to="/admin/tickets" icon={Ticket} label="Company Tickets" />
-              <NavItem to="/admin/it-support/create-ticket" icon={Plus} label="Create Ticket" />
+              <NavGroup id="tickets" icon={Ticket} label="Tickets">
+                {itSupportTicketChildren}
+              </NavGroup>
               {/* <NavItem
                 to="/admin/it-support/employees"
                 icon={Users}
