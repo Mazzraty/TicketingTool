@@ -16,49 +16,80 @@ import {
 import { Line, Bar } from "react-chartjs-2";
 
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Tooltip,
-  Legend,
-  Filler
+  CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler
 );
+
+/* ================= DESIGN TOKENS (Atlassian-style) ================= */
+const T = {
+  text: "#172B4D",
+  subtle: "#44546F",
+  muted: "#626F86",
+  border: "#DCDFE4",
+  borderSoft: "#EBECF0",
+  surface: "#FFFFFF",
+  canvas: "#F7F8F9",
+  brand: "#0C66E4",
+  brandSoft: "#E9F2FF",
+  good: "#1F845A",
+  bad: "#C9372C",
+};
+
+const FONT_STACK =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif";
+
+// Lozenge palettes: [background, text]
+const LOZENGE = {
+  Open: ["#DEEBFF", "#0747A6"],
+  "In Progress": ["#FFF0B3", "#7F5F01"],
+  Resolved: ["#DCFFF1", "#216E4E"],
+  Closed: ["#DFE1E6", "#42526E"],
+  Low: ["#E9F2FF", "#0055CC"],
+  Medium: ["#FFF7D6", "#7F5F01"],
+  High: ["#FFEDEB", "#AE2E24"],
+  Critical: ["#C9372C", "#FFFFFF"],
+};
+
+const STATUS_COLORS = {
+  Open: "#4C9AFF",
+  "In Progress": "#F5CD47",
+  Resolved: "#4BCE97",
+  Closed: "#8590A2",
+};
+
+const PRIORITY_COLORS = {
+  Low: "#579DFF",
+  Medium: "#F5CD47",
+  High: "#F87168",
+  Critical: "#C9372C",
+};
+
+const NEUTRAL_PALETTE = ["#0C66E4", "#6E5DC6", "#1D9AAA", "#E56910", "#22A06B", "#CD519D", "#8590A2"];
 
 /* ================= ICONS ================= */
 const Icon = ({ children, className = "w-4 h-4" }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-    strokeLinecap="round" strokeLinejoin="round" className={className}>
+    strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
     {children}
   </svg>
 );
-const IconTicket = (p) => <Icon {...p}><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M9 4v3M9 17v3M9 10.5v3" /></Icon>;
-const IconCircle = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /></Icon>;
-const IconClock = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></Icon>;
-const IconCheckCircle = (p) => <Icon {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></Icon>;
-const IconArchive = (p) => <Icon {...p}><rect x="2" y="4" width="20" height="5" rx="1" /><path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9M10 13h4" /></Icon>;
-const IconAlertTriangle = (p) => <Icon {...p}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4M12 17h.01" /></Icon>;
-const IconZap = (p) => <Icon {...p}><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z" /></Icon>;
 const IconCalendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Icon>;
-const IconTrendUp = (p) => <Icon {...p}><path d="m22 7-8.5 8.5-5-5L2 17" /><path d="M16 7h6v6" /></Icon>;
-const IconTrendDown = (p) => <Icon {...p}><path d="m22 17-8.5-8.5-5 5L2 7" /><path d="M16 17h6v-6" /></Icon>;
-const IconTimer = (p) => <Icon {...p}><path d="M10 2h4M12 14l3-3" /><circle cx="12" cy="14" r="8" /></Icon>;
 const IconBuilding = (p) => <Icon {...p}><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18" /><path d="M6 12h12M6 8h12M6 16h12" /><path d="M10 22v-4h4v4" /></Icon>;
+const IconRefresh = (p) => <Icon {...p}><path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" /></Icon>;
+const IconArrowUp = (p) => <Icon {...p}><path d="M12 19V5M5 12l7-7 7 7" /></Icon>;
+const IconArrowDown = (p) => <Icon {...p}><path d="M12 5v14M19 12l-7 7-7-7" /></Icon>;
 
 /* ================= HELPERS ================= */
-const todayStr = () => new Date().toISOString().split("T")[0];
+const toISO = (d) => d.toISOString().split("T")[0];
+const todayStr = () => toISO(new Date());
 const daysAgoStr = (n) => {
   const d = new Date();
   d.setDate(d.getDate() - n);
-  return d.toISOString().split("T")[0];
+  return toISO(d);
 };
 const rangeDays = (from, to) =>
   Math.max(1, Math.round((new Date(to) - new Date(from)) / 86400000) + 1);
 
-// Formats a millisecond duration into a compact human string:
-// "2d 4h", "3h 12m", "45m". Returns an em dash when there's
-// nothing to show (no resolved tickets in range).
+// "2d 4h", "3h 12m", "45m", or an em dash when there is nothing to show.
 const formatDuration = (ms) => {
   if (!ms || ms <= 0) return "—";
   const totalMinutes = Math.round(ms / 60000);
@@ -70,35 +101,107 @@ const formatDuration = (ms) => {
   return `${minutes}m`;
 };
 
-const FONT_STACK =
-  "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const formatSlaHours = (hours) =>
+  hours < 1 ? `${Math.round(hours * 60)}m` : `${hours}h`;
 
-const STATUS_COLORS = {
-  Open: "#2563eb",
-  "In Progress": "#d97706",
-  Resolved: "#059669",
-  Closed: "#64748b",
+// Returns null when there is no previous-period baseline, so we never
+// show a misleading "+100%" badge on every card.
+const pctChange = (curr, prev) => {
+  if (!prev) return null;
+  return Math.round(((curr - prev) / prev) * 100);
 };
 
-const PRIORITY_COLORS = {
-  Low: "#2563eb",
-  Medium: "#d97706",
-  High: "#ea580c",
-  Critical: "#dc2626",
+const chartTooltip = {
+  backgroundColor: T.text,
+  titleFont: { family: FONT_STACK, size: 12, weight: "600" },
+  bodyFont: { family: FONT_STACK, size: 12 },
+  padding: 10,
+  cornerRadius: 3,
+  displayColors: false,
 };
 
-const NEUTRAL_PALETTE = ["#2563eb", "#7c3aed", "#0891b2", "#d97706", "#059669", "#db2777", "#64748b"];
+/* ================= SMALL UI PIECES ================= */
+const Lozenge = ({ label, bold }) => {
+  const [bg, fg] = LOZENGE[label] || ["#DFE1E6", "#42526E"];
+  return (
+    <span
+      className="inline-flex items-center px-1.5 h-5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide whitespace-nowrap"
+      style={{ backgroundColor: bg, color: fg }}
+    >
+      {label}
+    </span>
+  );
+};
 
-const KPI_CARDS = [
-  { key: "totalTickets", label: "Total Tickets", icon: IconTicket, tint: "bg-slate-50 text-slate-600" },
-  { key: "openTickets", label: "Open", icon: IconCircle, tint: "bg-blue-50 text-blue-600" },
-  { key: "inProgressTickets", label: "In Progress", icon: IconClock, tint: "bg-amber-50 text-amber-600" },
-  { key: "resolvedTickets", label: "Resolved", icon: IconCheckCircle, tint: "bg-emerald-50 text-emerald-600" },
-  { key: "closedTickets", label: "Closed", icon: IconArchive, tint: "bg-slate-50 text-slate-500" },
-  { key: "criticalTickets", label: "Critical", icon: IconZap, tint: "bg-red-50 text-red-600" },
-  { key: "slaBreached", label: "SLA Breached", icon: IconAlertTriangle, tint: "bg-red-50 text-red-600" },
-];
+const Card = ({ title, aside, children, className = "" }) => (
+  <section
+    className={`bg-white rounded-[3px] border ${className}`}
+    style={{ borderColor: T.border }}
+  >
+    {(title || aside) && (
+      <header
+        className="flex items-center justify-between px-4 py-3 border-b"
+        style={{ borderColor: T.borderSoft }}
+      >
+        <h2 className="text-sm font-semibold" style={{ color: T.text }}>{title}</h2>
+        {aside && <span className="text-xs" style={{ color: T.muted }}>{aside}</span>}
+      </header>
+    )}
+    <div className="p-4">{children}</div>
+  </section>
+);
 
+// goodWhenDown: for duration / breach metrics, lower is better.
+const Delta = ({ change, goodWhenDown }) => {
+  if (change === null || change === 0) return null;
+  const up = change > 0;
+  const good = goodWhenDown ? !up : up;
+  const Arrow = up ? IconArrowUp : IconArrowDown;
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 text-xs font-medium"
+      style={{ color: good ? T.good : T.bad }}
+      title="Change vs previous period"
+    >
+      <Arrow className="w-3 h-3" />
+      {Math.abs(change)}%
+    </span>
+  );
+};
+
+const StatTile = ({ label, value, accent, change, goodWhenDown, hint }) => (
+  <div className="px-4 py-3 min-w-0">
+    <div className="flex items-center gap-2 mb-1.5">
+      {accent && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accent }} />}
+      <p className="text-xs font-medium truncate" style={{ color: T.muted }}>{label}</p>
+    </div>
+    <div className="flex items-baseline gap-2">
+      <p className="text-[28px] leading-8 font-semibold whitespace-nowrap" style={{ color: T.text }}>
+        {value}
+      </p>
+      <Delta change={change} goodWhenDown={goodWhenDown} />
+    </div>
+    {hint && <p className="text-[11px] mt-0.5" style={{ color: T.muted }}>{hint}</p>}
+  </div>
+);
+
+const Skeleton = () => (
+  <div className="animate-pulse space-y-4">
+    <div className="h-20 bg-slate-200/70 rounded-[3px]" />
+    <div className="h-20 bg-slate-200/70 rounded-[3px]" />
+    <div className="h-40 bg-slate-200/70 rounded-[3px]" />
+    <div className="h-72 bg-slate-200/70 rounded-[3px]" />
+  </div>
+);
+
+const Empty = ({ text = "No data for this period" }) => (
+  <p className="text-sm text-center py-10" style={{ color: T.muted }}>{text}</p>
+);
+
+const inputBase =
+  "h-8 rounded-[3px] border bg-white text-sm px-2 outline-none focus:ring-2 focus:ring-[#4C9AFF] hover:bg-[#F7F8F9]";
+
+/* ================= PAGE ================= */
 export default function AdminTicketDashboard() {
   const { user } = useAuth();
 
@@ -118,13 +221,10 @@ export default function AdminTicketDashboard() {
   const [prevAvgFirstResponse, setPrevAvgFirstResponse] = useState(null);
   const [slaPolicy, setSlaPolicy] = useState(null);
 
-  // Super-admin company scoping
   const [companies, setCompanies] = useState([]);
   const [companyFilter, setCompanyFilter] = useState("All");
 
-  /* =========================
-     LOAD COMPANIES (super_admin only, once)
-  ========================= */
+  /* ---------- data loading (unchanged logic) ---------- */
   useEffect(() => {
     if (user?.role !== "super_admin") return;
     api
@@ -140,33 +240,18 @@ export default function AdminTicketDashboard() {
         user?.role === "super_admin" && companyFilter !== "All"
           ? { companyId: companyFilter }
           : {};
-
       const params = { from: range.from, to: range.to, ...companyParams };
 
-      // Previous period, same length, for trend comparison on KPI cards
       const spanDays = rangeDays(range.from, range.to);
       const prevTo = new Date(range.from);
       prevTo.setDate(prevTo.getDate() - 1);
       const prevFrom = new Date(prevTo);
       prevFrom.setDate(prevFrom.getDate() - (spanDays - 1));
-      const prevParams = {
-        from: prevFrom.toISOString().split("T")[0],
-        to: prevTo.toISOString().split("T")[0],
-        ...companyParams,
-      };
+      const prevParams = { from: toISO(prevFrom), to: toISO(prevTo), ...companyParams };
 
       const [
-        kpisRes,
-        prevKpisRes,
-        trendRes,
-        statusRes,
-        priorityRes,
-        departmentRes,
-        categoryRes,
-        avgResRes,
-        prevAvgResRes,
-        avgFirstResRes,
-        prevAvgFirstResRes,
+        kpisRes, prevKpisRes, trendRes, statusRes, priorityRes, departmentRes,
+        categoryRes, avgResRes, prevAvgResRes, avgFirstResRes, prevAvgFirstResRes,
       ] = await Promise.all([
         api.get("/ticket-dashboard/kpis", { params }),
         api.get("/ticket-dashboard/kpis", { params: prevParams }),
@@ -200,12 +285,8 @@ export default function AdminTicketDashboard() {
     }
   }, [range, companyFilter, user?.role]);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // SLA policy is static config, not date-filtered — fetch once on mount
-  // rather than every time the date range changes.
   useEffect(() => {
     api
       .get("/ticket-dashboard/sla-policy")
@@ -213,40 +294,31 @@ export default function AdminTicketDashboard() {
       .catch((err) => console.error("Failed to load SLA policy", err));
   }, []);
 
-  // "8" -> "8h", "0.5" -> "30m" — policy values are in hours.
-  const formatSlaHours = (hours) => {
-    if (hours < 1) return `${Math.round(hours * 60)}m`;
-    return `${hours}h`;
-  };
-
   const handleRangeChange = (field) => (e) => {
     setActiveQuick(null);
     setRange((prev) => ({ ...prev, [field]: e.target.value }));
   };
-
   const applyQuickRange = (days) => {
     setActiveQuick(days);
     setRange({ from: daysAgoStr(days), to: todayStr() });
   };
 
-  const pctChange = (curr, prev) => {
-    if (!prev) return curr > 0 ? 100 : 0;
-    return Math.round(((curr - prev) / prev) * 100);
-  };
-
-  // For resolution time, a smaller number is the "good" direction —
-  // unlike ticket counts where growth is usually good.
+  const delta = (key) => pctChange(kpis?.[key] ?? 0, prevKpis?.[key] ?? 0);
   const avgResChange =
     avgResolution && prevAvgResolution
       ? pctChange(avgResolution.avgResolutionMs, prevAvgResolution.avgResolutionMs)
-      : 0;
-
+      : null;
   const avgFirstResChange =
     avgFirstResponse && prevAvgFirstResponse
       ? pctChange(avgFirstResponse.avgResponseMs, prevAvgFirstResponse.avgResponseMs)
-      : 0;
+      : null;
 
-  /* ================= TREND CHART ================= */
+  // SLA compliance = share of tickets that did not breach.
+  const total = kpis?.totalTickets ?? 0;
+  const breached = kpis?.slaBreached ?? 0;
+  const compliance = total ? Math.round(((total - breached) / total) * 100) : null;
+
+  /* ---------- charts ---------- */
   const trendChartData = useMemo(
     () => ({
       labels: trend.map((t) =>
@@ -254,24 +326,24 @@ export default function AdminTicketDashboard() {
       ),
       datasets: [
         {
-          label: "Tickets",
+          label: "Tickets created",
           data: trend.map((t) => t.tickets),
-          borderColor: "#2563eb",
+          borderColor: T.brand,
           borderWidth: 2,
           backgroundColor: (ctx) => {
             const { chart } = ctx;
             const { ctx: c, chartArea } = chart;
-            if (!chartArea) return "rgba(37,99,235,0.08)";
-            const gradient = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-            gradient.addColorStop(0, "rgba(37,99,235,0.20)");
-            gradient.addColorStop(1, "rgba(37,99,235,0.00)");
-            return gradient;
+            if (!chartArea) return "rgba(12,102,228,0.08)";
+            const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            g.addColorStop(0, "rgba(12,102,228,0.16)");
+            g.addColorStop(1, "rgba(12,102,228,0)");
+            return g;
           },
           fill: true,
-          tension: 0.35,
+          tension: 0.2,
           pointRadius: 0,
-          pointHoverRadius: 5,
-          pointHoverBackgroundColor: "#2563eb",
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: T.brand,
           pointHoverBorderColor: "#fff",
           pointHoverBorderWidth: 2,
         },
@@ -284,33 +356,22 @@ export default function AdminTicketDashboard() {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: "#0f172a",
-        titleFont: { family: FONT_STACK, size: 12, weight: "600" },
-        bodyFont: { family: FONT_STACK, size: 12 },
-        padding: 10,
-        cornerRadius: 8,
-        displayColors: false,
-      },
-    },
+    plugins: { legend: { display: false }, tooltip: chartTooltip },
     scales: {
       x: {
         grid: { display: false },
-        ticks: { font: { family: FONT_STACK, size: 11 }, color: "#94a3b8" },
-        border: { display: false },
+        ticks: { font: { family: FONT_STACK, size: 11 }, color: T.muted, maxTicksLimit: 12, maxRotation: 0 },
+        border: { color: T.border },
       },
       y: {
         beginAtZero: true,
-        ticks: { precision: 0, font: { family: FONT_STACK, size: 11 }, color: "#94a3b8" },
-        grid: { color: "#f1f5f9" },
+        ticks: { precision: 0, font: { family: FONT_STACK, size: 11 }, color: T.muted },
+        grid: { color: T.borderSoft },
         border: { display: false },
       },
     },
   };
 
-  /* ================= HORIZONTAL BAR BUILDERS ================= */
   const buildBarData = (data, colorMap) => {
     const sorted = [...data].sort((a, b) => b.value - a.value);
     return {
@@ -321,8 +382,8 @@ export default function AdminTicketDashboard() {
           backgroundColor: sorted.map(
             (d, i) => (colorMap && colorMap[d._id]) || NEUTRAL_PALETTE[i % NEUTRAL_PALETTE.length]
           ),
-          borderRadius: 6,
-          barThickness: 18,
+          borderRadius: 3,
+          barThickness: 16,
         },
       ],
     };
@@ -332,26 +393,16 @@ export default function AdminTicketDashboard() {
     indexAxis: "y",
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: "#0f172a",
-        titleFont: { family: FONT_STACK, size: 12, weight: "600" },
-        bodyFont: { family: FONT_STACK, size: 12 },
-        padding: 10,
-        cornerRadius: 8,
-        displayColors: false,
-      },
-    },
+    plugins: { legend: { display: false }, tooltip: chartTooltip },
     scales: {
       x: {
         beginAtZero: true,
-        ticks: { precision: 0, font: { family: FONT_STACK, size: 11 }, color: "#94a3b8" },
-        grid: { color: "#f1f5f9" },
+        ticks: { precision: 0, font: { family: FONT_STACK, size: 11 }, color: T.muted },
+        grid: { color: T.borderSoft },
         border: { display: false },
       },
       y: {
-        ticks: { font: { family: FONT_STACK, size: 12, weight: "500" }, color: "#334155" },
+        ticks: { font: { family: FONT_STACK, size: 12 }, color: T.text },
         grid: { display: false },
         border: { display: false },
       },
@@ -360,355 +411,247 @@ export default function AdminTicketDashboard() {
 
   const totalForShare = (data) => data.reduce((s, d) => s + d.value, 0) || 1;
 
-  return (
-    <div className="min-h-screen bg-slate-50" style={{ fontFamily: FONT_STACK }}>
-      <div className="max-w-6xl mx-auto w-full p-6 md:p-8">
+  const BreakdownList = ({ data, fallback }) =>
+    data.length === 0 ? (
+      <Empty />
+    ) : (
+      <ul className="space-y-3">
+        {[...data].sort((a, b) => b.value - a.value).map((d, i) => {
+          const pct = Math.round((d.value / totalForShare(data)) * 100);
+          return (
+            <li key={d._id || i}>
+              <div className="flex items-center justify-between mb-1 text-sm">
+                <span style={{ color: T.text }}>{d._id || fallback}</span>
+                <span style={{ color: T.subtle }}>
+                  <b className="font-semibold" style={{ color: T.text }}>{d.value}</b>
+                  <span className="ml-1.5 text-xs">{pct}%</span>
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: T.borderSoft }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${pct}%`, backgroundColor: NEUTRAL_PALETTE[i % NEUTRAL_PALETTE.length] }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    );
 
-        {/* HEADER */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+  const trendTotal = trend.reduce((s, t) => s + t.tickets, 0);
+  const quick = [{ label: "7D", days: 7 }, { label: "30D", days: 30 }, { label: "90D", days: 90 }];
+
+  return (
+    <div className="min-h-screen" style={{ fontFamily: FONT_STACK, backgroundColor: T.canvas, color: T.text }}>
+      <div className="max-w-[1400px] mx-auto w-full px-4 sm:px-6 lg:px-10 py-6">
+
+        {/* BREADCRUMB + TITLE */}
+        <nav className="text-xs mb-2" style={{ color: T.muted }}>
+          Service desk <span className="mx-1">/</span> Reports
+        </nav>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Ticket Dashboard
-            </h1>
-            <p className="text-sm text-slate-400 mt-0.5">
-              Overview of ticket volume, status, and SLA performance
+            <h1 className="text-2xl font-medium" style={{ color: T.text }}>Ticket dashboard</h1>
+            <p className="text-sm mt-1" style={{ color: T.muted }}>
+              Ticket volume, status and SLA performance
             </p>
           </div>
 
-          <div className="flex flex-wrap items-end gap-2">
-            {/* COMPANY FILTER — super_admin only */}
+          {/* TOOLBAR */}
+          <div className="flex flex-wrap items-center gap-2">
             {user?.role === "super_admin" && (
-              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm">
-                <IconBuilding className="w-3.5 h-3.5 text-slate-400" />
+              <div className="relative">
+                <IconBuilding className="w-4 h-4 absolute left-2 top-2 pointer-events-none" style={{ color: T.muted }} />
                 <select
+                  aria-label="Company"
                   value={companyFilter}
                   onChange={(e) => setCompanyFilter(e.target.value)}
-                  className="border-0 bg-transparent text-xs font-medium text-slate-600 outline-none"
+                  className={`${inputBase} pl-8 pr-2 max-w-[260px]`}
+                  style={{ borderColor: T.border, color: T.text }}
                 >
                   <option value="All">All companies</option>
                   {companies.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.name}
-                    </option>
+                    <option key={c._id} value={c._id}>{c.name}</option>
                   ))}
                 </select>
               </div>
             )}
 
-            {/* DATE FILTER */}
-            <div className="flex flex-wrap items-end gap-2 bg-white border border-slate-200 rounded-xl p-2.5 shadow-sm">
-              <div className="flex gap-1 mr-1">
-                {[
-                  { label: "7D", days: 7 },
-                  { label: "30D", days: 30 },
-                  { label: "90D", days: 90 },
-                ].map((q) => (
+            {/* Segmented range buttons */}
+            <div className="inline-flex rounded-[3px] border overflow-hidden" style={{ borderColor: T.border }} role="group" aria-label="Quick range">
+              {quick.map((q, i) => {
+                const active = activeQuick === q.days;
+                return (
                   <button
                     key={q.label}
                     onClick={() => applyQuickRange(q.days)}
-                    className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition ${
-                      activeQuick === q.days
-                        ? "bg-blue-600 text-white"
-                        : "bg-transparent text-slate-500 hover:bg-slate-100"
-                    }`}
+                    aria-pressed={active}
+                    className="h-8 px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#4C9AFF]"
+                    style={{
+                      backgroundColor: active ? T.brandSoft : "#fff",
+                      color: active ? T.brand : T.subtle,
+                      borderLeft: i ? `1px solid ${T.border}` : "none",
+                    }}
                   >
                     {q.label}
                   </button>
-                ))}
-              </div>
-              <div className="w-px h-7 bg-slate-200" />
-              <div className="flex items-center gap-1.5 px-1">
-                <IconCalendar className="w-3.5 h-3.5 text-slate-400" />
-                <input
-                  type="date"
-                  className="border-0 bg-transparent text-xs font-medium text-slate-600 outline-none w-[110px]"
-                  value={range.from}
-                  max={range.to}
-                  onChange={handleRangeChange("from")}
-                />
-                <span className="text-slate-300 text-xs">→</span>
-                <input
-                  type="date"
-                  className="border-0 bg-transparent text-xs font-medium text-slate-600 outline-none w-[110px]"
-                  value={range.to}
-                  min={range.from}
-                  max={todayStr()}
-                  onChange={handleRangeChange("to")}
-                />
-              </div>
+                );
+              })}
             </div>
+
+            <div className="flex items-center gap-1.5">
+              <IconCalendar className="w-4 h-4" style={{ color: T.muted }} />
+              <input
+                type="date" aria-label="From"
+                className={inputBase}
+                style={{ borderColor: T.border, color: T.text }}
+                value={range.from} max={range.to}
+                onChange={handleRangeChange("from")}
+              />
+              <span className="text-xs" style={{ color: T.muted }}>to</span>
+              <input
+                type="date" aria-label="To"
+                className={inputBase}
+                style={{ borderColor: T.border, color: T.text }}
+                value={range.to} min={range.from} max={todayStr()}
+                onChange={handleRangeChange("to")}
+              />
+            </div>
+
+            <button
+              onClick={fetchAll}
+              disabled={loading}
+              aria-label="Refresh"
+              className="h-8 w-8 inline-flex items-center justify-center rounded-[3px] border bg-white hover:bg-[#F7F8F9] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#4C9AFF]"
+              style={{ borderColor: T.border, color: T.subtle }}
+            >
+              <IconRefresh className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            </button>
           </div>
         </div>
 
-        {loading ? (
-          <div className="py-24 text-center text-sm text-slate-400">Loading dashboard…</div>
+        {loading && !kpis ? (
+          <Skeleton />
         ) : (
-          <>
-            {/* KPI CARDS */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3 mb-6">
-              {KPI_CARDS.map((card) => {
-                const value = kpis?.[card.key] ?? 0;
-                const prevValue = prevKpis?.[card.key] ?? 0;
-                const change = pctChange(value, prevValue);
-                const isGoodDirection = ["resolvedTickets", "closedTickets"].includes(card.key)
-                  ? change >= 0
-                  : change <= 0;
-                const CardIcon = card.icon;
-                return (
-                  <div
-                    key={card.key}
-                    className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${card.tint}`}>
-                        <CardIcon className="w-3.5 h-3.5" />
-                      </div>
-                      {prevKpis && change !== 0 && (
-                        <div
-                          className={`flex items-center gap-0.5 text-[10px] font-semibold ${
-                            isGoodDirection ? "text-emerald-600" : "text-red-500"
-                          }`}
-                        >
-                          {change > 0 ? (
-                            <IconTrendUp className="w-2.5 h-2.5" />
-                          ) : (
-                            <IconTrendDown className="w-2.5 h-2.5" />
-                          )}
-                          {Math.abs(change)}%
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-2xl font-bold text-slate-900 leading-none mb-1">{value}</p>
-                    <p className="text-[11px] font-medium text-slate-400">{card.label}</p>
-                  </div>
-                );
-              })}
+          <div className={`space-y-4 transition-opacity ${loading ? "opacity-60" : ""}`}>
 
-              {/* AVG RESOLUTION TIME CARD */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-violet-50 text-violet-600">
-                    <IconTimer className="w-3.5 h-3.5" />
-                  </div>
-                  {prevAvgResolution && avgResChange !== 0 && (
-                    <div
-                      className={`flex items-center gap-0.5 text-[10px] font-semibold ${
-                        avgResChange <= 0 ? "text-emerald-600" : "text-red-500"
-                      }`}
-                    >
-                      {avgResChange > 0 ? (
-                        <IconTrendUp className="w-2.5 h-2.5" />
-                      ) : (
-                        <IconTrendDown className="w-2.5 h-2.5" />
-                      )}
-                      {Math.abs(avgResChange)}%
-                    </div>
-                  )}
-                </div>
-                <p className="text-2xl font-bold text-slate-900 leading-none mb-1">
-                  {formatDuration(avgResolution?.avgResolutionMs)}
-                </p>
-                <p className="text-[11px] font-medium text-slate-400">
-                  Avg Resolution{avgResolution?.count ? ` (${avgResolution.count})` : ""}
-                </p>
+            {/* WORK ITEM SUMMARY */}
+            <section className="bg-white rounded-[3px] border" style={{ borderColor: T.border }}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y lg:divide-y-0" style={{ borderColor: T.borderSoft }}>
+                <StatTile label="Total tickets" value={kpis?.totalTickets ?? 0} change={delta("totalTickets")} goodWhenDown={false} />
+                <StatTile label="Open" value={kpis?.openTickets ?? 0} accent={STATUS_COLORS.Open} change={delta("openTickets")} goodWhenDown />
+                <StatTile label="In progress" value={kpis?.inProgressTickets ?? 0} accent={STATUS_COLORS["In Progress"]} change={delta("inProgressTickets")} goodWhenDown />
+                <StatTile label="Resolved" value={kpis?.resolvedTickets ?? 0} accent={STATUS_COLORS.Resolved} change={delta("resolvedTickets")} />
+                <StatTile label="Closed" value={kpis?.closedTickets ?? 0} accent={STATUS_COLORS.Closed} change={delta("closedTickets")} />
               </div>
+            </section>
 
-              {/* AVG FIRST RESPONSE (SLA) TIME CARD */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-cyan-50 text-cyan-600">
-                    <IconZap className="w-3.5 h-3.5" />
-                  </div>
-                  {prevAvgFirstResponse && avgFirstResChange !== 0 && (
-                    <div
-                      className={`flex items-center gap-0.5 text-[10px] font-semibold ${
-                        avgFirstResChange <= 0 ? "text-emerald-600" : "text-red-500"
-                      }`}
-                    >
-                      {avgFirstResChange > 0 ? (
-                        <IconTrendUp className="w-2.5 h-2.5" />
-                      ) : (
-                        <IconTrendDown className="w-2.5 h-2.5" />
-                      )}
-                      {Math.abs(avgFirstResChange)}%
-                    </div>
-                  )}
-                </div>
-                <p className="text-2xl font-bold text-slate-900 leading-none mb-1">
-                  {formatDuration(avgFirstResponse?.avgResponseMs)}
-                </p>
-                <p className="text-[11px] font-medium text-slate-400">
-                  Avg SLA Response{avgFirstResponse?.count ? ` (${avgFirstResponse.count})` : ""}
-                </p>
+            {/* SLA PERFORMANCE SUMMARY */}
+            <section className="bg-white rounded-[3px] border" style={{ borderColor: T.border }}>
+              <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0" style={{ borderColor: T.borderSoft }}>
+                <StatTile
+                  label="SLA compliance"
+                  value={compliance === null ? "—" : `${compliance}%`}
+                  hint={total ? `${total - breached} of ${total} within SLA` : undefined}
+                  accent={compliance !== null && compliance < 80 ? T.bad : T.good}
+                />
+                <StatTile
+                  label="SLA breached"
+                  value={breached}
+                  accent={T.bad}
+                  change={delta("slaBreached")}
+                  goodWhenDown
+                />
+                <StatTile
+                  label="Avg time to resolution"
+                  value={formatDuration(avgResolution?.avgResolutionMs)}
+                  hint={avgResolution?.count ? `${avgResolution.count} resolved tickets` : undefined}
+                  change={avgResChange}
+                  goodWhenDown
+                />
+                <StatTile
+                  label="Avg time to first response"
+                  value={formatDuration(avgFirstResponse?.avgResponseMs)}
+                  hint={avgFirstResponse?.count ? `${avgFirstResponse.count} tickets responded` : undefined}
+                  change={avgFirstResChange}
+                  goodWhenDown
+                />
               </div>
-            </div>
+            </section>
 
-            {/* SLA POLICY REFERENCE TABLE */}
-            {slaPolicy && (
-              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">
-                <h2 className="text-sm font-semibold text-slate-800 mb-4">SLA Targets</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-slate-100">
-                        <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide pb-2 pr-4">
-                          Priority
-                        </th>
-                        <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide pb-2 pr-4">
-                          First Response Target
-                        </th>
-                        <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide pb-2">
-                          Resolution Target
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(slaPolicy).map(([priority, targets]) => (
-                        <tr key={priority} className="border-b border-slate-50 last:border-0">
-                          <td className="py-2.5 pr-4">
-                            <span
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold"
-                              style={{ color: PRIORITY_COLORS[priority] || "#334155" }}
-                            >
-                              <span
-                                className="w-1.5 h-1.5 rounded-full"
-                                style={{ backgroundColor: PRIORITY_COLORS[priority] || "#94a3b8" }}
-                              />
-                              {priority}
-                            </span>
-                          </td>
-                          <td className="py-2.5 pr-4 text-xs font-medium text-slate-600">
-                            {formatSlaHours(targets.firstResponse)}
-                          </td>
-                          <td className="py-2.5 text-xs font-medium text-slate-600">
-                            {formatSlaHours(targets.resolution)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* TREND CHART */}
-            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-slate-800">Ticket Volume Trend</h2>
-                <span className="text-[11px] font-medium text-slate-400">
-                  {trend.reduce((s, t) => s + t.tickets, 0)} tickets in range
-                </span>
-              </div>
-              {trend.length === 0 ? (
-                <p className="text-sm text-slate-400 py-16 text-center">No tickets in this date range</p>
-              ) : (
-                <div style={{ height: 260 }}>
-                  <Line data={trendChartData} options={trendChartOptions} />
-                </div>
-              )}
-            </div>
-
-            {/* BAR CHARTS */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-800 mb-4">By Status</h2>
-                {statusData.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-10">No data</p>
+            {/* TREND + SLA TARGETS */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+              <Card
+                title="Tickets created"
+                aside={`${trendTotal} tickets in range`}
+                className="xl:col-span-2"
+              >
+                {trend.length === 0 ? (
+                  <Empty text="No tickets in this date range" />
                 ) : (
-                  <div style={{ height: Math.max(120, statusData.length * 44) }}>
+                  <div style={{ height: 280 }}>
+                    <Line data={trendChartData} options={trendChartOptions} />
+                  </div>
+                )}
+              </Card>
+
+              <Card title="SLA targets">
+                {!slaPolicy ? (
+                  <Empty text="SLA policy not available" />
+                ) : (
+                  <div className="overflow-x-auto -mx-1">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b" style={{ borderColor: T.border }}>
+                          <th className="py-2 px-1 text-xs font-semibold" style={{ color: T.muted }}>Priority</th>
+                          <th className="py-2 px-1 text-xs font-semibold" style={{ color: T.muted }}>First response</th>
+                          <th className="py-2 px-1 text-xs font-semibold" style={{ color: T.muted }}>Resolution</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(slaPolicy).map(([priority, targets]) => (
+                          <tr key={priority} className="border-b last:border-0" style={{ borderColor: T.borderSoft }}>
+                            <td className="py-3 px-1"><Lozenge label={priority} /></td>
+                            <td className="py-3 px-1" style={{ color: T.text }}>{formatSlaHours(targets.firstResponse)}</td>
+                            <td className="py-3 px-1" style={{ color: T.text }}>{formatSlaHours(targets.resolution)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            {/* STATUS + PRIORITY */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card title="By status">
+                {statusData.length === 0 ? <Empty /> : (
+                  <div style={{ height: Math.max(130, statusData.length * 44) }}>
                     <Bar data={buildBarData(statusData, STATUS_COLORS)} options={barOptions} />
                   </div>
                 )}
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-800 mb-4">By Priority</h2>
-                {priorityData.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-10">No data</p>
-                ) : (
-                  <div style={{ height: Math.max(120, priorityData.length * 44) }}>
+              </Card>
+              <Card title="By priority">
+                {priorityData.length === 0 ? <Empty /> : (
+                  <div style={{ height: Math.max(130, priorityData.length * 44) }}>
                     <Bar data={buildBarData(priorityData, PRIORITY_COLORS)} options={barOptions} />
                   </div>
                 )}
-              </div>
+              </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-800 mb-4">By Department</h2>
-                {departmentData.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-10">No data</p>
-                ) : (
-                  <div className="space-y-3">
-                    {[...departmentData]
-                      .sort((a, b) => b.value - a.value)
-                      .map((d, i) => {
-                        const total = totalForShare(departmentData);
-                        const pct = Math.round((d.value / total) * 100);
-                        return (
-                          <div key={d._id || i}>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-slate-600">
-                                {d._id || "Unassigned"}
-                              </span>
-                              <span className="text-xs font-semibold text-slate-800">
-                                {d.value} <span className="text-slate-400 font-normal">({pct}%)</span>
-                              </span>
-                            </div>
-                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${pct}%`,
-                                  backgroundColor: NEUTRAL_PALETTE[i % NEUTRAL_PALETTE.length],
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-800 mb-4">By Category</h2>
-                {categoryData.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-10">No data</p>
-                ) : (
-                  <div className="space-y-3">
-                    {[...categoryData]
-                      .sort((a, b) => b.value - a.value)
-                      .map((d, i) => {
-                        const total = totalForShare(categoryData);
-                        const pct = Math.round((d.value / total) * 100);
-                        return (
-                          <div key={d._id || i}>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-slate-600">
-                                {d._id || "Uncategorized"}
-                              </span>
-                              <span className="text-xs font-semibold text-slate-800">
-                                {d.value} <span className="text-slate-400 font-normal">({pct}%)</span>
-                              </span>
-                            </div>
-                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${pct}%`,
-                                  backgroundColor: NEUTRAL_PALETTE[i % NEUTRAL_PALETTE.length],
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
+            {/* DEPARTMENT + CATEGORY */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card title="By department">
+                <BreakdownList data={departmentData} fallback="Unassigned" />
+              </Card>
+              <Card title="By category">
+                <BreakdownList data={categoryData} fallback="Uncategorized" />
+              </Card>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
