@@ -2,6 +2,162 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
+import {
+  Search,
+  Pencil,
+  Trash2,
+  X,
+  ChevronDown,
+  Download,
+  SlidersHorizontal,
+  RotateCcw,
+  Building2,
+  Package,
+  Laptop,
+  Smartphone,
+  Printer,
+  Tablet,
+  Inbox,
+} from "lucide-react";
+
+/* ============================================================
+   UI ONLY — Atlassian / Jira Service Management styling
+   (no business logic lives in this section)
+   ============================================================ */
+const inputCls =
+  "h-9 w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 text-sm text-[#172B4D] " +
+  "placeholder:text-[#7A869A] transition-colors hover:bg-[#EBECF0] " +
+  "focus:border-[#4C9AFF] focus:bg-white focus:outline-none";
+
+const btnBase =
+  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] px-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:cursor-not-allowed disabled:opacity-50";
+const btnPrimary = `${btnBase} bg-[#0052CC] text-white hover:bg-[#0065FF] active:bg-[#0747A6]`;
+const btnDefault = `${btnBase} bg-[rgba(9,30,66,0.04)] text-[#42526E] hover:bg-[rgba(9,30,66,0.08)] active:bg-[#DEEBFF] active:text-[#0052CC]`;
+const btnSubtle = `${btnBase} bg-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
+
+const STATUS_LABELS = {
+  All: "All",
+  available: "Available",
+  assigned: "Assigned",
+  damaged: "Damaged",
+  printer_for_service: "for Service",
+  under_service: "Under Service",
+};
+
+// Jira lozenge palette
+const STATUS_LOZENGE = {
+  available: "bg-[#E3FCEF] text-[#006644]",
+  assigned: "bg-[#DEEBFF] text-[#0747A6]",
+  damaged: "bg-[#FFEBE6] text-[#BF2600]",
+  printer_for_service: "bg-[#FFF0B3] text-[#172B4D]",
+  under_service: "bg-[#EAE6FF] text-[#403294]",
+};
+
+const TYPE_TAG = {
+  Laptop: "bg-[#DEEBFF] text-[#0747A6]",
+  Mobile: "bg-[#E6FCFF] text-[#008DA6]",
+  Printer: "bg-[#E3FCEF] text-[#006644]",
+  HHT: "bg-[#EAE6FF] text-[#403294]",
+};
+
+const AVATAR_COLORS = [
+  "#0052CC", "#00875A", "#5243AA", "#DE350B",
+  "#FF8B00", "#00A3BF", "#6554C0", "#36B37E",
+];
+
+const initials = (name = "") =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase() || "?";
+
+const avatarColor = (name = "") => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+};
+
+// Display only: "AHMED KAMAL" -> "Ahmed Kamal"
+const tidy = (v) => {
+  if (!v) return "";
+  if (v !== v.toUpperCase()) return v;
+  return v.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+function Avatar({ name }) {
+  return (
+    <span
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+      style={{ backgroundColor: avatarColor(name) }}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, accent }) {
+  return (
+    <div className="flex items-center gap-3 rounded-[3px] border border-[#DFE1E6] bg-white px-4 py-3">
+      <div
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[3px]"
+        style={{ backgroundColor: `${accent}1A`, color: accent }}
+      >
+        <Icon size={20} />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-xs font-semibold text-[#5E6C84]">{label}</p>
+        <p className="text-2xl font-medium leading-7 text-[#172B4D]">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, className = "", children }) {
+  return (
+    <div className={className}>
+      <label className="mb-1 block text-xs font-semibold text-[#5E6C84]">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function SelectBox({ className = "", children, ...props }) {
+  return (
+    <div className="relative">
+      <select
+        {...props}
+        className={`${inputCls} cursor-pointer appearance-none truncate pr-8 ${className}`}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={16}
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+      />
+    </div>
+  );
+}
+
+function FilterChip({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`h-8 rounded-[3px] px-3 text-sm font-medium transition-colors ${
+        active
+          ? "bg-[#172B4D] text-white"
+          : "bg-[rgba(9,30,66,0.04)] text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function AssetStoreFiori() {
   const [assets, setAssets] = useState([]);
   const [filter, setFilter] = useState("All");
@@ -249,147 +405,70 @@ export default function AssetStoreFiori() {
   };
 
   /* ================= UI HELPERS (styling only, no logic) ================= */
-  const STATUS_LABELS = {
-    All: "All",
-    available: "Available",
-    assigned: "Assigned",
-    damaged: "Damaged",
-    printer_for_service: "for Service",
-    under_service: "Under Service",
-  };
-
-  const STATUS_BADGE = {
-    available: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-    assigned: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-    damaged: "bg-red-50 text-red-700 ring-1 ring-red-200",
-    printer_for_service: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-    under_service: "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
-  };
-
-  const TYPE_BADGE = {
-    Laptop: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-    Mobile: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200",
-    Printer: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-    HHT: "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
-  };
-  const navLink = (label, href, active = false) => (
+  const tab = (label, href, active = false) => (
     <button
       key={label}
       onClick={() => (window.location.href = href)}
-      className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition ${active
-        ? "bg-[#0a6ed1] text-white shadow-sm shadow-blue-600/30"
-        : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-        }`}
+      className={`-mb-[2px] whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+        active
+          ? "border-[#0052CC] text-[#0052CC]"
+          : "border-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)] hover:text-[#172B4D]"
+      }`}
     >
       {label}
     </button>
   );
 
-  const inputClass =
-    "border border-gray-200 bg-white rounded-2xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition";
-
-  const modalInput =
-    "w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition";
-
-  const modalLabel = "text-xs font-semibold text-gray-500 tracking-wide block mb-1.5";
+  const columnCount = 6;
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa]">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6">
+    <div className="min-h-screen bg-[#F4F5F7] text-[#172B4D]">
+      <div className="mx-auto max-w-[1400px] px-6 py-6 lg:px-10">
 
-        {/* HEADER */}
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
-            Asset Details
-          </h1>
-          <p className="text-gray-500 mt-1 text-sm">
+        {/* BREADCRUMB + HEADER */}
+        <nav className="mb-2 flex items-center gap-1.5 text-sm text-[#5E6C84]">
+          <span>Admin</span>
+          <span>/</span>
+          <span>Asset Management</span>
+        </nav>
+
+        <div className="mb-4">
+          <h1 className="text-2xl font-medium text-[#172B4D]">Asset Details</h1>
+          <p className="mt-1 text-sm text-[#5E6C84]">
             Asset Management Dashboard
           </p>
         </div>
 
-        {/* ================= STICKY NAVIGATION ================= */}
-        <div className="sticky top-0 z-40 bg-white/90 backdrop-blur border border-gray-200 rounded-2xl shadow-sm mb-6">
-          <div className="px-4 py-3 flex flex-wrap gap-2 items-center">
-            {navLink("Assets Assign", "/admin/assets", true)}
-            {navLink("Asset History", "/admin/assets/history")}
-            {navLink("Upload Printer", "/admin/assets/upload-printer")}
-            {navLink("Upload Laptop", "/admin/assets/upload-laptop")}
-            {navLink("Upload HHT", "/admin/assets/upload-hht")}
-          </div>
+        {/* ================= TABS NAVIGATION ================= */}
+        <div className="sticky top-0 z-40 -mx-6 mb-5 flex gap-1 overflow-x-auto border-b-2 border-[#DFE1E6] bg-[#F4F5F7] px-6 lg:-mx-10 lg:px-10">
+          {tab("Assets Assign", "/admin/assets", true)}
+          {tab("Asset History", "/admin/assets/history")}
+          {tab("Upload Printer", "/admin/assets/upload-printer")}
+          {tab("Upload Laptop", "/admin/assets/upload-laptop")}
+          {tab("Upload HHT", "/admin/assets/upload-hht")}
         </div>
 
         {/* KPI */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
-            <span className="w-11 h-11 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center text-lg">
-              📊
-            </span>
-            <div>
-              <p className="text-gray-500 text-xs font-medium">Total Assets</p>
-              <h2 className="text-2xl md:text-3xl font-bold mt-0.5 text-gray-900">
-                {total}
-              </h2>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
-            <span className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
-              💻
-            </span>
-            <div>
-              <p className="text-gray-500 text-xs font-medium">Laptops</p>
-              <h2 className="text-2xl md:text-3xl font-bold mt-0.5 text-blue-600">
-                {laptop}
-              </h2>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
-            <span className="w-11 h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-lg">
-              📱
-            </span>
-            <div>
-              <p className="text-gray-500 text-xs font-medium">Mobiles</p>
-              <h2 className="text-2xl md:text-3xl font-bold mt-0.5 text-cyan-600">
-                {mobile}
-              </h2>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
-            <span className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
-              🖨️
-            </span>
-            <div>
-              <p className="text-gray-500 text-xs font-medium">Printers</p>
-              <h2 className="text-2xl md:text-3xl font-bold mt-0.5 text-emerald-600">
-                {printer}
-              </h2>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
-            <span className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg">
-              📟
-            </span>
-            <div>
-              <p className="text-gray-500 text-xs font-medium">HHT Devices</p>
-              <h2 className="text-2xl md:text-3xl font-bold mt-0.5 text-purple-600">
-                {hht}
-              </h2>
-            </div>
-          </div>
+        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+          <StatCard label="Total assets" value={total} icon={Package} accent="#42526E" />
+          <StatCard label="Laptops" value={laptop} icon={Laptop} accent="#0052CC" />
+          <StatCard label="Mobiles" value={mobile} icon={Smartphone} accent="#00A3BF" />
+          <StatCard label="Printers" value={printer} icon={Printer} accent="#00875A" />
+          <StatCard label="HHT devices" value={hht} icon={Tablet} accent="#5243AA" />
         </div>
 
-        {/* ================= SEARCH + FILTERS (single consolidated card) ================= */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-6 overflow-hidden">
+        {/* ================= TABLE CARD ================= */}
+        <div className="rounded-[3px] border border-[#DFE1E6] bg-white">
 
-          {/* TOP BAR: search + actions */}
-          <div className="px-6 py-5 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
-            <div className="relative flex-1">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                🔍
-              </span>
+          {/* TOOLBAR */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-[#DFE1E6] p-3">
+            <div className="relative w-full sm:w-80">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+              />
               <input
-                className={`${inputClass} w-full pl-10`}
+                className={`${inputCls} pl-8`}
                 placeholder="Search asset / serial / salesman..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -398,35 +477,41 @@ export default function AssetStoreFiori() {
 
             {/* COMPANY FILTER — super_admin only */}
             {isSuperAdmin && (
-              <select
-                value={companyFilter}
-                onChange={(e) => setCompanyFilter(e.target.value)}
-                className={`${inputClass} w-full lg:w-56 truncate shrink-0`}
-              >
-                <option value="All">All companies</option>
-                {companies.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative w-full sm:w-60">
+                <Building2
+                  size={15}
+                  className="pointer-events-none absolute left-2.5 top-1/2 z-10 -translate-y-1/2 text-[#6B778C]"
+                />
+                <SelectBox
+                  value={companyFilter}
+                  onChange={(e) => setCompanyFilter(e.target.value)}
+                  className="pl-8"
+                >
+                  <option value="All">All companies</option>
+                  {companies.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </SelectBox>
+              </div>
             )}
 
-            <div className="flex gap-2 flex-wrap">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2.5 rounded-2xl text-sm font-semibold transition ${showFilters
-                  ? "bg-[#0a6ed1] text-white shadow-sm shadow-blue-600/30"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                className={
+                  showFilters
+                    ? `${btnBase} bg-[#DEEBFF] text-[#0052CC] hover:bg-[#B3D4FF]`
+                    : btnDefault
+                }
               >
+                <SlidersHorizontal size={14} />
                 {showFilters ? "Hide Filters" : "Show Filters"}
               </button>
 
-              <button
-                onClick={exportToExcel}
-                className="px-4 py-2.5 rounded-2xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm shadow-emerald-600/20"
-              >
+              <button onClick={exportToExcel} className={btnDefault}>
+                <Download size={14} />
                 Export Excel
               </button>
 
@@ -437,8 +522,9 @@ export default function AssetStoreFiori() {
                   setStatusFilter("All");
                   setCompanyFilter("All");
                 }}
-                className="px-4 py-2.5 rounded-2xl text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+                className={btnSubtle}
               >
+                <RotateCcw size={14} />
                 Reset Filters
               </button>
             </div>
@@ -450,36 +536,27 @@ export default function AssetStoreFiori() {
               }`}
           >
             <div className="overflow-hidden">
-              <div className="px-6 pb-6 pt-1 space-y-5 border-t border-gray-100">
+              <div className="space-y-4 border-b border-[#DFE1E6] bg-[#FAFBFC] px-4 py-4">
 
                 {/* TYPE FILTER */}
-                <div className="pt-4">
-                  <p className="text-xs font-semibold text-gray-400 tracking-wide mb-2">
-                    TYPE
-                  </p>
-
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-[#5E6C84]">Type</p>
                   <div className="flex flex-wrap gap-2">
                     {["All", "Laptop", "Mobile", "Printer", "HHT"].map((t) => (
-                      <button
+                      <FilterChip
                         key={t}
+                        active={filter === t}
                         onClick={() => setFilter(t)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition ${filter === t
-                          ? "bg-[#0a6ed1] text-white border-[#0a6ed1] shadow-sm shadow-blue-600/20"
-                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                          }`}
                       >
                         {t}
-                      </button>
+                      </FilterChip>
                     ))}
                   </div>
                 </div>
 
                 {/* STATUS FILTER */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 tracking-wide mb-2">
-                    STATUS
-                  </p>
-
+                  <p className="mb-2 text-xs font-semibold text-[#5E6C84]">Status</p>
                   <div className="flex flex-wrap gap-2">
                     {[
                       "All",
@@ -489,45 +566,40 @@ export default function AssetStoreFiori() {
                       "printer_for_service",
                       "under_service",
                     ].map((s) => (
-                      <button
+                      <FilterChip
                         key={s}
+                        active={statusFilter === s}
                         onClick={() => setStatusFilter(s)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition ${statusFilter === s
-                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20"
-                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                          }`}
                       >
                         {STATUS_LABELS[s]}
-                      </button>
+                      </FilterChip>
                     ))}
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* ================= TABLE ================= */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+          {/* TABLE */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#f7f9fb] border-b border-gray-200">
-                <tr className="text-gray-500">
-                  <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
-                    Asset Code
+            <table className="w-full min-w-[900px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b-2 border-[#DFE1E6] text-left">
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
+                    Asset code
                   </th>
 
-                  <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
                     Type
                   </th>
 
                   {!showHHTFields && (
                     <>
-                      <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
                         Model
                       </th>
 
-                      <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
                         Serial
                       </th>
                     </>
@@ -535,25 +607,25 @@ export default function AssetStoreFiori() {
 
                   {showHHTFields && (
                     <>
-                      <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
                         Salesman
                       </th>
 
-                      <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
                         Route
                       </th>
                     </>
                   )}
 
-                  <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
-                    Current User
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
+                    Current user
                   </th>
 
-                  <th className="text-left px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
                     Status
                   </th>
 
-                  <th className="text-center px-6 py-3.5 font-semibold text-xs tracking-wide uppercase">
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-[#5E6C84]">
                     Actions
                   </th>
                 </tr>
@@ -562,133 +634,152 @@ export default function AssetStoreFiori() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="text-center py-16">
-                      <div className="flex flex-col items-center gap-2 text-gray-400">
-                        <span className="text-3xl">🗂️</span>
-                        <p className="text-sm font-medium">No assets found</p>
-                        <p className="text-xs">Try adjusting your search or filters</p>
+                    <td colSpan={columnCount + 1} className="px-4 py-16 text-center">
+                      <div className="flex flex-col items-center gap-1 text-[#5E6C84]">
+                        <Inbox size={32} className="text-[#97A0AF]" />
+                        <p className="mt-1 text-base font-medium text-[#172B4D]">
+                          No assets found
+                        </p>
+                        <p className="text-sm">Try adjusting your search or filters.</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((a, index) => (
-                    <tr
-                      key={a._id}
-                      className={`border-b border-gray-100 last:border-0 hover:bg-blue-50/40 transition ${index % 2 === 0 ? "bg-white" : "bg-gray-50/40"
-                        }`}
-                    >
-                      <td className="px-6 py-3.5 font-semibold text-gray-900">
-                        {a.assetCode}
-                      </td>
+                  filtered.map((a) => {
+                    const currentUser = getCurrentUser(a);
+                    const assigned = currentUser !== "Not Assigned";
 
-                      <td className="px-6 py-3.5">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${TYPE_BADGE[a.type] || "bg-gray-100 text-gray-700"
-                            }`}
-                        >
-                          {a.type}
-                        </span>
-                      </td>
+                    return (
+                      <tr
+                        key={a._id}
+                        className="border-b border-[#DFE1E6] transition-colors hover:bg-[#F4F5F7]"
+                      >
+                        <td className="px-4 py-2.5 font-medium text-[#0052CC]">
+                          {a.assetCode}
+                        </td>
 
-                      {!showHHTFields && (
-                        <>
-                          <td className="px-6 py-3.5 text-gray-600">
-                            {a.model || "-"}
-                          </td>
-
-                          <td className="px-6 py-3.5 text-gray-600">
-                            {a.serialNumber || "-"}
-                          </td>
-                        </>
-                      )}
-
-                      {showHHTFields && (
-                        <>
-                          <td className="px-6 py-3.5 text-gray-600">
-                            {a.salesmanName || "-"}
-                          </td>
-
-                          <td className="px-6 py-3.5 text-gray-600">
-                            {a.route || "-"}
-                          </td>
-                        </>
-                      )}
-
-                      <td className="px-6 py-3.5 text-gray-700 font-medium">
-                        {getCurrentUser(a)}
-                      </td>
-
-                      <td className="px-6 py-3.5">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold ${STATUS_BADGE[a.status] || "bg-gray-100 text-gray-700"
-                            }`}
-                        >
-                          {STATUS_LABELS[a.status] || a.status}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => openEdit(a)}
-                            className="min-w-[76px] h-8 rounded-lg bg-white hover:bg-blue-50 text-[#0a6ed1] text-xs font-semibold border border-blue-200 transition"
+                        <td className="px-4 py-2.5">
+                          <span
+                            className={`inline-block rounded-[3px] px-1.5 py-0.5 text-xs font-medium ${TYPE_TAG[a.type] || "bg-[#DFE1E6] text-[#42526E]"
+                              }`}
                           >
-                            Edit
-                          </button>
+                            {a.type}
+                          </span>
+                        </td>
 
-                          <button
-                            onClick={() => deleteAsset(a._id)}
-                            className="min-w-[76px] h-8 rounded-lg bg-white hover:bg-red-50 text-red-600 text-xs font-semibold border border-red-200 transition"
+                        {!showHHTFields && (
+                          <>
+                            <td className="px-4 py-2.5 text-[#42526E]">
+                              {a.model || "-"}
+                            </td>
+
+                            <td className="px-4 py-2.5 font-mono text-[13px] text-[#42526E]">
+                              {a.serialNumber || "-"}
+                            </td>
+                          </>
+                        )}
+
+                        {showHHTFields && (
+                          <>
+                            <td className="px-4 py-2.5 text-[#42526E]">
+                              {a.salesmanName || "-"}
+                            </td>
+
+                            <td className="px-4 py-2.5 text-[#42526E]">
+                              {a.route || "-"}
+                            </td>
+                          </>
+                        )}
+
+                        <td className="px-4 py-2.5">
+                          {assigned ? (
+                            <div className="flex items-center gap-2">
+                              <Avatar name={currentUser} />
+                              <span className="font-medium text-[#172B4D]">
+                                {tidy(currentUser)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[#6B778C]">Not Assigned</span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-2.5">
+                          <span
+                            className={`inline-block rounded-[3px] px-1.5 py-0.5 text-[11px] font-bold uppercase leading-4 tracking-wide ${STATUS_LOZENGE[a.status] || "bg-[#DFE1E6] text-[#42526E]"
+                              }`}
                           >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            {STATUS_LABELS[a.status] || a.status}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => openEdit(a)}
+                              className={`${btnSubtle} text-[#0052CC]`}
+                            >
+                              <Pencil size={14} />
+                              Edit
+                            </button>
+
+                            <button
+                              onClick={() => deleteAsset(a._id)}
+                              className={`${btnBase} bg-transparent text-[#BF2600] hover:bg-[#FFEBE6]`}
+                            >
+                              <Trash2 size={14} />
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
 
           {filtered.length > 0 && (
-            <div className="px-6 py-3 border-t border-gray-100 text-xs text-gray-400">
-              Showing {filtered.length} of {total} assets
+            <div className="border-t border-[#DFE1E6] px-4 py-3 text-sm text-[#5E6C84]">
+              Showing{" "}
+              <span className="font-medium text-[#172B4D]">{filtered.length}</span>{" "}
+              of <span className="font-medium text-[#172B4D]">{total}</span> assets
             </div>
           )}
         </div>
 
         {/* ================= EDIT MODAL ================= */}
         {editOpen && selected && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(9,30,66,0.54)] p-4 sm:pt-[6vh]">
+            <div className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-[3px] bg-white shadow-[0_8px_16px_-4px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
               {/* HEADER */}
-              <div className="bg-[#0a6ed1] px-6 py-4 flex items-center justify-between shrink-0">
+              <div className="flex shrink-0 items-start justify-between px-6 pb-2 pt-5">
                 <div>
-                  <h2 className="text-lg font-bold text-white">
-                    Edit Asset
+                  <h2 className="text-xl font-medium text-[#172B4D]">
+                    Edit asset
                   </h2>
-                  <p className="text-blue-100 text-xs">
+                  <p className="mt-0.5 text-sm text-[#5E6C84]">
                     Update asset information
                   </p>
                 </div>
 
                 <button
                   onClick={() => setEditOpen(false)}
-                  className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 text-white transition flex items-center justify-center"
+                  className="rounded-[3px] p-1 text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]"
+                  aria-label="Close"
                 >
-                  ✕
+                  <X size={18} />
                 </button>
               </div>
 
               {/* BODY */}
-              <div className="p-6 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="overflow-y-auto px-6 py-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
-                  <div>
-                    <label className={modalLabel}>Asset Code</label>
+                  <Field label="Asset code">
                     <input
-                      className={modalInput}
+                      className={inputCls}
                       value={selected.assetCode || ""}
                       onChange={(e) =>
                         setSelected({
@@ -697,12 +788,10 @@ export default function AssetStoreFiori() {
                         })
                       }
                     />
-                  </div>
+                  </Field>
 
-                  <div>
-                    <label className={modalLabel}>Type</label>
-                    <select
-                      className={modalInput}
+                  <Field label="Type">
+                    <SelectBox
                       value={selected.type || ""}
                       onChange={(e) =>
                         setSelected({
@@ -715,17 +804,16 @@ export default function AssetStoreFiori() {
                       <option value="Mobile">Mobile</option>
                       <option value="Printer">Printer</option>
                       <option value="HHT">HHT</option>
-                    </select>
-                  </div>
+                    </SelectBox>
+                  </Field>
 
                   {(selected.type === "Laptop" ||
                     selected.type === "Mobile" ||
                     selected.type === "Printer") && (
                       <>
-                        <div>
-                          <label className={modalLabel}>Model</label>
+                        <Field label="Model">
                           <input
-                            className={modalInput}
+                            className={inputCls}
                             value={selected.model || ""}
                             onChange={(e) =>
                               setSelected({
@@ -734,12 +822,11 @@ export default function AssetStoreFiori() {
                               })
                             }
                           />
-                        </div>
+                        </Field>
 
-                        <div>
-                          <label className={modalLabel}>Serial Number</label>
+                        <Field label="Serial number">
                           <input
-                            className={modalInput}
+                            className={inputCls}
                             value={selected.serialNumber || ""}
                             onChange={(e) =>
                               setSelected({
@@ -748,16 +835,15 @@ export default function AssetStoreFiori() {
                               })
                             }
                           />
-                        </div>
+                        </Field>
                       </>
                     )}
 
                   {selected.type === "Printer" && (
                     <>
-                      <div>
-                        <label className={modalLabel}>Route</label>
+                      <Field label="Route">
                         <input
-                          className={modalInput}
+                          className={inputCls}
                           value={selected.route || ""}
                           onChange={(e) =>
                             setSelected({
@@ -766,12 +852,11 @@ export default function AssetStoreFiori() {
                             })
                           }
                         />
-                      </div>
+                      </Field>
 
-                      <div>
-                        <label className={modalLabel}>Supervisor</label>
+                      <Field label="Supervisor">
                         <input
-                          className={modalInput}
+                          className={inputCls}
                           value={selected.supervisor || ""}
                           onChange={(e) =>
                             setSelected({
@@ -780,12 +865,11 @@ export default function AssetStoreFiori() {
                             })
                           }
                         />
-                      </div>
+                      </Field>
 
-                      <div>
-                        <label className={modalLabel}>Salesman Code</label>
+                      <Field label="Salesman code">
                         <input
-                          className={modalInput}
+                          className={inputCls}
                           value={selected.salesmanCode || ""}
                           onChange={(e) =>
                             setSelected({
@@ -794,12 +878,11 @@ export default function AssetStoreFiori() {
                             })
                           }
                         />
-                      </div>
+                      </Field>
 
-                      <div>
-                        <label className={modalLabel}>Salesman Name</label>
+                      <Field label="Salesman name">
                         <input
-                          className={modalInput}
+                          className={inputCls}
                           value={selected.salesmanName || ""}
                           onChange={(e) =>
                             setSelected({
@@ -808,16 +891,15 @@ export default function AssetStoreFiori() {
                             })
                           }
                         />
-                      </div>
+                      </Field>
                     </>
                   )}
 
                   {selected.type === "HHT" && (
                     <>
-                      <div>
-                        <label className={modalLabel}>Salesman Name</label>
+                      <Field label="Salesman name">
                         <input
-                          className={modalInput}
+                          className={inputCls}
                           value={selected.salesmanName || ""}
                           onChange={(e) =>
                             setSelected({
@@ -826,12 +908,11 @@ export default function AssetStoreFiori() {
                             })
                           }
                         />
-                      </div>
+                      </Field>
 
-                      <div>
-                        <label className={modalLabel}>Route</label>
+                      <Field label="Route">
                         <input
-                          className={modalInput}
+                          className={inputCls}
                           value={selected.route || ""}
                           onChange={(e) =>
                             setSelected({
@@ -840,12 +921,11 @@ export default function AssetStoreFiori() {
                             })
                           }
                         />
-                      </div>
+                      </Field>
 
-                      <div>
-                        <label className={modalLabel}>IMEI</label>
+                      <Field label="IMEI">
                         <input
-                          className={modalInput}
+                          className={inputCls}
                           value={selected.imei || ""}
                           onChange={(e) =>
                             setSelected({
@@ -854,12 +934,11 @@ export default function AssetStoreFiori() {
                             })
                           }
                         />
-                      </div>
+                      </Field>
 
-                      <div>
-                        <label className={modalLabel}>SIM Number</label>
+                      <Field label="SIM number">
                         <input
-                          className={modalInput}
+                          className={inputCls}
                           value={selected.simNumber || ""}
                           onChange={(e) =>
                             setSelected({
@@ -868,14 +947,12 @@ export default function AssetStoreFiori() {
                             })
                           }
                         />
-                      </div>
+                      </Field>
                     </>
                   )}
 
-                  <div className="md:col-span-2">
-                    <label className={modalLabel}>Status</label>
-                    <select
-                      className={modalInput}
+                  <Field label="Status" className="md:col-span-2">
+                    <SelectBox
                       value={selected.status || ""}
                       onChange={(e) =>
                         setSelected({
@@ -891,16 +968,16 @@ export default function AssetStoreFiori() {
                         For Service
                       </option>
                       <option value="under_service">Under Service</option>
-                    </select>
-                  </div>
+                    </SelectBox>
+                  </Field>
 
                   {selected?.type === "Laptop" && (
                     <div className="md:col-span-2">
-                      <label className={modalLabel + " mb-2"}>
+                      <label className="mb-2 block text-xs font-semibold text-[#5E6C84]">
                         Accessories
                       </label>
 
-                      <div className="grid grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                         {[
                           ["charger", "Charger"],
                           ["mouse", "Mouse"],
@@ -910,11 +987,11 @@ export default function AssetStoreFiori() {
                         ].map(([key, label]) => (
                           <label
                             key={key}
-                            className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 cursor-pointer hover:bg-gray-100 transition"
+                            className="flex cursor-pointer items-center gap-2 rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-3 py-2 text-sm text-[#172B4D] transition-colors hover:bg-[#EBECF0]"
                           >
                             <input
                               type="checkbox"
-                              className="accent-[#0a6ed1]"
+                              className="h-4 w-4 accent-[#0052CC]"
                               checked={selected?.accessories?.[key] || false}
                               onChange={(e) =>
                                 setSelected({
@@ -933,11 +1010,10 @@ export default function AssetStoreFiori() {
                     </div>
                   )}
 
-                  <div className="md:col-span-2">
-                    <label className={modalLabel}>Notes</label>
+                  <Field label="Notes" className="md:col-span-2">
                     <textarea
                       rows="4"
-                      className={modalInput}
+                      className="w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 py-2 text-sm text-[#172B4D] transition-colors hover:bg-[#EBECF0] focus:border-[#4C9AFF] focus:bg-white focus:outline-none"
                       value={selected.notes || ""}
                       onChange={(e) =>
                         setSelected({
@@ -946,24 +1022,21 @@ export default function AssetStoreFiori() {
                         })
                       }
                     />
-                  </div>
+                  </Field>
                 </div>
               </div>
 
               {/* FOOTER */}
-              <div className="flex gap-3 p-6 pt-0 shrink-0">
-                <button
-                  onClick={updateAsset}
-                  className="flex-1 h-11 rounded-xl bg-[#0a6ed1] hover:bg-[#085caf] text-white font-semibold shadow-sm shadow-blue-600/20 transition"
-                >
-                  Save Changes
-                </button>
-
+              <div className="flex shrink-0 justify-end gap-2 px-6 pb-5 pt-3">
                 <button
                   onClick={() => setEditOpen(false)}
-                  className="flex-1 h-11 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold transition"
+                  className={btnSubtle}
                 >
                   Cancel
+                </button>
+
+                <button onClick={updateAsset} className={btnPrimary}>
+                  Save changes
                 </button>
               </div>
             </div>
