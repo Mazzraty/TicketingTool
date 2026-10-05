@@ -36,7 +36,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { to: "/admin/assets", icon: Package, label: "Asset Management" },
     { to: "/admin/assets/history", icon: History, label: "Asset History" },
     { to: "/admin/assets/upload-printer", icon: Printer, label: "Upload Printer" },
-    { to: "/admin/assets/upload-laptop", icon: Laptop, label: "Upload Laptop" },
+    { to: "/admin/assets/upload-laptop", icon: Laptop, label: "Upload System" },
     { to: "/admin/assets/upload-hht", icon: Tablet, label: "Upload HHT" },
   ];
 
@@ -220,17 +220,17 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             <div className="space-y-2">
               <NavItem to="/admin/dashboard" icon={LayoutDashboard} label="Dashboard" />
 
-              <NavGroup id="employees" icon={Users} label="Employees">
-                {employeeChildren}
+                <NavGroup id="tickets" icon={Ticket} label="Tickets">
+                {ticketItems}
               </NavGroup>
 
               <NavGroup id="assets" icon={Package} label="Asset Management">
                 {assetChildren}
               </NavGroup>
-
-              <NavGroup id="tickets" icon={Ticket} label="Tickets">
-                {ticketItems}
+              <NavGroup id="employees" icon={Users} label="Employees">
+                {employeeChildren}
               </NavGroup>
+ 
             </div>
           </div>
         )}
@@ -245,8 +245,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
             <div className="space-y-2">
               <NavItem to="/admin/dashboard" icon={LayoutDashboard} label="Dashboard" />
-              <NavItem to="/admin/it-support-users" icon={Users} label="Company Users" />
               <NavGroup id="tickets" icon={Ticket} label="Tickets">
+              <NavItem to="/admin/it-support-users" icon={Users} label="Company Users" />
+              
                 {itSupportTicketChildren}
               </NavGroup>
               {/* <NavItem
