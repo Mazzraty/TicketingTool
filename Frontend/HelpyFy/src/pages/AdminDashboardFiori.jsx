@@ -1,38 +1,123 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  CartesianGrid,
-} from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Package,
   Laptop,
   Printer,
   Smartphone,
-  CheckCircle,
-  AlertCircle,
   Users,
   FileText,
   Lock,
   DollarSign,
-  Calendar,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 
-/**
- * FONTS — same as Login/Register/Dashboard, add once to index.html <head>:
- * <link rel="preconnect" href="https://fonts.googleapis.com">
- * <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
- * <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
- */
+/* ================= DESIGN TOKENS (Atlassian-style) ================= */
+const FONT_STACK =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Helvetica Neue', sans-serif";
+
+const COLORS = {
+  laptops: "#0C66E4",
+  printers: "#6E5DC6",
+  hht: "#1D9AAA",
+  assigned: "#0C66E4",
+  available: "#4BCE97",
+};
+
+// Lozenge palette: [background, text]
+const STATUS_LOZ = {
+  available: ["#DCFFF1", "#216E4E"],
+  active: ["#DCFFF1", "#216E4E"],
+  assigned: ["#DEEBFF", "#0747A6"],
+  expiring: ["#FFF7D6", "#7F5F01"],
+  expired: ["#FFEDEB", "#AE2E24"],
+};
+
+/* ================= SMALL UI PIECES ================= */
+const Lozenge = ({ status }) => {
+  const key = String(status || "").toLowerCase();
+  const [bg, fg] = STATUS_LOZ[key] || ["#DFE1E6", "#42526E"];
+  return (
+    <span
+      className="inline-flex items-center h-5 px-1.5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide whitespace-nowrap"
+      style={{ backgroundColor: bg, color: fg }}
+    >
+      {status || "—"}
+    </span>
+  );
+};
+
+const Tile = ({ icon: Icon, label, value, hint, tone }) => (
+  <div className="px-4 py-3 min-w-0 bg-white">
+    <div className="flex items-center gap-2 mb-1.5">
+      <Icon
+        size={14}
+        className={tone === "warning" ? "text-[#B65C02]" : tone === "danger" ? "text-[#C9372C]" : "text-[#626F86]"}
+      />
+      <p className="text-xs font-medium text-[#626F86] truncate">{label}</p>
+    </div>
+    <p className="text-[28px] leading-8 font-semibold text-[#172B4D] whitespace-nowrap tabular-nums">{value}</p>
+    {hint && (
+      <p className={`text-xs mt-1 truncate ${tone === "warning" ? "text-[#B65C02]" : tone === "danger" ? "text-[#C9372C]" : "text-[#626F86]"}`}>
+        {hint}
+      </p>
+    )}
+  </div>
+);
+
+const Strip = ({ children, cols }) => (
+  <section className="border border-[#DCDFE4] rounded-[3px] overflow-hidden bg-[#DCDFE4]">
+    <div className={`grid grid-cols-2 gap-px ${cols}`}>{children}</div>
+  </section>
+);
+
+const Card = ({ title, aside, children }) => (
+  <section className="bg-white border border-[#DCDFE4] rounded-[3px]">
+    <header className="flex items-center justify-between px-4 py-3 border-b border-[#EBECF0]">
+      <h2 className="text-sm font-semibold text-[#172B4D]">{title}</h2>
+      {aside && <span className="text-xs text-[#626F86]">{aside}</span>}
+    </header>
+    {children}
+  </section>
+);
+
+const Th = ({ children }) => (
+  <th className="py-2.5 px-4 text-left text-xs font-semibold text-[#626F86] whitespace-nowrap">{children}</th>
+);
+
+const SkeletonRows = () => (
+  <div className="animate-pulse divide-y divide-[#EBECF0]">
+    {[...Array(5)].map((_, i) => (
+      <div key={i} className="flex items-center gap-4 px-4 py-3.5">
+        <div className="h-3 w-24 bg-[#EBECF0] rounded" />
+        <div className="h-3 flex-1 bg-[#EBECF0] rounded" />
+        <div className="h-3 w-16 bg-[#EBECF0] rounded" />
+      </div>
+    ))}
+  </div>
+);
+
+const Empty = () => <p className="text-sm text-center text-[#626F86] py-10">No data available</p>;
+
+const ChartTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-[#172B4D] text-white text-xs px-2.5 py-1.5 rounded-[3px]">
+      {payload[0].name}: <b>{payload[0].value}</b>
+    </div>
+  );
+};
+
+const formatDate = (d) => {
+  if (!d) return "—";
+  const date = new Date(d);
+  if (isNaN(date)) return "—";
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+};
+
+const pct = (value, total) => (total ? Math.round((value / total) * 100) : 0);
 
 export default function AdminDashboardProfessional() {
   /* ================= STATE ================= */
@@ -95,8 +180,7 @@ export default function AdminDashboardProfessional() {
 
   useEffect(() => {
     loadDashboard();
-
-    // Real auto-refresh every 5 minutes — matches what the footer claims.
+    // Auto-refresh every 5 minutes.
     const interval = setInterval(loadDashboard, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -105,321 +189,247 @@ export default function AdminDashboardProfessional() {
     ? lastUpdated.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     : "—";
 
-  /* ================= CHART DATA — green/wheat palette ================= */
+  /* ================= DERIVED DATA ================= */
   const assetChart = [
-    { name: "Laptops", value: stats.laptops || 0, fill: "#1f4a35" },
-    { name: "Printers", value: stats.printers || 0, fill: "#4a7c59" },
-    { name: "Mobile/HHT", value: stats.hht || 0, fill: "#d4a94c" },
+    { name: "Laptops/Desktops", value: stats.laptops || 0, fill: COLORS.laptops },
+    { name: "Printers", value: stats.printers || 0, fill: COLORS.printers },
+    { name: "Mobile/HHT", value: stats.hht || 0, fill: COLORS.hht },
   ];
+  const chartTotal = assetChart.reduce((s, d) => s + d.value, 0);
 
-  const assetStatus = [
-    { name: "Assigned", value: stats.assigned || 0 },
-    { name: "Available", value: stats.available || 0 },
-  ];
-
-  /* ================= STAT CARD COMPONENT ================= */
-  const StatCard = ({ icon: Icon, title, value, subtext, trendType = "neutral" }) => (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <p className="text-gray-600 text-sm font-medium mb-1">{title}</p>
-          <h3 className="text-3xl font-bold text-gray-900">{value}</h3>
-          {subtext && <p className="text-xs text-gray-500 mt-2">{subtext}</p>}
-        </div>
-        <div
-          className={`p-3 rounded-lg ${trendType === "positive"
-              ? "bg-[#eef3ee]"
-              : trendType === "warning"
-                ? "bg-amber-100"
-                : "bg-[#eef3ee]"
-            }`}
-        >
-          <Icon
-            size={20}
-            className={
-              trendType === "warning" ? "text-amber-600" : "text-[#1f4a35]"
-            }
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  /* ================= SECTION HEADER ================= */
-  const SectionHeader = ({ title, subtitle }) => (
-    <div className="mb-6">
-      <h2 className="font-['Fraunces',serif] text-xl font-medium text-[#14251c]">{title}</h2>
-      {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
-    </div>
-  );
-
-  /* ================= CHART WRAPPER ================= */
-  const ChartCard = ({ title, children }) => (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-      <h3 className="font-['Fraunces',serif] text-lg font-medium text-[#14251c] mb-6">{title}</h3>
-      {children}
-    </div>
-  );
-
-  /* ================= TABLE COMPONENT ================= */
-  const EnhancedTable = ({ title, columns, data, loading }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="p-6 border-b border-gray-100">
-        <h3 className="font-['Fraunces',serif] text-lg font-medium text-[#14251c]">{title}</h3>
-      </div>
-
-      {loading ? (
-        <div className="p-8 text-center text-gray-500">Loading...</div>
-      ) : data.length === 0 ? (
-        <div className="p-8 text-center text-gray-500">No data available</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                {columns.map((col, i) => (
-                  <th
-                    key={i}
-                    className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide"
-                  >
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row, idx) => (
-                <tr
-                  key={idx}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150"
-                >
-                  {Object.values(row).map((cell, cellIdx) => (
-                    <td key={cellIdx} className="px-6 py-4 text-sm text-gray-700">
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-
-  /* ================= STATUS BADGE ================= */
-  const StatusBadge = ({ status }) => {
-    const colors = {
-      available: "bg-[#eef3ee] text-[#1f4a35]",
-      assigned: "bg-blue-100 text-blue-800",
-      active: "bg-[#eef3ee] text-[#1f4a35]",
-      expired: "bg-red-100 text-red-800",
-      expiring: "bg-amber-100 text-amber-800",
-    };
-    return (
-      <span
-        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${colors[status.toLowerCase()] || "bg-gray-100 text-gray-800"
-          }`}
-      >
-        {status.toLowerCase() === "available" || status.toLowerCase() === "active" ? (
-          <CheckCircle size={12} />
-        ) : (
-          <AlertCircle size={12} />
-        )}
-        {status}
-      </span>
-    );
-  };
-
-  /* ================= CUSTOM TOOLTIP ================= */
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-100">
-          <p className="text-sm font-medium text-gray-900">{label}</p>
-          <p className="text-sm text-[#1f4a35] font-semibold">{payload[0].value}</p>
-        </div>
-      );
-    }
-    return null;
-  };
+  const statusTotal = (stats.assigned || 0) + (stats.available || 0);
+  const assignedPct = pct(stats.assigned, statusTotal);
+  const availablePct = statusTotal ? 100 - assignedPct : 0;
 
   /* ================= RENDER ================= */
   return (
-    <div className="min-h-screen bg-[#faf8f4] font-['Inter',sans-serif]">
-      {/* HEADER */}
-      <div className="border-b border-gray-100 bg-white sticky top-15 z-30">
-        <div className="max-w-7xl mx-auto px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="font-['Fraunces',serif] text-2xl font-medium text-[#14251c]">
-                Dashboard
-              </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Enterprise asset & operations overview
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Calendar size={16} />
-              <span>
-                {loading ? "Updating…" : `Last updated: ${formattedLastUpdated}`}
-              </span>
-            </div>
+    <div className="min-h-screen bg-[#F7F8F9] text-[#172B4D]" style={{ fontFamily: FONT_STACK }}>
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-6">
+
+        {/* TITLE */}
+        <nav className="text-xs text-[#626F86] mb-2">
+          Asset management <span className="mx-1">/</span> Overview
+        </nav>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+          <div>
+            <h1 className="text-2xl font-medium">Dashboard</h1>
+            <p className="text-sm text-[#626F86] mt-1">Enterprise asset and operations overview</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-[#626F86]">
+              {loading ? "Updating…" : `Updated ${formattedLastUpdated}`}
+            </span>
+            <button
+              onClick={loadDashboard}
+              disabled={loading}
+              aria-label="Refresh"
+              className="h-8 w-8 inline-flex items-center justify-center rounded-[3px] bg-[#091E420F] hover:bg-[#091E4224] text-[#44546F] focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:opacity-60"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* MAIN CONTENT */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* KPI SECTION */}
-        <div className="mb-12">
-          <SectionHeader
-            title="Key Performance Indicators"
-            subtitle="Real-time asset and operations metrics"
-          />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
+        <div className="space-y-4">
+
+          {/* ASSETS SUMMARY */}
+          <Strip cols="sm:grid-cols-3 lg:grid-cols-5">
+            <Tile
               icon={Package}
-              title="Total Assets"
+              label="Total assets"
               value={stats.totalAssets}
-              subtext={`${stats.assigned} assigned, ${stats.available} available`}
+              hint={`${stats.assigned} assigned · ${stats.available} available`}
             />
-            <StatCard
-              icon={Laptop}
-              title="Laptops/Desktops"
-              value={stats.laptops}
-              subtext="Managed devices"
-            />
-            <StatCard
-              icon={Printer}
-              title="Printers"
-              value={stats.printers}
-              subtext="Managed devices"
-            />
-            <StatCard
-              icon={Smartphone}
-              title="Mobile/HHT"
-              value={stats.hht}
-              subtext="Hand-held terminals"
-            />
+            <Tile icon={Laptop} label="Laptops / desktops" value={stats.laptops} hint="Managed devices" />
+            <Tile icon={Printer} label="Printers" value={stats.printers} hint="Managed devices" />
+            <Tile icon={Smartphone} label="Mobile / HHT" value={stats.hht} hint="Hand-held terminals" />
+            <Tile icon={Users} label="Employees" value={stats.employees} hint="Active staff" />
+          </Strip>
 
-            <StatCard
-              icon={Users}
-              title="Employees"
-              value={stats.employees}
-              subtext="Active staff"
-            />
-            <StatCard
+          {/* OPERATIONS SUMMARY */}
+          <Strip cols="lg:grid-cols-4">
+            <Tile
               icon={FileText}
-              title="Open Tickets"
+              label="Open tickets"
               value={stats.openTickets}
-              trendType={stats.openTickets > 5 ? "warning" : "positive"}
-              subtext="Support requests"
+              hint="Support requests"
+              tone={stats.openTickets > 5 ? "warning" : undefined}
             />
-            <StatCard
+            <Tile
               icon={Lock}
-              title="Active Licenses"
+              label="Active licenses"
               value={stats.totalActiveLicenses}
-              subtext={`${stats.expiringThisMonth} expiring soon`}
-              trendType={stats.expiringThisMonth > 0 ? "warning" : "positive"}
+              hint={`${stats.expiringThisMonth} expiring this month`}
+              tone={stats.expiringThisMonth > 0 ? "warning" : undefined}
             />
-            <StatCard
+            <Tile
+              icon={AlertCircle}
+              label="Expired services"
+              value={stats.expiredServices}
+              hint={stats.expiredServices > 0 ? "Needs renewal" : "None expired"}
+              tone={stats.expiredServices > 0 ? "danger" : undefined}
+            />
+            <Tile
               icon={DollarSign}
-              title="Annual Software Cost"
+              label="Annual software cost"
               value={`QAR ${Number(stats.annualSoftwareCost).toLocaleString()}`}
-              subtext="Current fiscal year"
+              hint="Current fiscal year"
             />
+          </Strip>
+
+          {/* CHARTS */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card title="Assets by type" aside={`${chartTotal} total`}>
+              <div className="p-4 flex flex-col sm:flex-row items-center gap-6">
+                <div className="relative w-[200px] h-[200px] shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={assetChart}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={62}
+                        outerRadius={92}
+                        paddingAngle={chartTotal ? 2 : 0}
+                        dataKey="value"
+                        nameKey="name"
+                        stroke="none"
+                      >
+                        {assetChart.map((entry) => (
+                          <Cell key={entry.name} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<ChartTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-semibold tabular-nums">{chartTotal}</span>
+                    <span className="text-xs text-[#626F86]">devices</span>
+                  </div>
+                </div>
+
+                <ul className="w-full divide-y divide-[#EBECF0]">
+                  {assetChart.map((d) => (
+                    <li key={d.name} className="flex items-center justify-between py-2.5 text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: d.fill }} />
+                        {d.name}
+                      </span>
+                      <span className="text-[#44546F] tabular-nums">
+                        <b className="font-semibold text-[#172B4D]">{d.value}</b>
+                        <span className="ml-2 text-xs">{pct(d.value, chartTotal)}%</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Card>
+
+            <Card title="Asset allocation" aside={`${assignedPct}% assigned`}>
+              <div className="p-4">
+                <div className="flex h-3 w-full rounded-[3px] overflow-hidden bg-[#EBECF0] mb-5">
+                  <div style={{ width: `${assignedPct}%`, backgroundColor: COLORS.assigned }} />
+                  <div style={{ width: `${availablePct}%`, backgroundColor: COLORS.available }} />
+                </div>
+
+                <ul className="divide-y divide-[#EBECF0]">
+                  <li className="flex items-center justify-between py-2.5 text-sm">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: COLORS.assigned }} />
+                      Assigned
+                    </span>
+                    <span className="text-[#44546F] tabular-nums">
+                      <b className="font-semibold text-[#172B4D]">{stats.assigned}</b>
+                      <span className="ml-2 text-xs">{assignedPct}%</span>
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between py-2.5 text-sm">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: COLORS.available }} />
+                      Available
+                    </span>
+                    <span className="text-[#44546F] tabular-nums">
+                      <b className="font-semibold text-[#172B4D]">{stats.available}</b>
+                      <span className="ml-2 text-xs">{availablePct}%</span>
+                    </span>
+                  </li>
+                </ul>
+
+                <p className="text-xs text-[#626F86] mt-3">
+                  {stats.available} of {statusTotal} assets are free to assign.
+                </p>
+              </div>
+            </Card>
           </div>
-        </div>
 
-        {/* CHARTS SECTION */}
-        <div className="mb-12">
-          <SectionHeader
-            title="Asset Analytics"
-            subtitle="Distribution and status breakdown"
-          />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* PIE CHART */}
-            <ChartCard title="Asset Distribution by Type">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={assetChart}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                    nameKey="name"
-                  >
-                    {assetChart.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    formatter={(value) => (
-                      <span className="text-sm text-gray-700">{value}</span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartCard>
+          {/* TABLES */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card title="Recent assets">
+              {loading && recentAssets.length === 0 ? (
+                <SkeletonRows />
+              ) : recentAssets.length === 0 ? (
+                <Empty />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-[#DCDFE4]">
+                        <Th>Asset code</Th>
+                        <Th>Type</Th>
+                        <Th>Model</Th>
+                        <Th>Status</Th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#EBECF0]">
+                      {recentAssets.map((a, i) => (
+                        <tr key={a._id || a.assetCode || i} className="hover:bg-[#F7F8F9] transition-colors">
+                          <td className="py-3 px-4 font-medium whitespace-nowrap">{a.assetCode || "—"}</td>
+                          <td className="py-3 px-4 text-[#44546F]">{a.type || "—"}</td>
+                          <td className="py-3 px-4 text-[#44546F]">{a.model || "—"}</td>
+                          <td className="py-3 px-4"><Lozenge status={a.status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
 
-            {/* BAR CHART */}
-            <ChartCard title="Asset Allocation Status">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={assetStatus} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                  <XAxis dataKey="name" stroke="#9ca3af" style={{ fontSize: "12px" }} />
-                  <YAxis stroke="#9ca3af" style={{ fontSize: "12px" }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="value" fill="#1f4a35" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
+            <Card title="Recent software">
+              {loading && recentSoftware.length === 0 ? (
+                <SkeletonRows />
+              ) : recentSoftware.length === 0 ? (
+                <Empty />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-[#DCDFE4]">
+                        <Th>Service</Th>
+                        <Th>Vendor</Th>
+                        <Th>Expiry date</Th>
+                        <Th>Status</Th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#EBECF0]">
+                      {recentSoftware.map((s, i) => (
+                        <tr key={s._id || i} className="hover:bg-[#F7F8F9] transition-colors">
+                          <td className="py-3 px-4 font-medium">{s.serviceName || "—"}</td>
+                          <td className="py-3 px-4 text-[#44546F]">{s.vendor || "—"}</td>
+                          <td className="py-3 px-4 text-[#44546F] whitespace-nowrap">{formatDate(s.expiryDate)}</td>
+                          <td className="py-3 px-4"><Lozenge status={s.status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
           </div>
-        </div>
 
-        {/* TABLES SECTION */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <EnhancedTable
-            title="Recent Assets"
-            columns={["Asset Code", "Type", "Model", "Status"]}
-            data={recentAssets.map((a) => ({
-              code: a.assetCode,
-              type: a.type,
-              model: a.model || "—",
-              status: <StatusBadge status={a.status} />,
-            }))}
-            loading={loading}
-          />
-
-          <EnhancedTable
-            title="Recent Software"
-            columns={["Service", "Vendor", "Expiry Date", "Status"]}
-            data={recentSoftware.map((s) => ({
-              service: s.serviceName,
-              vendor: s.vendor,
-              expiry: new Date(s.expiryDate).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              }),
-              status: <StatusBadge status={s.status} />,
-            }))}
-            loading={loading}
-          />
-        </div>
-
-        {/* FOOTER */}
-        <div className="border-t border-gray-100 pt-6">
-          <p className="text-xs text-gray-500 text-center">
-            Dashboard refreshes automatically every 5 minutes
-            {lastUpdated && ` • Last sync: ${formattedLastUpdated}`}
+          <p className="text-xs text-[#626F86] text-center pt-2">
+            Refreshes automatically every 5 minutes
+            {lastUpdated && ` · Last sync ${formattedLastUpdated}`}
           </p>
         </div>
       </div>

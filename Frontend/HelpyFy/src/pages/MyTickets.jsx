@@ -218,6 +218,7 @@ export default function MyTickets() {
 
   /* ================= MODALS / DRAWER ================= */
   const [reviewModal, setReviewModal] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
   const [editModal, setEditModal] = useState(false);
 
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -302,11 +303,13 @@ export default function MyTickets() {
 
   /* ================= ACTIONS ================= */
   const submitReview = async () => {
-    try {
-      if (!rating) {
-        return toast.error("Please select a rating");
-      }
+    if (submittingReview) return;
+    if (!rating) {
+      return toast.error("Please select a rating");
+    }
 
+    setSubmittingReview(true);
+    try {
       await api.put(`/tickets/${selectedTicket._id}/review`, {
         rating,
         review: comment,
@@ -327,6 +330,8 @@ export default function MyTickets() {
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to submit feedback");
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -1082,6 +1087,7 @@ export default function MyTickets() {
                   setReviewModal(false);
                   setSelectedTicket(null);
                 }}
+                disabled={submittingReview}
               >
                 Cancel
               </Button>
@@ -1090,9 +1096,13 @@ export default function MyTickets() {
                 size="md"
                 icon={Check}
                 onClick={submitReview}
-                disabled={!rating}
+                disabled={!rating || submittingReview}
               >
-                {selectedTicket.status === "Resolved" ? "Confirm and close" : "Save review"}
+                {submittingReview
+                  ? "Saving..."
+                  : selectedTicket.status === "Resolved"
+                    ? "Confirm and close"
+                    : "Save review"}
               </Button>
             </div>
           </div>

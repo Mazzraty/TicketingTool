@@ -812,22 +812,69 @@ export const confirmResolution = async (req, res) => {
       });
     }
 
-    ticket.status = "Closed";
-    ticket.closedAt = new Date();
+    if (ticket.status === "Closed") {
+      return res.json({
+        success: true,
+        message: "Ticket already confirmed",
+        data: ticket,
+      });
+    }
 
-    await ticket.save();
+    if (ticket.status !== "Resolved") {
+      return res.status(409).json({
+        success: false,
+        message: "Ticket must be resolved before it can be confirmed",
+      });
+    }
+
+    const confirmedTicket = await Ticket.findOneAndUpdate(
+      { _id: ticket._id, userId: req.user.id, status: "Resolved" },
+      { $set: { status: "Closed", closedAt: new Date() } },
+      { new: true }
+    );
+
+    if (!confirmedTicket) {
+      const latestTicket = await Ticket.findById(req.params.id);
+
+      if (!latestTicket) {
+        return res.status(404).json({
+          success: false,
+          message: "Ticket not found",
+        });
+      }
+
+      if (!latestTicket.userId || latestTicket.userId.toString() !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      if (latestTicket.status === "Closed") {
+        return res.json({
+          success: true,
+          message: "Ticket already confirmed",
+          data: latestTicket,
+        });
+      }
+
+      return res.status(409).json({
+        success: false,
+        message: "Ticket must be resolved before it can be confirmed",
+      });
+    }
 
     // Create notification for admins
     const admins = await User.find({
-      companyId: ticket.companyId,
+      companyId: confirmedTicket.companyId,
       role: { $in: ["company_admin", "super_admin", "it_support"] },
     });
     for (const admin of admins) {
       await Notification.create({
         userId: admin._id,
-        companyId: ticket.companyId,
+        companyId: confirmedTicket.companyId,
         title: "Ticket Closed by User",
-        message: `User confirmed resolution for ticket: "${ticket.title}"`,
+        message: `User confirmed resolution for ticket: "${confirmedTicket.title}"`,
         type: "status",
       });
     }
@@ -835,7 +882,7 @@ export const confirmResolution = async (req, res) => {
     res.json({
       success: true,
       message: "Ticket confirmed",
-      data: ticket,
+      data: confirmedTicket,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
