@@ -15,6 +15,10 @@ import {
   BarChart3,
   List,
   UserCog,
+  History,
+  Printer,
+  Laptop,
+  Tablet,
 } from "lucide-react";
 
 export default function Sidebar({ collapsed, setCollapsed }) {
@@ -26,6 +30,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const employeeChildren = [
     { to: "/admin/employees", icon: Users, label: "Employees" },
     { to: "/admin/company-access", icon: UserCog, label: "Users" },
+  ];
+
+  const assetChildren = [
+    { to: "/admin/assets", icon: Package, label: "Asset Management" },
+    { to: "/admin/assets/history", icon: History, label: "Asset History" },
+    { to: "/admin/assets/upload-printer", icon: Printer, label: "Upload Printer" },
+    { to: "/admin/assets/upload-laptop", icon: Laptop, label: "Upload Laptop" },
+    { to: "/admin/assets/upload-hht", icon: Tablet, label: "Upload HHT" },
   ];
 
   const ticketChildren = [
@@ -48,6 +60,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   const [openGroups, setOpenGroups] = useState({
     employees: groupHasActive(employeeChildren),
+    assets: groupHasActive(assetChildren),
     tickets: groupHasActive(ticketItems),
   });
 
@@ -55,6 +68,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   useEffect(() => {
     setOpenGroups((prev) => ({
       employees: prev.employees || groupHasActive(employeeChildren),
+      assets: prev.assets || groupHasActive(assetChildren),
       tickets: prev.tickets || groupHasActive(ticketItems),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,7 +224,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 {employeeChildren}
               </NavGroup>
 
-              <NavItem to="/admin/assets" icon={Package} label="Asset Management" />
+              <NavGroup id="assets" icon={Package} label="Asset Management">
+                {assetChildren}
+              </NavGroup>
 
               <NavGroup id="tickets" icon={Ticket} label="Tickets">
                 {ticketItems}
