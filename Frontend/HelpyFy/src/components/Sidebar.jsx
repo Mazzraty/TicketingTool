@@ -245,11 +245,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
             <div className="space-y-2">
               <NavItem to="/admin/dashboard" icon={LayoutDashboard} label="Dashboard" />
-              <NavGroup id="tickets" icon={Ticket} label="Tickets">
-              <NavItem to="/admin/it-support-users" icon={Users} label="Company Users" />
-              
+                 <NavGroup id="tickets" icon={Ticket} label="Tickets">
                 {itSupportTicketChildren}
               </NavGroup>
+              <NavGroup id="assets" icon={Package} label="Asset Management">
+                {assetChildren}
+              </NavGroup>
+              <NavItem to="/admin/it-support-users" icon={Users} label="Company Users" />
+           
               {/* <NavItem
                 to="/admin/it-support/employees"
                 icon={Users}
