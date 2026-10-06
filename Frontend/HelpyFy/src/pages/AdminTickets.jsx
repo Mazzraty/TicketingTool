@@ -330,6 +330,7 @@ const SlaDetailPanel = ({ ticket, now, onOpenReason }) => {
 const getReporterName = (ticket) => {
   if (ticket.userId?.name) return ticket.userId.name;
   if (ticket.employeeId?.name) return ticket.employeeId.name;
+  if (ticket.externalName) return ticket.externalName; // NEW: outside-company requester
   if (ticket.assignedTo?.name) return ticket.assignedTo.name;
   const creatorLabel =
     ticket.createdByType === "super_admin" ? "Super Admin"
@@ -341,6 +342,7 @@ const getReporterName = (ticket) => {
 const getReporterSubtext = (ticket) => {
   if (ticket.userId?.email) return ticket.userId.email;
   if (ticket.employeeId?.staffCode) return `Staff Code: ${ticket.employeeId.staffCode}`;
+  if (ticket.externalName) return "Outside company"; // NEW
   if (ticket.assignedTo?.email) return ticket.assignedTo.email;
   if (ticket.createdByType) {
     const label = ticket.createdByType.replace("_", " ");
@@ -348,7 +350,6 @@ const getReporterSubtext = (ticket) => {
   }
   return "—";
 };
-
 /* ================= SMALL SHARED PIECES ================= */
 const Avatar = ({ name, size = "w-8 h-8 text-xs" }) => (
   <span className={`${size} rounded-full bg-[#E9F2FF] text-[#0055CC] flex items-center justify-center font-semibold shrink-0`}>
