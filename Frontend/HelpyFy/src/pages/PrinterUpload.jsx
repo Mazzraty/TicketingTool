@@ -2,6 +2,92 @@ import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Plus,
+  Eraser,
+  Download,
+  Upload,
+  FileSpreadsheet,
+  X,
+} from "lucide-react";
+
+/* ================= UI HELPERS (styling only, no logic) ================= */
+// Atlassian / Jira Service Management styling
+const inputCls =
+  "h-9 w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 text-sm text-[#172B4D] " +
+  "placeholder:text-[#7A869A] transition-colors hover:bg-[#EBECF0] " +
+  "focus:border-[#4C9AFF] focus:bg-white focus:outline-none";
+
+const btnBase =
+  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] px-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:cursor-not-allowed disabled:opacity-50";
+const btnPrimary = `${btnBase} bg-[#0052CC] text-white hover:bg-[#0065FF] active:bg-[#0747A6]`;
+const btnDefault = `${btnBase} bg-[rgba(9,30,66,0.04)] text-[#42526E] hover:bg-[rgba(9,30,66,0.08)] active:bg-[#DEEBFF] active:text-[#0052CC]`;
+const btnSubtle = `${btnBase} bg-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
+
+const COLUMN_LABELS = {
+  assetCode: "Asset code",
+  model: "Model",
+  serialNumber: "Serial number",
+  route: "Route",
+  salesmanCode: "Salesman code",
+  salesmanName: "Salesman name",
+  supervisor: "Supervisor",
+  notes: "Notes",
+};
+
+function Card({ title, subtitle, actions, children, footer }) {
+  return (
+    <div className="mb-4 rounded-[3px] border border-[#DFE1E6] bg-white">
+      {(title || actions) && (
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#DFE1E6] px-4 py-3">
+          <div>
+            <h2 className="text-base font-semibold text-[#172B4D]">{title}</h2>
+            {subtitle && (
+              <p className="mt-0.5 text-sm text-[#5E6C84]">{subtitle}</p>
+            )}
+          </div>
+          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+        </div>
+      )}
+      <div className="p-4">{children}</div>
+      {footer && (
+        <div className="flex justify-end gap-2 border-t border-[#DFE1E6] bg-[#FAFBFC] px-4 py-3">
+          {footer}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, tone = "neutral" }) {
+  const tones = {
+    neutral: "text-[#172B4D]",
+    success: "text-[#006644]",
+    danger: "text-[#BF2600]",
+  };
+  return (
+    <div className="rounded-[3px] border border-[#DFE1E6] bg-white px-4 py-3">
+      <p className="text-xs font-semibold text-[#5E6C84]">{label}</p>
+      <p className={`text-2xl font-medium leading-7 ${tones[tone]}`}>{value}</p>
+    </div>
+  );
+}
+
+function Lozenge({ tone, children }) {
+  const tones = {
+    success: "bg-[#E3FCEF] text-[#006644]",
+    danger: "bg-[#FFEBE6] text-[#BF2600]",
+  };
+  return (
+    <span
+      className={`inline-block rounded-[3px] px-1.5 py-0.5 text-[11px] font-bold uppercase leading-4 tracking-wide ${tones[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
 
 export default function PrinterUpload() {
   const [rows, setRows] = useState([]);
@@ -29,6 +115,10 @@ export default function PrinterUpload() {
     Array.from({ length: 8 }, emptySheetRow)
   );
   const [pasteText, setPasteText] = useState("");
+
+  // UI-only state (new): drag highlight + file input reset key
+  const [dragOver, setDragOver] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
@@ -227,106 +317,179 @@ export default function PrinterUpload() {
 
   const invalidCount = rows.length - validCount;
 
+  /* ================= NEW (UI-only additions) ================= */
+
+  // CANCEL #1 — paste sheet: discard everything typed/pasted in the grid
+  const cancelSheet = () => {
+    clearSheet();
+  };
+
+  // CANCEL #2 — preview: discard the loaded rows / selected file
+  const cancelUpload = () => {
+    setRows([]);
+    setFileName("");
+    setFileInputKey((k) => k + 1); // lets the same file be picked again
+  };
+
+  // Download a ready-to-fill Excel template with the exact header names
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([SHEET_COLUMNS]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Printers");
+    XLSX.writeFile(wb, "printer-upload-template.xlsx");
+  };
+
+  // Drag & drop onto the drop area — reuses handleFile as-is
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer?.files?.length) {
+      handleFile({ target: { files: e.dataTransfer.files } });
+    }
+  };
+
+  const filledSheetRows = sheetRows.filter(
+    (r) => r.assetCode || r.serialNumber || r.model
+  ).length;
+
   return (
-    <div className="min-h-screen bg-[#f4f6f9] p-6">
+    <div className="min-h-screen bg-[#F4F5F7] text-[#172B4D]">
+      <div className="mx-auto max-w-[1400px] px-6 py-6 lg:px-10">
 
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">
-            Printer Bulk Upload
-          </h1>
-          <p className="text-sm text-gray-500">
-            Upload Excel file (.xlsx / .xls)
-          </p>
-        </div>
+        {/* BREADCRUMB + BACK */}
+        <div className="mb-2 flex items-center justify-between">
+          <nav className="flex items-center gap-1.5 text-sm text-[#5E6C84]">
+            <span>Admin</span>
+            <span>/</span>
+            <span>Assets</span>
+            <span>/</span>
+            <span>Upload Printer</span>
+          </nav>
 
-        <button
-          onClick={() => window.history.back()}
-          className="px-4 py-2 rounded-xl bg-white border text-gray-700 hover:bg-gray-100 text-sm"
-        >
-          ← Back
-        </button>
-      </div>
-
-      {/* 🔥 COMPANY SELECT (ONLY SUPER ADMIN) */}
-      {isSuperAdmin && (
-        <div className="mb-4 bg-white p-3 rounded-xl border">
-          <label className="text-sm font-semibold text-gray-600">
-            Select Company
-          </label>
-
-          <select
-            className="w-full mt-2 p-2 border rounded"
-            value={selectedCompany}
-            onChange={(e) => setSelectedCompany(e.target.value)}
+          <button
+            onClick={() => window.history.back()}
+            className={btnSubtle}
           >
-            <option value="">-- Choose Company --</option>
-            {companies.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            <ArrowLeft size={14} />
+            Back
+          </button>
         </div>
-      )}
 
-      {/* UPLOAD CARD */}
-      <div className="bg-white border rounded-2xl p-6 shadow-sm">
-
-        {/* IN-PAGE PASTE SHEET */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">
-              Copy your asset details from Excel (data rows only, no header) and paste into the box below
+        {/* HEADER */}
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-medium text-[#172B4D]">
+              Printer Bulk Upload
+            </h1>
+            <p className="mt-1 text-sm text-[#5E6C84]">
+              Upload Excel file (.xlsx / .xls) or paste rows from Excel
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={addSheetRow}
-                className="px-3 py-1.5 rounded-lg bg-white border text-gray-700 text-xs font-semibold hover:bg-gray-100"
-              >
-                + Add Row
-              </button>
-              <button
-                onClick={clearSheet}
-                className="px-3 py-1.5 rounded-lg bg-white border text-gray-700 text-xs font-semibold hover:bg-gray-100"
-              >
-                Clear
-              </button>
-            </div>
           </div>
 
+          <button onClick={downloadTemplate} className={btnDefault}>
+            <Download size={14} />
+            Download template
+          </button>
+        </div>
+
+        {/* 🔥 COMPANY SELECT (ONLY SUPER ADMIN) */}
+        {isSuperAdmin && (
+          <Card title="Company" subtitle="Assets will be created under this company">
+            <label className="mb-1 block text-xs font-semibold text-[#5E6C84]">
+              Select company<span className="ml-0.5 text-[#DE350B]">*</span>
+            </label>
+            <div className="relative max-w-md">
+              <select
+                className={`${inputCls} cursor-pointer appearance-none truncate pr-8`}
+                value={selectedCompany}
+                onChange={(e) => setSelectedCompany(e.target.value)}
+              >
+                <option value="">-- Choose Company --</option>
+                {companies.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+              />
+            </div>
+          </Card>
+        )}
+
+        {/* IN-PAGE PASTE SHEET */}
+        <Card
+          title="Paste from Excel"
+          subtitle="Copy your asset details from Excel (data rows only, no header) and paste into the box below"
+          actions={
+            <>
+              <button onClick={addSheetRow} className={btnDefault}>
+                <Plus size={14} />
+                Add row
+              </button>
+              <button onClick={clearSheet} className={btnSubtle}>
+                <Eraser size={14} />
+                Clear
+              </button>
+            </>
+          }
+          footer={
+            <>
+              <span className="mr-auto self-center text-sm text-[#5E6C84]">
+                {filledSheetRows} of {sheetRows.length} rows filled
+              </span>
+              {/* NEW: Cancel #1 */}
+              <button onClick={cancelSheet} className={btnSubtle}>
+                Cancel
+              </button>
+              <button onClick={loadSheetIntoRows} className={btnPrimary}>
+                Load sheet
+              </button>
+            </>
+          }
+        >
           <textarea
             value={pasteText}
             onChange={handlePasteBoxChange}
             onPaste={handlePasteBoxPaste}
             placeholder="Click here and press Ctrl+V (or Cmd+V) to paste your copied Excel rows..."
             rows={3}
-            className="w-full p-3 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-green-200 mb-3"
+            className="mb-3 w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 py-2 text-sm text-[#172B4D] placeholder:text-[#7A869A] transition-colors hover:bg-[#EBECF0] focus:border-[#4C9AFF] focus:bg-white focus:outline-none"
           />
 
-          <div className="overflow-x-auto border rounded-xl">
-            <table className="w-full text-sm border-collapse">
-              <thead className="bg-gray-100 text-xs uppercase">
-                <tr>
+          <div className="overflow-x-auto rounded-[3px] border border-[#DFE1E6]">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b-2 border-[#DFE1E6] bg-[#FAFBFC]">
+                  <th className="w-10 border-r border-[#DFE1E6] px-2 py-2 text-center text-xs font-semibold text-[#5E6C84]">
+                    #
+                  </th>
                   {SHEET_COLUMNS.map((col) => (
-                    <th key={col} className="p-2 text-left border-b whitespace-nowrap">
-                      {col}
+                    <th
+                      key={col}
+                      className="whitespace-nowrap border-r border-[#DFE1E6] px-2 py-2 text-left text-xs font-semibold text-[#5E6C84] last:border-r-0"
+                    >
+                      {COLUMN_LABELS[col]}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {sheetRows.map((row, rowIdx) => (
-                  <tr key={rowIdx} className="border-t">
+                  <tr key={rowIdx} className="border-b border-[#DFE1E6] last:border-b-0">
+                    <td className="border-r border-[#DFE1E6] bg-[#FAFBFC] px-2 text-center text-xs text-[#6B778C]">
+                      {rowIdx + 1}
+                    </td>
                     {SHEET_COLUMNS.map((col) => (
-                      <td key={col} className="p-0 border-r last:border-r-0">
+                      <td key={col} className="border-r border-[#DFE1E6] p-0 last:border-r-0">
                         <input
                           value={row[col]}
                           onChange={(e) =>
                             updateSheetCell(rowIdx, col, e.target.value)
                           }
-                          className="w-full p-2 text-sm outline-none focus:bg-green-50 min-w-[100px]"
+                          className="h-9 w-full min-w-[120px] bg-transparent px-2 text-sm text-[#172B4D] outline-none hover:bg-[#F4F5F7] focus:bg-white focus:shadow-[inset_0_0_0_2px_#4C9AFF]"
                         />
                       </td>
                     ))}
@@ -335,117 +498,157 @@ export default function PrinterUpload() {
               </tbody>
             </table>
           </div>
+        </Card>
 
-          <div className="flex justify-end mt-3">
-            <button
-              onClick={loadSheetIntoRows}
-              className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700"
-            >
-              Load Sheet →
-            </button>
-          </div>
-        </div>
+        <p className="mb-4 text-center text-xs font-semibold uppercase tracking-wide text-[#6B778C]">
+          or
+        </p>
 
-        <p className="text-xs text-gray-400 text-center mb-2">— or —</p>
+        {/* UPLOAD CARD */}
+        <Card
+          title="Upload Excel file"
+          subtitle="The first sheet is read. Required columns: assetCode and serialNumber"
+        >
+          {/* DROP AREA */}
+          <label
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-[3px] border-2 border-dashed p-10 transition-colors ${dragOver
+                ? "border-[#4C9AFF] bg-[#DEEBFF]"
+                : "border-[#C1C7D0] bg-[#FAFBFC] hover:bg-[#F4F5F7]"
+              }`}
+          >
+            <input
+              key={fileInputKey}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleFile}
+              className="hidden"
+            />
 
-        {/* DROP AREA */}
-        <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 cursor-pointer hover:bg-gray-50 transition">
-
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleFile}
-            className="hidden"
-          />
-
-          <div className="text-center">
-            <p className="text-lg font-semibold text-gray-700">
-              📤 Drag & Drop Excel File
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              or click to browse
-            </p>
-
-            {fileName && (
-              <p className="mt-3 text-sm text-blue-600">
-                Selected: {fileName}
+            <div className="flex flex-col items-center text-center">
+              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#DEEBFF] text-[#0052CC]">
+                <Upload size={22} />
+              </span>
+              <p className="text-base font-medium text-[#172B4D]">
+                Drag & drop Excel file
               </p>
-            )}
-          </div>
-        </label>
+              <p className="mt-1 text-sm text-[#5E6C84]">
+                or <span className="font-medium text-[#0052CC]">click to browse</span>
+              </p>
 
-        {/* STATS */}
+              {fileName && (
+                <p className="mt-3 inline-flex items-center gap-1.5 rounded-[3px] bg-[#DEEBFF] px-2 py-1 text-sm text-[#0747A6]">
+                  <FileSpreadsheet size={14} />
+                  {fileName}
+                </p>
+              )}
+            </div>
+          </label>
+        </Card>
+
+        {/* PREVIEW */}
         {rows.length > 0 && (
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-gray-50 p-4 rounded-xl border text-center">
-              Total Rows
-              <div className="text-xl font-bold">{rows.length}</div>
+          <>
+            {/* STATS */}
+            <div className="mb-4 grid grid-cols-3 gap-3">
+              <Stat label="Total rows" value={rows.length} />
+              <Stat label="Valid" value={validCount} tone="success" />
+              <Stat label="Invalid" value={invalidCount} tone="danger" />
             </div>
 
-            <div className="bg-green-50 p-4 rounded-xl border text-center">
-              Valid
-              <div className="text-xl font-bold text-green-700">
-                {validCount}
-              </div>
-            </div>
-
-            <div className="bg-red-50 p-4 rounded-xl border text-center">
-              Invalid
-              <div className="text-xl font-bold text-red-600">
-                {invalidCount}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TABLE */}
-        {rows.length > 0 && (
-          <div className="mt-6 overflow-x-auto border rounded-xl">
-            <table className="w-full text-sm">
-
-              <thead className="bg-gray-100 text-xs uppercase">
-                <tr>
-                  <th className="p-3 text-left">Asset Code</th>
-                  <th className="p-3 text-left">Model</th>
-                  <th className="p-3 text-left">Serial</th>
-                  <th className="p-3 text-left">Route</th>
-                  <th className="p-3 text-left">Salesman</th>
-                  <th className="p-3 text-left">Supervisor</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i} className="border-t hover:bg-gray-50">
-                    <td className="p-3">{r.assetCode}</td>
-                    <td className="p-3">{r.model}</td>
-                    <td className="p-3">{r.serialNumber}</td>
-                    <td className="p-3">{r.route}</td>
-                    <td className="p-3">
-                      {r.salesmanCode} - {r.salesmanName}
-                    </td>
-                    <td className="p-3">{r.supervisor}</td>
-                  </tr>
-                ))}
-              </tbody>
-
-            </table>
-          </div>
-        )}
-
-        {/* ACTION BUTTON */}
-        {rows.length > 0 && (
-          <div className="flex justify-end mt-6">
-            <button
-              onClick={upload}
-              disabled={loading}
-              className="px-6 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-50"
+            <Card
+              title="Review"
+              subtitle={
+                invalidCount > 0
+                  ? "Rows missing an asset code or serial number will be skipped"
+                  : "All rows are ready to upload"
+              }
+              actions={
+                <button
+                  onClick={cancelUpload}
+                  className={btnSubtle}
+                  aria-label="Discard loaded rows"
+                >
+                  <X size={14} />
+                  Discard
+                </button>
+              }
+              footer={
+                <>
+                  {/* NEW: Cancel #2 */}
+                  <button
+                    onClick={cancelUpload}
+                    disabled={loading}
+                    className={btnSubtle}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={upload}
+                    disabled={loading}
+                    className={btnPrimary}
+                  >
+                    {loading ? "Uploading..." : "Upload Printers"}
+                  </button>
+                </>
+              }
             >
-              {loading ? "Uploading..." : "Upload Printers"}
-            </button>
-          </div>
-        )}
+              <div className="-m-4 overflow-x-auto">
+                <table className="w-full min-w-[860px] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-[#DFE1E6] text-left">
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">Status</th>
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">Asset code</th>
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">Model</th>
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">Serial</th>
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">Route</th>
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">Salesman</th>
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">Supervisor</th>
+                    </tr>
+                  </thead>
 
+                  <tbody>
+                    {rows.map((r, i) => {
+                      const ok = r.assetCode && r.serialNumber;
+                      return (
+                        <tr
+                          key={i}
+                          className={`border-b border-[#DFE1E6] transition-colors hover:bg-[#F4F5F7] ${ok ? "" : "bg-[#FFF5F2]"
+                            }`}
+                        >
+                          <td className="px-4 py-2.5">
+                            {ok ? (
+                              <Lozenge tone="success">Valid</Lozenge>
+                            ) : (
+                              <Lozenge tone="danger">Invalid</Lozenge>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 font-medium text-[#0052CC]">
+                            {r.assetCode || <span className="text-[#BF2600]">Missing</span>}
+                          </td>
+                          <td className="px-4 py-2.5 text-[#42526E]">{r.model}</td>
+                          <td className="px-4 py-2.5 font-mono text-[13px] text-[#42526E]">
+                            {r.serialNumber || <span className="text-[#BF2600]">Missing</span>}
+                          </td>
+                          <td className="px-4 py-2.5 text-[#42526E]">{r.route}</td>
+                          <td className="px-4 py-2.5 text-[#42526E]">
+                            {r.salesmanCode} - {r.salesmanName}
+                          </td>
+                          <td className="px-4 py-2.5 text-[#42526E]">{r.supervisor}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
