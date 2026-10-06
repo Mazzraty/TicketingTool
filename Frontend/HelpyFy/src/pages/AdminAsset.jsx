@@ -10,128 +10,83 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-/* ================= UI HELPERS (styling only, no logic) ================= */
-// Atlassian / Jira Service Management styling
-const inputClass =
-  "h-9 w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 text-sm text-[#172B4D] " +
-  "placeholder:text-[#7A869A] transition-colors hover:bg-[#EBECF0] " +
-  "focus:border-[#4C9AFF] focus:bg-white focus:outline-none";
+/* ================= DESIGN TOKENS (same as Tickets / Dashboard) ================= */
+const FONT_STACK =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Helvetica Neue', sans-serif";
 
-const btnBase =
-  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] px-4 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:cursor-not-allowed disabled:opacity-50";
-const btnPrimary = `${btnBase} bg-[#0052CC] text-white hover:bg-[#0065FF] active:bg-[#0747A6]`;
-const btnSubtle = `${btnBase} bg-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
+const FIELD =
+  "h-8 w-full rounded-[3px] border border-[#8590A2] bg-white px-2.5 text-sm text-[#172B4D] outline-none " +
+  "placeholder:text-[#626F86] hover:bg-[#F7F8F9] focus:bg-white focus:ring-2 focus:ring-[#4C9AFF]";
 
-const Field = ({ label, required, className = "", children }) => (
+const BTN =
+  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] px-3 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:cursor-not-allowed disabled:opacity-60";
+const BTN_PRIMARY = `${BTN} bg-[#0C66E4] text-white hover:bg-[#0055CC]`;
+const BTN_SUBTLE = `${BTN} bg-[#091E420F] text-[#172B4D] hover:bg-[#091E4224]`;
+
+const Field = ({ label, required, hint, className = "", children }) => (
   <div className={`flex flex-col ${className}`}>
-    <label className="mb-1 text-xs font-semibold text-[#5E6C84]">
+    <label className="mb-1 text-xs font-semibold text-[#44546F]">
       {label}
-      {required && <span className="ml-0.5 text-[#DE350B]">*</span>}
+      {required && <span className="ml-0.5 text-[#C9372C]">*</span>}
     </label>
     {children}
+    {hint && <p className="mt-1 text-xs text-[#626F86]">{hint}</p>}
   </div>
 );
 
 // Native <select> with a consistent chevron
 const SelectBox = ({ children, ...props }) => (
   <div className="relative">
-    <select
-      {...props}
-      className={`${inputClass} cursor-pointer appearance-none truncate pr-8`}
-    >
+    <select {...props} className={`${FIELD} cursor-pointer appearance-none truncate pr-8`}>
       {children}
     </select>
     <ChevronDown
       size={16}
-      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#626F86]"
     />
   </div>
 );
 
-const Section = ({ id, icon: Icon, title, subtitle, children, open, setOpen }) => {
-  const isOpen = open === id;
-  return (
-    <div className="mb-3 overflow-hidden rounded-[3px] border border-[#DFE1E6] bg-white">
-      <button
-        onClick={() => setOpen(isOpen ? null : id)}
-        aria-expanded={isOpen}
-        className={`flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-[#F4F5F7] ${
-          isOpen ? "bg-[#F4F5F7]" : ""
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <span
-            className={`flex h-9 w-9 items-center justify-center rounded-[3px] ${
-              isOpen ? "bg-[#0052CC] text-white" : "bg-[#DEEBFF] text-[#0052CC]"
-            }`}
-          >
-            <Icon size={18} />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-[#172B4D]">{title}</p>
-            {subtitle && <p className="text-xs text-[#5E6C84]">{subtitle}</p>}
-          </div>
-        </div>
-        <ChevronDown
-          size={18}
-          className={`text-[#42526E] transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
-      </button>
+const GroupTitle = ({ children }) => (
+  <h3 className="mb-3 text-sm font-semibold text-[#172B4D]">{children}</h3>
+);
 
-      <div
-        className={`grid transition-all duration-300 ease-in-out ${
-          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="border-t border-[#DFE1E6] p-5">{children}</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// react-select skinned to match the Atlassian inputs
+// react-select skinned to match the inputs above
 const selectStyles = {
   control: (base, state) => ({
     ...base,
-    minHeight: "36px",
+    minHeight: "32px",
     borderRadius: "3px",
-    borderWidth: "2px",
-    borderColor: state.isFocused ? "#4C9AFF" : "#DFE1E6",
-    backgroundColor: state.isFocused ? "#FFFFFF" : "#FAFBFC",
-    boxShadow: "none",
-    "&:hover": {
-      borderColor: state.isFocused ? "#4C9AFF" : "#DFE1E6",
-      backgroundColor: state.isFocused ? "#FFFFFF" : "#EBECF0",
-    },
+    borderColor: "#8590A2",
+    backgroundColor: "#FFFFFF",
+    boxShadow: state.isFocused ? "0 0 0 2px #4C9AFF" : "none",
+    "&:hover": { borderColor: "#8590A2", backgroundColor: state.isFocused ? "#FFFFFF" : "#F7F8F9" },
   }),
   valueContainer: (base) => ({ ...base, padding: "0 10px" }),
-  placeholder: (base) => ({ ...base, color: "#7A869A" }),
+  placeholder: (base) => ({ ...base, color: "#626F86" }),
   singleValue: (base) => ({ ...base, color: "#172B4D" }),
-  input: (base) => ({ ...base, color: "#172B4D" }),
+  input: (base) => ({ ...base, color: "#172B4D", margin: 0, padding: 0 }),
   indicatorSeparator: () => ({ display: "none" }),
-  dropdownIndicator: (base) => ({ ...base, color: "#6B778C", padding: "0 8px" }),
+  dropdownIndicator: (base) => ({ ...base, color: "#626F86", padding: "0 8px" }),
   menu: (base) => ({
     ...base,
     borderRadius: "3px",
-    boxShadow:
-      "0 4px 8px -2px rgba(9,30,66,0.25), 0 0 1px rgba(9,30,66,0.31)",
+    boxShadow: "0 8px 12px #091E4226, 0 0 1px #091E424F",
     zIndex: 30,
   }),
   option: (base, state) => ({
     ...base,
     fontSize: "14px",
-    color: state.isSelected ? "#0052CC" : "#172B4D",
-    backgroundColor: state.isSelected
-      ? "#DEEBFF"
-      : state.isFocused
-      ? "#F4F5F7"
-      : "#FFFFFF",
+    color: state.isSelected ? "#0C66E4" : "#172B4D",
+    backgroundColor: state.isSelected ? "#E9F2FF" : state.isFocused ? "#F7F8F9" : "#FFFFFF",
   }),
 };
+
+const TABS = [
+  { id: "add", label: "Add asset", icon: Package },
+  { id: "assign", label: "Assign asset", icon: UserCheck },
+  { id: "return", label: "Return asset", icon: RotateCcw },
+];
 
 export default function AdminAssets() {
   const [assetCode, setAssetCode] = useState("");
@@ -153,11 +108,13 @@ export default function AdminAssets() {
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState("");
 
-  const [open, setOpen] = useState(null);
+  // Tabs replace the old accordion; "add" is open by default
+  const [open, setOpen] = useState("add");
   const user = JSON.parse(localStorage.getItem("user"));
 
   const [companies, setCompanies] = useState([]);
   const [companyId, setCompanyId] = useState("");
+
   /* ================= LOAD EMPLOYEES ================= */
   const fetchEmployees = async () => {
     try {
@@ -187,7 +144,6 @@ export default function AdminAssets() {
     fetchEmployees();
     loadCompanies();
   }, []);
-
 
   /* ================= RESET ================= */
   const resetForm = () => {
@@ -235,7 +191,7 @@ export default function AdminAssets() {
         imei,
         simNumber,
         notes,
-        companyId, // 🔥 send selected company
+        companyId, // send selected company
       });
 
       toast.success("Asset Added");
@@ -304,277 +260,308 @@ export default function AdminAssets() {
     }
   };
 
-
+  const showDeviceFields = type === "Printer" || type === "HHT";
 
   return (
-    <div className="min-h-screen bg-[#F4F5F7] text-[#172B4D]">
-      <div className="mx-auto max-w-5xl px-6 py-6 lg:px-10">
+    <div className="min-h-screen bg-[#F7F8F9] text-[#172B4D]" style={{ fontFamily: FONT_STACK }}>
+      <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-10">
+
         {/* BREADCRUMB + BACK */}
         <div className="mb-2 flex items-center justify-between">
-          <nav className="flex items-center gap-1.5 text-sm text-[#5E6C84]">
-            <span>Admin</span>
-            <span>/</span>
-            <span>Assets</span>
+          <nav className="text-xs text-[#626F86]">
+            Admin <span className="mx-1">/</span> Assets
           </nav>
-
-          <button
-            onClick={() => window.history.back()}
-            className={`${btnSubtle} h-8 px-3`}
-          >
-            <ArrowLeft size={14} />
-            Back
+          <button onClick={() => window.history.back()} className={BTN_SUBTLE}>
+            <ArrowLeft size={14} /> Back
           </button>
         </div>
 
-        <div className="mb-5">
-          <h1 className="text-2xl font-medium text-[#172B4D]">
-            Asset Management
-          </h1>
-          <p className="mt-1 text-sm text-[#5E6C84]">
+        {/* TITLE */}
+        <div className="mb-4">
+          <h1 className="text-2xl font-medium">Asset Management</h1>
+          <p className="mt-1 text-sm text-[#626F86]">
             Laptop / Printer / HHT / Mobile Management System
           </p>
         </div>
 
-        {/* ================= ADD ASSET ================= */}
-        <Section
-          id="add"
-          open={open}
-          setOpen={setOpen}
-          icon={Package}
-          title="Add Asset"
-          subtitle="Register a new asset in the system"
-        >
-          <p className="mb-4 text-xs text-[#5E6C84]">
-            Required fields are marked with an asterisk{" "}
-            <span className="text-[#DE350B]">*</span>
-          </p>
+        {/* MAIN CARD */}
+        <section className="rounded-[3px] border border-[#DCDFE4] bg-white">
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {user?.role === "super_admin" && (
-              <Field label="Company" required className="md:col-span-3">
-                <SelectBox
-                  value={companyId}
-                  onChange={(e) => setCompanyId(e.target.value)}
+          {/* TABS */}
+          <div role="tablist" className="flex overflow-x-auto border-b border-[#DCDFE4] px-2">
+            {TABS.map(({ id, label, icon: Icon }) => {
+              const active = open === id;
+              return (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setOpen(id)}
+                  className={`-mb-px inline-flex h-11 items-center gap-2 whitespace-nowrap border-b-2 px-4 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#4C9AFF] ${
+                    active
+                      ? "border-[#0C66E4] text-[#0C66E4]"
+                      : "border-transparent text-[#44546F] hover:bg-[#091E420F] hover:text-[#172B4D]"
+                  }`}
                 >
-                  <option value="">Select Company</option>
-                  {companies.map((company) => (
-                    <option key={company._id} value={company._id}>
-                      {company.name}
-                    </option>
-                  ))}
-                </SelectBox>
-              </Field>
-            )}
-
-            <Field label="Asset Code" required>
-              <input
-                className={inputClass}
-                placeholder="e.g. AST-0042"
-                value={assetCode}
-                onChange={(e) => setAssetCode(e.target.value)}
-              />
-            </Field>
-
-            <Field label="Type" required>
-              <SelectBox
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-              >
-                <option value="">Select Type</option>
-                <option value="Laptop">Laptop</option>
-                <option value="Desktop">Desktop</option>
-                <option value="Mobile">Mobile</option>
-                <option value="Printer">Printer</option>
-                <option value="HHT">HHT</option>
-              </SelectBox>
-            </Field>
-
-            <Field label="Model">
-              <input
-                className={inputClass}
-                placeholder="e.g. Dell Latitude 5420"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-              />
-            </Field>
-
-            <Field label="Serial Number">
-              <input
-                className={inputClass}
-                placeholder="Serial Number"
-                value={serialNumber}
-                onChange={(e) => setSerialNumber(e.target.value)}
-              />
-            </Field>
-
-            {(type === "Printer" || type === "HHT") && (
-              <>
-                <Field label="Route">
-                  <input
-                    className={inputClass}
-                    placeholder="Route"
-                    value={route}
-                    onChange={(e) => setRoute(e.target.value)}
-                  />
-                </Field>
-
-                <Field label="Salesman Code">
-                  <input
-                    className={inputClass}
-                    placeholder="Salesman Code"
-                    value={salesmanCode}
-                    onChange={(e) => setSalesmanCode(e.target.value)}
-                  />
-                </Field>
-
-                <Field label="Salesman Name">
-                  <input
-                    className={inputClass}
-                    placeholder="Salesman Name"
-                    value={salesmanName}
-                    onChange={(e) => setSalesmanName(e.target.value)}
-                  />
-                </Field>
-
-                <Field label="Supervisor">
-                  <input
-                    className={inputClass}
-                    placeholder="Supervisor"
-                    value={supervisor}
-                    onChange={(e) => setSupervisor(e.target.value)}
-                  />
-                </Field>
-              </>
-            )}
-
-            {type === "Printer" && (
-              <Field label="SOTI">
-                <input
-                  className={inputClass}
-                  placeholder="SOTI"
-                  value={soti}
-                  onChange={(e) => setSoti(e.target.value)}
-                />
-              </Field>
-            )}
-
-            {type === "HHT" && (
-              <>
-                <Field label="IMEI">
-                  <input
-                    className={inputClass}
-                    placeholder="IMEI"
-                    value={imei}
-                    onChange={(e) => setImei(e.target.value)}
-                  />
-                </Field>
-
-                <Field label="SIM Number">
-                  <input
-                    className={inputClass}
-                    placeholder="SIM Number"
-                    value={simNumber}
-                    onChange={(e) => setSimNumber(e.target.value)}
-                  />
-                </Field>
-              </>
-            )}
-
-            <Field label="Notes" className="md:col-span-3">
-              <input
-                className={inputClass}
-                placeholder="Additional notes (optional)"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </Field>
-
-            <div className="flex justify-end md:col-span-3">
-              <button onClick={addAsset} className={btnPrimary}>
-                Create asset
-              </button>
-            </div>
+                  <Icon size={16} />
+                  {label}
+                </button>
+              );
+            })}
           </div>
-        </Section>
 
-        {/* ================= ASSIGN ================= */}
-        <Section
-          id="assign"
-          open={open}
-          setOpen={setOpen}
-          icon={UserCheck}
-          title="Assign Asset"
-          subtitle="Assign an asset to an employee"
-        >
-          <div className="grid gap-4 md:grid-cols-3">
-            <Field label="Employee" required className="md:col-span-2">
-              <Select
-                options={employees.map((e) => ({
-                  value: e.staffCode,
-                  label: `${e.name} (${e.staffCode})`,
-                }))}
-                value={
-                  selectedEmployee
-                    ? {
-                      value: selectedEmployee,
-                      label: selectedEmployee,
-                    }
-                    : null
-                }
-                onChange={(selected) =>
-                  setSelectedEmployee(selected?.value || "")
-                }
-                placeholder="Search Employee..."
-                className="text-sm"
-                classNamePrefix="rs"
-                isSearchable
-                styles={selectStyles}
-              />
-            </Field>
+          {/* ================= ADD ASSET ================= */}
+          {open === "add" && (
+            <>
+              <div className="p-5">
+                <p className="mb-5 text-xs text-[#626F86]">
+                  Register a new asset in the system. Required fields are marked with an asterisk{" "}
+                  <span className="text-[#C9372C]">*</span>
+                </p>
 
-            <Field label="Asset Code" required>
-              <input
-                className={inputClass}
-                placeholder="Asset Code"
-                value={assetCode}
-                onChange={(e) => setAssetCode(e.target.value)}
-              />
-            </Field>
+                <div className="flex flex-col gap-6">
+                  {/* Basic details */}
+                  <div>
+                    <GroupTitle>Basic details</GroupTitle>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {user?.role === "super_admin" && (
+                        <Field label="Company" required className="sm:col-span-2 lg:col-span-3">
+                          <SelectBox
+                            value={companyId}
+                            onChange={(e) => setCompanyId(e.target.value)}
+                          >
+                            <option value="">Select Company</option>
+                            {companies.map((company) => (
+                              <option key={company._id} value={company._id}>
+                                {company.name}
+                              </option>
+                            ))}
+                          </SelectBox>
+                        </Field>
+                      )}
 
-            <div className="flex justify-end md:col-span-3">
-              <button onClick={assign} className={btnPrimary}>
-                Assign
-              </button>
-            </div>
-          </div>
-        </Section>
+                      <Field label="Asset Code" required>
+                        <input
+                          className={FIELD}
+                          placeholder="e.g. AST-0042"
+                          value={assetCode}
+                          onChange={(e) => setAssetCode(e.target.value)}
+                        />
+                      </Field>
 
-        {/* ================= RETURN ================= */}
-        <Section
-          id="return"
-          open={open}
-          setOpen={setOpen}
-          icon={RotateCcw}
-          title="Return Asset"
-          subtitle="Mark an asset as returned to stock"
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <Field label="Asset Code" required>
-                <input
-                  className={inputClass}
-                  placeholder="Asset Code"
-                  value={assetCode}
-                  onChange={(e) => setAssetCode(e.target.value)}
-                />
-              </Field>
-            </div>
+                      <Field label="Type" required>
+                        <SelectBox value={type} onChange={(e) => setType(e.target.value)}>
+                          <option value="">Select Type</option>
+                          <option value="Laptop">Laptop</option>
+                          <option value="Desktop">Desktop</option>
+                          <option value="Mobile">Mobile</option>
+                          <option value="Printer">Printer</option>
+                          <option value="HHT">HHT</option>
+                        </SelectBox>
+                      </Field>
 
-            <button onClick={returnAsset} className={btnPrimary}>
-              Return
-            </button>
-          </div>
-        </Section>
+                      <Field label="Model">
+                        <input
+                          className={FIELD}
+                          placeholder="e.g. Dell Latitude 5420"
+                          value={model}
+                          onChange={(e) => setModel(e.target.value)}
+                        />
+                      </Field>
+
+                      <Field label="Serial Number">
+                        <input
+                          className={FIELD}
+                          placeholder="Serial Number"
+                          value={serialNumber}
+                          onChange={(e) => setSerialNumber(e.target.value)}
+                        />
+                      </Field>
+                    </div>
+                  </div>
+
+                  {/* Printer / HHT details */}
+                  {(showDeviceFields || type === "Printer" || type === "HHT") && (
+                    <div className="border-t border-[#EBECF0] pt-5">
+                      <GroupTitle>{type} details</GroupTitle>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {showDeviceFields && (
+                          <>
+                            <Field label="Route">
+                              <input
+                                className={FIELD}
+                                placeholder="Route"
+                                value={route}
+                                onChange={(e) => setRoute(e.target.value)}
+                              />
+                            </Field>
+
+                            <Field label="Salesman Code">
+                              <input
+                                className={FIELD}
+                                placeholder="Salesman Code"
+                                value={salesmanCode}
+                                onChange={(e) => setSalesmanCode(e.target.value)}
+                              />
+                            </Field>
+
+                            <Field label="Salesman Name">
+                              <input
+                                className={FIELD}
+                                placeholder="Salesman Name"
+                                value={salesmanName}
+                                onChange={(e) => setSalesmanName(e.target.value)}
+                              />
+                            </Field>
+
+                            <Field label="Supervisor">
+                              <input
+                                className={FIELD}
+                                placeholder="Supervisor"
+                                value={supervisor}
+                                onChange={(e) => setSupervisor(e.target.value)}
+                              />
+                            </Field>
+                          </>
+                        )}
+
+                        {type === "Printer" && (
+                          <Field label="SOTI">
+                            <input
+                              className={FIELD}
+                              placeholder="SOTI"
+                              value={soti}
+                              onChange={(e) => setSoti(e.target.value)}
+                            />
+                          </Field>
+                        )}
+
+                        {type === "HHT" && (
+                          <>
+                            <Field label="IMEI">
+                              <input
+                                className={FIELD}
+                                placeholder="IMEI"
+                                value={imei}
+                                onChange={(e) => setImei(e.target.value)}
+                              />
+                            </Field>
+
+                            <Field label="SIM Number">
+                              <input
+                                className={FIELD}
+                                placeholder="SIM Number"
+                                value={simNumber}
+                                onChange={(e) => setSimNumber(e.target.value)}
+                              />
+                            </Field>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  <div className="border-t border-[#EBECF0] pt-5">
+                    <GroupTitle>Additional information</GroupTitle>
+                    <Field label="Notes">
+                      <input
+                        className={FIELD}
+                        placeholder="Additional notes (optional)"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-[#DCDFE4] bg-[#F7F8F9] px-5 py-3">
+                <button onClick={resetForm} className={BTN_SUBTLE}>Clear</button>
+                <button onClick={addAsset} className={BTN_PRIMARY}>Create asset</button>
+              </div>
+            </>
+          )}
+
+          {/* ================= ASSIGN ================= */}
+          {open === "assign" && (
+            <>
+              <div className="p-5">
+                <p className="mb-5 text-xs text-[#626F86]">
+                  Assign an asset to an employee. Required fields are marked with an asterisk{" "}
+                  <span className="text-[#C9372C]">*</span>
+                </p>
+
+                <div className="grid max-w-3xl gap-4 md:grid-cols-3">
+                  <Field label="Employee" required className="md:col-span-2">
+                    <Select
+                      options={employees.map((e) => ({
+                        value: e.staffCode,
+                        label: `${e.name} (${e.staffCode})`,
+                      }))}
+                      value={
+                        selectedEmployee
+                          ? {
+                            value: selectedEmployee,
+                            label: selectedEmployee,
+                          }
+                          : null
+                      }
+                      onChange={(selected) =>
+                        setSelectedEmployee(selected?.value || "")
+                      }
+                      placeholder="Search Employee..."
+                      className="text-sm"
+                      classNamePrefix="rs"
+                      isSearchable
+                      styles={selectStyles}
+                    />
+                  </Field>
+
+                  <Field label="Asset Code" required>
+                    <input
+                      className={FIELD}
+                      placeholder="Asset Code"
+                      value={assetCode}
+                      onChange={(e) => setAssetCode(e.target.value)}
+                    />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-[#DCDFE4] bg-[#F7F8F9] px-5 py-3">
+                <button onClick={assign} className={BTN_PRIMARY}>Assign</button>
+              </div>
+            </>
+          )}
+
+          {/* ================= RETURN ================= */}
+          {open === "return" && (
+            <>
+              <div className="p-5">
+                <p className="mb-5 text-xs text-[#626F86]">
+                  Mark an asset as returned to stock. Required fields are marked with an asterisk{" "}
+                  <span className="text-[#C9372C]">*</span>
+                </p>
+
+                <div className="max-w-md">
+                  <Field label="Asset Code" required>
+                    <input
+                      className={FIELD}
+                      placeholder="Asset Code"
+                      value={assetCode}
+                      onChange={(e) => setAssetCode(e.target.value)}
+                    />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-[#DCDFE4] bg-[#F7F8F9] px-5 py-3">
+                <button onClick={returnAsset} className={BTN_PRIMARY}>Return</button>
+              </div>
+            </>
+          )}
+        </section>
       </div>
     </div>
   );
