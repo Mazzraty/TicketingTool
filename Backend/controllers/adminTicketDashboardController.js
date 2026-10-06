@@ -21,6 +21,7 @@ export const getSlaPolicy = async (req, res) => {
   res.json(slaPolicy);
 };
 
+
 export const getTicketKpis = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user, req.query);
