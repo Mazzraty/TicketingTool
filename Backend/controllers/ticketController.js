@@ -1230,6 +1230,7 @@ export const createManualTicket = async (req, res) => {
       relatedTo,
       assetId,
       employeeId,
+      externalName, // NEW: name of requester outside the company
       incidentDate,
       companyId: bodyCompanyId,
     } = req.body;
@@ -1299,27 +1300,35 @@ export const createManualTicket = async (req, res) => {
       });
     }
 
-    if (!employeeId) {
+    // ==================================================
+    // REQUESTER: employee OR outside-company person (by name)
+    // ==================================================
+    const cleanExternalName = (externalName || "").trim();
+    const isExternalRequester = !employeeId && !!cleanExternalName;
+
+    if (!employeeId && !cleanExternalName) {
       return res.status(400).json({
         success: false,
-        message: "Please select the employee this ticket is for",
+        message: "Please select an employee or enter the requester's name",
       });
     }
 
     // Guard against a super admin picking an employee/asset that doesn't
     // actually belong to the selected company (e.g. stale client state).
-    const employee = await Employee.findById(employeeId);
-    if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: "Employee not found",
-      });
-    }
-    if (String(employee.companyId) !== String(companyId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Selected employee does not belong to the selected company",
-      });
+    if (employeeId) {
+      const employee = await Employee.findById(employeeId);
+      if (!employee) {
+        return res.status(404).json({
+          success: false,
+          message: "Employee not found",
+        });
+      }
+      if (String(employee.companyId) !== String(companyId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Selected employee does not belong to the selected company",
+        });
+      }
     }
 
     if (assetId) {
@@ -1359,15 +1368,18 @@ export const createManualTicket = async (req, res) => {
       // ASSET LINK
       assetId: assetId || null,
 
-      // EMPLOYEE LINK (who the ticket is for)
-      employeeId,
+      // EMPLOYEE LINK (who the ticket is for) - null for outside requesters
+      employeeId: employeeId || null,
+
+      // OUTSIDE-COMPANY REQUESTER NAME
+      externalName: isExternalRequester ? cleanExternalName : "",
 
       // MANUAL TICKET
       source: "Manual",
       createdByType:
         req.user.role === "super_admin" ? "super_admin" : "it_support",
 
-      // No portal end user — this was raised on behalf of an employee
+      // No portal end user — this was raised on behalf of someone
       userId: null,
 
       // INCIDENT DATE
@@ -1387,12 +1399,14 @@ export const createManualTicket = async (req, res) => {
       ],
     });
 
-    // Populate the employee so the response (and any caller re-rendering
-    // the list from this response) has the name/staffCode immediately.
-    await ticket.populate(
-      "employeeId",
-      "name staffCode department designation"
-    );
+    // Populate the employee (if any) so the response has the
+    // name/staffCode immediately.
+    if (ticket.employeeId) {
+      await ticket.populate(
+        "employeeId",
+        "name staffCode department designation"
+      );
+    }
 
     return res.status(201).json({
       success: true,
@@ -1408,6 +1422,16 @@ export const createManualTicket = async (req, res) => {
     });
   }
 };
+
+/* ==================================================================
+   ALSO ADD THIS TO YOUR Ticket SCHEMA (next to employeeId):
+
+   externalName: {
+     type: String,
+     trim: true,
+     default: "",
+   },
+================================================================== */
 
 /* ======================================================
    ✅ ESCALATE TICKET (IT SUPPORT -> SUPER ADMIN)

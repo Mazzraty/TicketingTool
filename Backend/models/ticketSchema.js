@@ -340,6 +340,12 @@ const ticketSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+
+    externalName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     // =========================
     // INCIDENT DATE
     // =========================
