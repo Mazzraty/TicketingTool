@@ -9,9 +9,6 @@ import {
   Plus,
   Search,
   Building2,
-  Calendar,
-  CalendarClock,
-  Banknote,
   Layers,
   CheckCircle2,
   XCircle,
@@ -22,22 +19,28 @@ import {
   PackageSearch,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   AlertTriangle,
 } from "lucide-react";
 
+/* ================= UI HELPERS (styling only, no logic) ================= */
+// Atlassian / Jira Service Management styling
+const inputCls =
+  "h-9 w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 text-sm text-[#172B4D] " +
+  "placeholder:text-[#7A869A] transition-colors hover:bg-[#EBECF0] " +
+  "focus:border-[#4C9AFF] focus:bg-white focus:outline-none";
+
+const btnBase =
+  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] px-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:cursor-not-allowed disabled:opacity-50";
+const btnPrimary = `${btnBase} bg-[#0052CC] text-white hover:bg-[#0065FF] active:bg-[#0747A6]`;
+const btnDanger = `${btnBase} bg-[#DE350B] text-white hover:bg-[#FF5630] active:bg-[#BF2600]`;
+const btnSubtle = `${btnBase} bg-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
+
+// Jira lozenge palette
 const STATUS_STYLES = {
-  Active: {
-    pill: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
-    dot: "bg-emerald-500",
-  },
-  Expired: {
-    pill: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
-    dot: "bg-rose-500",
-  },
-  Renewed: {
-    pill: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200",
-    dot: "bg-sky-500",
-  },
+  Active: "bg-[#E3FCEF] text-[#006644]",
+  Expired: "bg-[#FFEBE6] text-[#BF2600]",
+  Renewed: "bg-[#DEEBFF] text-[#0747A6]",
 };
 
 const EMPTY_FORM = {
@@ -59,6 +62,98 @@ function initials(name = "") {
     .map((w) => w[0]?.toUpperCase())
     .join("") || "?";
 }
+
+function Field({ label, required, className = "", children }) {
+  return (
+    <div className={className}>
+      <label className="mb-1 block text-xs font-semibold text-[#5E6C84]">
+        {label}
+        {required && <span className="ml-0.5 text-[#DE350B]">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+// Native <select> with a consistent chevron
+function SelectBox({ children, className = "", ...props }) {
+  return (
+    <div className="relative">
+      <select
+        {...props}
+        className={`${inputCls} cursor-pointer appearance-none truncate pr-8 ${className}`}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={16}
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+      />
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, accent }) {
+  return (
+    <div className="flex items-center gap-3 rounded-[3px] border border-[#DFE1E6] bg-white px-4 py-3">
+      <div
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[3px]"
+        style={{ backgroundColor: `${accent}1A`, color: accent }}
+      >
+        <Icon size={20} />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-xs font-semibold text-[#5E6C84]">{label}</p>
+        <p className="text-2xl font-medium leading-7 text-[#172B4D]">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`h-8 rounded-[3px] px-3 text-sm font-medium transition-colors ${
+        active
+          ? "bg-[#172B4D] text-white"
+          : "bg-[rgba(9,30,66,0.04)] text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Modal shell: header + body. Pass onSubmit to render the body as a <form>.
+function ModalShell({ title, subtitle, onClose, onSubmit, children }) {
+  const Body = onSubmit ? "form" : "div";
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(9,30,66,0.54)] p-4 sm:pt-[8vh]">
+      <div className="w-full max-w-2xl rounded-[3px] bg-white shadow-[0_8px_16px_-4px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
+        <div className="flex items-start justify-between px-6 pb-2 pt-5">
+          <div>
+            <h2 className="text-xl font-medium text-[#172B4D]">{title}</h2>
+            {subtitle && (
+              <p className="mt-0.5 text-sm text-[#5E6C84]">{subtitle}</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[3px] p-1 text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <Body onSubmit={onSubmit}>{children}</Body>
+      </div>
+    </div>
+  );
+}
+
+const thCls = "px-4 py-2.5 text-left text-xs font-semibold text-[#5E6C84]";
 
 export default function AdminSoftwareDashboard() {
   const [softwares, setSoftwares] = useState([]);
@@ -258,180 +353,139 @@ export default function AdminSoftwareDashboard() {
   }, [softwares]);
 
   const kpiCards = [
-    {
-      label: "Total vendors",
-      value: kpi.total,
-      icon: Layers,
-      iconBg: "bg-slate-100",
-      iconColor: "text-slate-600",
-      valueColor: "text-slate-900",
-    },
-    {
-      label: "Active",
-      value: kpi.active,
-      icon: CheckCircle2,
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-600",
-      valueColor: "text-emerald-700",
-    },
-    {
-      label: "Expired",
-      value: kpi.expired,
-      icon: XCircle,
-      iconBg: "bg-rose-50",
-      iconColor: "text-rose-600",
-      valueColor: "text-rose-700",
-    },
-    {
-      label: "Renewed",
-      value: kpi.renewed,
-      icon: RefreshCcw,
-      iconBg: "bg-sky-50",
-      iconColor: "text-sky-600",
-      valueColor: "text-sky-700",
-    },
+    { label: "Total vendors", value: kpi.total, icon: Layers, accent: "#42526E" },
+    { label: "Active", value: kpi.active, icon: CheckCircle2, accent: "#00875A" },
+    { label: "Expired", value: kpi.expired, icon: XCircle, accent: "#DE350B" },
+    { label: "Renewed", value: kpi.renewed, icon: RefreshCcw, accent: "#0052CC" },
   ];
 
   return (
-    <div className="bg-slate-50 min-h-screen font-sans text-slate-900">
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* ================= BACK NAVIGATION ================= */}
-        <button
-          onClick={() => window.history.back()}
-          className="inline-flex items-center gap-2 mb-5 px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 transition text-sm font-medium shadow-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
+    <div className="min-h-screen bg-[#F4F5F7] text-[#172B4D]">
+      <div className="mx-auto max-w-7xl px-6 py-6 lg:px-10">
+        {/* ================= BREADCRUMB + BACK ================= */}
+        <div className="mb-2 flex items-center justify-between">
+          <nav className="flex items-center gap-1.5 text-sm text-[#5E6C84]">
+           
+            <span>Vendor Dashboard</span>
+          </nav>
+
+          <button
+            onClick={() => window.history.back()}
+            className={btnSubtle}
+          >
+            <ArrowLeft size={14} />
+            Back
+          </button>
+        </div>
 
         {/* HEADER */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm px-6 py-5 flex items-center justify-between mb-6">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-medium text-[#172B4D]">
               Vendor Dashboard
             </h1>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className="mt-1 text-sm text-[#5E6C84]">
               Software & license management
             </p>
           </div>
 
           <button
             onClick={() => setAddModal(true)}
-            className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition text-sm font-semibold shadow-sm shadow-indigo-200"
+            className={btnPrimary}
           >
-            <Plus className="w-4 h-4" />
+            <Plus size={14} />
             Add vendor
           </button>
         </div>
 
         {/* KPI */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {kpiCards.map(({ label, value, icon: Icon, iconBg, iconColor, valueColor }) => (
-            <div
+        <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {kpiCards.map(({ label, value, icon, accent }) => (
+            <StatCard
               key={label}
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-start justify-between"
-            >
-              <div>
-                <p className="text-slate-500 text-sm font-medium">{label}</p>
-                <h2 className={`text-3xl font-semibold mt-2 tracking-tight ${valueColor}`}>
-                  {value}
-                </h2>
-              </div>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}>
-                <Icon className={`w-5 h-5 ${iconColor}`} />
-              </div>
-            </div>
+              label={label}
+              value={value}
+              icon={icon}
+              accent={accent}
+            />
           ))}
         </div>
 
-        {/* TOOLBAR */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-          <div className="relative w-full sm:w-[340px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              className="w-full border border-slate-200 rounded-lg pl-10 pr-4 py-2.5 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition"
-              placeholder="Search by service, vendor, or status"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {["All", "Active", "Expired", "Renewed"].map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`px-3.5 py-2 rounded-lg text-sm font-medium border transition ${
-                  statusFilter === s
-                    ? "bg-slate-900 text-white border-slate-900"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-
-          {/* COMPANY FILTER — super_admin only */}
-          {user?.role === "super_admin" && (
-            <div className="flex items-center gap-2 sm:ml-auto">
-              <Building2 className="w-4 h-4 text-slate-400 hidden sm:block" />
-              <select
-                value={companyFilter}
-                onChange={(e) => setCompanyFilter(e.target.value)}
-                className="border border-slate-200 rounded-lg px-3 py-2.5 bg-white text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition"
-              >
-                <option value="All">All companies</option>
-                {companies.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+        {/* TABLE CARD */}
+        <div className="rounded-[3px] border border-[#DFE1E6] bg-white">
+          {/* TOOLBAR */}
+          <div className="flex flex-col gap-3 border-b border-[#DFE1E6] p-3 sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-80">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+              />
+              <input
+                className={`${inputCls} pl-8`}
+                placeholder="Search by service, vendor, or status"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-          )}
-        </div>
 
-        {/* TABLE */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="flex flex-wrap items-center gap-2">
+              {["All", "Active", "Expired", "Renewed"].map((s) => (
+                <FilterChip
+                  key={s}
+                  active={statusFilter === s}
+                  onClick={() => setStatusFilter(s)}
+                >
+                  {s}
+                </FilterChip>
+              ))}
+            </div>
+
+            {/* COMPANY FILTER — super_admin only */}
+            {user?.role === "super_admin" && (
+              <div className="relative w-full sm:ml-auto sm:w-60">
+                <Building2
+                  size={15}
+                  className="pointer-events-none absolute left-2.5 top-1/2 z-10 -translate-y-1/2 text-[#6B778C]"
+                />
+                <SelectBox
+                  value={companyFilter}
+                  onChange={(e) => setCompanyFilter(e.target.value)}
+                  className="pl-8"
+                >
+                  <option value="All">All companies</option>
+                  {companies.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </SelectBox>
+              </div>
+            )}
+          </div>
+
+          {/* TABLE */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[960px] border-collapse text-sm">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
-                    Service
-                  </th>
-                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
-                    Company
-                  </th>
-                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
-                    Duration
-                  </th>
-                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
-                    Amount
-                  </th>
-                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
-                    Start date
-                  </th>
-                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
-                    End date
-                  </th>
-                  <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
-                    Status
-                  </th>
-                  <th className="text-right px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">
-                    Actions
-                  </th>
+                <tr className="border-b-2 border-[#DFE1E6]">
+                  <th className={thCls}>Service</th>
+                  <th className={thCls}>Company</th>
+                  <th className={thCls}>Duration</th>
+                  <th className={thCls}>Amount</th>
+                  <th className={thCls}>Start date</th>
+                  <th className={thCls}>End date</th>
+                  <th className={thCls}>Status</th>
+                  <th className={`${thCls} text-right`}>Actions</th>
                 </tr>
               </thead>
 
               <tbody>
                 {isLoading &&
                   Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} className="border-b border-slate-100">
+                    <tr key={i} className="border-b border-[#DFE1E6]">
                       {Array.from({ length: 8 }).map((__, j) => (
-                        <td key={j} className="px-5 py-4">
-                          <div className="h-3.5 bg-slate-100 rounded animate-pulse w-full max-w-[120px]" />
+                        <td key={j} className="px-4 py-3.5">
+                          <div className="h-4 w-full max-w-[120px] animate-pulse rounded-[3px] bg-[#F4F5F7]" />
                         </td>
                       ))}
                     </tr>
@@ -439,13 +493,13 @@ export default function AdminSoftwareDashboard() {
 
                 {!isLoading && paginated.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-5 py-16">
-                      <div className="flex flex-col items-center justify-center text-center gap-2">
-                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-1">
-                          <PackageSearch className="w-6 h-6 text-slate-400" />
-                        </div>
-                        <p className="text-slate-700 font-medium">No vendors found</p>
-                        <p className="text-slate-400 text-sm max-w-xs">
+                    <td colSpan={8} className="px-4 py-16">
+                      <div className="flex flex-col items-center justify-center gap-1 text-center text-[#5E6C84]">
+                        <PackageSearch size={32} className="text-[#97A0AF]" />
+                        <p className="mt-1 text-base font-medium text-[#172B4D]">
+                          No vendors found
+                        </p>
+                        <p className="max-w-xs text-sm">
                           Try adjusting your search or filters, or add a new vendor to get started.
                         </p>
                       </div>
@@ -461,74 +515,75 @@ export default function AdminSoftwareDashboard() {
                     return (
                       <tr
                         key={s._id}
-                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition-colors"
+                        className="border-b border-[#DFE1E6] transition-colors hover:bg-[#F4F5F7]"
                       >
-                        <td className="px-5 py-4">
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-semibold shrink-0">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[#DEEBFF] text-xs font-semibold text-[#0052CC]">
                               {initials(s.vendor)}
                             </div>
                             <div>
-                              <p className="font-medium text-slate-900">
+                              <p className="font-medium text-[#0052CC]">
                                 {s.serviceName}
                               </p>
-                              <p className="text-xs text-slate-400">{s.vendor}</p>
+                              <p className="text-xs text-[#5E6C84]">{s.vendor}</p>
                             </div>
                           </div>
                         </td>
 
-                        <td className="px-5 py-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-medium">
-                            <Building2 className="w-3.5 h-3.5" />
+                        <td className="px-4 py-3 text-[#42526E]">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Building2 size={14} className="text-[#6B778C]" />
                             {s.companyId?.name || "—"}
                           </span>
                         </td>
 
-                        <td className="px-5 py-4 text-slate-600">
+                        <td className="px-4 py-3 text-[#42526E]">
                           {s.durationMonths} months
                         </td>
 
-                        <td className="px-5 py-4 text-slate-900 font-medium">
+                        <td className="px-4 py-3 font-medium text-[#172B4D]">
                           QAR {s.amount}
                         </td>
 
-                        <td className="px-5 py-4 text-slate-600">
+                        <td className="px-4 py-3 text-[#42526E]">
                           {s.purchaseDate
                             ? new Date(s.purchaseDate).toLocaleDateString()
                             : "—"}
                         </td>
 
-                        <td className="px-5 py-4 text-slate-600">
+                        <td className="px-4 py-3 text-[#42526E]">
                           {s.expiryDate
                             ? new Date(s.expiryDate).toLocaleDateString()
                             : "—"}
                         </td>
 
-                        <td className="px-5 py-4">
+                        <td className="px-4 py-3">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyle.pill}`}
+                            className={`inline-block rounded-[3px] px-1.5 py-0.5 text-[11px] font-bold uppercase leading-4 tracking-wide ${statusStyle}`}
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
                             {s.status}
                           </span>
                         </td>
 
-                        <td className="px-5 py-4">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
                             <button
                               onClick={() => openEdit(s)}
                               title="Edit vendor"
-                              className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                              aria-label="Edit vendor"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-[3px] text-[#42526E] transition-colors hover:bg-[#DEEBFF] hover:text-[#0052CC]"
                             >
-                              <Pencil className="w-4 h-4" />
+                              <Pencil size={15} />
                             </button>
 
                             <button
                               onClick={() => setDeleteTarget(s)}
                               title="Delete vendor"
-                              className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                              aria-label="Delete vendor"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-[3px] text-[#42526E] transition-colors hover:bg-[#FFEBE6] hover:text-[#BF2600]"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         </td>
@@ -541,32 +596,34 @@ export default function AdminSoftwareDashboard() {
 
           {/* PAGINATION */}
           {!isLoading && filtered.length > 0 && (
-            <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100">
-              <p className="text-xs text-slate-400">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#DFE1E6] px-4 py-3">
+              <p className="text-sm text-[#5E6C84]">
                 Showing{" "}
-                <span className="font-medium text-slate-600">
+                <span className="font-medium text-[#172B4D]">
                   {(page - 1) * limit + 1}–{Math.min(page * limit, filtered.length)}
                 </span>{" "}
-                of <span className="font-medium text-slate-600">{filtered.length}</span>
+                of <span className="font-medium text-[#172B4D]">{filtered.length}</span>
               </p>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  className="flex h-8 min-w-[32px] items-center justify-center rounded-[3px] px-2 text-[#42526E] transition-colors hover:bg-[rgba(9,30,66,0.08)] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Previous page"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft size={16} />
                 </button>
-                <span className="text-xs text-slate-500 px-2 font-medium">
+                <span className="rounded-[3px] bg-[#DEEBFF] px-3 py-1.5 text-sm font-medium text-[#0052CC]">
                   Page {page} of {totalPages}
                 </span>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  className="flex h-8 min-w-[32px] items-center justify-center rounded-[3px] px-2 text-[#42526E] transition-colors hover:bg-[rgba(9,30,66,0.08)] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Next page"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight size={16} />
                 </button>
               </div>
             </div>
@@ -576,273 +633,245 @@ export default function AdminSoftwareDashboard() {
 
       {/* ADD MODAL */}
       {addModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Add vendor</h2>
-                <p className="text-sm text-slate-400 mt-0.5">
-                  Register a new software license or subscription
-                </p>
-              </div>
-              <button
-                onClick={() => setAddModal(false)}
-                className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+        <ModalShell
+          title="Add vendor"
+          subtitle="Register a new software license or subscription"
+          onClose={() => setAddModal(false)}
+          onSubmit={handleSubmit}
+        >
+          <div className="grid grid-cols-2 gap-4 px-6 py-3">
+            <p className="col-span-2 text-xs text-[#5E6C84]">
+              Required fields are marked with an asterisk{" "}
+              <span className="text-[#DE350B]">*</span>
+            </p>
+
+            <Field label="Service name" required className="col-span-2 sm:col-span-1">
+              <input
+                className={inputCls}
+                placeholder="e.g. Kaspersky"
+                value={form.serviceName}
+                onChange={(e) => setForm({ ...form, serviceName: e.target.value })}
+                required
+              />
+            </Field>
+
+            <Field label="Vendor name" required className="col-span-2 sm:col-span-1">
+              <input
+                className={inputCls}
+                placeholder="e.g. Aruba"
+                value={form.vendor}
+                onChange={(e) => setForm({ ...form, vendor: e.target.value })}
+                required
+              />
+            </Field>
+
+            {user?.role === "super_admin" && (
+              <Field label="Company" required className="col-span-2">
+                <SelectBox
+                  value={form.companyId}
+                  onChange={(e) => setForm({ ...form, companyId: e.target.value })}
+                  required
+                >
+                  <option value="">Select company</option>
+                  {companies.map((company) => (
+                    <option key={company._id} value={company._id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </SelectBox>
+              </Field>
+            )}
+
+            <Field label="Duration (months)" className="col-span-2 sm:col-span-1">
+              <input
+                type="number"
+                className={inputCls}
+                placeholder="12"
+                value={form.durationMonths}
+                onChange={(e) => setForm({ ...form, durationMonths: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Amount (QAR)" className="col-span-2 sm:col-span-1">
+              <input
+                type="number"
+                className={inputCls}
+                placeholder="0.00"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Purchase date" className="col-span-2 sm:col-span-1">
+              <input
+                type="date"
+                className={inputCls}
+                value={form.purchaseDate}
+                onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Expiry date" className="col-span-2 sm:col-span-1">
+              <input
+                type="date"
+                className={inputCls}
+                value={form.expiryDate}
+                onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Status" className="col-span-2">
+              <SelectBox
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="px-6 py-6 grid grid-cols-2 gap-4">
-              <Field label="Service name" required className="col-span-2 sm:col-span-1">
-                <input
-                  className="input-field"
-                  placeholder="e.g. Kaspersky"
-                  value={form.serviceName}
-                  onChange={(e) => setForm({ ...form, serviceName: e.target.value })}
-                  required
-                />
-              </Field>
-
-              <Field label="Vendor name" required className="col-span-2 sm:col-span-1">
-                <input
-                  className="input-field"
-                  placeholder="e.g. Aruba"
-                  value={form.vendor}
-                  onChange={(e) => setForm({ ...form, vendor: e.target.value })}
-                  required
-                />
-              </Field>
-
-              {user?.role === "super_admin" && (
-                <Field label="Company" required className="col-span-2">
-                  <select
-                    className="input-field"
-                    value={form.companyId}
-                    onChange={(e) => setForm({ ...form, companyId: e.target.value })}
-                    required
-                  >
-                    <option value="">Select company</option>
-                    {companies.map((company) => (
-                      <option key={company._id} value={company._id}>
-                        {company.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              )}
-
-              <Field label="Duration (months)" className="col-span-2 sm:col-span-1">
-                <input
-                  type="number"
-                  className="input-field"
-                  placeholder="12"
-                  value={form.durationMonths}
-                  onChange={(e) => setForm({ ...form, durationMonths: e.target.value })}
-                />
-              </Field>
-
-              <Field label="Amount (QAR)" className="col-span-2 sm:col-span-1">
-                <input
-                  type="number"
-                  className="input-field"
-                  placeholder="0.00"
-                  value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                />
-              </Field>
-
-              <Field label="Purchase date" className="col-span-2 sm:col-span-1">
-                <input
-                  type="date"
-                  className="input-field"
-                  value={form.purchaseDate}
-                  onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
-                />
-              </Field>
-
-              <Field label="Expiry date" className="col-span-2 sm:col-span-1">
-                <input
-                  type="date"
-                  className="input-field"
-                  value={form.expiryDate}
-                  onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
-                />
-              </Field>
-
-              <Field label="Status" className="col-span-2">
-                <select
-                  className="input-field"
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value })}
-                >
-                  <option>Active</option>
-                  <option>Expired</option>
-                  <option>Renewed</option>
-                </select>
-              </Field>
-
-              <div className="col-span-2 flex justify-end gap-3 mt-2 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setAddModal(false)}
-                  className="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition text-sm font-semibold shadow-sm shadow-indigo-200"
-                >
-                  Save vendor
-                </button>
-              </div>
-            </form>
+                <option>Active</option>
+                <option>Expired</option>
+                <option>Renewed</option>
+              </SelectBox>
+            </Field>
           </div>
-        </div>
+
+          <div className="flex justify-end gap-2 px-6 pb-5 pt-3">
+            <button
+              type="button"
+              onClick={() => setAddModal(false)}
+              className={btnSubtle}
+            >
+              Cancel
+            </button>
+            <button type="submit" className={btnPrimary}>
+              Save vendor
+            </button>
+          </div>
+        </ModalShell>
       )}
 
       {/* EDIT MODAL */}
       {editModal && editData && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Edit vendor</h2>
-                <p className="text-sm text-slate-400 mt-0.5">
-                  Update license details for {editData.serviceName}
-                </p>
-              </div>
-              <button
-                onClick={() => setEditModal(false)}
-                className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+        <ModalShell
+          title="Edit vendor"
+          subtitle={`Update license details for ${editData.serviceName}`}
+          onClose={() => setEditModal(false)}
+        >
+          <div className="grid grid-cols-2 gap-4 px-6 py-3">
+            <Field label="Service name" className="col-span-2 sm:col-span-1">
+              <input
+                className={inputCls}
+                value={editData.serviceName}
+                onChange={(e) =>
+                  setEditData({ ...editData, serviceName: e.target.value })
+                }
+              />
+            </Field>
+
+            <Field label="Vendor name" className="col-span-2 sm:col-span-1">
+              <input
+                className={inputCls}
+                value={editData.vendor}
+                onChange={(e) => setEditData({ ...editData, vendor: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Duration (months)" className="col-span-2 sm:col-span-1">
+              <input
+                type="number"
+                className={inputCls}
+                value={editData.durationMonths}
+                onChange={(e) =>
+                  setEditData({ ...editData, durationMonths: e.target.value })
+                }
+              />
+            </Field>
+
+            <Field label="Amount (QAR)" className="col-span-2 sm:col-span-1">
+              <input
+                type="number"
+                className={inputCls}
+                value={editData.amount}
+                onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Purchase date" className="col-span-2 sm:col-span-1">
+              <input
+                type="date"
+                className={inputCls}
+                value={editData.purchaseDate || ""}
+                onChange={(e) =>
+                  setEditData({ ...editData, purchaseDate: e.target.value })
+                }
+              />
+            </Field>
+
+            <Field label="Expiry date" className="col-span-2 sm:col-span-1">
+              <input
+                type="date"
+                className={inputCls}
+                value={editData.expiryDate || ""}
+                onChange={(e) =>
+                  setEditData({ ...editData, expiryDate: e.target.value })
+                }
+              />
+            </Field>
+
+            <Field label="Status" className="col-span-2">
+              <SelectBox
+                value={editData.status}
+                onChange={(e) => setEditData({ ...editData, status: e.target.value })}
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="px-6 py-6 grid grid-cols-2 gap-4">
-              <Field label="Service name" className="col-span-2 sm:col-span-1">
-                <input
-                  className="input-field"
-                  value={editData.serviceName}
-                  onChange={(e) =>
-                    setEditData({ ...editData, serviceName: e.target.value })
-                  }
-                />
-              </Field>
-
-              <Field label="Vendor name" className="col-span-2 sm:col-span-1">
-                <input
-                  className="input-field"
-                  value={editData.vendor}
-                  onChange={(e) => setEditData({ ...editData, vendor: e.target.value })}
-                />
-              </Field>
-
-              <Field label="Duration (months)" className="col-span-2 sm:col-span-1">
-                <input
-                  type="number"
-                  className="input-field"
-                  value={editData.durationMonths}
-                  onChange={(e) =>
-                    setEditData({ ...editData, durationMonths: e.target.value })
-                  }
-                />
-              </Field>
-
-              <Field label="Amount (QAR)" className="col-span-2 sm:col-span-1">
-                <input
-                  type="number"
-                  className="input-field"
-                  value={editData.amount}
-                  onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
-                />
-              </Field>
-
-              <Field label="Purchase date" className="col-span-2 sm:col-span-1">
-                <input
-                  type="date"
-                  className="input-field"
-                  value={editData.purchaseDate || ""}
-                  onChange={(e) =>
-                    setEditData({ ...editData, purchaseDate: e.target.value })
-                  }
-                />
-              </Field>
-
-              <Field label="Expiry date" className="col-span-2 sm:col-span-1">
-                <input
-                  type="date"
-                  className="input-field"
-                  value={editData.expiryDate || ""}
-                  onChange={(e) =>
-                    setEditData({ ...editData, expiryDate: e.target.value })
-                  }
-                />
-              </Field>
-
-              <Field label="Status" className="col-span-2">
-                <select
-                  className="input-field"
-                  value={editData.status}
-                  onChange={(e) => setEditData({ ...editData, status: e.target.value })}
-                >
-                  <option>Active</option>
-                  <option>Expired</option>
-                  <option>Renewed</option>
-                </select>
-              </Field>
-            </div>
-
-            <div className="flex justify-end gap-3 px-6 pb-6 pt-4 border-t border-slate-100">
-              <button
-                onClick={() => setEditModal(false)}
-                className="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdate}
-                className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition text-sm font-semibold shadow-sm shadow-indigo-200"
-              >
-                Save changes
-              </button>
-            </div>
+                <option>Active</option>
+                <option>Expired</option>
+                <option>Renewed</option>
+              </SelectBox>
+            </Field>
           </div>
-        </div>
+
+          <div className="flex justify-end gap-2 px-6 pb-5 pt-3">
+            <button
+              onClick={() => setEditModal(false)}
+              className={btnSubtle}
+            >
+              Cancel
+            </button>
+            <button onClick={handleUpdate} className={btnPrimary}>
+              Save changes
+            </button>
+          </div>
+        </ModalShell>
       )}
 
       {/* DELETE CONFIRM MODAL */}
       {deleteTarget && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden p-6">
-            <div className="w-11 h-11 rounded-full bg-rose-50 flex items-center justify-center mb-4">
-              <AlertTriangle className="w-5 h-5 text-rose-600" />
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(9,30,66,0.54)] p-4 sm:pt-[15vh]">
+          <div className="w-full max-w-md rounded-[3px] bg-white shadow-[0_8px_16px_-4px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
+            <div className="flex items-center gap-2.5 px-6 pb-2 pt-5">
+              <AlertTriangle size={22} className="shrink-0 text-[#DE350B]" />
+              <h3 className="text-xl font-medium text-[#172B4D]">
+                Delete this vendor?
+              </h3>
             </div>
-            <h3 className="text-base font-semibold text-slate-900">
-              Delete this vendor?
-            </h3>
-            <p className="text-sm text-slate-500 mt-1.5">
+
+            <p className="px-6 py-3 text-sm text-[#42526E]">
               This will permanently remove{" "}
-              <span className="font-medium text-slate-700">
+              <span className="font-medium text-[#172B4D]">
                 {deleteTarget.serviceName}
               </span>{" "}
               ({deleteTarget.vendor}). This action can't be undone.
             </p>
 
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-2 px-6 pb-5 pt-3">
               <button
                 onClick={() => setDeleteTarget(null)}
                 disabled={isDeleting}
-                className="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition disabled:opacity-50"
+                className={btnSubtle}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="bg-rose-600 text-white px-4 py-2.5 rounded-lg hover:bg-rose-700 transition text-sm font-semibold shadow-sm shadow-rose-200 disabled:opacity-60"
+                className={btnDanger}
               >
                 {isDeleting ? "Deleting…" : "Delete vendor"}
               </button>
@@ -850,34 +879,6 @@ export default function AdminSoftwareDashboard() {
           </div>
         </div>
       )}
-
-      <style>{`
-        .input-field {
-          width: 100%;
-          border: 1px solid rgb(226 232 240);
-          border-radius: 0.5rem;
-          padding: 0.625rem 0.75rem;
-          font-size: 0.875rem;
-          background: white;
-          transition: box-shadow 0.15s, border-color 0.15s;
-        }
-        .input-field:focus {
-          outline: none;
-          border-color: rgb(129 140 248);
-          box-shadow: 0 0 0 3px rgb(199 210 254 / 0.5);
-        }
-      `}</style>
-    </div>
-  );
-}
-
-function Field({ label, required, className = "", children }) {
-  return (
-    <div className={className}>
-      <label className="block text-xs font-medium text-slate-500 mb-1.5">
-        {label} {required && <span className="text-rose-500">*</span>}
-      </label>
-      {children}
     </div>
   );
 }
