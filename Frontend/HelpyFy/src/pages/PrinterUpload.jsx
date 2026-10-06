@@ -358,13 +358,13 @@ export default function PrinterUpload() {
 
         {/* BREADCRUMB + BACK */}
         <div className="mb-2 flex items-center justify-between">
-          <nav className="flex items-center gap-1.5 text-sm text-[#5E6C84]">
+          {/* <nav className="flex items-center gap-1.5 text-sm text-[#5E6C84]">
             <span>Admin</span>
             <span>/</span>
             <span>Assets</span>
             <span>/</span>
             <span>Upload Printer</span>
-          </nav>
+          </nav> */}
 
           <button
             onClick={() => window.history.back()}
