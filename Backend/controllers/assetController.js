@@ -483,7 +483,7 @@ export default function AdminAssets() {
         <section className="rounded-[3px] border border-[#DCDFE4] bg-white">
 
           {/* TABS */}
-          <div role="tablist" className="flex overflow-x-auto border-b border-[#DCDFE4] px-2">
+          <div role="tablist" className="flex overflow-x-auto overflow-y-hidden border-b border-[#DCDFE4] px-2">
             {TABS.map(({ id, label, icon: Icon }) => {
               const active = open === id;
               return (
@@ -711,7 +711,10 @@ export default function AdminAssets() {
                         selectedEmployee
                           ? {
                             value: selectedEmployee,
-                            label: selectedEmployee,
+                            label: (() => {
+                              const emp = employees.find((e) => e.staffCode === selectedEmployee);
+                              return emp ? `${emp.name} (${emp.staffCode})` : selectedEmployee;
+                            })(),
                           }
                           : null
                       }
