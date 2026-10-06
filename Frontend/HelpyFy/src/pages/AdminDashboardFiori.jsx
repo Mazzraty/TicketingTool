@@ -24,6 +24,7 @@ const COLORS = {
   hht: "#1D9AAA",
   assigned: "#0C66E4",
   available: "#4BCE97",
+  damaged: "#E2483D", // NEW
 };
 
 // Lozenge palette: [background, text]
@@ -31,6 +32,7 @@ const STATUS_LOZ = {
   available: ["#DCFFF1", "#216E4E"],
   active: ["#DCFFF1", "#216E4E"],
   assigned: ["#DEEBFF", "#0747A6"],
+  damaged: ["#FFEDEB", "#AE2E24"], // NEW
   expiring: ["#FFF7D6", "#7F5F01"],
   expired: ["#FFEDEB", "#AE2E24"],
 };
@@ -110,6 +112,20 @@ const ChartTooltip = ({ active, payload }) => {
   );
 };
 
+// One row of the allocation legend
+const AllocationRow = ({ color, label, value, percent }) => (
+  <li className="flex items-center justify-between py-2.5 text-sm">
+    <span className="flex items-center gap-2">
+      <span className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: color }} />
+      {label}
+    </span>
+    <span className="text-[#44546F] tabular-nums">
+      <b className="font-semibold text-[#172B4D]">{value}</b>
+      <span className="ml-2 text-xs">{percent}%</span>
+    </span>
+  </li>
+);
+
 const formatDate = (d) => {
   if (!d) return "—";
   const date = new Date(d);
@@ -128,6 +144,7 @@ export default function AdminDashboardProfessional() {
     hht: 0,
     assigned: 0,
     available: 0,
+    damaged: 0, // NEW
     employees: 0,
     openTickets: 0,
     totalActiveLicenses: 0,
@@ -160,6 +177,7 @@ export default function AdminDashboardProfessional() {
         hht: s.hht ?? 0,
         assigned: s.assigned ?? 0,
         available: s.available ?? 0,
+        damaged: s.damaged ?? 0, // NEW
         employees: s.employees ?? 0,
         openTickets: s.openTickets ?? 0,
         totalActiveLicenses: s.totalActiveLicenses ?? 0,
@@ -197,9 +215,11 @@ export default function AdminDashboardProfessional() {
   ];
   const chartTotal = assetChart.reduce((s, d) => s + d.value, 0);
 
-  const statusTotal = (stats.assigned || 0) + (stats.available || 0);
+  // Allocation now includes damaged assets
+  const statusTotal = (stats.assigned || 0) + (stats.available || 0) + (stats.damaged || 0);
   const assignedPct = pct(stats.assigned, statusTotal);
-  const availablePct = statusTotal ? 100 - assignedPct : 0;
+  const damagedPct = pct(stats.damaged, statusTotal);
+  const availablePct = statusTotal ? Math.max(0, 100 - assignedPct - damagedPct) : 0;
 
   /* ================= RENDER ================= */
   return (
@@ -238,7 +258,7 @@ export default function AdminDashboardProfessional() {
               icon={Package}
               label="Total assets"
               value={stats.totalAssets}
-              hint={`${stats.assigned} assigned · ${stats.available} available`}
+              hint={`${stats.assigned} assigned · ${stats.available} available · ${stats.damaged} damaged`}
             />
             <Tile icon={Laptop} label="Laptops / desktops" value={stats.laptops} hint="Managed devices" />
             <Tile icon={Printer} label="Printers" value={stats.printers} hint="Managed devices" />
@@ -310,16 +330,13 @@ export default function AdminDashboardProfessional() {
 
                 <ul className="w-full divide-y divide-[#EBECF0]">
                   {assetChart.map((d) => (
-                    <li key={d.name} className="flex items-center justify-between py-2.5 text-sm">
-                      <span className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: d.fill }} />
-                        {d.name}
-                      </span>
-                      <span className="text-[#44546F] tabular-nums">
-                        <b className="font-semibold text-[#172B4D]">{d.value}</b>
-                        <span className="ml-2 text-xs">{pct(d.value, chartTotal)}%</span>
-                      </span>
-                    </li>
+                    <AllocationRow
+                      key={d.name}
+                      color={d.fill}
+                      label={d.name}
+                      value={d.value}
+                      percent={pct(d.value, chartTotal)}
+                    />
                   ))}
                 </ul>
               </div>
@@ -330,33 +347,18 @@ export default function AdminDashboardProfessional() {
                 <div className="flex h-3 w-full rounded-[3px] overflow-hidden bg-[#EBECF0] mb-5">
                   <div style={{ width: `${assignedPct}%`, backgroundColor: COLORS.assigned }} />
                   <div style={{ width: `${availablePct}%`, backgroundColor: COLORS.available }} />
+                  <div style={{ width: `${damagedPct}%`, backgroundColor: COLORS.damaged }} />
                 </div>
 
                 <ul className="divide-y divide-[#EBECF0]">
-                  <li className="flex items-center justify-between py-2.5 text-sm">
-                    <span className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: COLORS.assigned }} />
-                      Assigned
-                    </span>
-                    <span className="text-[#44546F] tabular-nums">
-                      <b className="font-semibold text-[#172B4D]">{stats.assigned}</b>
-                      <span className="ml-2 text-xs">{assignedPct}%</span>
-                    </span>
-                  </li>
-                  <li className="flex items-center justify-between py-2.5 text-sm">
-                    <span className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: COLORS.available }} />
-                      Available
-                    </span>
-                    <span className="text-[#44546F] tabular-nums">
-                      <b className="font-semibold text-[#172B4D]">{stats.available}</b>
-                      <span className="ml-2 text-xs">{availablePct}%</span>
-                    </span>
-                  </li>
+                  <AllocationRow color={COLORS.assigned} label="Assigned" value={stats.assigned} percent={assignedPct} />
+                  <AllocationRow color={COLORS.available} label="Available" value={stats.available} percent={availablePct} />
+                  <AllocationRow color={COLORS.damaged} label="Damaged" value={stats.damaged} percent={damagedPct} />
                 </ul>
 
                 <p className="text-xs text-[#626F86] mt-3">
-                  {stats.available} of {statusTotal} assets are free to assign.
+                  {stats.available} of {statusTotal} assets are free to assign
+                  {stats.damaged > 0 && ` · ${stats.damaged} damaged need attention`}.
                 </p>
               </div>
             </Card>
