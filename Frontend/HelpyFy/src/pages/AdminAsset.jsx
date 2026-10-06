@@ -2,61 +2,137 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import Select from "react-select";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Package,
+  UserCheck,
+  RotateCcw,
+} from "lucide-react";
+
 /* ================= UI HELPERS (styling only, no logic) ================= */
-const Field = ({ label, className = "", children }) => (
-  <div className={`flex flex-col gap-1.5 ${className}`}>
-    <label className="text-xs font-medium text-gray-500 tracking-wide">
+// Atlassian / Jira Service Management styling
+const inputClass =
+  "h-9 w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 text-sm text-[#172B4D] " +
+  "placeholder:text-[#7A869A] transition-colors hover:bg-[#EBECF0] " +
+  "focus:border-[#4C9AFF] focus:bg-white focus:outline-none";
+
+const btnBase =
+  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] px-4 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:cursor-not-allowed disabled:opacity-50";
+const btnPrimary = `${btnBase} bg-[#0052CC] text-white hover:bg-[#0065FF] active:bg-[#0747A6]`;
+const btnSubtle = `${btnBase} bg-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
+
+const Field = ({ label, required, className = "", children }) => (
+  <div className={`flex flex-col ${className}`}>
+    <label className="mb-1 text-xs font-semibold text-[#5E6C84]">
       {label}
+      {required && <span className="ml-0.5 text-[#DE350B]">*</span>}
     </label>
     {children}
   </div>
 );
 
-const inputClass =
-  "border border-gray-200 bg-white p-2.5 rounded-lg text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition";
+// Native <select> with a consistent chevron
+const SelectBox = ({ children, ...props }) => (
+  <div className="relative">
+    <select
+      {...props}
+      className={`${inputClass} cursor-pointer appearance-none truncate pr-8`}
+    >
+      {children}
+    </select>
+    <ChevronDown
+      size={16}
+      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+    />
+  </div>
+);
 
-const selectClass = inputClass + " appearance-none";
-
-const Section = ({ id, icon, title, subtitle, children, open, setOpen }) => {
+const Section = ({ id, icon: Icon, title, subtitle, children, open, setOpen }) => {
   const isOpen = open === id;
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl mb-4 shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+    <div className="mb-3 overflow-hidden rounded-[3px] border border-[#DFE1E6] bg-white">
       <button
         onClick={() => setOpen(isOpen ? null : id)}
-        className="w-full flex items-center justify-between px-5 py-4 group"
+        aria-expanded={isOpen}
+        className={`flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-[#F4F5F7] ${
+          isOpen ? "bg-[#F4F5F7]" : ""
+        }`}
       >
         <div className="flex items-center gap-3">
-          <span className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 text-base">
-            {icon}
+          <span
+            className={`flex h-9 w-9 items-center justify-center rounded-[3px] ${
+              isOpen ? "bg-[#0052CC] text-white" : "bg-[#DEEBFF] text-[#0052CC]"
+            }`}
+          >
+            <Icon size={18} />
           </span>
-          <div className="text-left">
-            <p className="font-semibold text-gray-900 text-sm">{title}</p>
-            {subtitle && (
-              <p className="text-xs text-gray-400">{subtitle}</p>
-            )}
+          <div>
+            <p className="text-sm font-semibold text-[#172B4D]">{title}</p>
+            {subtitle && <p className="text-xs text-[#5E6C84]">{subtitle}</p>}
           </div>
         </div>
-        <span
-          className={`w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 text-sm transition-transform duration-200 ${isOpen ? "rotate-45 border-blue-300 text-blue-600" : ""
-            }`}
-        >
-          +
-        </span>
+        <ChevronDown
+          size={18}
+          className={`text-[#42526E] transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
       </button>
 
       <div
-        className={`grid transition-all duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-          }`}
+        className={`grid transition-all duration-300 ease-in-out ${
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
       >
         <div className="overflow-hidden">
-          <div className="p-5 pt-1 bg-gray-50/60 border-t border-gray-100">
-            {children}
-          </div>
+          <div className="border-t border-[#DFE1E6] p-5">{children}</div>
         </div>
       </div>
     </div>
   );
 };
+
+// react-select skinned to match the Atlassian inputs
+const selectStyles = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: "36px",
+    borderRadius: "3px",
+    borderWidth: "2px",
+    borderColor: state.isFocused ? "#4C9AFF" : "#DFE1E6",
+    backgroundColor: state.isFocused ? "#FFFFFF" : "#FAFBFC",
+    boxShadow: "none",
+    "&:hover": {
+      borderColor: state.isFocused ? "#4C9AFF" : "#DFE1E6",
+      backgroundColor: state.isFocused ? "#FFFFFF" : "#EBECF0",
+    },
+  }),
+  valueContainer: (base) => ({ ...base, padding: "0 10px" }),
+  placeholder: (base) => ({ ...base, color: "#7A869A" }),
+  singleValue: (base) => ({ ...base, color: "#172B4D" }),
+  input: (base) => ({ ...base, color: "#172B4D" }),
+  indicatorSeparator: () => ({ display: "none" }),
+  dropdownIndicator: (base) => ({ ...base, color: "#6B778C", padding: "0 8px" }),
+  menu: (base) => ({
+    ...base,
+    borderRadius: "3px",
+    boxShadow:
+      "0 4px 8px -2px rgba(9,30,66,0.25), 0 0 1px rgba(9,30,66,0.31)",
+    zIndex: 30,
+  }),
+  option: (base, state) => ({
+    ...base,
+    fontSize: "14px",
+    color: state.isSelected ? "#0052CC" : "#172B4D",
+    backgroundColor: state.isSelected
+      ? "#DEEBFF"
+      : state.isFocused
+      ? "#F4F5F7"
+      : "#FFFFFF",
+  }),
+};
+
 export default function AdminAssets() {
   const [assetCode, setAssetCode] = useState("");
   const [type, setType] = useState("");
@@ -231,22 +307,30 @@ export default function AdminAssets() {
 
 
   return (
-    <div className="p-6 md:p-8 bg-[#f4f6f9] min-h-screen">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-5">
+    <div className="min-h-screen bg-[#F4F5F7] text-[#172B4D]">
+      <div className="mx-auto max-w-5xl px-6 py-6 lg:px-10">
+        {/* BREADCRUMB + BACK */}
+        <div className="mb-2 flex items-center justify-between">
+          <nav className="flex items-center gap-1.5 text-sm text-[#5E6C84]">
+            <span>Admin</span>
+            <span>/</span>
+            <span>Assets</span>
+          </nav>
+
           <button
             onClick={() => window.history.back()}
-            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition shadow-sm text-sm font-semibold"
+            className={`${btnSubtle} h-8 px-3`}
           >
-            ← Back
+            <ArrowLeft size={14} />
+            Back
           </button>
         </div>
 
-        <div className="mb-7">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
+        <div className="mb-5">
+          <h1 className="text-2xl font-medium text-[#172B4D]">
             Asset Management
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="mt-1 text-sm text-[#5E6C84]">
             Laptop / Printer / HHT / Mobile Management System
           </p>
         </div>
@@ -256,14 +340,19 @@ export default function AdminAssets() {
           id="add"
           open={open}
           setOpen={setOpen}
-          icon="📦"
+          icon={Package}
           title="Add Asset"
+          subtitle="Register a new asset in the system"
         >
-          <div className="grid md:grid-cols-3 gap-4 pt-4">
+          <p className="mb-4 text-xs text-[#5E6C84]">
+            Required fields are marked with an asterisk{" "}
+            <span className="text-[#DE350B]">*</span>
+          </p>
+
+          <div className="grid gap-4 md:grid-cols-3">
             {user?.role === "super_admin" && (
-              <Field label="Company" className="md:col-span-3">
-                <select
-                  className={selectClass}
+              <Field label="Company" required className="md:col-span-3">
+                <SelectBox
                   value={companyId}
                   onChange={(e) => setCompanyId(e.target.value)}
                 >
@@ -273,11 +362,11 @@ export default function AdminAssets() {
                       {company.name}
                     </option>
                   ))}
-                </select>
+                </SelectBox>
               </Field>
             )}
 
-            <Field label="Asset Code">
+            <Field label="Asset Code" required>
               <input
                 className={inputClass}
                 placeholder="e.g. AST-0042"
@@ -286,9 +375,8 @@ export default function AdminAssets() {
               />
             </Field>
 
-            <Field label="Type">
-              <select
-                className={selectClass}
+            <Field label="Type" required>
+              <SelectBox
                 value={type}
                 onChange={(e) => setType(e.target.value)}
               >
@@ -298,7 +386,7 @@ export default function AdminAssets() {
                 <option value="Mobile">Mobile</option>
                 <option value="Printer">Printer</option>
                 <option value="HHT">HHT</option>
-              </select>
+              </SelectBox>
             </Field>
 
             <Field label="Model">
@@ -401,12 +489,11 @@ export default function AdminAssets() {
               />
             </Field>
 
-            <button
-              onClick={addAsset}
-              className="md:col-span-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm rounded-lg py-3 mt-1 transition shadow-sm shadow-blue-600/20"
-            >
-              Create Asset
-            </button>
+            <div className="flex justify-end md:col-span-3">
+              <button onClick={addAsset} className={btnPrimary}>
+                Create asset
+              </button>
+            </div>
           </div>
         </Section>
 
@@ -415,11 +502,12 @@ export default function AdminAssets() {
           id="assign"
           open={open}
           setOpen={setOpen}
-          icon="📦"
+          icon={UserCheck}
           title="Assign Asset"
+          subtitle="Assign an asset to an employee"
         >
-          <div className="grid md:grid-cols-3 gap-4 pt-4">
-            <Field label="Employee" className="md:col-span-2">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Field label="Employee" required className="md:col-span-2">
               <Select
                 options={employees.map((e) => ({
                   value: e.staffCode,
@@ -440,22 +528,11 @@ export default function AdminAssets() {
                 className="text-sm"
                 classNamePrefix="rs"
                 isSearchable
-                styles={{
-                  control: (base, state) => ({
-                    ...base,
-                    borderRadius: "0.5rem",
-                    borderColor: state.isFocused ? "#3b82f6" : "#e5e7eb",
-                    boxShadow: state.isFocused
-                      ? "0 0 0 3px rgba(59,130,246,0.15)"
-                      : "none",
-                    minHeight: "42px",
-                    "&:hover": { borderColor: "#3b82f6" },
-                  }),
-                }}
+                styles={selectStyles}
               />
             </Field>
 
-            <Field label="Asset Code">
+            <Field label="Asset Code" required>
               <input
                 className={inputClass}
                 placeholder="Asset Code"
@@ -464,12 +541,11 @@ export default function AdminAssets() {
               />
             </Field>
 
-            <button
-              onClick={assign}
-              className="md:col-span-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-sm rounded-lg py-3 mt-1 transition shadow-sm shadow-emerald-600/20"
-            >
-              Assign
-            </button>
+            <div className="flex justify-end md:col-span-3">
+              <button onClick={assign} className={btnPrimary}>
+                Assign
+              </button>
+            </div>
           </div>
         </Section>
 
@@ -478,13 +554,13 @@ export default function AdminAssets() {
           id="return"
           open={open}
           setOpen={setOpen}
-          icon="↩️"
+          icon={RotateCcw}
           title="Return Asset"
           subtitle="Mark an asset as returned to stock"
         >
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1">
-              <Field label="Asset Code">
+              <Field label="Asset Code" required>
                 <input
                   className={inputClass}
                   placeholder="Asset Code"
@@ -494,10 +570,7 @@ export default function AdminAssets() {
               </Field>
             </div>
 
-            <button
-              onClick={returnAsset}
-              className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold text-sm px-6 rounded-lg transition shadow-sm shadow-red-600/20 sm:mt-6 sm:h-[42px]"
-            >
+            <button onClick={returnAsset} className={btnPrimary}>
               Return
             </button>
           </div>
