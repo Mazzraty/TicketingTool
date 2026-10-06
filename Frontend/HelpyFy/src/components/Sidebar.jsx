@@ -19,6 +19,7 @@ import {
   Printer,
   Laptop,
   Tablet,
+  Upload,
 } from "lucide-react";
 
 export default function Sidebar({ collapsed, setCollapsed }) {
@@ -30,9 +31,18 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const employeeChildren = [
     { to: "/admin/employees", icon: Users, label: "Employees" },
     { to: "/admin/company-access", icon: UserCog, label: "Users" },
+    { to: "/admin/assets/upload-excel", icon: Upload, label: "Employee Upload" },
   ];
 
+  // IT SUPPORT: same Employee Upload, plus its own Company Users page
+  const itSupportEmployeeChildren = [
+    { to: "/admin/it-support-users", icon: Users, label: "Company Users" },
+    { to: "/admin/assets/upload-excel", icon: Upload, label: "Employee Upload" },
+  ];
+
+  // shared by Super Admin and IT Support
   const assetChildren = [
+    { to: "/admin/assets/fiori", icon: LayoutDashboard, label: "Asset Dashboard" },
     { to: "/admin/assets", icon: Package, label: "Asset Management" },
     { to: "/admin/assets/history", icon: History, label: "Asset History" },
     { to: "/admin/assets/upload-printer", icon: Printer, label: "Upload Printer" },
@@ -55,11 +65,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const ticketItems =
     role === "it_support" ? itSupportTicketChildren : ticketChildren;
 
+  const employeeItems =
+    role === "it_support" ? itSupportEmployeeChildren : employeeChildren;
+
   const groupHasActive = (children) =>
     children.some((c) => location.pathname === c.to);
 
   const [openGroups, setOpenGroups] = useState({
-    employees: groupHasActive(employeeChildren),
+    employees: groupHasActive(employeeItems),
     assets: groupHasActive(assetChildren),
     tickets: groupHasActive(ticketItems),
   });
@@ -67,7 +80,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   // Auto-open the group that contains the current page
   useEffect(() => {
     setOpenGroups((prev) => ({
-      employees: prev.employees || groupHasActive(employeeChildren),
+      employees: prev.employees || groupHasActive(employeeItems),
       assets: prev.assets || groupHasActive(assetChildren),
       tickets: prev.tickets || groupHasActive(ticketItems),
     }));
@@ -220,17 +233,17 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             <div className="space-y-2">
               <NavItem to="/admin/dashboard" icon={LayoutDashboard} label="Dashboard" />
 
-                <NavGroup id="tickets" icon={Ticket} label="Tickets">
+              <NavGroup id="tickets" icon={Ticket} label="Tickets">
                 {ticketItems}
               </NavGroup>
 
               <NavGroup id="assets" icon={Package} label="Asset Management">
                 {assetChildren}
               </NavGroup>
+
               <NavGroup id="employees" icon={Users} label="Employees">
-                {employeeChildren}
+                {employeeItems}
               </NavGroup>
- 
             </div>
           </div>
         )}
@@ -245,14 +258,19 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
             <div className="space-y-2">
               <NavItem to="/admin/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                 <NavGroup id="tickets" icon={Ticket} label="Tickets">
+
+              <NavGroup id="tickets" icon={Ticket} label="Tickets">
                 {itSupportTicketChildren}
               </NavGroup>
+
               <NavGroup id="assets" icon={Package} label="Asset Management">
                 {assetChildren}
               </NavGroup>
-              <NavItem to="/admin/it-support-users" icon={Users} label="Company Users" />
-           
+
+              <NavGroup id="employees" icon={Users} label="Employees">
+                {employeeItems}
+              </NavGroup>
+
               {/* <NavItem
                 to="/admin/it-support/employees"
                 icon={Users}
