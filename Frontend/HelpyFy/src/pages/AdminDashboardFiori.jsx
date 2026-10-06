@@ -24,7 +24,9 @@ const COLORS = {
   hht: "#1D9AAA",
   assigned: "#0C66E4",
   available: "#4BCE97",
-  damaged: "#E2483D", // NEW
+  damaged: "#E2483D",
+  printerService: "#F5CD47", // NEW
+  underService: "#E56910", // NEW
 };
 
 // Lozenge palette: [background, text]
@@ -32,7 +34,9 @@ const STATUS_LOZ = {
   available: ["#DCFFF1", "#216E4E"],
   active: ["#DCFFF1", "#216E4E"],
   assigned: ["#DEEBFF", "#0747A6"],
-  damaged: ["#FFEDEB", "#AE2E24"], // NEW
+  damaged: ["#FFEDEB", "#AE2E24"],
+  printer_for_service: ["#FFF7D6", "#7F5F01"], // NEW
+  under_service: ["#FFE2BD", "#974F0C"], // NEW
   expiring: ["#FFF7D6", "#7F5F01"],
   expired: ["#FFEDEB", "#AE2E24"],
 };
@@ -46,7 +50,7 @@ const Lozenge = ({ status }) => {
       className="inline-flex items-center h-5 px-1.5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide whitespace-nowrap"
       style={{ backgroundColor: bg, color: fg }}
     >
-      {status || "—"}
+      {status === "printer_for_service" ? "service" : String(status || "—").replace(/_/g, " ")}
     </span>
   );
 };
@@ -144,7 +148,9 @@ export default function AdminDashboardProfessional() {
     hht: 0,
     assigned: 0,
     available: 0,
-    damaged: 0, // NEW
+    damaged: 0,
+    printerForService: 0, // NEW
+    underService: 0, // NEW
     employees: 0,
     openTickets: 0,
     totalActiveLicenses: 0,
@@ -177,7 +183,9 @@ export default function AdminDashboardProfessional() {
         hht: s.hht ?? 0,
         assigned: s.assigned ?? 0,
         available: s.available ?? 0,
-        damaged: s.damaged ?? 0, // NEW
+        damaged: s.damaged ?? 0,
+        printerForService: s.printerForService ?? 0, // NEW
+        underService: s.underService ?? 0, // NEW
         employees: s.employees ?? 0,
         openTickets: s.openTickets ?? 0,
         totalActiveLicenses: s.totalActiveLicenses ?? 0,
@@ -215,11 +223,20 @@ export default function AdminDashboardProfessional() {
   ];
   const chartTotal = assetChart.reduce((s, d) => s + d.value, 0);
 
-  // Allocation now includes damaged assets
-  const statusTotal = (stats.assigned || 0) + (stats.available || 0) + (stats.damaged || 0);
+  // Allocation includes damaged + service statuses
+  const statusTotal =
+    (stats.assigned || 0) +
+    (stats.available || 0) +
+    (stats.damaged || 0) +
+    (stats.printerForService || 0) +
+    (stats.underService || 0);
   const assignedPct = pct(stats.assigned, statusTotal);
   const damagedPct = pct(stats.damaged, statusTotal);
-  const availablePct = statusTotal ? Math.max(0, 100 - assignedPct - damagedPct) : 0;
+  const printerServicePct = pct(stats.printerForService, statusTotal);
+  const underServicePct = pct(stats.underService, statusTotal);
+  const availablePct = statusTotal
+    ? Math.max(0, 100 - assignedPct - damagedPct - printerServicePct - underServicePct)
+    : 0;
 
   /* ================= RENDER ================= */
   return (
@@ -348,12 +365,16 @@ export default function AdminDashboardProfessional() {
                   <div style={{ width: `${assignedPct}%`, backgroundColor: COLORS.assigned }} />
                   <div style={{ width: `${availablePct}%`, backgroundColor: COLORS.available }} />
                   <div style={{ width: `${damagedPct}%`, backgroundColor: COLORS.damaged }} />
+                  <div style={{ width: `${printerServicePct}%`, backgroundColor: COLORS.printerService }} />
+                  <div style={{ width: `${underServicePct}%`, backgroundColor: COLORS.underService }} />
                 </div>
 
                 <ul className="divide-y divide-[#EBECF0]">
                   <AllocationRow color={COLORS.assigned} label="Assigned" value={stats.assigned} percent={assignedPct} />
                   <AllocationRow color={COLORS.available} label="Available" value={stats.available} percent={availablePct} />
                   <AllocationRow color={COLORS.damaged} label="Damaged" value={stats.damaged} percent={damagedPct} />
+                  <AllocationRow color={COLORS.printerService} label="Service" value={stats.printerForService} percent={printerServicePct} />
+                  <AllocationRow color={COLORS.underService} label="Under service" value={stats.underService} percent={underServicePct} />
                 </ul>
 
                 <p className="text-xs text-[#626F86] mt-3">
