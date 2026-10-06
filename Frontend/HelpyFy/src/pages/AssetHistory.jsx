@@ -5,6 +5,165 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import {
+  ArrowLeft,
+  Search,
+  X,
+  Download,
+  Pencil,
+  Check,
+  ChevronDown,
+  Inbox,
+  Plug,
+  Mouse,
+  Briefcase,
+  Keyboard,
+  Headphones,
+} from "lucide-react";
+
+/* ===================================
+   UI ONLY — Atlassian / Jira Service Management styling
+   (no business logic lives in this section)
+=================================== */
+const inputCls =
+  "h-9 w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 text-sm text-[#172B4D] " +
+  "placeholder:text-[#7A869A] transition-colors hover:bg-[#EBECF0] " +
+  "focus:border-[#4C9AFF] focus:bg-white focus:outline-none";
+
+const btnBase =
+  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] px-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:cursor-not-allowed disabled:opacity-50";
+const btnPrimary = `${btnBase} bg-[#0052CC] text-white hover:bg-[#0065FF] active:bg-[#0747A6]`;
+const btnDefault = `${btnBase} bg-[rgba(9,30,66,0.04)] text-[#42526E] hover:bg-[rgba(9,30,66,0.08)] active:bg-[#DEEBFF] active:text-[#0052CC]`;
+const btnSubtle = `${btnBase} bg-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
+
+const thCls = "px-4 py-2.5 text-left text-xs font-semibold text-[#5E6C84]";
+const tdCls = "px-4 py-3 align-top text-[#42526E]";
+
+const TYPE_TAG = {
+  Laptop: "bg-[#DEEBFF] text-[#0747A6]",
+  Mobile: "bg-[#E6FCFF] text-[#008DA6]",
+  Printer: "bg-[#E3FCEF] text-[#006644]",
+  HHT: "bg-[#EAE6FF] text-[#403294]",
+};
+
+const AVATAR_COLORS = [
+  "#0052CC", "#00875A", "#5243AA", "#DE350B",
+  "#FF8B00", "#00A3BF", "#6554C0", "#36B37E",
+];
+
+const initials = (name = "") =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase() || "?";
+
+const avatarColor = (name = "") => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+};
+
+// Display only: "AHMED KAMAL" -> "Ahmed Kamal"
+const tidy = (v) => {
+  if (!v) return "";
+  if (v !== v.toUpperCase()) return v;
+  return v.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+function Avatar({ name }) {
+  return (
+    <span
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+      style={{ backgroundColor: avatarColor(name) }}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+function Lozenge({ tone, children }) {
+  const tones = {
+    success: "bg-[#E3FCEF] text-[#006644]",
+    warning: "bg-[#FFF0B3] text-[#172B4D]",
+    neutral: "bg-[#DFE1E6] text-[#42526E]",
+  };
+  return (
+    <span
+      className={`inline-block rounded-[3px] px-1.5 py-0.5 text-[11px] font-bold uppercase leading-4 tracking-wide ${tones[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function TypeTag({ type }) {
+  if (!type) return <span className="text-[#97A0AF]">-</span>;
+  return (
+    <span
+      className={`inline-block rounded-[3px] px-1.5 py-0.5 text-xs font-medium ${TYPE_TAG[type] || "bg-[#DFE1E6] text-[#42526E]"
+        }`}
+    >
+      {type}
+    </span>
+  );
+}
+
+// NEW: accessories rendered as small tags with icons instead of emoji text
+function AccessoryTags({ acc }) {
+  const items = [
+    [acc.charger, Plug, "Charger"],
+    [acc.mouse, Mouse, "Mouse"],
+    [acc.laptopBag, Briefcase, "Bag"],
+    [acc.keyboard, Keyboard, "Keyboard"],
+    [acc.headset, Headphones, "Headset"],
+  ].filter(([on]) => on);
+
+  if (items.length === 0) return <span className="text-[#97A0AF]">-</span>;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map(([, Icon, label]) => (
+        <span
+          key={label}
+          className="inline-flex items-center gap-1 rounded-[3px] bg-[#F4F5F7] px-1.5 py-0.5 text-xs font-medium text-[#42526E]"
+        >
+          <Icon size={12} />
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// NEW: small "label  value" counter used in the table headers
+function CountPill({ label, value, tone = "neutral" }) {
+  const tones = {
+    neutral: "bg-[#F4F5F7] text-[#42526E]",
+    success: "bg-[#E3FCEF] text-[#006644]",
+    warning: "bg-[#FFF0B3] text-[#172B4D]",
+  };
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-[3px] px-2 py-1 text-xs font-medium ${tones[tone]}`}
+    >
+      {label}
+      <span className="font-bold">{value}</span>
+    </span>
+  );
+}
+
+function EmptyState({ title, hint }) {
+  return (
+    <div className="flex flex-col items-center gap-1 py-14 text-[#5E6C84]">
+      <Inbox size={32} className="text-[#97A0AF]" />
+      <p className="mt-1 text-base font-medium text-[#172B4D]">{title}</p>
+      {hint && <p className="text-sm">{hint}</p>}
+    </div>
+  );
+}
 
 /* ===================================
    MOVED OUT of the main component + wrapped in memo().
@@ -33,22 +192,26 @@ const AssignedDateCell = memo(function AssignedDateCell({
       <div className="flex items-center gap-2">
         <input
           type="date"
-          className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="h-8 rounded-[3px] border-2 border-[#4C9AFF] bg-white px-2 text-xs text-[#172B4D] focus:outline-none"
           value={editDate}
           onChange={(e) => onChangeDate(e.target.value)}
           autoFocus
         />
         <button
           onClick={() => onSave(h)}
-          className="text-xs font-semibold text-emerald-600 hover:text-emerald-800"
+          className={`${btnPrimary} !h-8 !px-2`}
+          aria-label="Save date"
+          title="Save"
         >
-          Save
+          <Check size={14} />
         </button>
         <button
           onClick={onCancel}
-          className="text-xs font-semibold text-gray-400 hover:text-gray-600"
+          className={`${btnSubtle} !h-8 !px-2`}
+          aria-label="Cancel"
+          title="Cancel"
         >
-          Cancel
+          <X size={14} />
         </button>
       </div>
     );
@@ -63,8 +226,9 @@ const AssignedDateCell = memo(function AssignedDateCell({
       </span>
       <button
         onClick={() => onStart(h)}
-        className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 hover:underline transition"
+        className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-xs font-medium text-[#0052CC] opacity-0 transition hover:bg-[#DEEBFF] group-hover:opacity-100 focus:opacity-100"
       >
+        <Pencil size={12} />
         Edit
       </button>
     </div>
@@ -81,18 +245,18 @@ function VendorDetailsCell({ h }) {
 
   return (
     <div className="text-xs leading-relaxed">
-      <div className="font-semibold text-gray-700">
+      <div className="font-semibold text-[#172B4D]">
         {v.vendorName || "-"}
       </div>
 
       {v.complaintDescription && (
-        <div className="text-gray-500">
+        <div className="text-[#5E6C84]">
           {v.complaintDescription}
         </div>
       )}
 
       {(v.cost || v.cost === 0) && (
-        <div className="text-gray-500">
+        <div className="text-[#5E6C84]">
           Cost: {v.cost}
         </div>
       )}
@@ -102,14 +266,14 @@ function VendorDetailsCell({ h }) {
           href={v.receiptUrl}
           target="_blank"
           rel="noreferrer"
-          className="text-blue-600 hover:underline"
+          className="text-[#0052CC] hover:underline"
         >
           Receipt
         </a>
       )}
 
       {h.ticketNumber && (
-        <div className="text-gray-400 mt-1">
+        <div className="mt-1 text-[#6B778C]">
           Ticket: {h.ticketNumber}
         </div>
       )}
@@ -331,26 +495,14 @@ export default function AssetHistoryPage() {
   =================================== */
   const statusBadge = (h) => {
     if (h.recordType === "repair") {
-      return (
-        <span className="px-3 py-1 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">
-          Sent for Repair
-        </span>
-      );
+      return <Lozenge tone="warning">Sent for Repair</Lozenge>;
     }
 
     if (!h.returnedDate) {
-      return (
-        <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 font-medium">
-          Active
-        </span>
-      );
+      return <Lozenge tone="success">Active</Lozenge>;
     }
 
-    return (
-      <span className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-700 font-medium">
-        Returned
-      </span>
-    );
+    return <Lozenge tone="neutral">Returned</Lozenge>;
   };
 
   /* ===================================
@@ -554,538 +706,634 @@ export default function AssetHistoryPage() {
     doc.save("asset-history.pdf");
   };
 
+  /* ===================================
+     UI-ONLY DERIVED VALUES (new summary counters)
+  =================================== */
+  const empActive = empHistory.filter((h) => !h.returnedDate).length;
+  const empReturned = empHistory.length - empActive;
+
+  const assetRepairs = assetHistory.filter(
+    (h) => h.recordType === "repair"
+  ).length;
+  const assetActive = assetHistory.filter(
+    (h) => h.recordType !== "repair" && !h.returnedDate
+  ).length;
+  const assetReturned = assetHistory.length - assetRepairs - assetActive;
+
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      {/* ================= BACK NAVIGATION ================= */}
-      <div className="mb-4">
-        <button
-          onClick={() => window.history.back()}
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition shadow-sm text-sm font-semibold"
-        >
-          ← Back
-        </button>
-      </div>
-      {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Asset History
-        </h1>
-
-        <p className="text-sm text-gray-500 mt-1">
-          Track employee & asset
-          assignment history
-        </p>
-      </div>
-
-      {/* FILTERS */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border mb-6">
-
-        <div className="grid md:grid-cols-3 gap-5">
-
-          {/* EMPLOYEE SEARCH */}
-          <div className="relative">
-
-            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">
-              Search Employee
-            </label>
-
-            <input
-              type="text"
-              className="border border-gray-300 p-3 rounded-xl w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search by staff code or employee..."
-              value={employeeSearch}
-              onChange={(e) => {
-                setEmployeeSearch(
-                  e.target.value
-                );
-
-                setShowEmployeeDropdown(
-                  true
-                );
-              }}
-              onFocus={() =>
-                setShowEmployeeDropdown(
-                  true
-                )
-              }
-            />
-
-            {/* DROPDOWN */}
-            {showEmployeeDropdown &&
-              employeeSearch &&
-              filteredEmployees.length >
-              0 && (
-                <div className="absolute z-50 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-60 overflow-y-auto">
-
-                  {filteredEmployees.map(
-                    (emp) => (
-                      <div
-                        key={emp._id}
-                        onClick={() => {
-                          setEmployeeId(
-                            emp._id
-                          );
-
-                          setEmployeeSearch(
-                            `${emp.staffCode} - ${emp.name}`
-                          );
-
-                          setShowEmployeeDropdown(
-                            false
-                          );
-                        }}
-                        className="p-3 hover:bg-blue-50 cursor-pointer border-b"
-                      >
-                        <div className="font-semibold text-sm text-gray-800">
-                          {
-                            emp.staffCode
-                          }
-                        </div>
-
-                        <div className="text-xs text-gray-500">
-                          {emp.name}
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
-
-            {/* SELECTED */}
-            {employeeId && (
-              <div className="mt-2 text-xs bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-100">
-                Selected:{" "}
-                {employeeSearch}
-              </div>
-            )}
-          </div>
-
-          {/* ASSET SEARCH */}
-          <div className="relative">
-
-            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">
-              Search Asset
-            </label>
-
-            <input
-              type="text"
-              className="border border-gray-300 p-3 rounded-xl w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search by asset code..."
-              value={assetSearch}
-              onChange={(e) => {
-                setAssetSearch(
-                  e.target.value
-                );
-
-                setShowAssetDropdown(
-                  true
-                );
-              }}
-              onFocus={() =>
-                setShowAssetDropdown(
-                  true
-                )
-              }
-            />
-
-            {/* DROPDOWN */}
-            {showAssetDropdown &&
-              assetSearch &&
-              filteredAssets.length >
-              0 && (
-                <div className="absolute z-50 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-60 overflow-y-auto">
-
-                  {filteredAssets.map(
-                    (asset) => (
-                      <div
-                        key={asset._id}
-                        onClick={() => {
-                          setAssetCode(
-                            asset.assetCode
-                          );
-
-                          setAssetSearch(
-                            `${asset.assetCode} - ${asset.type}`
-                          );
-
-                          setShowAssetDropdown(
-                            false
-                          );
-                        }}
-                        className="p-3 hover:bg-blue-50 cursor-pointer border-b"
-                      >
-                        <div className="font-semibold text-sm text-gray-800">
-                          {
-                            asset.assetCode
-                          }
-                        </div>
-
-                        <div className="text-xs text-gray-500">
-                          {asset.type}
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
-
-            {/* SELECTED */}
-            {assetCode && (
-              <div className="mt-2 text-xs bg-green-50 text-green-700 px-3 py-2 rounded-lg border border-green-100">
-                Selected: {assetSearch}
-              </div>
-            )}
-          </div>
-
-          {/* TYPE */}
-          <div>
-
-            <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">
-              Asset Type
-            </label>
-
-            <select
-              className="border border-gray-300 p-3 rounded-xl w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={assetType}
-              onChange={(e) =>
-                setAssetType(
-                  e.target.value
-                )
-              }
-            >
-              <option value="All">
-                All
-              </option>
-
-              <option value="Laptop">
-                Laptop
-              </option>
-
-              <option value="Printer">
-                Printer
-              </option>
-
-              <option value="HHT">
-                HHT
-              </option>
-            </select>
-
-          </div>
-
-        </div>
-      </div>
-
-      {/* EMPLOYEE HISTORY */}
-      <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
-
-        <div className="flex justify-between items-center mb-5">
-
-          <div>
-            <h2 className="font-bold text-xl text-gray-800">
-              Employee History
-            </h2>
-
-            <p className="text-sm text-gray-500 mt-1">
-              Assignment records by
-              employee
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#F4F5F7] text-[#172B4D]">
+      <div className="mx-auto max-w-[1400px] px-6 py-6 lg:px-10">
+        {/* ================= BREADCRUMB + BACK ================= */}
+        <div className="mb-2 flex items-center justify-between">
+          <nav className="flex items-center gap-1.5 text-sm text-[#5E6C84]">
+            <span>Admin</span>
+            <span>/</span>
+            <span>Assets</span>
+            <span>/</span>
+            <span>Asset History</span>
+          </nav>
 
           <button
-            onClick={exportEmpPDF}
-            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-medium"
+            onClick={() => window.history.back()}
+            className={btnSubtle}
           >
-            Export PDF
+            <ArrowLeft size={14} />
+            Back
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* HEADER */}
+        <div className="mb-5">
+          <h1 className="text-2xl font-medium text-[#172B4D]">
+            Asset History
+          </h1>
 
-          <table className="w-full text-sm">
+          <p className="mt-1 text-sm text-[#5E6C84]">
+            Track employee & asset assignment history
+          </p>
+        </div>
 
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-4 text-left font-semibold">
-                  Asset
-                </th>
+        {/* FILTERS */}
+        <div className="mb-5 rounded-[3px] border border-[#DFE1E6] bg-white p-4">
 
-                <th className="p-4 text-left font-semibold">
-                  Type
-                </th>
+          <div className="grid gap-4 md:grid-cols-3">
 
-                <th className="p-4 text-left font-semibold">
-                  Status
-                </th>
+            {/* EMPLOYEE SEARCH */}
+            <div className="relative">
 
-                <th className="p-4 text-left font-semibold">
-                  Assigned
-                </th>
+              <label className="mb-1 block text-xs font-semibold text-[#5E6C84]">
+                Search employee
+              </label>
 
-                <th className="p-4 text-left font-semibold">
-                  Returned
-                </th>
-                <th className="p-4 text-left font-semibold">
-                  Accessories
-                </th>
-              </tr>
-            </thead>
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+                />
+                <input
+                  type="text"
+                  className={`${inputCls} pl-8`}
+                  placeholder="Search by staff code or employee..."
+                  value={employeeSearch}
+                  onChange={(e) => {
+                    setEmployeeSearch(
+                      e.target.value
+                    );
 
-            <tbody>
+                    setShowEmployeeDropdown(
+                      true
+                    );
+                  }}
+                  onFocus={() =>
+                    setShowEmployeeDropdown(
+                      true
+                    )
+                  }
+                />
+              </div>
 
-              {loadingEmp ? (
-                <tr>
-                  <td
-                    colSpan="5"
-                    className="p-6 text-center"
+              {/* DROPDOWN */}
+              {showEmployeeDropdown &&
+                employeeSearch &&
+                filteredEmployees.length >
+                0 && (
+                  <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-[3px] border border-[#DFE1E6] bg-white shadow-[0_4px_8px_-2px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
+
+                    {filteredEmployees.map(
+                      (emp) => (
+                        <div
+                          key={emp._id}
+                          onClick={() => {
+                            setEmployeeId(
+                              emp._id
+                            );
+
+                            setEmployeeSearch(
+                              `${emp.staffCode} - ${emp.name}`
+                            );
+
+                            setShowEmployeeDropdown(
+                              false
+                            );
+                          }}
+                          className="flex cursor-pointer items-center gap-2.5 border-b border-[#F4F5F7] px-3 py-2 last:border-0 hover:bg-[#F4F5F7]"
+                        >
+                          <Avatar name={emp.name} />
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium text-[#172B4D]">
+                              {tidy(emp.name)}
+                            </div>
+
+                            <div className="text-xs text-[#5E6C84]">
+                              {
+                                emp.staffCode
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+
+              {/* SELECTED */}
+              {employeeId && (
+                <div className="mt-2 flex items-center justify-between gap-2 rounded-[3px] bg-[#DEEBFF] px-2.5 py-1.5 text-xs text-[#0747A6]">
+                  <span className="truncate">
+                    Selected:{" "}
+                    <span className="font-semibold">{employeeSearch}</span>
+                  </span>
+                  {/* NEW: clear selection */}
+                  <button
+                    onClick={() => {
+                      setEmployeeId("");
+                      setEmployeeSearch("");
+                      setShowEmployeeDropdown(false);
+                    }}
+                    className="rounded-[3px] p-0.5 hover:bg-[#B3D4FF]"
+                    aria-label="Clear employee"
                   >
-                    Loading...
-                  </td>
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ASSET SEARCH */}
+            <div className="relative">
+
+              <label className="mb-1 block text-xs font-semibold text-[#5E6C84]">
+                Search asset
+              </label>
+
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+                />
+                <input
+                  type="text"
+                  className={`${inputCls} pl-8`}
+                  placeholder="Search by asset code..."
+                  value={assetSearch}
+                  onChange={(e) => {
+                    setAssetSearch(
+                      e.target.value
+                    );
+
+                    setShowAssetDropdown(
+                      true
+                    );
+                  }}
+                  onFocus={() =>
+                    setShowAssetDropdown(
+                      true
+                    )
+                  }
+                />
+              </div>
+
+              {/* DROPDOWN */}
+              {showAssetDropdown &&
+                assetSearch &&
+                filteredAssets.length >
+                0 && (
+                  <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-[3px] border border-[#DFE1E6] bg-white shadow-[0_4px_8px_-2px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
+
+                    {filteredAssets.map(
+                      (asset) => (
+                        <div
+                          key={asset._id}
+                          onClick={() => {
+                            setAssetCode(
+                              asset.assetCode
+                            );
+
+                            setAssetSearch(
+                              `${asset.assetCode} - ${asset.type}`
+                            );
+
+                            setShowAssetDropdown(
+                              false
+                            );
+                          }}
+                          className="flex cursor-pointer items-center justify-between gap-2 border-b border-[#F4F5F7] px-3 py-2 last:border-0 hover:bg-[#F4F5F7]"
+                        >
+                          <div className="text-sm font-medium text-[#0052CC]">
+                            {
+                              asset.assetCode
+                            }
+                          </div>
+
+                          <TypeTag type={asset.type} />
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+
+              {/* SELECTED */}
+              {assetCode && (
+                <div className="mt-2 flex items-center justify-between gap-2 rounded-[3px] bg-[#E3FCEF] px-2.5 py-1.5 text-xs text-[#006644]">
+                  <span className="truncate">
+                    Selected:{" "}
+                    <span className="font-semibold">{assetSearch}</span>
+                  </span>
+                  {/* NEW: clear selection */}
+                  <button
+                    onClick={() => {
+                      setAssetCode("");
+                      setAssetSearch("");
+                      setShowAssetDropdown(false);
+                    }}
+                    className="rounded-[3px] p-0.5 hover:bg-[#ABF5D1]"
+                    aria-label="Clear asset"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* TYPE */}
+            <div>
+
+              <label className="mb-1 block text-xs font-semibold text-[#5E6C84]">
+                Asset type
+              </label>
+
+              <div className="relative">
+                <select
+                  className={`${inputCls} cursor-pointer appearance-none pr-8`}
+                  value={assetType}
+                  onChange={(e) =>
+                    setAssetType(
+                      e.target.value
+                    )
+                  }
+                >
+                  <option value="All">
+                    All
+                  </option>
+
+                  <option value="Laptop">
+                    Laptop
+                  </option>
+
+                  <option value="Printer">
+                    Printer
+                  </option>
+
+                  <option value="HHT">
+                    HHT
+                  </option>
+                </select>
+                <ChevronDown
+                  size={16}
+                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+                />
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        {/* EMPLOYEE HISTORY */}
+        <div className="mb-5 rounded-[3px] border border-[#DFE1E6] bg-white">
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#DFE1E6] p-4">
+
+            <div>
+              <h2 className="text-base font-semibold text-[#172B4D]">
+                Employee History
+              </h2>
+
+              <p className="mt-0.5 text-sm text-[#5E6C84]">
+                Assignment records by employee
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {employeeId && !loadingEmp && (
+                <>
+                  <CountPill label="Total" value={empHistory.length} />
+                  <CountPill label="Active" value={empActive} tone="success" />
+                  <CountPill label="Returned" value={empReturned} />
+                </>
+              )}
+
+              <button
+                onClick={exportEmpPDF}
+                disabled={empHistory.length === 0}
+                className={btnDefault}
+              >
+                <Download size={14} />
+                Export PDF
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+
+            <table className="w-full min-w-[860px] border-collapse text-sm">
+
+              <thead>
+                <tr className="border-b-2 border-[#DFE1E6]">
+                  <th className={thCls}>
+                    Asset
+                  </th>
+
+                  <th className={thCls}>
+                    Type
+                  </th>
+
+                  <th className={thCls}>
+                    Status
+                  </th>
+
+                  <th className={thCls}>
+                    Assigned
+                  </th>
+
+                  <th className={thCls}>
+                    Returned
+                  </th>
+                  <th className={thCls}>
+                    Accessories
+                  </th>
                 </tr>
-              ) : empHistory.length ===
-                0 ? (
-                <tr>
-                  <td
-                    colSpan="5"
-                    className="p-6 text-center text-gray-500"
-                  >
-                    No employee history
-                    found
-                  </td>
-                </tr>
-              ) : (
-                empHistory.map((h) => (
-                  <tr
-                    key={h._id}
-                    className="border-t hover:bg-gray-50"
-                  >
-                    <td className="p-4">
-                      {h.asset
-                        ?.assetCode ||
-                        "-"}
-                    </td>
+              </thead>
 
-                    <td className="p-4">
-                      {h.assetType}
-                    </td>
+              <tbody>
 
-                    <td className="p-4">
-                      {statusBadge(h)}
-                    </td>
-
-                    {/* inline-editable assigned date */}
-                    <td className="p-4">
-                      <AssignedDateCell
-                        h={h}
-                        isEditing={editingId === h._id}
-                        editDate={editDate}
-                        onStart={startEditDate}
-                        onSave={saveEditDate}
-                        onCancel={cancelEditDate}
-                        onChangeDate={handleChangeEditDate}
-                      />
-                    </td>
-
-                    <td className="p-4">
-                      {h.returnedDate
-                        ? new Date(
-                          h.returnedDate
-                        ).toLocaleString()
-                        : "Active"}
-                    </td>
-                    <td className="p-4 text-sm">
-                      {h.assetType?.toLowerCase() === "laptop" ? (() => {
-                        const acc = getAccessories(h);
-
-                        return (
-                          <>
-                            {acc.charger && "🔌 Charger "}
-                            {acc.mouse && "🖱 Mouse "}
-                            {acc.laptopBag && "🎒 Bag "}
-                            {acc.keyboard && "⌨ Keyboard "}
-                            {acc.headset && "🎧 Headset "}
-                          </>
-                        );
-                      })() : "-"}
+                {loadingEmp ? (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-3">
+                      <div className="h-6 animate-pulse rounded-[3px] bg-[#F4F5F7]" />
                     </td>
                   </tr>
-                ))
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
-      </div>
-
-      {/* ASSET HISTORY */}
-      <div className="bg-white rounded-2xl shadow-sm border p-6">
-
-        <div className="flex justify-between items-center mb-5">
-
-          <div>
-            <h2 className="font-bold text-xl text-gray-800">
-              Asset History
-            </h2>
-
-            <p className="text-sm text-gray-500 mt-1">
-              Assignment & repair records
-              for this asset
-            </p>
-          </div>
-
-          <button
-            onClick={exportAssetPDF}
-            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-medium"
-          >
-            Export PDF
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-4 text-left font-semibold">
-                  Employee
-                </th>
-
-                <th className="p-4 text-left font-semibold">
-                  Type
-                </th>
-
-                <th className="p-4 text-left font-semibold">
-                  Status
-                </th>
-
-                <th className="p-4 text-left font-semibold">
-                  Assigned
-                </th>
-
-                <th className="p-4 text-left font-semibold">
-                  Returned
-                </th>
-                <th className="p-4 text-left font-semibold">
-                  Accessories / Vendor
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {loadingAsset ? (
-                <tr>
-                  <td
-                    colSpan="6"
-                    className="p-6 text-center"
-                  >
-                    Loading...
-                  </td>
-                </tr>
-              ) : assetHistory.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="6"
-                    className="p-6 text-center text-gray-500"
-                  >
-                    No asset history found
-                  </td>
-                </tr>
-              ) : (
-                assetHistory.map((h) => {
-                  const isRepair = h.recordType === "repair";
-
-                  return (
+                ) : empHistory.length ===
+                  0 ? (
+                  <tr>
+                    <td colSpan="6">
+                      <EmptyState
+                        title={
+                          employeeId
+                            ? "No employee history found"
+                            : "No employee selected"
+                        }
+                        hint={
+                          employeeId
+                            ? "This employee has no matching assignment records."
+                            : "Search and select an employee to see their assets."
+                        }
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  empHistory.map((h) => (
                     <tr
                       key={h._id}
-                      className={`border-t hover:bg-gray-50 ${isRepair ? "bg-amber-50/40" : ""
-                        }`}
+                      className="border-b border-[#DFE1E6] transition-colors hover:bg-[#F4F5F7]"
                     >
-                      <td className="p-4">
-                        {isRepair
-                          ? "-"
-                          : `${h.employee?.staffCode || "-"} - ${h.employee?.name || "-"
-                          }`}
+                      <td className={`${tdCls} font-medium text-[#0052CC]`}>
+                        {h.asset
+                          ?.assetCode ||
+                          "-"}
                       </td>
 
-                      <td className="p-4">
-                        {h.assetType || "-"}
+                      <td className={tdCls}>
+                        <TypeTag type={h.assetType} />
                       </td>
 
-                      <td className="p-4">
+                      <td className={tdCls}>
                         {statusBadge(h)}
                       </td>
 
-                      {/* inline-editable assigned date — repair
-                          rows have no AssetAssignment _id, so they
-                          never get the editable cell */}
-                      <td className="p-4">
-                        {isRepair ? (
-                          <span className="text-xs text-gray-400">
-                            -
-                          </span>
-                        ) : (
-                          <AssignedDateCell
-                            h={h}
-                            isEditing={editingId === h._id}
-                            editDate={editDate}
-                            onStart={startEditDate}
-                            onSave={saveEditDate}
-                            onCancel={cancelEditDate}
-                            onChangeDate={handleChangeEditDate}
-                          />
-                        )}
+                      {/* inline-editable assigned date */}
+                      <td className={tdCls}>
+                        <AssignedDateCell
+                          h={h}
+                          isEditing={editingId === h._id}
+                          editDate={editDate}
+                          onStart={startEditDate}
+                          onSave={saveEditDate}
+                          onCancel={cancelEditDate}
+                          onChangeDate={handleChangeEditDate}
+                        />
                       </td>
 
-                      <td className="p-4">
+                      <td className={tdCls}>
                         {h.returnedDate
-                          ? isRepair
-                            // FIX: repair rows carry a date-only value
-                            // (from the vendor-repair date picker), so
-                            // show date-only here too — toLocaleString()
-                            // was surfacing the UTC-midnight artifact as
-                            // a stray "3:00:00 AM"-style timestamp.
-                            ? new Date(h.returnedDate).toLocaleDateString()
-                            : new Date(h.returnedDate).toLocaleString()
-                          : isRepair
-                            ? "-"
-                            : "Active"}
+                          ? new Date(
+                            h.returnedDate
+                          ).toLocaleString()
+                          : "Active"}
                       </td>
-
-                      <td className="p-4 text-sm">
-                        {isRepair ? (
-                          <VendorDetailsCell h={h} />
-                        ) : h.assetType?.toLowerCase() === "laptop" ? (
-                          (() => {
-                            const acc = getAccessories(h);
-
-                            return (
-                              <>
-                                {acc.charger && "🔌 Charger "}
-                                {acc.mouse && "🖱 Mouse "}
-                                {acc.laptopBag && "🎒 Bag "}
-                                {acc.keyboard && "⌨ Keyboard "}
-                                {acc.headset && "🎧 Headset "}
-                              </>
-                            );
-                          })()
+                      <td className={tdCls}>
+                        {h.assetType?.toLowerCase() === "laptop" ? (
+                          <AccessoryTags acc={getAccessories(h)} />
                         ) : (
-                          "-"
+                          <span className="text-[#97A0AF]">-</span>
                         )}
                       </td>
                     </tr>
-                  );
-                })
+                  ))
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+        </div>
+
+        {/* ASSET HISTORY */}
+        <div className="rounded-[3px] border border-[#DFE1E6] bg-white">
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#DFE1E6] p-4">
+
+            <div>
+              <h2 className="text-base font-semibold text-[#172B4D]">
+                Asset History
+              </h2>
+
+              <p className="mt-0.5 text-sm text-[#5E6C84]">
+                Assignment & repair records for this asset
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {assetCode && !loadingAsset && (
+                <>
+                  <CountPill label="Total" value={assetHistory.length} />
+                  <CountPill label="Active" value={assetActive} tone="success" />
+                  <CountPill label="Returned" value={assetReturned} />
+                  <CountPill label="Repairs" value={assetRepairs} tone="warning" />
+                </>
               )}
 
-            </tbody>
+              <button
+                onClick={exportAssetPDF}
+                disabled={assetHistory.length === 0}
+                className={btnDefault}
+              >
+                <Download size={14} />
+                Export PDF
+              </button>
+            </div>
+          </div>
 
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] border-collapse text-sm">
+
+              <thead>
+                <tr className="border-b-2 border-[#DFE1E6]">
+                  <th className={thCls}>
+                    Employee
+                  </th>
+
+                  <th className={thCls}>
+                    Type
+                  </th>
+
+                  <th className={thCls}>
+                    Status
+                  </th>
+
+                  <th className={thCls}>
+                    Assigned
+                  </th>
+
+                  <th className={thCls}>
+                    Returned
+                  </th>
+                  <th className={thCls}>
+                    Accessories / Vendor
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {loadingAsset ? (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-3">
+                      <div className="h-6 animate-pulse rounded-[3px] bg-[#F4F5F7]" />
+                    </td>
+                  </tr>
+                ) : assetHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan="6">
+                      <EmptyState
+                        title={
+                          assetCode
+                            ? "No asset history found"
+                            : "No asset selected"
+                        }
+                        hint={
+                          assetCode
+                            ? "This asset has no matching assignment or repair records."
+                            : "Search and select an asset to see its history."
+                        }
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  assetHistory.map((h) => {
+                    const isRepair = h.recordType === "repair";
+
+                    return (
+                      <tr
+                        key={h._id}
+                        className={`border-b border-[#DFE1E6] transition-colors hover:bg-[#F4F5F7] ${isRepair ? "bg-[#FFFAE6]" : ""
+                          }`}
+                      >
+                        <td className={tdCls}>
+                          {isRepair ? (
+                            <span className="text-[#97A0AF]">-</span>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Avatar name={h.employee?.name || "-"} />
+                              <div>
+                                <div className="font-medium text-[#172B4D]">
+                                  {tidy(h.employee?.name) || "-"}
+                                </div>
+                                <div className="text-xs text-[#5E6C84]">
+                                  {h.employee?.staffCode || "-"}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+
+                        <td className={tdCls}>
+                          <TypeTag type={h.assetType} />
+                        </td>
+
+                        <td className={tdCls}>
+                          {statusBadge(h)}
+                        </td>
+
+                        {/* inline-editable assigned date — repair
+                            rows have no AssetAssignment _id, so they
+                            never get the editable cell */}
+                        <td className={tdCls}>
+                          {isRepair ? (
+                            <span className="text-xs text-[#97A0AF]">
+                              -
+                            </span>
+                          ) : (
+                            <AssignedDateCell
+                              h={h}
+                              isEditing={editingId === h._id}
+                              editDate={editDate}
+                              onStart={startEditDate}
+                              onSave={saveEditDate}
+                              onCancel={cancelEditDate}
+                              onChangeDate={handleChangeEditDate}
+                            />
+                          )}
+                        </td>
+
+                        <td className={tdCls}>
+                          {h.returnedDate
+                            ? isRepair
+                              // FIX: repair rows carry a date-only value
+                              // (from the vendor-repair date picker), so
+                              // show date-only here too — toLocaleString()
+                              // was surfacing the UTC-midnight artifact as
+                              // a stray "3:00:00 AM"-style timestamp.
+                              ? new Date(h.returnedDate).toLocaleDateString()
+                              : new Date(h.returnedDate).toLocaleString()
+                            : isRepair
+                              ? "-"
+                              : "Active"}
+                        </td>
+
+                        <td className={tdCls}>
+                          {isRepair ? (
+                            <VendorDetailsCell h={h} />
+                          ) : h.assetType?.toLowerCase() === "laptop" ? (
+                            <AccessoryTags acc={getAccessories(h)} />
+                          ) : (
+                            <span className="text-[#97A0AF]">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+
+              </tbody>
+
+            </table>
+          </div>
+
         </div>
 
       </div>
-
     </div>
   );
 }
