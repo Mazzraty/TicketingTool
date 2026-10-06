@@ -3,15 +3,181 @@ import Select from "react-select";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import {
-  Users,
   Building2,
-  Shield,
-  CheckCircle,
-  XCircle,
   Trash2,
-  ChevronRight,
+  ChevronDown,
+  Eraser,
+  X,
   UserCheck,
 } from "lucide-react";
+
+/* ================= UI HELPERS (styling only, no logic) ================= */
+// Atlassian / Jira Service Management styling
+const inputCls =
+  "h-9 w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 text-sm text-[#172B4D] " +
+  "placeholder:text-[#7A869A] transition-colors hover:bg-[#EBECF0] " +
+  "focus:border-[#4C9AFF] focus:bg-white focus:outline-none";
+
+const btnBase =
+  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] px-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:cursor-not-allowed disabled:opacity-50";
+const btnPrimary = `${btnBase} bg-[#0052CC] text-white hover:bg-[#0065FF] active:bg-[#0747A6]`;
+const btnDanger = `${btnBase} bg-[#DE350B] text-white hover:bg-[#FF5630] active:bg-[#BF2600]`;
+const btnSubtle = `${btnBase} bg-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
+
+const AVATAR_COLORS = [
+  "#0052CC", "#00875A", "#5243AA", "#DE350B",
+  "#FF8B00", "#00A3BF", "#6554C0", "#36B37E",
+];
+
+const initials = (name = "") =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase() || "?";
+
+const avatarColor = (name = "") => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+};
+
+// Display only: "AHMED KAMAL" -> "Ahmed Kamal"
+const tidy = (v) => {
+  if (!v) return "";
+  if (v !== v.toUpperCase()) return v;
+  return v.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+function Avatar({ name, size = 32 }) {
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center rounded-full font-semibold text-white"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.36,
+        backgroundColor: avatarColor(name),
+      }}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+function Lozenge({ className, children }) {
+  return (
+    <span
+      className={`inline-block rounded-[3px] px-1.5 py-0.5 text-[11px] font-bold uppercase leading-4 tracking-wide ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Card({ title, subtitle, actions, children, footer, className = "" }) {
+  return (
+    <div className={`rounded-[3px] border border-[#DFE1E6] bg-white ${className}`}>
+      {(title || actions) && (
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#DFE1E6] px-4 py-3">
+          <div>
+            <h2 className="text-base font-semibold text-[#172B4D]">{title}</h2>
+            {subtitle && (
+              <p className="mt-0.5 text-sm text-[#5E6C84]">{subtitle}</p>
+            )}
+          </div>
+          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+        </div>
+      )}
+      <div className="p-4">{children}</div>
+      {footer && (
+        <div className="flex justify-end gap-2 border-t border-[#DFE1E6] bg-[#FAFBFC] px-4 py-3">
+          {footer}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, required, children }) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-semibold text-[#5E6C84]">
+        {label}
+        {required && <span className="ml-0.5 text-[#DE350B]">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function SelectBox({ children, ...props }) {
+  return (
+    <div className="relative">
+      <select
+        {...props}
+        className={`${inputCls} cursor-pointer appearance-none truncate pr-8`}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={16}
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B778C]"
+      />
+    </div>
+  );
+}
+
+function InfoRow({ label, children }) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold text-[#5E6C84]">{label}</dt>
+      <dd className="mt-1 text-sm text-[#172B4D]">{children}</dd>
+    </div>
+  );
+}
+
+// react-select skinned to match the Atlassian inputs
+const selectStyles = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: "36px",
+    borderRadius: "3px",
+    borderWidth: "2px",
+    borderColor: state.isFocused ? "#4C9AFF" : "#DFE1E6",
+    backgroundColor: state.isFocused ? "#FFFFFF" : "#FAFBFC",
+    boxShadow: "none",
+    "&:hover": {
+      borderColor: state.isFocused ? "#4C9AFF" : "#DFE1E6",
+      backgroundColor: state.isFocused ? "#FFFFFF" : "#EBECF0",
+    },
+  }),
+  valueContainer: (base) => ({ ...base, padding: "0 10px" }),
+  placeholder: (base) => ({ ...base, color: "#7A869A" }),
+  singleValue: (base) => ({ ...base, color: "#172B4D" }),
+  input: (base) => ({ ...base, color: "#172B4D" }),
+  indicatorSeparator: () => ({ display: "none" }),
+  dropdownIndicator: (base) => ({ ...base, color: "#6B778C", padding: "0 8px" }),
+  menu: (base) => ({
+    ...base,
+    borderRadius: "3px",
+    boxShadow:
+      "0 4px 8px -2px rgba(9,30,66,0.25), 0 0 1px rgba(9,30,66,0.31)",
+    zIndex: 30,
+  }),
+  option: (base, state) => ({
+    ...base,
+    fontSize: "14px",
+    color: state.isSelected ? "#0052CC" : "#172B4D",
+    backgroundColor: state.isSelected
+      ? "#DEEBFF"
+      : state.isFocused
+        ? "#F4F5F7"
+        : "#FFFFFF",
+  }),
+};
 
 export default function AdminCompanyAccess() {
   const [employees, setEmployees] = useState([]);
@@ -22,6 +188,9 @@ export default function AdminCompanyAccess() {
   const [selectedRole, setSelectedRole] = useState("it_support");
 
   const [loading, setLoading] = useState(false);
+
+  // UI-only state (new): which access row is awaiting revoke confirmation
+  const [confirmRevoke, setConfirmRevoke] = useState(null);
 
   /* =========================
      LOAD EMPLOYEES
@@ -147,350 +316,386 @@ export default function AdminCompanyAccess() {
     return roleMap[role] || role;
   };
 
+  // Jira lozenge colours per role
   const getRoleColor = (role) => {
     const colorMap = {
-      user: "bg-blue-50 text-blue-700 border-blue-200",
-      company_admin: "bg-purple-50 text-purple-700 border-purple-200",
-      it_support: "bg-orange-50 text-orange-700 border-orange-200",
+      user: "bg-[#DEEBFF] text-[#0747A6]",
+      company_admin: "bg-[#EAE6FF] text-[#403294]",
+      it_support: "bg-[#FFF0B3] text-[#172B4D]",
     };
-    return colorMap[role] || "bg-gray-50 text-gray-700 border-gray-200";
+    return colorMap[role] || "bg-[#DFE1E6] text-[#42526E]";
   };
 
+  /* ================= NEW (UI-only additions) ================= */
+
+  // Clear the assign form without submitting (uses the existing setters)
+  const clearForm = () => {
+    setSelectedEmployee(null);
+    setSelectedCompany("");
+    setSelectedRole("it_support");
+  };
+
+  const companyAccessList =
+    selectedEmployee?.employee?.companyAccess || [];
+  const activeAccessCount = companyAccessList.filter((a) => a.isActive).length;
+  const revokedAccessCount = companyAccessList.length - activeAccessCount;
+
+  const selectedCompanyName = companies.find(
+    (c) => c._id === selectedCompany
+  )?.name;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Building2 className="w-6 h-6 text-blue-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Company Access Management
-            </h1>
-          </div>
-          <p className="text-gray-600 ml-11">
+    <div className="min-h-screen bg-[#F4F5F7] text-[#172B4D]">
+      <div className="mx-auto max-w-6xl px-6 py-6 lg:px-10">
+        {/* BREADCRUMB */}
+        {/* <nav className="mb-2 flex items-center gap-1.5 text-sm text-[#5E6C84]">
+          <span>Admin</span>
+          <span>/</span>
+          <span>Users</span>
+          <span>/</span>
+          <span>Company Access</span>
+        </nav> */}
+
+        {/* HEADER */}
+        <div className="mb-5">
+          <h1 className="text-2xl font-medium text-[#172B4D]">
+            Company Access Management
+          </h1>
+          <p className="mt-1 text-sm text-[#5E6C84]">
             Manage employee access to companies and assign roles
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Assignment Form */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* ASSIGNMENT FORM */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-blue-600" />
-                Assign Company Access
-              </h2>
-
-              {/* Employee Selection */}
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Users className="w-4 h-4 text-gray-600" />
-                    Select Employee
-                  </div>
-                </label>
-                <Select
-                  options={employees}
-                  value={selectedEmployee}
-                  onChange={setSelectedEmployee}
-                  placeholder="Search by name or staff code..."
-                  isSearchable
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      borderColor: "#e5e7eb",
-                      borderRadius: "0.5rem",
-                      padding: "0.25rem",
-                      boxShadow: "none",
-                      "&:hover": {
-                        borderColor: "#3b82f6",
-                      },
-                      "&:focus-within": {
-                        borderColor: "#3b82f6",
-                        boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                      },
-                    }),
-                    option: (base, state) => ({
-                      ...base,
-                      backgroundColor: state.isSelected
-                        ? "#3b82f6"
-                        : state.isFocused
-                          ? "#eff6ff"
-                          : "#fff",
-                      color: state.isSelected ? "#fff" : "#1f2937",
-                    }),
-                  }}
-                />
-              </div>
-
-              {/* Company Selection */}
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Building2 className="w-4 h-4 text-gray-600" />
-                    Select Company
-                  </div>
-                </label>
-                <select
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  value={selectedCompany}
-                  onChange={(e) =>
-                    setSelectedCompany(e.target.value)
-                  }
-                >
-                  <option value="">Choose a company...</option>
-
-                  {companies.map((company) => (
-                    <option
-                      key={company._id}
-                      value={company._id}
-                    >
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Role Selection */}
-              <div className="mb-8">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Shield className="w-4 h-4 text-gray-600" />
-                    Select Role
-                  </div>
-                </label>
-                <select
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  value={selectedRole}
-                  onChange={(e) =>
-                    setSelectedRole(e.target.value)
-                  }
-                >
-                  <option value="user">User</option>
-                  <option value="company_admin">Company Admin</option>
-                  <option value="it_support">IT Support</option>
-                </select>
-              </div>
-
-              {/* Assign Button */}
-              <button
-                onClick={assignAccess}
-                disabled={loading || !selectedEmployee || !selectedCompany}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 rounded-lg transition transform disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-500 flex items-center justify-center gap-2"
-              >
-                <CheckCircle className="w-5 h-5" />
-                {loading ? "Assigning..." : "Assign Company Access"}
-              </button>
-            </div>
-          </div>
-
-          {/* Summary Card */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sticky top-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Selection Summary
-              </h3>
+            <Card
+              title="Assign company access"
+              subtitle="Give an employee access to a company with a role"
+              footer={
+                <>
+                  {/* NEW: clear form */}
+                  <button
+                    onClick={clearForm}
+                    disabled={loading}
+                    className={btnSubtle}
+                  >
+                    <Eraser size={14} />
+                    Clear
+                  </button>
+                  <button
+                    onClick={assignAccess}
+                    disabled={loading || !selectedEmployee || !selectedCompany}
+                    className={btnPrimary}
+                  >
+                    <UserCheck size={14} />
+                    {loading ? "Assigning..." : "Assign Company Access"}
+                  </button>
+                </>
+              }
+            >
+              <p className="mb-4 text-xs text-[#5E6C84]">
+                Required fields are marked with an asterisk{" "}
+                <span className="text-[#DE350B]">*</span>
+              </p>
 
               <div className="space-y-4">
-                {/* Employee Summary */}
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
-                    Employee
-                  </p>
-                  <p className="text-sm font-medium text-gray-900 mt-1">
-                    {selectedEmployee?.employee?.name || "Not selected"}
-                  </p>
-                  {selectedEmployee?.employee?.staffCode && (
-                    <p className="text-xs text-gray-600 mt-1">
-                      Code: {selectedEmployee.employee.staffCode}
-                    </p>
-                  )}
-                </div>
+                {/* Employee Selection */}
+                <Field label="Employee" required>
+                  <Select
+                    options={employees}
+                    value={selectedEmployee}
+                    onChange={setSelectedEmployee}
+                    placeholder="Search by name or staff code..."
+                    isSearchable
+                    styles={selectStyles}
+                  />
+                </Field>
 
-                {/* Company Summary */}
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">
-                    Company
-                  </p>
-                  <p className="text-sm font-medium text-gray-900 mt-1">
-                    {companies.find((c) => c._id === selectedCompany)?.name ||
-                      "Not selected"}
-                  </p>
-                </div>
+                {/* Company Selection */}
+                <Field label="Company" required>
+                  <SelectBox
+                    value={selectedCompany}
+                    onChange={(e) =>
+                      setSelectedCompany(e.target.value)
+                    }
+                  >
+                    <option value="">Choose a company...</option>
 
-                {/* Role Summary */}
-                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                  <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">
-                    Role
-                  </p>
-                  <p className="text-sm font-medium text-gray-900 mt-1">
-                    {getRoleLabel(selectedRole)}
-                  </p>
-                </div>
+                    {companies.map((company) => (
+                      <option
+                        key={company._id}
+                        value={company._id}
+                      >
+                        {company.name}
+                      </option>
+                    ))}
+                  </SelectBox>
+                </Field>
+
+                {/* Role Selection */}
+                <Field label="Role" required>
+                  <SelectBox
+                    value={selectedRole}
+                    onChange={(e) =>
+                      setSelectedRole(e.target.value)
+                    }
+                  >
+                    <option value="user">User</option>
+                    <option value="company_admin">Company Admin</option>
+                    <option value="it_support">IT Support</option>
+                  </SelectBox>
+                </Field>
               </div>
-            </div>
+            </Card>
+          </div>
+
+          {/* SUMMARY CARD */}
+          <div className="lg:col-span-1">
+            <Card title="Selection summary" className="lg:sticky lg:top-6">
+              <dl className="space-y-4">
+                <InfoRow label="Employee">
+                  {selectedEmployee?.employee?.name ? (
+                    <div className="flex items-center gap-2.5">
+                      <Avatar name={selectedEmployee.employee.name} />
+                      <div>
+                        <p className="font-medium">
+                          {tidy(selectedEmployee.employee.name)}
+                        </p>
+                        {selectedEmployee.employee.staffCode && (
+                          <p className="text-xs text-[#5E6C84]">
+                            Code: {selectedEmployee.employee.staffCode}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-[#6B778C]">Not selected</span>
+                  )}
+                </InfoRow>
+
+                <InfoRow label="Company">
+                  {selectedCompanyName ? (
+                    <span className="font-medium">{selectedCompanyName}</span>
+                  ) : (
+                    <span className="text-[#6B778C]">Not selected</span>
+                  )}
+                </InfoRow>
+
+                <InfoRow label="Role">
+                  <Lozenge className={getRoleColor(selectedRole)}>
+                    {getRoleLabel(selectedRole)}
+                  </Lozenge>
+                </InfoRow>
+              </dl>
+            </Card>
           </div>
         </div>
 
-        {/* Employee Details Section */}
+        {/* EMPLOYEE DETAILS SECTION */}
         {selectedEmployee && (
-          <div className="mt-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-gray-600" />
-                  Employee Details
-                </h3>
+          <Card
+            title="Employee details"
+            className="mt-4"
+            actions={
+              <div className="flex items-center gap-2">
+                {/* NEW: counts */}
+                <Lozenge className="bg-[#E3FCEF] text-[#006644]">
+                  {activeAccessCount} active
+                </Lozenge>
+                <Lozenge className="bg-[#DFE1E6] text-[#42526E]">
+                  {revokedAccessCount} revoked
+                </Lozenge>
               </div>
-
-              <div className="p-6">
-                {/* Employee Info Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Full Name
-                    </p>
-                    <p className="text-lg font-medium text-gray-900 mt-1">
-                      {selectedEmployee.employee.name}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Staff Code
-                    </p>
-                    <p className="text-lg font-medium text-gray-900 mt-1">
-                      {selectedEmployee.employee.staffCode}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Department
-                    </p>
-                    <p className="text-lg font-medium text-gray-900 mt-1">
-                      {selectedEmployee.employee.department || "—"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Designation
-                    </p>
-                    <p className="text-lg font-medium text-gray-900 mt-1">
-                      {selectedEmployee.employee.designation || "—"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      User Status
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      {selectedEmployee.value ? (
-                        <>
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                          <span className="font-medium text-green-700">
-                            User Account Linked
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="w-5 h-5 text-red-600" />
-                          <span className="font-medium text-red-700">
-                            No User Account
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+            }
+          >
+            {/* Employee Info Grid */}
+            <dl className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-3">
+              <InfoRow label="Full name">
+                <div className="flex items-center gap-2.5">
+                  <Avatar name={selectedEmployee.employee.name} />
+                  <span className="font-medium">
+                    {tidy(selectedEmployee.employee.name)}
+                  </span>
                 </div>
+              </InfoRow>
 
-                {/* Company Access Section */}
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-gray-600" />
-                    Company Access
-                  </h4>
+              <InfoRow label="Staff code">
+                <span className="font-mono text-[13px]">
+                  {selectedEmployee.employee.staffCode}
+                </span>
+              </InfoRow>
 
-                  {!selectedEmployee.employee.companyAccess ||
-                    selectedEmployee.employee.companyAccess.length === 0 ? (
-                    <div className="p-6 text-center bg-gray-50 rounded-lg border border-gray-200">
-                      <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                      <p className="text-gray-600 font-medium">
-                        No company access assigned
-                      </p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Use the form above to assign company access
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {selectedEmployee.employee.companyAccess.map(
-                        (access, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
-                          >
-                            <div className="flex items-start gap-4 flex-1">
-                              <div className="p-2 bg-blue-100 rounded-lg">
-                                <Building2 className="w-5 h-5 text-blue-600" />
-                              </div>
+              <InfoRow label="User status">
+                {selectedEmployee.value ? (
+                  <Lozenge className="bg-[#E3FCEF] text-[#006644]">
+                    User account linked
+                  </Lozenge>
+                ) : (
+                  <Lozenge className="bg-[#FFEBE6] text-[#BF2600]">
+                    No user account
+                  </Lozenge>
+                )}
+              </InfoRow>
 
-                              <div className="flex-1">
-                                <p className="font-semibold text-gray-900">
-                                  {access.companyName}
-                                </p>
+              <InfoRow label="Department">
+                {tidy(selectedEmployee.employee.department) || "—"}
+              </InfoRow>
 
-                                <div className="flex items-center gap-3 mt-2">
-                                  <span
-                                    className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(
-                                      access.role
-                                    )}`}
-                                  >
-                                    {getRoleLabel(access.role)}
-                                  </span>
+              <InfoRow label="Designation">
+                {tidy(selectedEmployee.employee.designation) || "—"}
+              </InfoRow>
+            </dl>
 
-                                  {access.isActive ? (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                                      <CheckCircle className="w-3 h-3" />
-                                      Active
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
-                                      <XCircle className="w-3 h-3" />
-                                      Revoked
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
+            {/* Company Access Section */}
+            <h3 className="mb-2 text-sm font-semibold text-[#172B4D]">
+              Company access
+            </h3>
+
+            {!selectedEmployee.employee.companyAccess ||
+              selectedEmployee.employee.companyAccess.length === 0 ? (
+              <div className="flex flex-col items-center gap-1 rounded-[3px] border border-dashed border-[#C1C7D0] bg-[#FAFBFC] py-10 text-center">
+                <Building2 size={32} className="text-[#97A0AF]" />
+                <p className="mt-1 text-base font-medium text-[#172B4D]">
+                  No company access assigned
+                </p>
+                <p className="text-sm text-[#5E6C84]">
+                  Use the form above to assign company access
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-[3px] border border-[#DFE1E6]">
+                <table className="w-full min-w-[560px] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-[#DFE1E6] bg-[#FAFBFC] text-left">
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
+                        Company
+                      </th>
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
+                        Role
+                      </th>
+                      <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
+                        Status
+                      </th>
+                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-[#5E6C84]">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedEmployee.employee.companyAccess.map(
+                      (access, index) => (
+                        <tr
+                          key={index}
+                          className="border-b border-[#DFE1E6] transition-colors last:border-b-0 hover:bg-[#F4F5F7]"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2.5">
+                              <span className="flex h-8 w-8 items-center justify-center rounded-[3px] bg-[#DEEBFF] text-[#0052CC]">
+                                <Building2 size={16} />
+                              </span>
+                              <span className="font-medium text-[#172B4D]">
+                                {access.companyName}
+                              </span>
                             </div>
+                          </td>
 
+                          <td className="px-4 py-3">
+                            <Lozenge className={getRoleColor(access.role)}>
+                              {getRoleLabel(access.role)}
+                            </Lozenge>
+                          </td>
+
+                          <td className="px-4 py-3">
+                            {access.isActive ? (
+                              <Lozenge className="bg-[#E3FCEF] text-[#006644]">
+                                Active
+                              </Lozenge>
+                            ) : (
+                              <Lozenge className="bg-[#FFEBE6] text-[#BF2600]">
+                                Revoked
+                              </Lozenge>
+                            )}
+                          </td>
+
+                          <td className="px-4 py-3 text-right">
                             {access.isActive && (
                               <button
                                 onClick={() =>
-                                  revokeAccess(access.companyId)
+                                  setConfirmRevoke({
+                                    companyId: access.companyId,
+                                    companyName: access.companyName,
+                                  })
                                 }
-                                className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition flex items-center gap-2"
+                                className={`${btnBase} bg-transparent text-[#BF2600] hover:bg-[#FFEBE6]`}
                                 title="Revoke access"
                               >
-                                <Trash2 className="w-5 h-5" />
+                                <Trash2 size={14} />
+                                Revoke
                               </button>
                             )}
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </div>
-          </div>
+            )}
+          </Card>
         )}
       </div>
+
+      {/* NEW: REVOKE CONFIRMATION (calls your existing revokeAccess) */}
+      {confirmRevoke && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(9,30,66,0.54)] p-4 sm:pt-[15vh]">
+          <div className="w-full max-w-md rounded-[3px] bg-white shadow-[0_8px_16px_-4px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
+            <div className="flex items-center justify-between px-6 pb-2 pt-5">
+              <h2 className="text-xl font-medium text-[#172B4D]">
+                Revoke access?
+              </h2>
+              <button
+                onClick={() => setConfirmRevoke(null)}
+                className="rounded-[3px] p-1 text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-3 text-sm text-[#42526E]">
+              <span className="font-medium text-[#172B4D]">
+                {tidy(selectedEmployee?.employee?.name)}
+              </span>{" "}
+              will lose access to{" "}
+              <span className="font-medium text-[#172B4D]">
+                {confirmRevoke.companyName}
+              </span>
+              .
+            </div>
+
+            <div className="flex justify-end gap-2 px-6 pb-5 pt-3">
+              <button
+                onClick={() => setConfirmRevoke(null)}
+                className={btnSubtle}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const id = confirmRevoke.companyId;
+                  setConfirmRevoke(null);
+                  await revokeAccess(id);
+                }}
+                className={btnDanger}
+              >
+                <Trash2 size={14} />
+                Revoke access
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
