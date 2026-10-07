@@ -11,17 +11,56 @@ import {
   LogOut,
   ChevronDown,
   Clock,
-  CheckCircle2,
   AlertCircle,
   CheckCheck,
   Trash2,
+  Plus,
+  Ticket,
+  Package,
+  Users,
+  HelpCircle,
 } from "lucide-react";
+
+/* ---------- small UI helpers (new, presentation only) ---------- */
+
+const statusStyle = (status = "") => {
+  const s = status.toLowerCase();
+  if (s.includes("open") || s.includes("new")) return "bg-blue-50 text-blue-700 ring-blue-200";
+  if (s.includes("progress") || s.includes("assigned")) return "bg-amber-50 text-amber-700 ring-amber-200";
+  if (s.includes("resolved") || s.includes("closed") || s.includes("done"))
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  return "bg-gray-100 text-gray-600 ring-gray-200";
+};
+
+const timeAgo = (date) => {
+  if (!date) return "";
+  const diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (Number.isNaN(diff)) return "";
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+};
+
+const iconBtn =
+  "relative flex items-center justify-center w-9 h-9 rounded-md text-white/75 hover:text-white hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d4a94c] transition-colors";
+
+function SectionHeader({ icon: Icon, label, count }) {
+  return (
+    <div className="px-4 py-2 bg-gray-50 border-y border-gray-100 flex items-center gap-2 sticky top-0">
+      <Icon size={13} className="text-gray-400" />
+      <p className="text-xs font-semibold text-gray-600">{label}</p>
+      <span className="ml-auto text-[11px] text-gray-400">{count}</span>
+    </div>
+  );
+}
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const { user, logout } = useAuth();
@@ -88,6 +127,19 @@ export default function Navbar() {
     setSearchQuery("");
     setSearchResults(null);
   }, [location.pathname]);
+
+  // NEW: press "/" anywhere to focus search (like Jira / ServiceNow)
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (e.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(tag)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   const handleResultClick = (path) => {
     navigate(path);
@@ -168,18 +220,21 @@ export default function Navbar() {
     ];
   }, [role]);
 
+  // NEW: "Create" button target (Jira-style primary action)
+  const createPath = isAdminRole ? "/admin/tickets" : "/create";
+
   const isActive = (path) =>
     location.pathname === path
-      ? "text-[#1f4a35] font-semibold border-b-2 border-[#1f4a35]"
-      : "text-gray-600 hover:text-[#1f4a35] border-b-2 border-transparent";
+      ? "text-white font-semibold border-[#d4a94c] bg-white/10"
+      : "text-white/70 hover:text-white hover:bg-white/5 border-transparent";
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
-      <div className="h-16 px-4 lg:px-8 grid grid-cols-[auto_1fr_auto] items-center gap-4">
+    <header className="sticky top-0 z-50 w-full bg-[#14251c] shadow-md">
+      <div className="h-14 px-4 lg:px-6 flex items-center gap-4">
 
         {/* LOGO */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#1f4a35] to-[#0f2419] flex items-center justify-center p-1.5 shadow-sm">
+        <Link to={navItems[0].path} className="flex items-center gap-2.5 flex-shrink-0 mr-2">
+          <div className="w-9 h-9 rounded-md bg-white flex items-center justify-center p-1">
             <img
               src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
               alt="Mazzraty"
@@ -188,20 +243,18 @@ export default function Navbar() {
           </div>
 
           <div className="hidden sm:block leading-tight">
-            <h1 className="text-[15px] font-bold text-gray-900">Mazzraty</h1>
-            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
-              IT Service
-            </p>
+            <h1 className="text-[15px] font-bold text-white">Mazzraty</h1>
+            <p className="text-[11px] text-[#d4a94c] font-medium">IT Service</p>
           </div>
-        </div>
+        </Link>
 
-        {/* CENTERED DESKTOP NAV */}
-        <nav className="hidden lg:flex items-center justify-center gap-1">
+        {/* DESKTOP NAV (tabs sit on the bottom edge of the bar) */}
+        <nav className="hidden lg:flex items-stretch self-stretch gap-0.5">
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${isActive(
+              className={`flex items-center px-4 text-sm border-b-[3px] transition-colors whitespace-nowrap ${isActive(
                 item.path
               )}`}
             >
@@ -210,47 +263,79 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* RIGHT SECTION */}
-        <div className="flex items-center justify-end gap-2 relative" ref={dropdownRef}>
+        {/* CREATE BUTTON */}
+        <Link
+          to={createPath}
+          className="hidden md:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-[#d4a94c] hover:bg-[#e0b95f] text-[#14251c] text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+        >
+          <Plus size={16} strokeWidth={2.5} />
+          Create
+        </Link>
 
-          {/* SEARCH */}
+        {/* SPACER */}
+        <div className="flex-1" />
+
+        {/* RIGHT SECTION */}
+        <div className="flex items-center gap-1.5 relative" ref={dropdownRef}>
+
+          {/* SEARCH – always visible on desktop */}
           <div className="hidden md:block relative" ref={searchRef}>
-            {!searchOpen ? (
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-all duration-200"
-                title="Search"
-              >
-                <Search size={18} />
-              </button>
-            ) : (
-              <div className="flex items-center gap-2 w-72 px-3.5 py-2.5 rounded-lg border border-[#1f4a35] bg-white shadow-lg">
-                <Search size={16} className="text-gray-400 flex-shrink-0" />
-                <input
-                  autoFocus
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search tickets, assets, employees..."
-                  className="flex-1 outline-none text-sm text-gray-700 placeholder-gray-400 bg-transparent"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSearchResults(null);
-                    }}
-                    className="text-gray-400 hover:text-gray-600 transition p-1"
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
-            )}
+            <div
+              className={`flex items-center gap-2 h-9 rounded-md px-3 transition-all duration-200 ${
+                searchOpen
+                  ? "w-96 bg-white ring-2 ring-[#d4a94c]"
+                  : "w-64 bg-white/10 hover:bg-white/15"
+              }`}
+            >
+              <Search
+                size={16}
+                className={`flex-shrink-0 ${searchOpen ? "text-gray-400" : "text-white/60"}`}
+              />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onFocus={() => setSearchOpen(true)}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setSearchOpen(false);
+                    setSearchQuery("");
+                    setSearchResults(null);
+                    e.currentTarget.blur();
+                  }
+                }}
+                placeholder="Search tickets, assets, employees"
+                className={`flex-1 min-w-0 outline-none text-sm bg-transparent ${
+                  searchOpen
+                    ? "text-gray-800 placeholder-gray-400"
+                    : "text-white placeholder-white/60"
+                }`}
+              />
+              {searchQuery ? (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchResults(null);
+                    searchInputRef.current?.focus();
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition p-0.5"
+                  aria-label="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              ) : (
+                !searchOpen && (
+                  <kbd className="text-[11px] text-white/60 border border-white/25 rounded px-1.5 leading-5">
+                    /
+                  </kbd>
+                )
+              )}
+            </div>
 
             {/* SEARCH DROPDOWN */}
             {searchOpen && searchQuery && (
-              <div className="absolute right-0 top-12 w-96 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+              <div className="absolute right-0 top-11 w-[26rem] bg-white border border-gray-200 rounded-lg shadow-2xl z-50 overflow-hidden">
 
                 {searchLoading ? (
                   <div className="p-8 text-center">
@@ -263,20 +348,19 @@ export default function Navbar() {
                   <div className="p-8 text-center">
                     <AlertCircle size={24} className="text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">
-                      No results found for "{searchQuery}"
+                      No results for "{searchQuery}"
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Try a ticket number, asset code or staff name.
                     </p>
                   </div>
                 ) : (
-                  <div className="max-h-96 overflow-y-auto">
+                  <div className="max-h-[26rem] overflow-y-auto">
 
                     {/* TICKETS */}
                     {searchResults?.tickets?.length > 0 && (
                       <div>
-                        <div className="px-4 py-2.5 bg-gray-50 border-b">
-                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                            Tickets
-                          </p>
-                        </div>
+                        <SectionHeader icon={Ticket} label="Tickets" count={searchResults.tickets.length} />
                         {(Array.isArray(searchResults.tickets)
                           ? searchResults.tickets
                           : []
@@ -290,14 +374,25 @@ export default function Navbar() {
                                   : `/tickets/${t._id}`
                               )
                             }
-                            className="px-4 py-3 hover:bg-[#eef3ee] cursor-pointer border-b transition-colors last:border-b-0"
+                            className="px-4 py-2.5 hover:bg-[#eef3ee] cursor-pointer border-b border-gray-100 transition-colors last:border-b-0 flex items-center gap-3"
                           >
-                            <p className="text-sm font-medium text-gray-900">
-                              {t.title}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              #{t.ticketId || t._id?.slice(-6)} · {t.status}
-                            </p>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {t.title}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5 font-mono">
+                                #{t.ticketId || t._id?.slice(-6)}
+                              </p>
+                            </div>
+                            {t.status && (
+                              <span
+                                className={`text-[11px] font-medium px-2 py-0.5 rounded-full ring-1 ring-inset whitespace-nowrap ${statusStyle(
+                                  t.status
+                                )}`}
+                              >
+                                {t.status}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -306,11 +401,7 @@ export default function Navbar() {
                     {/* ASSETS */}
                     {searchResults?.assets?.length > 0 && (
                       <div>
-                        <div className="px-4 py-2.5 bg-gray-50 border-b">
-                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                            Assets
-                          </p>
-                        </div>
+                        <SectionHeader icon={Package} label="Assets" count={searchResults.assets.length} />
                         {(Array.isArray(searchResults.assets)
                           ? searchResults.assets
                           : []
@@ -320,12 +411,12 @@ export default function Navbar() {
                             onClick={() =>
                               handleResultClick("/admin/assets/fiori")
                             }
-                            className="px-4 py-3 hover:bg-[#eef3ee] cursor-pointer border-b transition-colors last:border-b-0"
+                            className="px-4 py-2.5 hover:bg-[#eef3ee] cursor-pointer border-b border-gray-100 transition-colors last:border-b-0"
                           >
                             <p className="text-sm font-medium text-gray-900">
                               {a.assetCode}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 mt-0.5">
                               {a.type} · {a.model || "-"}
                             </p>
                           </div>
@@ -336,11 +427,7 @@ export default function Navbar() {
                     {/* EMPLOYEES */}
                     {searchResults?.employees?.length > 0 && (
                       <div>
-                        <div className="px-4 py-2.5 bg-gray-50 border-b">
-                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                            Employees
-                          </p>
-                        </div>
+                        <SectionHeader icon={Users} label="Employees" count={searchResults.employees.length} />
                         {(Array.isArray(searchResults.employees)
                           ? searchResults.employees
                           : []
@@ -350,14 +437,19 @@ export default function Navbar() {
                             onClick={() =>
                               handleResultClick("/admin/employees")
                             }
-                            className="px-4 py-3 hover:bg-[#eef3ee] cursor-pointer border-b transition-colors last:border-b-0"
+                            className="px-4 py-2.5 hover:bg-[#eef3ee] cursor-pointer border-b border-gray-100 transition-colors last:border-b-0 flex items-center gap-3"
                           >
-                            <p className="text-sm font-medium text-gray-900">
-                              {e.name}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {e.staffCode} · {e.department || "-"}
-                            </p>
+                            <div className="w-8 h-8 rounded-full bg-[#1f4a35] text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
+                              {e.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {e.name}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {e.staffCode} · {e.department || "-"}
+                              </p>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -374,24 +466,25 @@ export default function Navbar() {
           <div className="relative">
             <button
               onClick={() => setNotificationOpen(!notificationOpen)}
-              className="relative flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-all duration-200"
+              className={iconBtn}
               title="Notifications"
+              aria-label="Notifications"
             >
               <Bell size={18} />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-5 h-5 bg-[#d4a94c] text-[#14251c] text-xs font-semibold rounded-full flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-[#d4a94c] text-[#14251c] text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-[#14251c]">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </button>
 
             {notificationOpen && (
-              <div className="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+              <div className="absolute right-0 mt-2 w-[26rem] max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-lg shadow-2xl z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b bg-white flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-gray-900">
                     Notifications
                     {unreadCount > 0 && (
-                      <span className="ml-2 text-xs font-medium text-[#1f4a35]">
+                      <span className="ml-2 px-1.5 py-0.5 rounded bg-[#eef3ee] text-xs font-medium text-[#1f4a35]">
                         {unreadCount} new
                       </span>
                     )}
@@ -411,17 +504,20 @@ export default function Navbar() {
                   )}
                 </div>
 
-                <div className="max-h-96 overflow-y-auto divide-y">
+                <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
                   {notifications.length === 0 ? (
-                    <div className="p-8 text-center">
+                    <div className="p-10 text-center">
                       <Bell size={24} className="text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">No notifications</p>
+                      <p className="text-sm font-medium text-gray-600">You're all caught up</p>
+                      <p className="text-xs text-gray-400 mt-0.5">New ticket updates will show here.</p>
                     </div>
                   ) : (
                     notifications.map((n) => (
                       <div
                         key={n._id}
-                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${!n.isRead ? "bg-[#eef3ee]" : ""}`}
+                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-l-[3px] ${
+                          !n.isRead ? "bg-[#f4f8f4] border-[#1f4a35]" : "border-transparent"
+                        }`}
                         onClick={async () => {
                           if (!n.isRead) {
                             await api.put(`/notifications/${n._id}/read`);
@@ -430,13 +526,17 @@ export default function Navbar() {
                         }}
                       >
                         <div className="flex items-start gap-2">
-                          {!n.isRead && (
-                            <div className="w-2 h-2 rounded-full bg-[#1f4a35] mt-1.5 flex-shrink-0" />
-                          )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900">{n.title}</p>
+                            <p className={`text-sm text-gray-900 ${!n.isRead ? "font-semibold" : "font-medium"}`}>
+                              {n.title}
+                            </p>
                             <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
                           </div>
+                          {n.createdAt && (
+                            <span className="text-[11px] text-gray-400 whitespace-nowrap mt-0.5">
+                              {timeAgo(n.createdAt)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))
@@ -468,40 +568,54 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* ROLE BADGE - HIDDEN ON MOBILE */}
-          <div className="hidden md:flex items-center px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold capitalize border border-gray-200">
-            {role}
-          </div>
+          {/* HELP (new, optional: point it wherever you like) */}
+          <button className={`${iconBtn} hidden md:flex`} title="Help" aria-label="Help">
+            <HelpCircle size={18} />
+          </button>
+
+          {/* DIVIDER */}
+          <div className="hidden md:block w-px h-6 bg-white/15 mx-1" />
 
           {/* USER PROFILE */}
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
+            className="flex items-center gap-2 pl-1 pr-2 h-9 rounded-md hover:bg-white/10 transition-colors group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d4a94c]"
             title="User menu"
           >
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#1f4a35] to-[#0f2419] text-white flex items-center justify-center font-semibold text-sm shadow-sm group-hover:shadow-md transition-shadow">
+            <div className="relative w-7 h-7 rounded-full bg-[#d4a94c] text-[#14251c] flex items-center justify-center font-bold text-xs">
               {user?.name?.charAt(0).toUpperCase() || "U"}
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#14251c]" />
+            </div>
+            <div className="hidden xl:block text-left leading-tight">
+              <p className="text-xs font-medium text-white max-w-[110px] truncate">
+                {user?.name || "User"}
+              </p>
+              <p className="text-[10px] text-white/60 capitalize">{role.replace("_", " ")}</p>
             </div>
             <ChevronDown
-              size={16}
-              className="text-gray-600 hidden lg:block group-hover:text-gray-900 transition-colors"
+              size={14}
+              className={`text-white/60 hidden lg:block group-hover:text-white transition-transform ${
+                userMenuOpen ? "rotate-180" : ""
+              }`}
             />
           </button>
 
           {/* USER DROPDOWN */}
           {userMenuOpen && (
-            <div className="absolute right-0 top-14 w-80 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+            <div className="absolute right-0 top-12 w-72 bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden z-50">
               {/* USER INFO */}
-              <div className="px-5 py-4 border-b bg-gradient-to-r from-gray-50 to-white">
+              <div className="px-4 py-4 border-b bg-[#f4f8f4]">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#1f4a35] to-[#0f2419] text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                  <div className="w-11 h-11 rounded-full bg-[#1f4a35] text-white flex items-center justify-center font-bold text-base">
                     {user?.name?.charAt(0).toUpperCase() || "U"}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-gray-500 font-medium">
-                      Signed in as
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    {user?.name && (
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {user.name}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 truncate">
                       {user?.email || "Guest"}
                     </p>
                   </div>
@@ -509,25 +623,25 @@ export default function Navbar() {
               </div>
 
               {/* ROLE INFO */}
-              <div className="px-5 py-4 border-b">
+              <div className="px-4 py-3 border-b">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 font-medium">
-                    Access Role
+                  <span className="text-sm text-gray-600">
+                    Access role
                   </span>
-                  <span className="px-3 py-1 rounded-full bg-[#eef3ee] text-[#1f4a35] text-xs font-semibold capitalize border border-[#cfe0d3]">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#eef3ee] text-[#1f4a35] text-xs font-semibold capitalize border border-[#cfe0d3]">
                     {role}
                   </span>
                 </div>
               </div>
 
               {/* LOGOUT */}
-              <div className="p-2">
+              <div className="p-1.5">
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors text-sm font-medium"
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-red-600 hover:bg-red-50 transition-colors text-sm font-medium"
                 >
                   <LogOut size={16} />
-                  Logout
+                  Log out
                 </button>
               </div>
             </div>
@@ -536,8 +650,9 @@ export default function Navbar() {
           {/* MOBILE MENU TOGGLE */}
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
-            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 transition-all duration-200"
+            className={`${iconBtn} lg:hidden`}
             title="Toggle menu"
+            aria-label="Toggle menu"
           >
             {mobileMenu ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -546,16 +661,16 @@ export default function Navbar() {
 
       {/* MOBILE NAV */}
       {mobileMenu && (
-        <div className="lg:hidden border-t border-gray-200 bg-white px-4 py-3">
+        <div className="lg:hidden border-t border-white/10 bg-[#0f1d16] px-4 py-3">
           <nav className="space-y-1">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileMenu(false)}
-                className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${location.pathname === item.path
-                  ? "bg-[#1f4a35] text-white shadow-sm"
-                  : "text-gray-700 hover:bg-gray-100"
+                className={`block px-4 py-2.5 rounded-md text-sm font-medium transition-all ${location.pathname === item.path
+                  ? "bg-[#d4a94c] text-[#14251c]"
+                  : "text-white/80 hover:bg-white/10"
                   }`}
               >
                 {item.label}
