@@ -222,8 +222,9 @@ export default function Navbar() {
 
   // NEW: "Create" button target (Jira-style primary action)
   const createPath = isAdminRole ? "/admin/tickets" : "/create";
-  // hidden for super_admin and it_support
-  const showCreate = !["super_admin", "it_support"].includes(role);
+  // hidden for super_admin, it_support and plain users
+  // (users already have the "Create Ticket" tab and sidebar link)
+  const showCreate = !["super_admin", "it_support", "user"].includes(role);
 
   const isActive = (path) =>
     location.pathname === path
@@ -306,7 +307,7 @@ export default function Navbar() {
                     e.currentTarget.blur();
                   }
                 }}
-                placeholder="Search tickets, assets, employees"
+                placeholder={isAdminRole ? "Search tickets, assets, staff" : "Search my tickets"}
                 className={`flex-1 min-w-0 outline-none text-sm bg-transparent ${
                   searchOpen
                     ? "text-gray-800 placeholder-gray-400"
