@@ -222,6 +222,8 @@ export default function Navbar() {
 
   // NEW: "Create" button target (Jira-style primary action)
   const createPath = isAdminRole ? "/admin/tickets" : "/create";
+  // hidden for super_admin and it_support
+  const showCreate = !["super_admin", "it_support"].includes(role);
 
   const isActive = (path) =>
     location.pathname === path
@@ -230,10 +232,10 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#14251c] shadow-md">
-      <div className="h-14 px-4 lg:px-6 flex items-center gap-4">
+      <div className="h-14 px-4 lg:px-6 flex items-center gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr]">
 
         {/* LOGO */}
-        <Link to={navItems[0].path} className="flex items-center gap-2.5 flex-shrink-0 mr-2">
+        <Link to={navItems[0].path} className="flex items-center gap-2.5 flex-shrink-0 mr-2 justify-self-start">
           <div className="w-9 h-9 rounded-md bg-white flex items-center justify-center p-1">
             <img
               src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
@@ -249,7 +251,7 @@ export default function Navbar() {
         </Link>
 
         {/* DESKTOP NAV (tabs sit on the bottom edge of the bar) */}
-        <nav className="hidden lg:flex items-stretch self-stretch gap-0.5">
+        <nav className="hidden lg:flex items-stretch justify-center self-stretch gap-0.5">
           {navItems.map((item) => (
             <Link
               key={item.path}
@@ -263,20 +265,19 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* CREATE BUTTON */}
-        <Link
-          to={createPath}
-          className="hidden md:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-[#d4a94c] hover:bg-[#e0b95f] text-[#14251c] text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          Create
-        </Link>
-
-        {/* SPACER */}
-        <div className="flex-1" />
-
         {/* RIGHT SECTION */}
-        <div className="flex items-center gap-1.5 relative" ref={dropdownRef}>
+        <div className="flex items-center gap-1.5 relative ml-auto lg:ml-0 justify-self-end" ref={dropdownRef}>
+
+          {/* CREATE BUTTON */}
+          {showCreate && (
+            <Link
+              to={createPath}
+              className="hidden md:inline-flex items-center gap-1.5 h-9 px-3.5 mr-1 rounded-md bg-[#d4a94c] hover:bg-[#e0b95f] text-[#14251c] text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              Create
+            </Link>
+          )}
 
           {/* SEARCH – always visible on desktop */}
           <div className="hidden md:block relative" ref={searchRef}>
