@@ -126,12 +126,12 @@ export default function UserProfile() {
         <div className="bg-white rounded-md border border-gray-200 overflow-hidden mb-5">
           <div className="h-20 bg-gradient-to-r from-[#14251c] to-[#1f4a35]" />
           <div className="px-6 pb-6">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-              <div className="flex items-end gap-4 -mt-9">
-                <div className="w-[72px] h-[72px] rounded-full bg-[#d4a94c] text-[#14251c] ring-4 ring-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 min-w-0">
+                <div className="-mt-9 w-[72px] h-[72px] rounded-full bg-[#d4a94c] text-[#14251c] ring-4 ring-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
                   {user?.name?.charAt(0).toUpperCase() || "U"}
                 </div>
-                <div className="pb-0.5 min-w-0">
+                <div className="sm:pt-3 min-w-0">
                   <h1 className="text-xl font-semibold text-gray-900 truncate">
                     {user?.name}
                   </h1>
@@ -143,7 +143,7 @@ export default function UserProfile() {
 
               <button
                 onClick={() => setPassOpen(true)}
-                className="flex items-center justify-center gap-2 h-9 px-4 bg-[#1f4a35] hover:bg-[#173a29] text-white text-sm font-medium rounded-md transition-colors whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f4a35]"
+                className="md:mt-4 flex items-center justify-center gap-2 h-9 px-4 bg-[#1f4a35] hover:bg-[#173a29] text-white text-sm font-medium rounded-md transition-colors whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f4a35]"
               >
                 <Lock size={15} />
                 Change password
@@ -179,7 +179,6 @@ export default function UserProfile() {
                 icon={<Code size={16} />}
                 label="Staff code"
                 value={user?.staffCode}
-                mono
               />
             </dl>
           </div>
