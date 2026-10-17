@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../api/axios.js";
+import { useAuth } from "../auth/AuthContext.jsx";
 import toast from "react-hot-toast";
 import {
   AlertCircle,
@@ -45,6 +46,25 @@ const DEPARTMENTS = [
   "FINANCE AND ADMIN",
   "OPERATIONS",
 ];
+
+const getUserDepartment = (department) => {
+  const normalizedDepartment = department?.trim();
+  if (!normalizedDepartment) return "";
+
+  const matchingDepartment = DEPARTMENTS.find(
+    (option) => option.toLowerCase() === normalizedDepartment.toLowerCase()
+  );
+
+  if (matchingDepartment) return matchingDepartment;
+
+  const looseMatches = DEPARTMENTS.filter(
+    (option) =>
+      option.toLowerCase().includes(normalizedDepartment.toLowerCase()) ||
+      normalizedDepartment.toLowerCase().includes(option.toLowerCase())
+  );
+
+  return looseMatches.length === 1 ? looseMatches[0] : normalizedDepartment;
+};
 
 const RELATED_OPTIONS = [
   "Laptop/Desktop",
@@ -384,10 +404,12 @@ const SummaryRow = ({ label, children }) => (
    PAGE
 ====================================================== */
 export default function CreateTicket() {
+  const { user } = useAuth();
+  const userDepartment = getUserDepartment(user?.department);
   const [form, setForm] = useState({
     title: "",
     description: "",
-    department: "",
+    department: userDepartment,
     relatedTo: "",
     impact: "",
     urgency: "",
@@ -668,7 +690,7 @@ export default function CreateTicket() {
         setForm({
           title: "",
           description: "",
-          department: "",
+          department: userDepartment,
           relatedTo: "",
           impact: "",
           urgency: "",
@@ -1080,7 +1102,7 @@ export default function CreateTicket() {
                   name="department"
                   error={errors.department}
                   required
-                  hint="Which department does this issue affect?"
+                  hint="Filled from your profile. Change it only if another department is affected."
                 >
                   <select
                     id="department"
@@ -1090,6 +1112,9 @@ export default function CreateTicket() {
                     className={`${inputBase} ${errors.department ? inputErr : inputOk}`}
                   >
                     <option value="">Select a department...</option>
+                    {!DEPARTMENTS.includes(form.department) && form.department && (
+                      <option value={form.department}>{form.department}</option>
+                    )}
                     {DEPARTMENTS.map((dept) => (
                       <option key={dept} value={dept}>
                         {dept}
