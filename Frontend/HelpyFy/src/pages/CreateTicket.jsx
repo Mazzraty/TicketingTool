@@ -1102,25 +1102,13 @@ export default function CreateTicket() {
                   name="department"
                   error={errors.department}
                   required
-                  hint="Filled from your profile. Change it only if another department is affected."
                 >
-                  <select
+                  <div
                     id="department"
-                    name="department"
-                    value={form.department}
-                    onChange={handleChange}
-                    className={`${inputBase} ${errors.department ? inputErr : inputOk}`}
+                    className={`${inputBase} flex items-center ${errors.department ? inputErr : inputOk}`}
                   >
-                    <option value="">Select a department...</option>
-                    {!DEPARTMENTS.includes(form.department) && form.department && (
-                      <option value={form.department}>{form.department}</option>
-                    )}
-                    {DEPARTMENTS.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
-                  </select>
+                    {form.department || "Department not set"}
+                  </div>
                 </FormField>
 
                 <FormField
