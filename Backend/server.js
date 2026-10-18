@@ -7,6 +7,7 @@ import connectDB from "./config/db.js";
 
 // cron
 import "./crons/softwareCronesExpiry.js";
+import "./crons/autoCloseTicket.js";  
 
 // routes
 import authRoutes from "./routes/authRoutes.js";

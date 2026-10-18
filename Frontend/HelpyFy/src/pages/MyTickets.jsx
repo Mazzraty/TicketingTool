@@ -109,6 +109,26 @@ const formatDateTime = (date) => {
 };
 
 /* =========================
+   RATING / AUTO-CLOSE HELPERS
+========================= */
+
+// A ticket can be rated unless the employee already gave their own rating.
+// An auto 5-star (ratingSource === "auto") can still be replaced.
+const canRate = (ticket) =>
+  ["Resolved", "Closed"].includes(ticket.status) &&
+  !(ticket.rating > 0 && ticket.ratingSource !== "auto");
+
+// Countdown info for Resolved tickets
+const getAutoCloseInfo = (ticket) => {
+  if (ticket.status !== "Resolved" || !ticket.autoCloseAt) return null;
+  const msLeft = new Date(ticket.autoCloseAt).getTime() - Date.now();
+  return {
+    date: ticket.autoCloseAt,
+    daysLeft: Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000))),
+  };
+};
+
+/* =========================
    SMALL UI PIECES
 ========================= */
 const Button = ({
@@ -190,10 +210,11 @@ const StarRating = ({ rating, hoverRating, setHoverRating, onRate }) => (
         className="transition cursor-pointer"
       >
         <Star
-          className={`w-6 h-6 ${(hoverRating || rating) >= star
+          className={`w-6 h-6 ${
+            (hoverRating || rating) >= star
               ? "fill-amber-400 text-amber-400"
               : "text-[#C7CDD6]"
-            }`}
+          }`}
         />
       </button>
     ))}
@@ -315,11 +336,13 @@ export default function MyTickets() {
         review: comment,
       });
 
+      // Resolved -> rating also closes the ticket (and cancels auto-close).
+      // Closed (e.g. auto-closed with default rating) -> just save the rating.
       if (selectedTicket.status === "Resolved") {
         await api.put(`/tickets/${selectedTicket._id}/confirm`);
-        toast.success("Ticket confirmed and closed successfully");
+        toast.success("Thanks for your rating. Ticket closed.");
       } else {
-        toast.success("Review saved successfully");
+        toast.success("Rating saved successfully");
       }
 
       setReviewModal(false);
@@ -338,7 +361,7 @@ export default function MyTickets() {
   const reopenTicket = async (id) => {
     try {
       await api.put(`/tickets/${id}/reopen`);
-      toast.success("Ticket reopened");
+      toast.success("Ticket reopened. Auto-close cancelled.");
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to reopen ticket");
@@ -425,15 +448,27 @@ export default function MyTickets() {
           </Button>
         )}
 
-        {(ticket.status === "Resolved" || ticket.status === "Closed") && (
-          <Button variant="success" icon={Check} onClick={() => openReview(ticket)}>
-            {ticket.status === "Closed" ? "Review" : "Confirm"}
+        {/* Resolved: employee can rate (closes ticket) or reopen within 7 days */}
+        {ticket.status === "Resolved" && (
+          <Button variant="success" icon={Star} onClick={() => openReview(ticket)}>
+            Rate & close
           </Button>
         )}
 
         {ticket.status === "Resolved" && (
-          <Button variant="secondary" icon={RotateCw} onClick={() => reopenTicket(ticket._id)}>
+          <Button
+            variant="secondary"
+            icon={RotateCw}
+            onClick={() => reopenTicket(ticket._id)}
+          >
             Reopen
+          </Button>
+        )}
+
+        {/* Closed: only show if the employee hasn't given their own rating */}
+        {ticket.status === "Closed" && canRate(ticket) && (
+          <Button variant="success" icon={Star} onClick={() => openReview(ticket)}>
+            {ticket.ratingSource === "auto" ? "Change rating" : "Rate"}
           </Button>
         )}
       </>
@@ -467,6 +502,7 @@ export default function MyTickets() {
 
   // The drawer reads from the loaded list so it refreshes after every action
   const detail = detailId ? tickets.find((t) => t._id === detailId) : null;
+  const autoClose = detail ? getAutoCloseInfo(detail) : null;
 
   const pageBtn =
     "w-8 h-8 rounded-[4px] text-sm font-medium transition-colors cursor-pointer";
@@ -512,18 +548,20 @@ export default function MyTickets() {
                       setStatusFilter(tab.key);
                       setPage(1);
                     }}
-                    className={`relative flex items-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors cursor-pointer ${active
+                    className={`relative flex items-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors cursor-pointer ${
+                      active
                         ? "text-[#0B6E76]"
                         : "text-[#626F86] hover:text-[#172B4D]"
-                      }`}
+                    }`}
                   >
                     {tab.label}
                     {count !== undefined && (
                       <span
-                        className={`min-w-[20px] rounded-full px-1.5 py-px text-[11px] font-semibold text-center ${active
+                        className={`min-w-[20px] rounded-full px-1.5 py-px text-[11px] font-semibold text-center ${
+                          active
                             ? "bg-[#0B6E76] text-white"
                             : "bg-[#EEF0F3] text-[#44546F]"
-                          }`}
+                        }`}
                       >
                         {count}
                       </span>
@@ -631,8 +669,9 @@ export default function MyTickets() {
                     <div
                       key={ticket._id}
                       onClick={() => setDetailId(ticket._id)}
-                      className={`${ROW_GRID} py-3.5 border-b border-[#EBECF0] cursor-pointer transition-colors ${isSelected ? "bg-[#E6F3F4]" : "hover:bg-[#F7F8F9]"
-                        }`}
+                      className={`${ROW_GRID} py-3.5 border-b border-[#EBECF0] cursor-pointer transition-colors ${
+                        isSelected ? "bg-[#E6F3F4]" : "hover:bg-[#F7F8F9]"
+                      }`}
                     >
                       <span
                         className="text-[13px] font-medium text-[#0B6E76] break-all"
@@ -710,10 +749,11 @@ export default function MyTickets() {
                   <button
                     key={n}
                     onClick={() => setPage(n)}
-                    className={`${pageBtn} ${page === n
+                    className={`${pageBtn} ${
+                      page === n
                         ? "bg-[#0B6E76] text-white"
                         : "text-[#44546F] hover:bg-[#EEF0F3]"
-                      }`}
+                    }`}
                   >
                     {n}
                   </button>
@@ -789,6 +829,35 @@ export default function MyTickets() {
 
             {/* body */}
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              {/* auto-close countdown (Resolved only) */}
+              {autoClose && (
+                <div className="flex items-start gap-2.5 bg-[#FFF3D6] border border-[#F5DFA8] rounded-[4px] px-3.5 py-3">
+                  <Clock className="w-4 h-4 text-[#7A4B00] shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-[#7A4B00]">
+                      Auto-closes in {autoClose.daysLeft} day
+                      {autoClose.daysLeft === 1 ? "" : "s"}
+                    </p>
+                    <p className="text-sm text-[#7A4B00] leading-relaxed">
+                      Rate this ticket, or reopen it if the issue persists. If you
+                      do neither, it closes on {formatDate(autoClose.date)} with a
+                      default 5-star rating.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* auto-closed with default rating */}
+              {detail.status === "Closed" && detail.ratingSource === "auto" && (
+                <div className="flex items-start gap-2.5 bg-[#EEF0F3] border border-[#DFE1E6] rounded-[4px] px-3.5 py-3">
+                  <Star className="w-4 h-4 text-[#44546F] shrink-0 mt-0.5" />
+                  <p className="text-sm text-[#44546F] leading-relaxed">
+                    This ticket was closed automatically and a default 5-star
+                    rating was applied. You can still change it.
+                  </p>
+                </div>
+              )}
+
               {/* outcome banners */}
               {detail.status === "Rejected" && detail.rejectionReason && (
                 <div className="flex items-start gap-2.5 bg-[#FFECEB] border border-[#FFD5D2] rounded-[4px] px-3.5 py-3">
@@ -850,7 +919,7 @@ export default function MyTickets() {
                   <DetailField label="Created">{formatDateTime(detail.createdAt)}</DetailField>
                   <DetailField label="Resolution due">
                     {["Open", "In Progress", "Reopened"].includes(detail.status) &&
-                      detail.sla?.resolutionDue ? (
+                    detail.sla?.resolutionDue ? (
                       <span
                         className={
                           new Date(detail.sla.resolutionDue).getTime() < Date.now()
@@ -865,6 +934,11 @@ export default function MyTickets() {
                   {detail.resolvedAt && (
                     <DetailField label="Resolved">{formatDateTime(detail.resolvedAt)}</DetailField>
                   )}
+                  {autoClose && (
+                    <DetailField label="Auto-closes">
+                      {formatDateTime(autoClose.date)}
+                    </DetailField>
+                  )}
                   {detail.closedAt && (
                     <DetailField label="Closed">{formatDateTime(detail.closedAt)}</DetailField>
                   )}
@@ -874,7 +948,10 @@ export default function MyTickets() {
                     </DetailField>
                   )}
                   {detail.rating > 0 && (
-                    <DetailField label="Your rating">{`${detail.rating}/5`}</DetailField>
+                    <DetailField label="Your rating">
+                      {`${detail.rating}/5`}
+                      {detail.ratingSource === "auto" ? " (default)" : ""}
+                    </DetailField>
                   )}
                 </dl>
               </section>
@@ -1027,7 +1104,7 @@ export default function MyTickets() {
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg border border-[#DFE1E6]">
             <div className="border-b border-[#DFE1E6] px-6 py-4">
               <h2 className="text-lg font-semibold text-[#172B4D]">
-                {selectedTicket.status === "Resolved" ? "Confirm resolution" : "Review ticket"}
+                {selectedTicket.status === "Resolved" ? "Rate and close ticket" : "Rate ticket"}
               </h2>
               <p className="mt-1 text-sm text-[#44546F]">{selectedTicket.title}</p>
               {selectedTicket.ticketNumber && (
@@ -1036,6 +1113,17 @@ export default function MyTickets() {
                   style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                 >
                   {selectedTicket.ticketNumber}
+                </p>
+              )}
+              {selectedTicket.status === "Resolved" && (
+                <p className="mt-1 text-xs text-[#626F86]">
+                  Submitting a rating closes this ticket. If the issue is not
+                  fixed, cancel and use Reopen instead.
+                </p>
+              )}
+              {selectedTicket.ratingSource === "auto" && (
+                <p className="mt-1 text-xs text-[#626F86]">
+                  A default 5-star rating was applied. Your rating will replace it.
                 </p>
               )}
             </div>
@@ -1101,8 +1189,8 @@ export default function MyTickets() {
                 {submittingReview
                   ? "Saving..."
                   : selectedTicket.status === "Resolved"
-                    ? "Confirm and close"
-                    : "Save review"}
+                    ? "Rate and close"
+                    : "Save rating"}
               </Button>
             </div>
           </div>

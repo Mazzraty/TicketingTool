@@ -17,6 +17,10 @@ import { generateTicketNumber } from "../utils/generateTicketNumber.js";
 // Keep in sync with REMINDER_COOLDOWN_HOURS in MyTickets.jsx
 const REMINDER_COOLDOWN_HOURS = 4;
 
+// Days after "Resolved" before the ticket is auto-closed
+// (keep in sync with the cron in crons/autoCloseTickets.js)
+const AUTO_CLOSE_DAYS = 7;
+
 // Escape user-typed text before putting it inside email HTML
 const escapeHtml = (value = "") =>
   String(value)
@@ -158,12 +162,14 @@ export const createTicket = async (req, res) => {
       // REVIEW
       review: "",
       rating: 0,
+      ratingSource: null,
       reviewedAt: null,
 
       // TIMESTAMPS
       inProgressAt: null,
       resolvedAt: null,
       closedAt: null,
+      autoCloseAt: null,
       reopened: false,
       reopenedAt: null,
 
@@ -586,6 +592,12 @@ export const updateStatus = async (req, res) => {
 
       ticket.sla.resolvedAt = ticket.resolvedAt;
 
+      // Start the 7-day auto-close countdown. The employee can rate or
+      // reopen during this window; the cron closes the ticket afterwards.
+      ticket.autoCloseAt = new Date(
+        ticket.resolvedAt.getTime() + AUTO_CLOSE_DAYS * 24 * 60 * 60 * 1000
+      );
+
       if (ticket.resolvedAt > ticket.sla.resolutionDue) {
         ticket.sla.resolutionBreached = true;
         ticket.sla.status = "Breached";
@@ -611,6 +623,7 @@ export const updateStatus = async (req, res) => {
       }
       ticket.rejectedAt = new Date();
       ticket.rejectionReason = rejectionReason.trim();
+      ticket.autoCloseAt = null;
     }
 
     // ============================
@@ -618,6 +631,7 @@ export const updateStatus = async (req, res) => {
     // ============================
     if (status === "Closed") {
       ticket.closedAt = new Date();
+      ticket.autoCloseAt = null;
     }
 
     // ============================
@@ -629,6 +643,17 @@ export const updateStatus = async (req, res) => {
 
       ticket.resolvedAt = null;
       ticket.closedAt = null;
+
+      // Cancel the pending auto-close countdown
+      ticket.autoCloseAt = null;
+
+      // Discard a system-given default rating so the next resolution
+      // can be rated fresh by the employee
+      if (ticket.ratingSource === "auto") {
+        ticket.rating = 0;
+        ticket.ratingSource = null;
+        ticket.reviewedAt = null;
+      }
 
       // Reset SLA Resolution Status
       ticket.sla.resolvedAt = null;
@@ -650,6 +675,8 @@ export const updateStatus = async (req, res) => {
       note:
         status === "Rejected"
           ? `Ticket rejected: ${rejectionReason.trim()}`
+          : status === "Resolved"
+          ? `Status changed to ${status}${vendorSummaryForHistory}. Auto-closes in ${AUTO_CLOSE_DAYS} days unless reopened.`
           : `Status changed to ${status}${vendorSummaryForHistory}`,
     });
 
@@ -657,6 +684,8 @@ export const updateStatus = async (req, res) => {
 
     // ============================
     // EMAIL WHEN RESOLVED
+    // (update the ticketResolvedEmail template to mention: rate 1-5 stars
+    //  or reopen within 7 days, otherwise the ticket closes automatically)
     // ============================
     if (status === "Resolved") {
       const ticketUser = await User.findById(ticket.userId);
@@ -669,6 +698,7 @@ export const updateStatus = async (req, res) => {
             html: ticketResolvedEmail({
               ...ticket._doc,
               userEmail: ticketUser.email,
+              autoCloseDays: AUTO_CLOSE_DAYS,
             }),
           });
         } catch (emailError) {
@@ -684,12 +714,18 @@ export const updateStatus = async (req, res) => {
     // NOTIFICATION (portal tickets only — manual tickets have no userId)
     // ============================
     if (ticket.userId) {
+      const isResolved = status === "Resolved";
+
       await Notification.create({
         userId: ticket.userId,
         companyId: ticket.companyId,
-        title: "Ticket Status Updated",
-        message: `Your ticket "${ticket.title}" is now ${status}`,
-        type: "status",
+        title: isResolved
+          ? "Rate Your Support Experience"
+          : "Ticket Status Updated",
+        message: isResolved
+          ? `Your ticket ${ticket.ticketNumber} was resolved. Please rate it from 1 to 5 stars, or reopen it if the issue persists. It will auto-close in ${AUTO_CLOSE_DAYS} days.`
+          : `Your ticket "${ticket.title}" is now ${status}`,
+        type: isResolved ? "rating_request" : "status",
       });
     }
 
@@ -829,7 +865,9 @@ export const confirmResolution = async (req, res) => {
 
     const confirmedTicket = await Ticket.findOneAndUpdate(
       { _id: ticket._id, userId: req.user.id, status: "Resolved" },
-      { $set: { status: "Closed", closedAt: new Date() } },
+      {
+        $set: { status: "Closed", closedAt: new Date(), autoCloseAt: null },
+      },
       { new: true }
     );
 
@@ -890,7 +928,8 @@ export const confirmResolution = async (req, res) => {
 };
 
 /* ======================================================
-   ✅ REOPEN TICKET
+   ✅ REOPEN TICKET (USER)
+   Cancels the pending 7-day auto-close countdown.
 ====================================================== */
 export const reopenTicket = async (req, res) => {
   try {
@@ -910,18 +949,12 @@ export const reopenTicket = async (req, res) => {
       });
     }
 
-    // Create notification for admins
-    const admins = await User.find({
-      companyId: ticket.companyId,
-      role: { $in: ["company_admin", "super_admin", "it_support"] },
-    });
-    for (const admin of admins) {
-      await Notification.create({
-        userId: admin._id,
-        companyId: ticket.companyId,
-        title: "Ticket Reopened",
-        message: `User reopened ticket: "${ticket.title}"`,
-        type: "status",
+    // To allow reopening ONLY during the 7-day Resolved window,
+    // change this to: if (ticket.status !== "Resolved")
+    if (!["Resolved", "Closed"].includes(ticket.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Only resolved or closed tickets can be reopened",
       });
     }
 
@@ -932,7 +965,49 @@ export const reopenTicket = async (req, res) => {
     ticket.resolvedAt = null;
     ticket.closedAt = null;
 
+    // cancel the pending auto-close
+    ticket.autoCloseAt = null;
+
+    // discard a system-given default rating so the next resolution
+    // can be rated fresh
+    if (ticket.ratingSource === "auto") {
+      ticket.rating = 0;
+      ticket.ratingSource = null;
+      ticket.reviewedAt = null;
+    }
+
+    // reset resolution SLA, same as updateStatus -> Open
+    ticket.sla.resolvedAt = null;
+    ticket.sla.resolutionBreached = false;
+    ticket.sla.status = "Running";
+    ticket.sla.breachReason = "";
+
+    ticket.statusHistory.push({
+      status: "Open",
+      changedAt: new Date(),
+      changedBy: req.user.id,
+      note: "Ticket reopened by user. Auto-close cancelled.",
+    });
+
     await ticket.save();
+
+    // Notify admins
+    const admins = await User.find({
+      companyId: ticket.companyId,
+      role: { $in: ["company_admin", "super_admin", "it_support"] },
+    });
+
+    if (admins.length) {
+      await Notification.insertMany(
+        admins.map((admin) => ({
+          userId: admin._id,
+          companyId: ticket.companyId,
+          title: "Ticket Reopened",
+          message: `User reopened ticket: "${ticket.title}"`,
+          type: "status",
+        }))
+      );
+    }
 
     res.json({
       success: true,
@@ -1081,11 +1156,24 @@ export const sendTicketReminder = async (req, res) => {
 };
 
 /* ======================================================
-   ✅ ADD REVIEW
+   ✅ ADD REVIEW (USER)
+   Rating 1-5. Overrides the system's auto 5-star if present.
 ====================================================== */
 export const addReview = async (req, res) => {
   try {
     const { review, rating } = req.body;
+    const numericRating = Number(rating);
+
+    if (
+      !Number.isInteger(numericRating) ||
+      numericRating < 1 ||
+      numericRating > 5
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating must be a whole number from 1 to 5",
+      });
+    }
 
     const ticket = await Ticket.findById(req.params.id);
 
@@ -1093,6 +1181,13 @@ export const addReview = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Ticket not found",
+      });
+    }
+
+    if (!ticket.userId || ticket.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
       });
     }
 
@@ -1104,8 +1199,17 @@ export const addReview = async (req, res) => {
       });
     }
 
-    ticket.review = review;
-    ticket.rating = rating;
+    // Allow overriding the auto 5-star, block double user ratings
+    if (ticket.rating > 0 && ticket.ratingSource === "user") {
+      return res.status(409).json({
+        success: false,
+        message: "This ticket has already been rated",
+      });
+    }
+
+    ticket.review = review || "";
+    ticket.rating = numericRating;
+    ticket.ratingSource = "user";
     ticket.reviewedAt = new Date();
 
     await ticket.save();
@@ -1230,7 +1334,7 @@ export const createManualTicket = async (req, res) => {
       relatedTo,
       assetId,
       employeeId,
-      externalName, // NEW: name of requester outside the company
+      externalName, // name of requester outside the company
       incidentDate,
       companyId: bodyCompanyId,
     } = req.body;
@@ -1423,16 +1527,6 @@ export const createManualTicket = async (req, res) => {
   }
 };
 
-/* ==================================================================
-   ALSO ADD THIS TO YOUR Ticket SCHEMA (next to employeeId):
-
-   externalName: {
-     type: String,
-     trim: true,
-     default: "",
-   },
-================================================================== */
-
 /* ======================================================
    ✅ ESCALATE TICKET (IT SUPPORT -> SUPER ADMIN)
 ====================================================== */
@@ -1458,9 +1552,7 @@ export const escalateTicket = async (req, res) => {
 
     ticket.assignedRole = "super_admin";
 
-    // Nested `escalation` object (matches ticketSchema). The old
-    // top-level fields (ticket.escalated, ticket.escalatedAt, etc.)
-    // are not in the schema, so Mongoose silently dropped them.
+    // Nested `escalation` object (matches ticketSchema).
     ticket.escalation.isEscalated = true;
     ticket.escalation.level = (ticket.escalation.level || 0) + 1;
     ticket.escalation.reason = reason || "";

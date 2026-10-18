@@ -13,7 +13,8 @@ const notificationSchema = new mongoose.Schema(
         "ticket",
         "ticket_created",
         "ticket_escalated",
-        "ticket_reminder", // NEW
+        "ticket_reminder",
+        "rating_request", 
         "status",
         "system",
         "comment",
