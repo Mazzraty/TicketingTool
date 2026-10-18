@@ -9,6 +9,10 @@ import {
   Eraser,
   X,
   UserCheck,
+  KeyRound,
+  Copy,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 
 /* ================= UI HELPERS (styling only, no logic) ================= */
@@ -23,6 +27,7 @@ const btnBase =
 const btnPrimary = `${btnBase} bg-[#0052CC] text-white hover:bg-[#0065FF] active:bg-[#0747A6]`;
 const btnDanger = `${btnBase} bg-[#DE350B] text-white hover:bg-[#FF5630] active:bg-[#BF2600]`;
 const btnSubtle = `${btnBase} bg-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
+const btnDefault = `${btnBase} bg-[rgba(9,30,66,0.04)] text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
 
 const AVATAR_COLORS = [
   "#0052CC", "#00875A", "#5243AA", "#DE350B",
@@ -189,8 +194,15 @@ export default function AdminCompanyAccess() {
 
   const [loading, setLoading] = useState(false);
 
-  // UI-only state (new): which access row is awaiting revoke confirmation
+  // UI-only state: which access row is awaiting revoke confirmation
   const [confirmRevoke, setConfirmRevoke] = useState(null);
+
+  // ===== RESET PASSWORD (super admin) =====
+  const [resetOpen, setResetOpen] = useState(false);
+  const [customPassword, setCustomPassword] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [tempPassword, setTempPassword] = useState(null); // shown once
+  const [copied, setCopied] = useState(false);
 
   /* =========================
      LOAD EMPLOYEES
@@ -307,6 +319,64 @@ export default function AdminCompanyAccess() {
     }
   };
 
+  /* =========================
+     RESET PASSWORD
+  ========================= */
+  const openReset = () => {
+    setCustomPassword("");
+    setResetOpen(true);
+  };
+
+  const closeReset = () => {
+    if (resetting) return;
+    setResetOpen(false);
+    setCustomPassword("");
+  };
+
+  const closeResult = () => {
+    setTempPassword(null);
+    setResetOpen(false);
+    setCopied(false);
+  };
+
+  const confirmReset = async () => {
+    if (!selectedEmployee?.value || resetting) return;
+
+    const pwd = customPassword.trim();
+    if (pwd && pwd.length < 8) {
+      return toast.error("Password must be at least 8 characters");
+    }
+
+    setResetting(true);
+    try {
+      const res = await api.put(
+        `/auth/users/${selectedEmployee.value}/reset-password`,
+        pwd ? { newPassword: pwd } : {}
+      );
+
+      setTempPassword(res.data.tempPassword);
+      setCopied(false);
+      toast.success("Password reset successfully");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to reset password");
+      setResetOpen(false);
+    } finally {
+      setResetting(false);
+      setCustomPassword("");
+    }
+  };
+
+  const copyPassword = async () => {
+    try {
+      await navigator.clipboard.writeText(tempPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Could not copy. Select the password and copy it manually.");
+    }
+  };
+
   const getRoleLabel = (role) => {
     const roleMap = {
       user: "User",
@@ -326,7 +396,7 @@ export default function AdminCompanyAccess() {
     return colorMap[role] || "bg-[#DFE1E6] text-[#42526E]";
   };
 
-  /* ================= NEW (UI-only additions) ================= */
+  /* ================= UI-only additions ================= */
 
   // Clear the assign form without submitting (uses the existing setters)
   const clearForm = () => {
@@ -347,15 +417,6 @@ export default function AdminCompanyAccess() {
   return (
     <div className="min-h-screen bg-[#F4F5F7] text-[#172B4D]">
       <div className="mx-auto max-w-6xl px-6 py-6 lg:px-10">
-        {/* BREADCRUMB */}
-        {/* <nav className="mb-2 flex items-center gap-1.5 text-sm text-[#5E6C84]">
-          <span>Admin</span>
-          <span>/</span>
-          <span>Users</span>
-          <span>/</span>
-          <span>Company Access</span>
-        </nav> */}
-
         {/* HEADER */}
         <div className="mb-5">
           <h1 className="text-2xl font-medium text-[#172B4D]">
@@ -374,7 +435,6 @@ export default function AdminCompanyAccess() {
               subtitle="Give an employee access to a company with a role"
               footer={
                 <>
-                  {/* NEW: clear form */}
                   <button
                     onClick={clearForm}
                     disabled={loading}
@@ -498,14 +558,28 @@ export default function AdminCompanyAccess() {
             title="Employee details"
             className="mt-4"
             actions={
-              <div className="flex items-center gap-2">
-                {/* NEW: counts */}
+              <div className="flex flex-wrap items-center gap-2">
                 <Lozenge className="bg-[#E3FCEF] text-[#006644]">
                   {activeAccessCount} active
                 </Lozenge>
                 <Lozenge className="bg-[#DFE1E6] text-[#42526E]">
                   {revokedAccessCount} revoked
                 </Lozenge>
+
+                {/* RESET PASSWORD (only when the employee has a user account) */}
+                <button
+                  onClick={openReset}
+                  disabled={!selectedEmployee.value}
+                  title={
+                    selectedEmployee.value
+                      ? "Reset this user's password"
+                      : "This employee has no user account"
+                  }
+                  className={btnDefault}
+                >
+                  <KeyRound size={14} />
+                  Reset password
+                </button>
               </div>
             }
           >
@@ -646,7 +720,7 @@ export default function AdminCompanyAccess() {
         )}
       </div>
 
-      {/* NEW: REVOKE CONFIRMATION (calls your existing revokeAccess) */}
+      {/* REVOKE CONFIRMATION (calls your existing revokeAccess) */}
       {confirmRevoke && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(9,30,66,0.54)] p-4 sm:pt-[15vh]">
           <div className="w-full max-w-md rounded-[3px] bg-white shadow-[0_8px_16px_-4px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
@@ -691,6 +765,128 @@ export default function AdminCompanyAccess() {
               >
                 <Trash2 size={14} />
                 Revoke access
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESET PASSWORD: CONFIRM */}
+      {resetOpen && !tempPassword && selectedEmployee && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(9,30,66,0.54)] p-4 sm:pt-[15vh]">
+          <div className="w-full max-w-md rounded-[3px] bg-white shadow-[0_8px_16px_-4px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
+            <div className="flex items-center justify-between px-6 pb-2 pt-5">
+              <h2 className="text-xl font-medium text-[#172B4D]">
+                Reset password?
+              </h2>
+              <button
+                onClick={closeReset}
+                className="rounded-[3px] p-1 text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-3">
+              <div className="flex items-center gap-2.5">
+                <Avatar name={selectedEmployee.employee.name} />
+                <div>
+                  <p className="text-sm font-medium text-[#172B4D]">
+                    {tidy(selectedEmployee.employee.name)}
+                  </p>
+                  <p className="text-xs text-[#5E6C84]">
+                    Code: {selectedEmployee.employee.staffCode}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm text-[#42526E]">
+                A temporary password will be created and emailed to the user.
+                They will be asked to choose a new password the next time they
+                log in.
+              </p>
+
+              <Field label="Custom password (optional)">
+                <input
+                  type="text"
+                  value={customPassword}
+                  onChange={(e) => setCustomPassword(e.target.value)}
+                  placeholder="Leave empty to generate one"
+                  className={inputCls}
+                />
+                <p className="mt-1 text-xs text-[#5E6C84]">
+                  At least 8 characters.
+                </p>
+              </Field>
+            </div>
+
+            <div className="flex justify-end gap-2 px-6 pb-5 pt-3">
+              <button
+                onClick={closeReset}
+                disabled={resetting}
+                className={btnSubtle}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReset}
+                disabled={resetting}
+                className={btnPrimary}
+              >
+                <KeyRound size={14} />
+                {resetting ? "Resetting..." : "Reset password"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESET PASSWORD: RESULT (shown once) */}
+      {tempPassword && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(9,30,66,0.54)] p-4 sm:pt-[15vh]">
+          <div className="w-full max-w-md rounded-[3px] bg-white shadow-[0_8px_16px_-4px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
+            <div className="flex items-center gap-2.5 px-6 pb-2 pt-5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E3FCEF] text-[#006644]">
+                <Check size={16} />
+              </span>
+              <h2 className="text-xl font-medium text-[#172B4D]">
+                Password reset
+              </h2>
+            </div>
+
+            <div className="space-y-4 px-6 py-3">
+              <p className="text-sm text-[#42526E]">
+                Temporary password for{" "}
+                <span className="font-medium text-[#172B4D]">
+                  {tidy(selectedEmployee?.employee?.name)}
+                </span>
+                :
+              </p>
+
+              <div className="flex items-center gap-2">
+                <code className="flex-1 select-all break-all rounded-[3px] border border-[#DFE1E6] bg-[#F4F5F7] px-3 py-2 font-mono text-sm text-[#172B4D]">
+                  {tempPassword}
+                </code>
+                <button onClick={copyPassword} className={btnDefault}>
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+
+              <div className="flex items-start gap-2.5 rounded-[3px] bg-[#FFFAE6] px-3.5 py-3">
+                <AlertTriangle size={16} className="mt-0.5 shrink-0 text-[#FF8B00]" />
+                <p className="text-sm text-[#42526E]">
+                  This is shown only once and cannot be viewed again after you
+                  close this window. The user has also been emailed and must
+                  change it on next login.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end px-6 pb-5 pt-3">
+              <button onClick={closeResult} className={btnPrimary}>
+                Done
               </button>
             </div>
           </div>
