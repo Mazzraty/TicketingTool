@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 import User from "../models/userShema.js";
 import Company from "../models/comapnySchema.js";
 import bcrypt from "bcryptjs";
@@ -6,6 +7,7 @@ import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js";
 import { otpEmail } from "../utils/otpEmail.js";
 import EmployeeMaster from "../models/employeeMasterSchema.js";
+import Notification from "../models/notifcationSchema.js";
 
 const cookieOptions = {
   httpOnly: true,
@@ -13,12 +15,30 @@ const cookieOptions = {
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   path: "/",
 };
+
+// Random temporary password (e.g. "kT7mQx2RpA@42")
+const generateTempPassword = () => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  let pwd = "";
+  for (let i = 0; i < 10; i++) pwd += chars[crypto.randomInt(chars.length)];
+  return `${pwd}@${crypto.randomInt(10, 100)}`;
+};
+
+// Escape user-controlled text before putting it inside email HTML
+const escapeHtml = (value = "") =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
 /* =========================
    REGISTER (MULTI-TENANT)
 ========================= */
 export const register = async (req, res) => {
   try {
-    console.log("REGISTER REQUEST BODY:", req.body);
+    console.log("REGISTER REQUEST BODY:", { ...req.body, password: "[hidden]" });
 
     const {
       name,
@@ -39,27 +59,27 @@ export const register = async (req, res) => {
       return res.status(400).json({ msg: "Email already exists" });
     }
 
-    // 2️⃣ FIND EMPLOYEE (🔥 THIS WAS MISSING)
+    // 2️⃣ FIND EMPLOYEE
     const employee = await EmployeeMaster.findOne({
-      staffCode: new RegExp(`^${String(staffCode).trim()}$`)
+      staffCode: new RegExp(`^${String(staffCode).trim()}$`),
     });
 
     if (!employee) {
       return res.status(404).json({
         success: false,
-        message: "Employee not found with this staffCode"
+        message: "Employee not found with this staffCode",
       });
     }
 
     // 3️⃣ CHECK IF EMPLOYEE ALREADY LINKED
     const alreadyLinked = await User.findOne({
-      staffCode: employee.staffCode
+      staffCode: employee.staffCode,
     });
 
     if (alreadyLinked) {
       return res.status(400).json({
         success: false,
-        message: "This employee is already linked to a user"
+        message: "This employee is already linked to a user",
       });
     }
 
@@ -93,19 +113,18 @@ export const register = async (req, res) => {
       role: requestedRole || "user",
       companyId: companyIdentifier,
 
-      // ✅ ADD THIS
       companyAccess: companyIdentifier
         ? [
-          {
-            companyId: companyIdentifier,
-            companyName: company?.name || "",
-            role: requestedRole || "user",
-            department,
-            position,
-            permissions: [],
-            isActive: true,
-          },
-        ]
+            {
+              companyId: companyIdentifier,
+              companyName: company?.name || "",
+              role: requestedRole || "user",
+              department,
+              position,
+              permissions: [],
+              isActive: true,
+            },
+          ]
         : [],
     });
 
@@ -122,7 +141,6 @@ export const register = async (req, res) => {
         companyAccess: user.companyAccess,
       },
     });
-
   } catch (err) {
     console.error("REGISTER ERROR:", err);
 
@@ -135,6 +153,8 @@ export const register = async (req, res) => {
 
 /* =========================
    LOGIN (MULTI-TENANT)
+   The returned user object includes `mustChangePassword`;
+   the frontend should redirect to Change Password when it is true.
 ========================= */
 export const login = async (req, res) => {
   try {
@@ -158,7 +178,7 @@ export const login = async (req, res) => {
     const activeCompany =
       user.companyAccess?.find((c) => c.isActive && c.companyId)?.companyId ||
       user.companyAccess?.[0]?.companyId ||
-      user.companyId ||  // Fallback for old single-company format
+      user.companyId || // Fallback for old single-company format
       null;
 
     // ✅ Get all company access for multi-company support
@@ -174,7 +194,7 @@ export const login = async (req, res) => {
         id: user._id,
         role: user.role,
         email: user.email,
-        staffCode: user.staffCode,   // 👈 CHANGE THIS
+        staffCode: user.staffCode,
         companyId: activeCompany ? activeCompany.toString() : null,
         companyAccess: companyAccess,
       },
@@ -195,7 +215,6 @@ export const login = async (req, res) => {
       success: true,
       user: userData,
     });
-
   } catch (err) {
     console.error("LOGIN ERROR:", err);
     res.status(500).json({
@@ -243,7 +262,7 @@ export const switchCompany = async (req, res) => {
       c.isActive = c.companyId.toString() === companyId;
     });
 
-    user.companyId = companyId;  // Update default companyId
+    user.companyId = companyId; // Update default companyId
     await user.save();
 
     // ✅ Generate new token with new active company
@@ -391,7 +410,7 @@ export const forgotPassword = async (req, res) => {
 };
 
 /* =========================
-   RESET PASSWORD
+   RESET PASSWORD (OTP)
 ========================= */
 export const resetPassword = async (req, res) => {
   try {
@@ -416,6 +435,8 @@ export const resetPassword = async (req, res) => {
     user.password = hashedPassword;
     user.resetOtp = undefined;
     user.resetOtpExpire = undefined;
+    user.mustChangePassword = false;
+    user.passwordChangedAt = new Date();
 
     await user.save();
 
@@ -432,6 +453,131 @@ export const resetPassword = async (req, res) => {
 };
 
 /* =========================
+   ADMIN RESET USER PASSWORD
+   (super_admin / it_support)
+   Route: PUT /users/:id/reset-password
+========================= */
+export const adminResetPassword = async (req, res) => {
+  try {
+    const { role: actorRole, id: actorId } = req.user;
+
+    if (!["super_admin", "it_support"].includes(actorRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to reset passwords",
+      });
+    }
+
+    const target = await User.findById(req.params.id);
+
+    if (!target) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (String(target._id) === String(actorId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Use Change Password for your own account",
+      });
+    }
+
+    // IT support: only regular users, only in their own company.
+    // This stops IT support from taking over admin / super admin accounts.
+    if (actorRole === "it_support") {
+      if (target.role !== "user") {
+        return res.status(403).json({
+          success: false,
+          message: "IT Support can only reset passwords for regular users",
+        });
+      }
+
+      const sameCompany =
+        String(target.companyId) === String(req.user.companyId) ||
+        target.companyAccess?.some(
+          (c) => String(c.companyId) === String(req.user.companyId)
+        );
+
+      if (!sameCompany) {
+        return res.status(403).json({
+          success: false,
+          message: "This user does not belong to your company",
+        });
+      }
+    }
+
+    // Optional custom password, otherwise generate a random one
+    const { newPassword } = req.body || {};
+
+    if (newPassword && newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters",
+      });
+    }
+
+    const tempPassword = newPassword || generateTempPassword();
+
+    target.password = await bcrypt.hash(tempPassword, 10);
+    target.mustChangePassword = true; // force change on next login
+    target.passwordChangedAt = new Date();
+    target.resetOtp = undefined;
+    target.resetOtpExpire = undefined;
+    await target.save();
+
+    // Audit trail
+    console.log(
+      `PASSWORD RESET: ${actorRole} ${actorId} reset password for user ${target._id}`
+    );
+
+    // In-app notification
+    try {
+      await Notification.create({
+        userId: target._id,
+        companyId: target.companyId,
+        title: "Password Reset",
+        message:
+          "Your password was reset by IT. Please log in and change it right away.",
+        type: "system",
+      });
+    } catch (notifError) {
+      console.error("Reset notification failed:", notifError.message);
+    }
+
+    // Email the user (failure must not break the request)
+    try {
+      await sendEmail({
+        to: target.email,
+        subject: "Your password has been reset",
+        html: `
+          <p>Hello ${escapeHtml(target.name || "")},</p>
+          <p>Your password was reset by the IT team.</p>
+          <p><b>Temporary password:</b> ${escapeHtml(tempPassword)}</p>
+          <p>You will be asked to choose a new password when you log in.</p>
+        `,
+      });
+    } catch (emailError) {
+      console.error("Reset email failed:", emailError.message);
+    }
+
+    // The admin sees the temporary password once, to hand it over directly
+    res.json({
+      success: true,
+      message: "Password reset successfully",
+      tempPassword,
+    });
+  } catch (err) {
+    console.error("ADMIN RESET PASSWORD ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* =========================
    GET MY PROFILE (TENANT SAFE)
 ========================= */
 export const getMyProfile = async (req, res) => {
@@ -440,7 +586,7 @@ export const getMyProfile = async (req, res) => {
       .select("-password")
       .populate("companyId")
       .populate("companyAccess.companyId")
-      .populate("employeeRef"); // 🔥 ADD THIS
+      .populate("employeeRef");
 
     if (!user) {
       return res.status(404).json({
@@ -484,12 +630,25 @@ export const updateProfile = async (req, res) => {
 
 /* =========================
    CHANGE PASSWORD
+   Also clears the "must change password" flag set by an admin reset.
 ========================= */
 export const changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
 
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({
+        message: "New password must be at least 8 characters",
+      });
+    }
+
     const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
 
@@ -500,6 +659,8 @@ export const changePassword = async (req, res) => {
     }
 
     user.password = await bcrypt.hash(newPassword, 10);
+    user.mustChangePassword = false;
+    user.passwordChangedAt = new Date();
     await user.save();
 
     res.json({
@@ -514,6 +675,9 @@ export const changePassword = async (req, res) => {
   }
 };
 
+/* =========================
+   GET ALL USERS
+========================= */
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({})

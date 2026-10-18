@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     staffCode: {
-      type: String
+      type: String,
     },
     position: {
       type: String,
@@ -33,13 +33,13 @@ const userSchema = new mongoose.Schema(
     employeeRef: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "EmployeeMaster",
-      required: false
+      required: false,
     },
     // ✅ MULTI-TENANT SUPPORT
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
-      default: null,  // For super_admin users
+      default: null, // For super_admin users
     },
     isOnline: {
       type: Boolean,
@@ -76,13 +76,24 @@ const userSchema = new mongoose.Schema(
           type: Date,
           default: Date.now,
         },
-        permissions: [String],  // Optional: fine-grained permissions
+        permissions: [String], // Optional: fine-grained permissions
       },
     ],
 
-    // Password reset
+    // Password reset (OTP flow)
     resetOtp: String,
     resetOtpExpire: Date,
+
+    // 👇 NEW: admin password reset support
+    // true after an admin resets the password; user must change it on next login
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+    },
+    passwordChangedAt: {
+      type: Date,
+      default: null,
+    },
 
     // Profile
     profileImage: String,
@@ -94,7 +105,6 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    lastLogin: Date,
   },
   { timestamps: true }
 );
@@ -113,6 +123,6 @@ userSchema.pre("save", function () {
       this.companyAccess[0].isActive = true;
     }
   }
-});;
+});
 
 export default mongoose.model("User", userSchema);

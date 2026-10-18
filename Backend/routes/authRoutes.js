@@ -9,6 +9,7 @@ import {
   getMyProfile,
   updateProfile,
   changePassword,
+  adminResetPassword, // 👈 NEW
 } from "../controllers/authController.js";
 
 import {
@@ -27,7 +28,7 @@ const asyncHandler = (fn) => (req, res, next) =>
 ========================= */
 router.post("/login", login);
 router.post("/logout", logout);
-router.post("/forgot-password",forgotPassword);
+router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
 /* =========================
@@ -38,28 +39,27 @@ router.post("/register", register);
 /* =========================
    PROFILE (GLOBAL USER DATA)
 ========================= */
-router.get(
-  "/me",
-  protect,
-  getMyProfile
-);
+router.get("/me", protect, getMyProfile);
 
-router.put(
-  "/update-profile",
-  protect,
-  updateProfile
-);
+router.put("/update-profile", protect, updateProfile);
 
-router.put(
-  "/change-password",
-  protect,
-  changePassword
-);
+router.put("/change-password", protect, changePassword);
 
+/* =========================
+   USERS (ADMIN)
+========================= */
 router.get(
   "/users/company/:companyId",
   protect,
   roleCheck("it_support", "super_admin"),
   getUsersByCompany
 );
+
+router.put(
+  "/users/:id/reset-password",
+  protect,
+  roleCheck("it_support", "super_admin"),
+  adminResetPassword
+);
+
 export default router;
