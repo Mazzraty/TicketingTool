@@ -21,7 +21,6 @@ export const getSlaPolicy = async (req, res) => {
   res.json(slaPolicy);
 };
 
-
 export const getTicketKpis = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user, req.query);
@@ -163,6 +162,12 @@ export const getTicketPriorityChart = async (req, res) => {
   }
 };
 
+/* =========================
+   DEPARTMENT CHART
+   Groups case-insensitively so "Finance" and "FINANCE" (common in
+   imported employee data) count as one department. Blank/missing
+   departments fall back to "GENERAL".
+========================= */
 export const getDepartmentChart = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user, req.query);
@@ -176,8 +181,21 @@ export const getDepartmentChart = async (req, res) => {
     const data = await Ticket.aggregate([
       { $match: filter },
       {
+        $addFields: {
+          deptKey: {
+            $toUpper: {
+              $trim: {
+                input: { $ifNull: ["$department", "General"] },
+              },
+            },
+          },
+        },
+      },
+      {
         $group: {
-          _id: "$department",
+          _id: {
+            $cond: [{ $eq: ["$deptKey", ""] }, "GENERAL", "$deptKey"],
+          },
           value: {
             $sum: 1,
           },
@@ -208,7 +226,7 @@ export const getTicketCategoryChart = async (req, res) => {
       filter.createdAt = buildDateRangeFilter(from, to);
     }
 
-    // Ticket schema has no `category` field — this chart now groups by
+    // Ticket schema has no `category` field — this chart groups by
     // `relatedTo` instead (Laptop/Desktop, ERP, Email, Printer, etc.),
     // which is what "By Category" is meant to represent on the dashboard.
     // Tickets with no relatedTo set fall back to "Others" so the chart

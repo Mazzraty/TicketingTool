@@ -35,7 +35,9 @@ const escapeHtml = (value = "") =>
 ====================================================== */
 export const createTicket = async (req, res) => {
   try {
-    const { title, description, department, relatedTo, priority } = req.body;
+    // NOTE: `department` is intentionally NOT read from the request body.
+    // It is taken from the requester's employee master record below.
+    const { title, description, relatedTo, priority } = req.body;
 
     // ==================================================
     // COMPANY ID
@@ -89,6 +91,31 @@ export const createTicket = async (req, res) => {
     const ticketNumber = await generateTicketNumber(companyId, companyCode);
 
     // ==================================================
+    // REQUESTER'S REAL DEPARTMENT (from the employee master)
+    // ==================================================
+    const requester = await User.findById(req.user.id).populate(
+      "employeeRef",
+      "department"
+    );
+
+    let employeeRecord = requester?.employeeRef || null;
+
+    // Fallback for users that were never linked through employeeRef.
+    // Scoped to the ticket's company because staff codes are only
+    // unique inside a company.
+    if (!employeeRecord && requester?.staffCode) {
+      employeeRecord = await Employee.findOne({
+        staffCode: requester.staffCode,
+        companyId,
+      }).select("department");
+    }
+
+    const department =
+      employeeRecord?.department?.trim() ||
+      requester?.department?.trim() ||
+      "General";
+
+    // ==================================================
     // SLA POLICY
     // ==================================================
     const slaPolicy = {
@@ -122,6 +149,7 @@ export const createTicket = async (req, res) => {
 
       // USER
       userId: req.user.id,
+      employeeId: employeeRecord?._id || null,
 
       // STATUS
       status: "Open",
@@ -1419,6 +1447,8 @@ export const createManualTicket = async (req, res) => {
 
     // Guard against a super admin picking an employee/asset that doesn't
     // actually belong to the selected company (e.g. stale client state).
+    let employeeDepartment = "";
+
     if (employeeId) {
       const employee = await Employee.findById(employeeId);
       if (!employee) {
@@ -1433,6 +1463,7 @@ export const createManualTicket = async (req, res) => {
           message: "Selected employee does not belong to the selected company",
         });
       }
+      employeeDepartment = employee.department?.trim() || "";
     }
 
     if (assetId) {
@@ -1458,7 +1489,9 @@ export const createManualTicket = async (req, res) => {
       // BASIC INFO
       title,
       description,
-      department: department || "General",
+      // Employee's real department wins; the form value is only a fallback
+      // (e.g. outside-company requesters have no employee record)
+      department: employeeDepartment || department?.trim() || "General",
       relatedTo: relatedTo || "Others",
 
       // PRIORITY

@@ -366,15 +366,17 @@ const LevelOption = ({ option, selected, onClick }) => (
     type="button"
     onClick={onClick}
     aria-pressed={selected}
-    className={`text-left p-3 rounded-[4px] border transition cursor-pointer ${selected
+    className={`text-left p-3 rounded-[4px] border transition cursor-pointer ${
+      selected
         ? "border-[#0B6E76] bg-[#E6F3F4] ring-1 ring-[#0B6E76]"
         : "border-[#C7CDD6] bg-white hover:bg-[#F7F8F9]"
-      }`}
+    }`}
   >
     <div className="flex items-start gap-2.5">
       <span
-        className={`mt-0.5 shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${selected ? "border-[#0B6E76]" : "border-[#8590A2]"
-          }`}
+        className={`mt-0.5 shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${
+          selected ? "border-[#0B6E76]" : "border-[#8590A2]"
+        }`}
       >
         {selected && <span className="w-2 h-2 rounded-full bg-[#0B6E76]" />}
       </span>
@@ -406,6 +408,7 @@ const SummaryRow = ({ label, children }) => (
 export default function CreateTicket() {
   const { user } = useAuth();
   const userDepartment = getUserDepartment(user?.department);
+
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -415,6 +418,10 @@ export default function CreateTicket() {
     urgency: "",
     priority: "",
   });
+
+  // The employee's real department, loaded from the employee master.
+  // (The user record can still hold "General" from sign-up.)
+  const [employeeDepartment, setEmployeeDepartment] = useState("");
 
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -448,6 +455,33 @@ export default function CreateTicket() {
       });
     }
   };
+
+  // Load the employee's real department from their employee master record.
+  // The backend also resolves it on submit, so this is for display only.
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await api.get("/auth/me");
+        const dept =
+          res.data?.employeeRef?.department?.trim() ||
+          res.data?.department?.trim();
+
+        if (!cancelled && dept) {
+          const resolved = getUserDepartment(dept);
+          setEmployeeDepartment(resolved);
+          setForm((prev) => ({ ...prev, department: resolved }));
+        }
+      } catch (err) {
+        console.error("Failed to load employee department", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Re-scan title + description on every keystroke, pre-fill Impact/Urgency
   // unless the requester has already chosen them manually.
@@ -631,9 +665,8 @@ export default function CreateTicket() {
       newErrors.description = "Description is required";
     }
 
-    if (!form.department.trim()) {
-      newErrors.department = "Department is required";
-    }
+    // Department is display-only (the server resolves the real one from the
+    // employee master), so it is not a blocking requirement here.
 
     if (!form.relatedTo.trim()) {
       newErrors.relatedTo = "Please select what this ticket relates to";
@@ -664,6 +697,8 @@ export default function CreateTicket() {
       const data = new FormData();
       data.append("title", form.title);
       data.append("description", form.description);
+      // Sent only as a fallback hint. The server takes the department from
+      // the employee master record and ignores this for portal tickets.
       data.append("department", form.department);
       data.append("relatedTo", form.relatedTo);
       data.append("priority", form.priority);
@@ -690,7 +725,7 @@ export default function CreateTicket() {
         setForm({
           title: "",
           description: "",
-          department: userDepartment,
+          department: employeeDepartment || userDepartment,
           relatedTo: "",
           impact: "",
           urgency: "",
@@ -723,7 +758,6 @@ export default function CreateTicket() {
     { label: "Title (at least 5 characters)", ok: form.title.trim().length >= 5 },
     { label: "Description", ok: !!form.description.trim() },
     { label: "Impact and urgency", ok: !!form.priority },
-    { label: "Department", ok: !!form.department },
     { label: "Related to", ok: !!form.relatedTo },
   ];
   const doneCount = checklist.filter((c) => c.ok).length;
@@ -831,10 +865,11 @@ export default function CreateTicket() {
                     type="button"
                     onClick={handleAskAI}
                     disabled={!aiCanRun}
-                    className={`inline-flex items-center gap-1.5 rounded-[4px] px-3 py-1.5 text-xs font-medium transition-colors ${aiCanRun
+                    className={`inline-flex items-center gap-1.5 rounded-[4px] px-3 py-1.5 text-xs font-medium transition-colors ${
+                      aiCanRun
                         ? "bg-[#5B37AF] text-white hover:bg-[#4A2C93] cursor-pointer"
                         : "bg-[#EEF0F3] text-[#8590A2] cursor-not-allowed"
-                      }`}
+                    }`}
                   >
                     {aiLoading ? (
                       <>
@@ -920,10 +955,11 @@ export default function CreateTicket() {
                         type="button"
                         onClick={applyAiSuggestion}
                         disabled={aiApplied}
-                        className={`inline-flex items-center gap-1.5 rounded-[4px] px-3 py-1.5 text-xs font-medium transition-colors ${aiApplied
+                        className={`inline-flex items-center gap-1.5 rounded-[4px] px-3 py-1.5 text-xs font-medium transition-colors ${
+                          aiApplied
                             ? "bg-[#DFF7E8] text-[#146C3E] cursor-default"
                             : "bg-[#5B37AF] text-white hover:bg-[#4A2C93] cursor-pointer"
-                          }`}
+                        }`}
                       >
                         {aiApplied ? (
                           <>
@@ -1033,8 +1069,9 @@ export default function CreateTicket() {
                               return (
                                 <span
                                   key={urg}
-                                  className={`text-center rounded-[3px] py-1 font-medium ${active ? "ring-2 ring-offset-1" : "opacity-60"
-                                    }`}
+                                  className={`text-center rounded-[3px] py-1 font-medium ${
+                                    active ? "ring-2 ring-offset-1" : "opacity-60"
+                                  }`}
                                   style={{
                                     background: meta.bg,
                                     color: meta.text,
@@ -1067,16 +1104,17 @@ export default function CreateTicket() {
                           type="button"
                           onClick={() => setPriorityManually(level)}
                           aria-pressed={selected}
-                          className={`inline-flex items-center justify-center gap-1.5 rounded-[4px] border px-3 py-2.5 text-sm font-semibold transition cursor-pointer ${selected ? "ring-1" : "bg-white hover:bg-[#F7F8F9]"
-                            }`}
+                          className={`inline-flex items-center justify-center gap-1.5 rounded-[4px] border px-3 py-2.5 text-sm font-semibold transition cursor-pointer ${
+                            selected ? "ring-1" : "bg-white hover:bg-[#F7F8F9]"
+                          }`}
                           style={
                             selected
                               ? {
-                                background: meta.bg,
-                                color: meta.text,
-                                borderColor: meta.color,
-                                "--tw-ring-color": meta.color,
-                              }
+                                  background: meta.bg,
+                                  color: meta.text,
+                                  borderColor: meta.color,
+                                  "--tw-ring-color": meta.color,
+                                }
                               : { borderColor: "#C7CDD6", color: "#172B4D" }
                           }
                         >
@@ -1101,11 +1139,11 @@ export default function CreateTicket() {
                   label="Department"
                   name="department"
                   error={errors.department}
-                  required
+                  hint="Taken from your employee record"
                 >
                   <div
                     id="department"
-                    className={`${inputBase} flex items-center ${errors.department ? inputErr : inputOk}`}
+                    className={`${inputBase} flex items-center bg-[#F7F8F9] ${errors.department ? inputErr : "border-[#C7CDD6]"}`}
                   >
                     {form.department || "Department not set"}
                   </div>
@@ -1153,10 +1191,11 @@ export default function CreateTicket() {
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
-                className={`rounded-[4px] border border-dashed p-6 text-center transition ${dragActive
+                className={`rounded-[4px] border border-dashed p-6 text-center transition ${
+                  dragActive
                     ? "border-[#0B6E76] bg-[#E6F3F4]"
                     : "border-[#C7CDD6] bg-[#F7F8F9] hover:bg-[#F1F3F5]"
-                  }`}
+                }`}
               >
                 <input
                   type="file"
@@ -1211,8 +1250,9 @@ export default function CreateTicket() {
               <p className="text-xs text-[#626F86]">
                 {isReady
                   ? "All required fields are filled in"
-                  : `${checklist.length - doneCount} required item${checklist.length - doneCount !== 1 ? "s" : ""
-                  } left`}
+                  : `${checklist.length - doneCount} required item${
+                      checklist.length - doneCount !== 1 ? "s" : ""
+                    } left`}
               </p>
               <button
                 type="submit"
@@ -1244,14 +1284,16 @@ export default function CreateTicket() {
 
               <div className="px-5 py-4">
                 <p
-                  className={`text-base font-semibold leading-snug line-clamp-2 ${form.title ? "text-[#172B4D]" : "text-[#8590A2]"
-                    }`}
+                  className={`text-base font-semibold leading-snug line-clamp-2 ${
+                    form.title ? "text-[#172B4D]" : "text-[#8590A2]"
+                  }`}
                 >
                   {form.title || "No title yet"}
                 </p>
                 <p
-                  className={`mt-1.5 text-sm leading-relaxed line-clamp-3 ${form.description ? "text-[#44546F]" : "text-[#8590A2]"
-                    }`}
+                  className={`mt-1.5 text-sm leading-relaxed line-clamp-3 ${
+                    form.description ? "text-[#44546F]" : "text-[#8590A2]"
+                  }`}
                 >
                   {form.description || "No description yet"}
                 </p>
@@ -1286,7 +1328,7 @@ export default function CreateTicket() {
                   )}
 
                   <SummaryRow label="Department">
-                    {form.department || <span className="text-[#8590A2]">Not selected</span>}
+                    {form.department || <span className="text-[#8590A2]">Not set</span>}
                   </SummaryRow>
                   <SummaryRow label="Related to">
                     {form.relatedTo || <span className="text-[#8590A2]">Not selected</span>}
@@ -1313,8 +1355,9 @@ export default function CreateTicket() {
 
               <div className="mt-2.5 h-1.5 rounded-full bg-[#EEF0F3] overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-300 ${isReady ? "bg-[#22A06B]" : "bg-[#0B6E76]"
-                    }`}
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    isReady ? "bg-[#22A06B]" : "bg-[#0B6E76]"
+                  }`}
                   style={{ width: `${(doneCount / checklist.length) * 100}%` }}
                 />
               </div>

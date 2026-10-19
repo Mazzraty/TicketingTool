@@ -24,6 +24,10 @@ const generateTempPassword = () => {
   return `${pwd}@${crypto.randomInt(10, 100)}`;
 };
 
+// Escape text used inside a RegExp (staff codes can contain special chars)
+const escapeRegex = (value = "") =>
+  String(value).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // Escape user-controlled text before putting it inside email HTML
 const escapeHtml = (value = "") =>
   String(value)
@@ -60,8 +64,11 @@ export const register = async (req, res) => {
     }
 
     // 2️⃣ FIND EMPLOYEE
+    // Staff codes are unique per company, so scope the lookup to the
+    // selected company when one was provided.
     const employee = await EmployeeMaster.findOne({
-      staffCode: new RegExp(`^${String(staffCode).trim()}$`),
+      staffCode: new RegExp(`^${escapeRegex(staffCode)}$`),
+      ...(companyIdentifier ? { companyId: companyIdentifier } : {}),
     });
 
     if (!employee) {
@@ -73,7 +80,7 @@ export const register = async (req, res) => {
 
     // 3️⃣ CHECK IF EMPLOYEE ALREADY LINKED
     const alreadyLinked = await User.findOne({
-      staffCode: employee.staffCode,
+      employeeRef: employee._id,
     });
 
     if (alreadyLinked) {
@@ -108,8 +115,9 @@ export const register = async (req, res) => {
       staffCode: employee.staffCode,
       employeeRef: employee._id,
 
-      position,
-      department,
+      // Real values from the employee master (fall back to the form)
+      position: employee.designation || position,
+      department: employee.department || department,
       role: requestedRole || "user",
       companyId: companyIdentifier,
 
@@ -119,8 +127,8 @@ export const register = async (req, res) => {
               companyId: companyIdentifier,
               companyName: company?.name || "",
               role: requestedRole || "user",
-              department,
-              position,
+              department: employee.department || department,
+              position: employee.designation || position,
               permissions: [],
               isActive: true,
             },
