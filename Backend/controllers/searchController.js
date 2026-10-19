@@ -13,6 +13,13 @@ export const searchAll = async (req, res) => {
     }
 
     const regex = new RegExp(q, "i");
+    const companyFilter = req.user.role === "super_admin"
+      ? req.user.companyId || req.query.companyId
+        ? { companyId: req.user.companyId || req.query.companyId }
+        : {}
+      : req.user.role === "it_support"
+        ? { companyId: req.user.companyId || null }
+        : {};
 
     // ← user: only their tickets, no assets/employees
     if (isUser) {
@@ -28,11 +35,12 @@ export const searchAll = async (req, res) => {
 
     // ← admin: search everything
     const [tickets, assets, employees] = await Promise.all([
-      Ticket.find({ title: regex })
+      Ticket.find({ title: regex, ...companyFilter })
         .limit(5)
         .select("title status ticketId"),
 
       Asset.find({
+        ...companyFilter,
         $or: [
           { assetCode: regex },
           { type: regex },
@@ -43,6 +51,7 @@ export const searchAll = async (req, res) => {
         .select("assetCode type model"),
 
       EmployeeMaster.find({
+        ...companyFilter,
         $or: [
           { name: regex },
           { staffCode: regex },

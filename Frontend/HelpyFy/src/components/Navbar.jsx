@@ -63,7 +63,7 @@ export default function Navbar() {
   const searchInputRef = useRef(null);
 
   const [mobileMenu, setMobileMenu] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, companyId, selectCompany } = useAuth();
   const role = (user?.role || "guest").toLowerCase();
   const isAdminRole = ["company_admin", "super_admin", "it_support"].includes(
     role
@@ -71,6 +71,67 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [loadedCompanyOptions, setLoadedCompanyOptions] = useState([]);
+  const [companyOptionsError, setCompanyOptionsError] = useState("");
+
+  useEffect(() => {
+    if (role !== "super_admin") return undefined;
+
+    let cancelled = false;
+
+    api
+      .get("/companies")
+      .then((res) => {
+        if (!cancelled) {
+          setLoadedCompanyOptions(
+            (res.data.companies || []).map((company) => ({
+              companyId: String(company._id),
+              companyName: company.name,
+            }))
+          );
+          setCompanyOptionsError("");
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load company selector options", error);
+        if (!cancelled) {
+          setLoadedCompanyOptions([]);
+          setCompanyOptionsError("Company list could not be loaded");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [role]);
+
+  const supportCompanyOptions = useMemo(() => {
+    const options = (user?.companyAccess || [])
+      .filter((entry) => !entry.revokedAt)
+      .map((entry) => {
+        const company = entry.companyId;
+        return {
+          companyId: String(company?._id || company),
+          companyName: entry.companyName || company?.name || "Company",
+        };
+      });
+
+    if (options.length === 0 && user?.companyId) {
+      const company = user.companyId;
+      options.push({
+        companyId: String(company?._id || company),
+        companyName: user.companyName || company?.name || "Company",
+      });
+    }
+
+    return options;
+  }, [user]);
+  const companyOptions =
+    role === "super_admin"
+      ? loadedCompanyOptions
+      : role === "it_support"
+        ? supportCompanyOptions
+        : [];
 
   /* ===================================
      SEARCH
@@ -268,6 +329,55 @@ export default function Navbar() {
 
         {/* RIGHT SECTION */}
         <div className="flex items-center gap-1.5 relative ml-auto lg:ml-0 justify-self-end" ref={dropdownRef}>
+
+          {(role === "super_admin" || role === "it_support") && (
+            <label className="flex items-center gap-1.5">
+              <span className="hidden xl:inline text-xs text-white/65">
+                Company
+              </span>
+              <select
+                aria-label="Select company"
+                title={
+                  role === "super_admin" && companyOptionsError
+                    ? companyOptionsError
+                    : "Filter by company"
+                }
+                value={companyId || ""}
+                onChange={(event) => {
+                  const selected = companyOptions.find(
+                    (company) => company.companyId === event.target.value
+                  );
+                  const nextCompany = selected || null;
+                  const nextCompanyId = nextCompany?.companyId || null;
+
+                  if (nextCompanyId === companyId) return;
+                  selectCompany(nextCompany);
+                  window.location.reload();
+                }}
+                className="max-w-[130px] sm:max-w-[180px] h-9 rounded-md px-2 bg-white/10 text-white text-xs border border-white/20 outline-none focus:ring-2 focus:ring-[#d4a94c]"
+              >
+                {role === "super_admin" && (
+                  <option value="" className="text-gray-900">
+                    All companies
+                  </option>
+                )}
+                {role === "it_support" && companyOptions.length === 0 && (
+                  <option value="" className="text-gray-900">
+                    No company access
+                  </option>
+                )}
+                {companyOptions.map((company) => (
+                  <option
+                    key={company.companyId}
+                    value={company.companyId}
+                    className="text-gray-900"
+                  >
+                    {company.companyName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           {/* CREATE BUTTON */}
           {showCreate && (

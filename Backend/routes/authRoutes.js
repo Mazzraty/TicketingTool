@@ -15,6 +15,7 @@ import {
 import {
   protect,
   roleCheck,
+  verifyCompanyAccess,
 } from "../middleware/authMiddleware.js";
 import { getUsersByCompany } from "../controllers/userController.js";
 
@@ -52,6 +53,7 @@ router.get(
   "/users/company/:companyId",
   protect,
   roleCheck("it_support", "super_admin"),
+  verifyCompanyAccess,
   getUsersByCompany
 );
 

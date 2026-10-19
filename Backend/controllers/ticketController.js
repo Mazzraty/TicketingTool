@@ -384,7 +384,8 @@ export const getAllTickets = async (req, res) => {
     } else if (req.user.role === "super_admin") {
       // super_admin can optionally scope the list to a single company
       // via ?companyId=..., otherwise sees every company's tickets
-      filter = req.query.companyId ? { companyId: req.query.companyId } : {};
+      const selectedCompanyId = req.user.companyId || req.query.companyId;
+      filter = selectedCompanyId ? { companyId: selectedCompanyId } : {};
     }
 
     const tickets = await Ticket.find(filter)
@@ -441,14 +442,12 @@ export const getTicketById = async (req, res) => {
       });
     }
 
-    if (req.user.role !== "super_admin") {
+    if (req.user.role !== "super_admin" || req.user.companyId) {
       const ticketCompanyId =
         ticket.companyId && ticket.companyId._id
           ? ticket.companyId._id.toString()
           : ticket.companyId?.toString();
-      const userCompanyId = req.user.companyId
-        ? req.user.companyId.toString()
-        : null;
+      const userCompanyId = req.user.companyId?.toString() || null;
 
       if (ticketCompanyId && ticketCompanyId !== userCompanyId) {
         return res.status(403).json({
@@ -1264,8 +1263,8 @@ export const getTicketStats = async (req, res) => {
     // via ?companyId=..., matching the same behaviour as getAllTickets
     const filter =
       req.user.role === "super_admin"
-        ? req.query.companyId
-          ? { companyId: req.query.companyId }
+        ? req.user.companyId || req.query.companyId
+          ? { companyId: req.user.companyId || req.query.companyId }
           : {}
         : { companyId: req.user.companyId };
 
@@ -1376,13 +1375,13 @@ export const createManualTicket = async (req, res) => {
     let companyId;
 
     if (req.user.role === "super_admin") {
-      if (!bodyCompanyId) {
+      if (!req.user.companyId && !bodyCompanyId) {
         return res.status(400).json({
           success: false,
           message: "Please select a company",
         });
       }
-      companyId = bodyCompanyId;
+      companyId = req.user.companyId || bodyCompanyId;
     } else {
       companyId =
         req.user.companyId ||

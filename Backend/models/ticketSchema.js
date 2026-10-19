@@ -283,7 +283,19 @@ const ticketSchema = new mongoose.Schema(
       max: 5,
       default: 0,
     },
+    // When the ticket will be auto-closed (set on Resolved, cleared on reopen/close)
+    autoCloseAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
 
+    // Who gave the rating: the employee or the system default
+    ratingSource: {
+      type: String,
+      enum: ["user", "auto", null],
+      default: null,
+    },
     reviewedAt: {
       type: Date,
       default: null,

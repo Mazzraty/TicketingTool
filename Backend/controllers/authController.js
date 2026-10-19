@@ -183,14 +183,17 @@ export const login = async (req, res) => {
     }
 
     // ✅ Get active company from companyAccess array
+    const availableCompanyAccess = (user.companyAccess || []).filter(
+      (entry) => !entry.revokedAt
+    );
     const activeCompany =
-      user.companyAccess?.find((c) => c.isActive && c.companyId)?.companyId ||
-      user.companyAccess?.[0]?.companyId ||
+      availableCompanyAccess.find((c) => c.isActive && c.companyId)?.companyId ||
+      availableCompanyAccess[0]?.companyId ||
       user.companyId || // Fallback for old single-company format
       null;
 
     // ✅ Get all company access for multi-company support
-    const companyAccess = (user.companyAccess || []).map((c) => ({
+    const companyAccess = availableCompanyAccess.map((c) => ({
       companyId: c.companyId.toString(),
       companyName: c.companyName,
       role: c.role,
@@ -255,7 +258,7 @@ export const switchCompany = async (req, res) => {
 
     // ✅ Check if user has access to this company
     const companyAccess = user.companyAccess?.find(
-      (c) => c.companyId.toString() === companyId
+      (c) => c.companyId.toString() === companyId && !c.revokedAt
     );
 
     if (!companyAccess) {
@@ -267,19 +270,21 @@ export const switchCompany = async (req, res) => {
 
     // ✅ Mark all as inactive, then activate the selected one
     user.companyAccess.forEach((c) => {
-      c.isActive = c.companyId.toString() === companyId;
+      if (!c.revokedAt) c.isActive = c.companyId.toString() === companyId;
     });
 
     user.companyId = companyId; // Update default companyId
     await user.save();
 
     // ✅ Generate new token with new active company
-    const newCompanyAccess = user.companyAccess.map((c) => ({
-      companyId: c.companyId.toString(),
-      companyName: c.companyName,
-      role: c.role,
-      isActive: c.isActive,
-    }));
+    const newCompanyAccess = user.companyAccess
+      .filter((c) => !c.revokedAt)
+      .map((c) => ({
+        companyId: c.companyId.toString(),
+        companyName: c.companyName,
+        role: c.role,
+        isActive: c.isActive,
+      }));
 
     const newToken = jwt.sign(
       {
@@ -338,7 +343,7 @@ export const addCompanyAccess = async (req, res) => {
 
     // ✅ Check if user already has access to this company
     const alreadyHasAccess = user.companyAccess?.some(
-      (c) => c.companyId.toString() === companyId
+      (c) => c.companyId.toString() === companyId && !c.revokedAt
     );
 
     if (alreadyHasAccess) {

@@ -2,7 +2,6 @@ import Asset from "../models/assetSchema.js";
 import Ticket from "../models/ticketSchema.js";
 import Employee from "../models/employeeMasterSchema.js";
 import Software from "../models/softwareSchema.js";
-import mongoose from "mongoose";
 
 /* =========================
    HELPER: COMPANY FILTER
@@ -12,9 +11,8 @@ import mongoose from "mongoose";
 ========================= */
 export const getCompanyFilter = (user, query = {}) => {
   if (user.role === "super_admin") {
-    if (!query.companyId) return {};
-    if (!mongoose.Types.ObjectId.isValid(query.companyId)) return {};
-    return { companyId: new mongoose.Types.ObjectId(query.companyId) };
+    const selectedCompanyId = user.companyId || query.companyId;
+    return selectedCompanyId ? { companyId: selectedCompanyId } : {};
   }
 
   if (user.companyId) {
@@ -33,7 +31,7 @@ export const getCompanyFilter = (user, query = {}) => {
 ========================= */
 export const getDashboardStats = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const totalAssets = await Asset.countDocuments(filter);
 
@@ -157,7 +155,7 @@ export const getDashboardStats = async (req, res) => {
 ========================= */
 export const getRecentAssets = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const assets = await Asset.find(filter)
       .sort({ createdAt: -1 })
@@ -174,7 +172,7 @@ export const getRecentAssets = async (req, res) => {
 ========================= */
 export const getRecentTickets = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const tickets = await Ticket.find(filter)
       .sort({ createdAt: -1 })
@@ -191,7 +189,7 @@ export const getRecentTickets = async (req, res) => {
 ========================= */
 export const getRecentSoftware = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const software = await Software.find(filter)
       .sort({ createdAt: -1 })

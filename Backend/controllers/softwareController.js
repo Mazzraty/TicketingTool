@@ -8,7 +8,8 @@ import Software from "../models/softwareSchema.js";
 ============================== */
 const getCompanyFilter = (user, query = {}) => {
   if (user.role === "super_admin") {
-    return query.companyId ? { companyId: query.companyId } : {};
+    const selectedCompanyId = user.companyId || query.companyId;
+    return selectedCompanyId ? { companyId: selectedCompanyId } : {};
   }
   return { companyId: user.companyId };
 };
@@ -23,7 +24,7 @@ export const createSoftware = async (req, res) => {
 
     // Super Admin can choose company
     if (req.user.role === "super_admin") {
-      companyId = req.body.companyId;
+      companyId = req.user.companyId || req.body.companyId;
     }
 
     if (!companyId) {
@@ -106,7 +107,7 @@ export const getSoftwares = async (req, res) => {
 ============================== */
 export const getSoftwareById = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const software = await Software.findOne({
       _id: req.params.id,
@@ -132,7 +133,7 @@ export const getSoftwareById = async (req, res) => {
 ============================== */
 export const updateSoftware = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const software = await Software.findOneAndUpdate(
       {
@@ -162,7 +163,7 @@ export const updateSoftware = async (req, res) => {
 ============================== */
 export const deleteSoftware = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const software = await Software.findOneAndDelete({
       _id: req.params.id,

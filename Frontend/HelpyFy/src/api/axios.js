@@ -11,6 +11,24 @@ const api = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
+    const role = localStorage.getItem("role");
+    if (role === "super_admin" || role === "it_support") {
+      try {
+        const activeCompany = JSON.parse(
+          localStorage.getItem("activeCompany") || "null"
+        );
+        const company = activeCompany?.companyId || activeCompany;
+        const companyId = company?._id || company;
+
+        if (companyId) {
+          config.headers = config.headers || {};
+          config.headers["X-Company-Id"] = String(companyId);
+        }
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

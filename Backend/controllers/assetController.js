@@ -11,7 +11,8 @@ import Ticket from "../models/ticketSchema.js"
 ========================= */
 const getCompanyFilter = (user, query = {}) => {
   if (user.role === "super_admin") {
-    return query.companyId ? { companyId: query.companyId } : {};
+    const selectedCompanyId = user.companyId || query.companyId;
+    return selectedCompanyId ? { companyId: selectedCompanyId } : {};
   }
   return { companyId: user.companyId };
 };
@@ -46,7 +47,7 @@ export const createAsset = async (req, res) => {
     // SUPER ADMIN MUST SELECT COMPANY
     const selectedCompanyId =
       req.user.role === "super_admin"
-        ? companyId
+        ? req.user.companyId || companyId
         : req.user.companyId;
 
     if (!selectedCompanyId) {
@@ -178,7 +179,7 @@ export const assignAsset = async (req, res) => {
   try {
     const { employeeId, assetCode, remarks } = req.body;
 
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const employee = await EmployeeMaster.findOne({
       staffCode: employeeId,
@@ -249,7 +250,7 @@ export const returnAsset = async (req, res) => {
   try {
     const { assetCode, remarks } = req.body;
 
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const asset = await Asset.findOne({
       assetCode,
@@ -292,7 +293,7 @@ export const returnAsset = async (req, res) => {
 ========================= */
 export const updateAsset = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const asset = await Asset.findOne({
       _id: req.params.id,
@@ -342,7 +343,7 @@ export const updateAsset = async (req, res) => {
 ========================= */
 export const deleteAsset = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const asset = await Asset.findOneAndDelete({
       _id: req.params.id,
@@ -365,7 +366,7 @@ export const deleteAsset = async (req, res) => {
 ========================= */
 export const getEmployeeHistory = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const employee = await EmployeeMaster.findOne({
       _id: req.params.id,
@@ -395,7 +396,7 @@ export const getEmployeeHistory = async (req, res) => {
 ========================= */
 export const getAssetHistory = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     let asset = await Asset.findOne({
       assetCode: req.params.code,
@@ -463,7 +464,7 @@ export const getAssetHistory = async (req, res) => {
 ========================= */
 export const getMyAssets = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const employee = await EmployeeMaster.findOne({
       staffCode: req.user.staffCode,
@@ -502,7 +503,7 @@ export const updateAssignmentDate = async (req, res) => {
       return res.status(400).json({ msg: "assignedDate is required" });
     }
 
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const assignment = await AssetAssignment.findOne({
       _id: req.params.id,

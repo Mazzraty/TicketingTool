@@ -11,7 +11,7 @@ export const getUsersByCompany = async (req, res) => {
       companyAccess: {
         $elemMatch: {
           companyId,
-          isActive: true,
+          revokedAt: null,
         },
       },
     }).select(
@@ -20,7 +20,7 @@ export const getUsersByCompany = async (req, res) => {
 
     const formatted = users.map((user) => {
       const access = user.companyAccess.find(
-        (c) => c.companyId.toString() === companyId
+        (c) => c.companyId.toString() === companyId && !c.revokedAt
       );
 
       return {

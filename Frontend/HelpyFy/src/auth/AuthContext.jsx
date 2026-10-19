@@ -38,6 +38,14 @@ const getStoredRole = () => {
   );
 };
 
+const getStoredCompany = () => {
+  try {
+    return JSON.parse(localStorage.getItem("activeCompany") || "null");
+  } catch {
+    return null;
+  }
+};
+
 /* =========================
    AUTH PROVIDER
 ========================= */
@@ -51,15 +59,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   // Active selected company
-  const [activeCompany, setActiveCompany] = useState(() => {
-    try {
-      return JSON.parse(
-        localStorage.getItem("activeCompany") || "null"
-      );
-    } catch {
-      return null;
-    }
-  });
+  const [activeCompany, setActiveCompany] = useState(getStoredCompany);
 
   const activeCompanyDetails = activeCompany?.companyId || activeCompany;
   const activeCompanyId = activeCompanyDetails?._id || activeCompanyDetails;
@@ -89,6 +89,39 @@ export const AuthProvider = ({ children }) => {
               serverUser?.companyAccess ||
               [],
           };
+
+          if (normalizedUser.role === "super_admin") {
+            localStorage.removeItem("activeCompany");
+            setActiveCompany(null);
+          } else if (normalizedUser.role === "it_support") {
+            const availableCompanies = (normalizedUser.companyAccess || [])
+              .filter((company) => !company.revokedAt);
+            const currentSelection = getStoredCompany();
+            const selectedId =
+              currentSelection?.companyId?._id ||
+              currentSelection?.companyId ||
+              currentSelection?._id ||
+              currentSelection;
+            const selectionIsAllowed = availableCompanies.some((company) => {
+              const companyId =
+                company.companyId?._id || company.companyId;
+              return String(companyId) === String(selectedId);
+            });
+
+            if (!selectionIsAllowed && availableCompanies.length > 0) {
+              const selectedCompany =
+                availableCompanies.find((company) => company.isActive) ||
+                availableCompanies[0];
+              localStorage.setItem(
+                "activeCompany",
+                JSON.stringify(selectedCompany)
+              );
+              setActiveCompany(selectedCompany);
+            } else if (availableCompanies.length === 0) {
+              localStorage.removeItem("activeCompany");
+              setActiveCompany(null);
+            }
+          }
 
           localStorage.setItem("user", JSON.stringify(normalizedUser));
           localStorage.setItem("role", normalizedUser.role || "user");
@@ -149,19 +182,25 @@ export const AuthProvider = ({ children }) => {
     setRole(normalizedRole);
     setUser(normalizedUser);
 
-    // Auto-select first company if user has company list
-    if (
-      normalizedUser.companies &&
-      normalizedUser.companies.length > 0
-    ) {
-      const firstCompany = normalizedUser.companies[0];
+    if (normalizedRole === "super_admin") {
+      localStorage.removeItem("activeCompany");
+      setActiveCompany(null);
+      return;
+    }
 
-      localStorage.setItem(
-        "activeCompany",
-        JSON.stringify(firstCompany)
-      );
+    const availableCompanies = normalizedUser.companies?.filter(
+      (company) => !company.revokedAt
+    );
+    const firstCompany =
+      availableCompanies?.find((company) => company.isActive) ||
+      availableCompanies?.[0];
 
+    if (firstCompany) {
+      localStorage.setItem("activeCompany", JSON.stringify(firstCompany));
       setActiveCompany(firstCompany);
+    } else {
+      localStorage.removeItem("activeCompany");
+      setActiveCompany(null);
     }
   };
 
@@ -170,10 +209,11 @@ export const AuthProvider = ({ children }) => {
   ========================= */
 
   const selectCompany = (company) => {
-    localStorage.setItem(
-      "activeCompany",
-      JSON.stringify(company)
-    );
+    if (company) {
+      localStorage.setItem("activeCompany", JSON.stringify(company));
+    } else {
+      localStorage.removeItem("activeCompany");
+    }
 
     setActiveCompany(company);
   };

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api/axios";
+import { useAuth } from "../../auth/AuthContext.jsx";
 import toast from "react-hot-toast";
 import {
   Search,
@@ -115,6 +116,7 @@ const Tag = ({ children }) => (
    PAGE
 ========================= */
 export default function ITSupportUsers() {
+  const { companyId: selectedCompanyId } = useAuth();
   const [users, setUsers] = useState([]);
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -140,7 +142,10 @@ export default function ITSupportUsers() {
       setMyId(me.data._id);
 
       const access = me.data.companyAccess?.find(
-        (c) => c.role === "it_support" && c.isActive
+        (c) =>
+          !c.revokedAt &&
+          String(c.companyId?._id || c.companyId) ===
+            String(selectedCompanyId)
       );
 
       if (!access) {

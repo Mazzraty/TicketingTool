@@ -32,6 +32,7 @@ export const getAllowedCompanyIds = (user) => {
   }
 
   const fromAccess = (user.companyAccess || [])
+    .filter((entry) => !entry?.revokedAt)
     .map((entry) => normalizeCompanyId(entry?.companyId))
     .filter(Boolean);
 
@@ -53,7 +54,12 @@ const getCompanyFilter = (user, query = {}) => {
   if (!user) return {};
 
   if (user.role === "super_admin") {
-    return query.companyId ? { companyId: query.companyId } : {};
+    const selectedCompanyId = user.companyId || query.companyId;
+    return selectedCompanyId ? { companyId: selectedCompanyId } : {};
+  }
+
+  if (user.role === "it_support") {
+    return user.companyId ? { companyId: user.companyId } : { companyId: null };
   }
 
   const allowedCompanyIds = getAllowedCompanyIds(user);
@@ -87,7 +93,7 @@ export const getEmployees = async (req, res) => {
 ========================= */
 export const getEmployee = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const emp = await EmployeeMaster.findOne({
       _id: req.params.id,
@@ -120,7 +126,7 @@ export const createEmployee = async (req, res) => {
     // ✅ Use companyId from body for super_admin, or from user for regular admin
     const targetCompanyId =
       req.user.role === "super_admin"
-        ? bodyCompanyId
+        ? req.user.companyId || bodyCompanyId
         : req.user.companyId;
 
     if (!targetCompanyId) {
@@ -142,8 +148,8 @@ export const createEmployee = async (req, res) => {
 
     // ✅ Get company name
     let companyName = req.user.companyName || "";
-    if (req.user.role === "super_admin" && bodyCompanyId) {
-      const company = await Company.findById(bodyCompanyId).select("name");
+    if (req.user.role === "super_admin" && targetCompanyId) {
+      const company = await Company.findById(targetCompanyId).select("name");
       companyName = company?.name || "";
     }
 
@@ -164,7 +170,7 @@ export const createEmployee = async (req, res) => {
 ========================= */
 export const updateEmployee = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const emp = await EmployeeMaster.findOneAndUpdate(
       {
@@ -190,7 +196,7 @@ export const updateEmployee = async (req, res) => {
 ========================= */
 export const deleteEmployee = async (req, res) => {
   try {
-    const filter = getCompanyFilter(req.user);
+    const filter = getCompanyFilter(req.user, req.query);
 
     const emp = await EmployeeMaster.findOneAndDelete({
       _id: req.params.id,
@@ -215,7 +221,10 @@ export const bulkUploadEmployees = async (req, res) => {
     const employees = req.body.employees || [];
     const assets = req.body.assets || [];
 
-    const requestedCompanyId = req.body.companyId || req.user.companyId;
+    const requestedCompanyId =
+      req.user.role === "super_admin"
+        ? req.user.companyId || req.body.companyId
+        : req.user.companyId;
     const allowedCompanyIds = getAllowedCompanyIds(req.user);
     const targetCompanyId =
       requestedCompanyId ||

@@ -72,6 +72,10 @@ const userSchema = new mongoose.Schema(
           type: Boolean,
           default: false,
         },
+        revokedAt: {
+          type: Date,
+          default: null,
+        },
         joinedAt: {
           type: Date,
           default: Date.now,
@@ -117,10 +121,15 @@ userSchema.index({ "companyAccess.companyId": 1 });
 // ✅ MIDDLEWARE: Before saving, ensure at least one active company
 userSchema.pre("save", function () {
   if (this.companyAccess?.length > 0) {
-    const hasActive = this.companyAccess.some((c) => c.isActive);
+    const hasActive = this.companyAccess.some(
+      (company) => !company.revokedAt && company.isActive
+    );
 
     if (!hasActive) {
-      this.companyAccess[0].isActive = true;
+      const firstAvailableCompany = this.companyAccess.find(
+        (company) => !company.revokedAt
+      );
+      if (firstAvailableCompany) firstAvailableCompany.isActive = true;
     }
   }
 });

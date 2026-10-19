@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 /* =========================
    🔐 PROTECT MIDDLEWARE
@@ -33,29 +34,63 @@ export const protect = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const requestedCompanyId = req.get("X-Company-Id")?.trim();
 
-    // ✅ FIXED USER OBJECT (STAFFCODE VERSION)
     const activeCompany =
       decoded.companyAccess?.find((c) => c.isActive && c.companyId) ||
       decoded.companyAccess?.[0] ||
       null;
+
+    if (requestedCompanyId) {
+      if (!mongoose.Types.ObjectId.isValid(requestedCompanyId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Selected company ID is invalid",
+        });
+      }
+
+      if (decoded.role === "it_support") {
+        const hasAccess =
+          decoded.companyId?.toString?.() === requestedCompanyId ||
+          decoded.companyAccess?.some(
+            (company) =>
+              !company.revokedAt &&
+              company.companyId?.toString?.() === requestedCompanyId
+          );
+
+        if (!hasAccess) {
+          return res.status(403).json({
+            success: false,
+            message: "You don't have access to this company",
+          });
+        }
+      } else if (decoded.role !== "super_admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Company selection is not allowed",
+        });
+      }
+
+    }
 
     req.user = {
       id: decoded.id,
       role: decoded.role,
       email: decoded.email,
 
-      // ❌ OLD: employeeId
-      // employeeId: decoded.employeeId,
-
-      // ✅ NEW: staffCode
       staffCode: decoded.staffCode || null,
-
-      // ACTIVE TENANT
-      companyId: decoded.companyId || null,
-      companyName: activeCompany?.companyName || null,
-
-      // MULTI-COMPANY ACCESS
+      companyId:
+        requestedCompanyId ||
+        (decoded.role === "super_admin" ? null : decoded.companyId) ||
+        null,
+      companyName:
+        decoded.companyAccess?.find(
+          (company) =>
+            company.companyId?.toString?.() ===
+            (requestedCompanyId || decoded.companyId)?.toString?.()
+        )?.companyName ||
+        activeCompany?.companyName ||
+        null,
       companyAccess: decoded.companyAccess || [],
     };
 
@@ -187,18 +222,37 @@ export const verifyCompanyAccess = (req, res, next) => {
     return next();  // If no company specified, skip this check
   }
 
-  // ✅ Super admin can access any company
+  // Super admins can access any company unless their selector is scoped.
   if (req.user.role === "super_admin") {
+    if (
+      req.user.companyId &&
+      req.user.companyId.toString() !== companyIdParam.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Selected company does not match the requested company",
+      });
+    }
     return next();
   }
 
   // ✅ Check if user has access to the requested company
   const companyIdString = companyIdParam?.toString?.();
 
+  if (
+    req.user.role === "it_support" &&
+    req.user.companyId?.toString?.() !== companyIdString
+  ) {
+    return res.status(403).json({
+      success: false,
+      message: "Select this company before accessing its data",
+    });
+  }
+
   const hasAccess =
     req.user.companyId?.toString?.() === companyIdString ||
     req.user.companyAccess?.some(
-      (c) => c.companyId?.toString?.() === companyIdString && c.isActive
+      (c) => c.companyId?.toString?.() === companyIdString && !c.revokedAt
     );
 
   if (!hasAccess) {

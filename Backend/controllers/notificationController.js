@@ -5,7 +5,7 @@ export const buildNotificationFilter = (user = {}) => {
     userId: user.id || user._id,
   };
 
-  if (user.role !== "super_admin" && user.companyId) {
+  if (user.companyId) {
     filter.companyId = user.companyId;
   }
 

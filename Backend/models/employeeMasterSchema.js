@@ -64,8 +64,6 @@ const employeeSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // 👇 NEW: the Employee Master page reads and sends this field.
-    // Without it Mongoose silently drops the value on save.
     visaExpiryDate: {
       type: Date,
       default: null,

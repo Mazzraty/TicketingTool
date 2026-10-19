@@ -91,7 +91,7 @@ export const revokeCompanyAccess = async (req, res) => {
     }
 
     const access = user.companyAccess.find(
-      (c) => c.companyId.toString() === companyId
+      (c) => c.companyId.toString() === companyId && !c.revokedAt
     );
 
     if (!access) {
@@ -109,11 +109,16 @@ export const revokeCompanyAccess = async (req, res) => {
     const remainingAccess = user.companyAccess.find(
       (c) =>
         c.companyId.toString() !== companyId &&
-        c.isActive === true
+        !c.revokedAt
     );
 
     if (remainingAccess) {
       // Switch user to another active company
+      user.companyAccess.forEach((c) => {
+        if (!c.revokedAt) {
+          c.isActive = c.companyId.toString() === remainingAccess.companyId.toString();
+        }
+      });
       user.role = remainingAccess.role;
       user.companyId = remainingAccess.companyId;
     } else {

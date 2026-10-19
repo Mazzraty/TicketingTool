@@ -407,7 +407,7 @@ export default function AdminCompanyAccess() {
 
   const companyAccessList =
     selectedEmployee?.employee?.companyAccess || [];
-  const activeAccessCount = companyAccessList.filter((a) => a.isActive).length;
+  const activeAccessCount = companyAccessList.filter((a) => !a.revokedAt).length;
   const revokedAccessCount = companyAccessList.length - activeAccessCount;
 
   const selectedCompanyName = companies.find(
@@ -681,7 +681,7 @@ export default function AdminCompanyAccess() {
                           </td>
 
                           <td className="px-4 py-3">
-                            {access.isActive ? (
+                            {!access.revokedAt ? (
                               <Lozenge className="bg-[#E3FCEF] text-[#006644]">
                                 Active
                               </Lozenge>
@@ -693,7 +693,7 @@ export default function AdminCompanyAccess() {
                           </td>
 
                           <td className="px-4 py-3 text-right">
-                            {access.isActive && (
+                            {!access.revokedAt && (
                               <button
                                 onClick={() =>
                                   setConfirmRevoke({
