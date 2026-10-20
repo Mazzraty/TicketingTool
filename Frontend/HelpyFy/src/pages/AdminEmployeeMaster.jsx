@@ -13,17 +13,12 @@ import {
   Users,
   Building2,
   ShieldAlert,
+  Clock,
 } from "lucide-react";
 
 /* ============================================================
    Design tokens (Atlassian / Jira Service Management palette)
    ============================================================ */
-const T = {
-  text: "text-[#172B4D]",
-  subtle: "text-[#5E6C84]",
-  border: "border-[#DFE1E6]",
-};
-
 const inputCls =
   "h-9 w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 text-sm text-[#172B4D] " +
   "placeholder:text-[#7A869A] transition-colors hover:bg-[#EBECF0] " +
@@ -65,10 +60,38 @@ const tidy = (v) => {
   return v.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
+const startOfDay = (d) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+};
+
+// whole days from today to the date (negative = already expired)
 const daysUntil = (date) =>
-  Math.floor((new Date(date) - new Date()) / (1000 * 60 * 60 * 24));
+  Math.round((startOfDay(date) - startOfDay(new Date())) / (1000 * 60 * 60 * 24));
+
+// one source of truth for badge, stat cards and list filter
+const EXPIRING_DAYS = 30;
+const visaStatus = (date) => {
+  if (!date) return "none";
+  const d = daysUntil(date);
+  if (d < 0) return "expired";
+  if (d < EXPIRING_DAYS) return "expiring";
+  return "active";
+};
 
 const toDateInput = (d) => (d ? String(d).slice(0, 10) : "");
+
+const formatDate = (d) => {
+  if (!d) return "—";
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return "—";
+  return dt.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 /* ============================================================
    Small presentational components
@@ -90,11 +113,31 @@ function Lozenge({ tone, children }) {
 }
 
 function VisaBadge({ expiryDate }) {
-  if (!expiryDate) return <span className="text-[#97A0AF]">—</span>;
-  const d = daysUntil(expiryDate);
-  if (d < 0) return <Lozenge tone="danger">Expired</Lozenge>;
-  if (d < 30) return <Lozenge tone="warning">Expiring soon</Lozenge>;
+  const status = visaStatus(expiryDate);
+  if (status === "none") return <span className="text-[#97A0AF]">—</span>;
+  if (status === "expired") return <Lozenge tone="danger">Expired</Lozenge>;
+  if (status === "expiring") return <Lozenge tone="warning">Expiring soon</Lozenge>;
   return <Lozenge tone="success">Active</Lozenge>;
+}
+
+// "12 days overdue" / "in 8 days" / "today"
+function ExpiryNote({ expiryDate }) {
+  if (!expiryDate) return null;
+  const d = daysUntil(expiryDate);
+  if (d === 0) return <span className="text-xs text-[#974F0C]">Expires today</span>;
+  if (d < 0)
+    return (
+      <span className="text-xs text-[#BF2600]">
+        {Math.abs(d)} day{Math.abs(d) === 1 ? "" : "s"} overdue
+      </span>
+    );
+  if (d < EXPIRING_DAYS)
+    return (
+      <span className="text-xs text-[#974F0C]">
+        in {d} day{d === 1 ? "" : "s"}
+      </span>
+    );
+  return null;
 }
 
 function Avatar({ name }) {
@@ -152,20 +195,45 @@ function Modal({ title, onClose, children, footer, wide }) {
   );
 }
 
-function StatCard({ label, value, icon: Icon, accent }) {
-  return (
-    <div className="flex items-center gap-4 rounded-[3px] border border-[#DFE1E6] bg-white px-4 py-3">
+// Static stat card, or a clickable filter card when onClick is passed
+function StatCard({ label, value, icon: Icon, accent, onClick, active, hint }) {
+  const content = (
+    <>
       <div
-        className="flex h-10 w-10 items-center justify-center rounded-[3px]"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[3px]"
         style={{ backgroundColor: `${accent}1A`, color: accent }}
       >
         <Icon size={20} />
       </div>
-      <div>
+      <div className="text-left">
         <p className="text-xs font-semibold text-[#5E6C84]">{label}</p>
         <p className="text-2xl font-medium leading-7 text-[#172B4D]">{value}</p>
+        {hint && <p className="mt-0.5 text-[11px] text-[#6B778C]">{hint}</p>}
       </div>
-    </div>
+    </>
+  );
+
+  const base =
+    "flex w-full items-center gap-4 rounded-[3px] border bg-white px-4 py-3";
+
+  if (!onClick) {
+    return <div className={`${base} border-[#DFE1E6]`}>{content}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={!!active}
+      className={`${base} cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] ${
+        active
+          ? "border-[#4C9AFF] bg-[#DEEBFF]"
+          : "border-[#DFE1E6] hover:bg-[#F4F5F7]"
+      }`}
+      style={active ? { boxShadow: `inset 3px 0 0 ${accent}` } : undefined}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -182,11 +250,17 @@ const EMPTY_EMPLOYEE = {
   companyId: "",
 };
 
+const VISA_FILTER_LABELS = {
+  expired: "Visa expired",
+  expiring: `Visa expiring within ${EXPIRING_DAYS} days`,
+};
+
 export default function AdminEmployeeMaster() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState("All"); // super_admin scoping
+  const [visaFilter, setVisaFilter] = useState("all"); // all | expired | expiring
 
   const [page, setPage] = useState(1);
   const pageSize = 10;
@@ -271,16 +345,41 @@ export default function AdminEmployeeMaster() {
     }
   };
 
-  // ================= SEARCH (company scoping is server-side) =================
+  // ================= VISA COUNTS =================
+  const expiredCount = useMemo(
+    () => employees.filter((e) => visaStatus(e.visaExpiryDate) === "expired").length,
+    [employees]
+  );
+  const expiringCount = useMemo(
+    () => employees.filter((e) => visaStatus(e.visaExpiryDate) === "expiring").length,
+    [employees]
+  );
+
+  const toggleVisaFilter = (value) => {
+    setVisaFilter((cur) => (cur === value ? "all" : value));
+    setPage(1);
+  };
+
+  // ================= SEARCH + VISA FILTER (company scoping is server-side) =================
   const filteredEmployees = useMemo(() => {
     const q = search.toLowerCase();
-    return employees.filter(
+
+    let list = employees.filter(
       (e) =>
         e.staffCode?.toLowerCase().includes(q) ||
         e.name?.toLowerCase().includes(q) ||
         e.department?.toLowerCase().includes(q)
     );
-  }, [employees, search]);
+
+    if (visaFilter !== "all") {
+      list = list
+        .filter((e) => visaStatus(e.visaExpiryDate) === visaFilter)
+        // most urgent first: oldest expiry date at the top
+        .sort((a, b) => new Date(a.visaExpiryDate) - new Date(b.visaExpiryDate));
+    }
+
+    return list;
+  }, [employees, search, visaFilter]);
 
   // ================= PAGINATION =================
   const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
@@ -299,9 +398,8 @@ export default function AdminEmployeeMaster() {
   const departmentCount = new Set(
     employees.map((e) => e.department).filter(Boolean)
   ).size;
-  const visaAttention = employees.filter(
-    (e) => e.visaExpiryDate && daysUntil(e.visaExpiryDate) < 30
-  ).length;
+
+  const hasFilters = search || companyFilter !== "All" || visaFilter !== "all";
 
   const pageBtn = (active) =>
     `flex h-8 min-w-[32px] items-center justify-center rounded-[3px] px-2 text-sm font-medium transition-colors ${
@@ -309,6 +407,8 @@ export default function AdminEmployeeMaster() {
         ? "bg-[#DEEBFF] text-[#0052CC]"
         : "text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]"
     }`;
+
+  const COLS = 8;
 
   return (
     <div className="min-h-screen bg-[#F4F5F7] font-sans text-[#172B4D]">
@@ -350,8 +450,8 @@ export default function AdminEmployeeMaster() {
           </div>
         </div>
 
-        {/* STATS */}
-        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {/* STATS (Expired / Expiring cards are clickable filters) */}
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label="Total employees"
             value={employees.length}
@@ -365,10 +465,22 @@ export default function AdminEmployeeMaster() {
             accent="#5243AA"
           />
           <StatCard
-            label="Visa expired / expiring"
-            value={visaAttention}
+            label="Visa expired"
+            value={expiredCount}
             icon={ShieldAlert}
             accent="#DE350B"
+            hint={visaFilter === "expired" ? "Click to clear filter" : "Click to view list"}
+            active={visaFilter === "expired"}
+            onClick={() => toggleVisaFilter("expired")}
+          />
+          <StatCard
+            label={`Visa expiring (${EXPIRING_DAYS} days)`}
+            value={expiringCount}
+            icon={Clock}
+            accent="#FF8B00"
+            hint={visaFilter === "expiring" ? "Click to clear filter" : "Click to view list"}
+            active={visaFilter === "expiring"}
+            onClick={() => toggleVisaFilter("expiring")}
           />
         </div>
 
@@ -417,11 +529,37 @@ export default function AdminEmployeeMaster() {
               </div>
             )}
 
-            {(search || companyFilter !== "All") && (
+            {/* Quick visa filter buttons (same filter as the stat cards) */}
+            <div className="flex items-center gap-1">
+              {[
+                { key: "all", label: "All" },
+                { key: "expired", label: `Expired (${expiredCount})` },
+                { key: "expiring", label: `Expiring (${expiringCount})` },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => {
+                    setVisaFilter(f.key);
+                    setPage(1);
+                  }}
+                  className={`${btnBase} ${
+                    visaFilter === f.key
+                      ? "bg-[#344563] text-white hover:bg-[#344563]"
+                      : "bg-[rgba(9,30,66,0.04)] text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {hasFilters && (
               <button
                 onClick={() => {
                   setSearch("");
                   setCompanyFilter("All");
+                  setVisaFilter("all");
+                  setPage(1);
                 }}
                 className={btnSubtle}
               >
@@ -430,9 +568,35 @@ export default function AdminEmployeeMaster() {
             )}
           </div>
 
+          {/* ACTIVE VISA FILTER BANNER */}
+          {visaFilter !== "all" && (
+            <div
+              className={`flex items-center justify-between gap-3 border-b px-4 py-2 text-sm ${
+                visaFilter === "expired"
+                  ? "border-[#FFBDAD] bg-[#FFEBE6] text-[#BF2600]"
+                  : "border-[#FFE380] bg-[#FFFAE6] text-[#172B4D]"
+              }`}
+            >
+              <span className="font-medium">
+                {VISA_FILTER_LABELS[visaFilter]} — {filteredEmployees.length} employee
+                {filteredEmployees.length === 1 ? "" : "s"}
+              </span>
+              <button
+                onClick={() => {
+                  setVisaFilter("all");
+                  setPage(1);
+                }}
+                className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-xs font-medium hover:bg-[rgba(9,30,66,0.08)]"
+              >
+                <X size={12} />
+                Show all
+              </button>
+            </div>
+          )}
+
           {/* TABLE */}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px] border-collapse text-sm">
+            <table className="w-full min-w-[1060px] border-collapse text-sm">
               <thead>
                 <tr className="border-b-2 border-[#DFE1E6] text-left">
                   {[
@@ -441,6 +605,7 @@ export default function AdminEmployeeMaster() {
                     "Company",
                     "Department",
                     "Designation",
+                    "Visa expiry",
                     "Visa status",
                     "",
                   ].map((h, i) => (
@@ -457,14 +622,14 @@ export default function AdminEmployeeMaster() {
                 {loading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i} className="border-b border-[#DFE1E6]">
-                      <td colSpan={7} className="px-4 py-3">
+                      <td colSpan={COLS} className="px-4 py-3">
                         <div className="h-6 animate-pulse rounded-[3px] bg-[#F4F5F7]" />
                       </td>
                     </tr>
                   ))
                 ) : paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-16 text-center">
+                    <td colSpan={COLS} className="px-4 py-16 text-center">
                       <p className="text-base font-medium text-[#172B4D]">
                         No employees found
                       </p>
@@ -498,6 +663,14 @@ export default function AdminEmployeeMaster() {
                       </td>
                       <td className="px-4 py-2.5 text-[#42526E]">
                         {tidy(emp.designation) || "—"}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex flex-col leading-4">
+                          <span className="text-[#42526E]">
+                            {formatDate(emp.visaExpiryDate)}
+                          </span>
+                          <ExpiryNote expiryDate={emp.visaExpiryDate} />
+                        </div>
                       </td>
                       <td className="px-4 py-2.5">
                         <VisaBadge expiryDate={emp.visaExpiryDate} />
