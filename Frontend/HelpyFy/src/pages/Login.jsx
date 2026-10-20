@@ -99,9 +99,14 @@ export default function Login() {
       login(normalizedUser);
       toast.success("Login successful");
 
-      const adminRoles = ["company_admin", "super_admin", "it_support"];
-      const isAdminRole = adminRoles.includes(normalizedUser.role);
-      navigate(isAdminRole ? "/admin" : "/");
+    const adminRoles = ["company_admin", "super_admin", "it_support"];
+const isAdminRole = adminRoles.includes(normalizedUser.role);
+
+if (normalizedUser.role === "hr") {
+  navigate("/admin/employees"); 
+} else {
+  navigate(isAdminRole ? "/admin" : "/");
+}
     } catch (err) {
       toast.error(err.response?.data?.msg || "Login failed");
       triggerShake();

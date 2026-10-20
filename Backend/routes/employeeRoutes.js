@@ -18,53 +18,33 @@ import {
 const router = express.Router();
 
 /* =========================
+   ROLE GUARD
+   Anyone adminOnly already allows keeps access;
+   "hr" is added on top. Delete stays adminOnly (HR cannot delete).
+========================= */
+const adminOrHr = (req, res, next) => {
+  if (req.user?.role === "hr") return next();
+  return adminOnly(req, res, next);
+};
+
+/* =========================
    EMPLOYEE CRUD (COMPANY ISOLATED)
 ========================= */
 
 // GET ALL EMPLOYEES
-router.get(
-  "/",
-  protect,
-  companyCheck,
-  adminOnly,
-  getEmployees
-);
+router.get("/", protect, companyCheck, adminOrHr, getEmployees);
 
 // GET SINGLE EMPLOYEE
-router.get(
-  "/:id",
-  protect,
-  companyCheck,
-  adminOnly,
-  getEmployee
-);
+router.get("/:id", protect, companyCheck, adminOrHr, getEmployee);
 
 // CREATE EMPLOYEE
-router.post(
-  "/",
-  protect,
-  companyCheck,
-  adminOnly,
-  createEmployee
-);
+router.post("/", protect, companyCheck, adminOrHr, createEmployee);
 
 // UPDATE EMPLOYEE
-router.put(
-  "/:id",
-  protect,
-  companyCheck,
-  adminOnly,
-  updateEmployee
-);
+router.put("/:id", protect, companyCheck, adminOrHr, updateEmployee);
 
-// DELETE EMPLOYEE
-router.delete(
-  "/:id",
-  protect,
-  companyCheck,
-  adminOnly,
-  deleteEmployee
-);
+// DELETE EMPLOYEE (admins only)
+router.delete("/:id", protect, companyCheck, adminOnly, deleteEmployee);
 
 /* =========================
    BULK UPLOAD
@@ -73,7 +53,7 @@ router.post(
   "/bulk-upload",
   protect,
   companyCheck,
-  adminOnly,
+  adminOrHr,
   bulkUploadEmployees
 );
 

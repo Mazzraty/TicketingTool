@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext.jsx";
 
 // PUBLIC
 import Login from "../pages/Login.jsx";
@@ -32,9 +33,19 @@ import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
 import AdminLayout from "../layouts/AdminLayout.jsx";
 
-
-
-
+/* =========================
+   /admin entry + fallback
+   HR goes straight to Employee Master, everyone else to the dashboard
+========================= */
+function AdminIndexRedirect() {
+  const { user } = useAuth();
+  return (
+    <Navigate
+      to={user?.role === "hr" ? "/admin/employees" : "/admin/dashboard"}
+      replace
+    />
+  );
+}
 
 export default function AppRoutes() {
 
@@ -80,7 +91,32 @@ export default function AppRoutes() {
 
       </Route>
 
-      {/* ================= ADMIN ROUTES ================= */}
+      {/* ================= ADMIN ENTRY ================= */}
+      <Route path="/admin" element={<AdminIndexRedirect />} />
+
+      {/* ================= ADMIN + HR (shared pages) =================
+          Only these two pages are open to HR */}
+      <Route
+        element={
+          <ProtectedRoute
+            allowedRoles={["super_admin", "company_admin", "it_support", "hr"]}
+          />
+        }
+      >
+        <Route element={<AdminLayout />}>
+          <Route
+            path="/admin/employees"
+            element={<AdminEmployeeMaster />}
+          />
+
+          <Route
+            path="/admin/assets/upload-excel"
+            element={<AssetExcelUpload />}
+          />
+        </Route>
+      </Route>
+
+      {/* ================= ADMIN ONLY (HR NOT ALLOWED) ================= */}
       <Route
         element={
           <ProtectedRoute
@@ -90,28 +126,18 @@ export default function AppRoutes() {
       >
         <Route element={<AdminLayout />}>
 
-          {/* DEFAULT ADMIN ENTRY */}
-          <Route
-            path="/admin"
-            element={<Navigate to="/admin/dashboard" replace />}
-          />
-
           {/* DASHBOARD */}
           <Route
             path="/admin/dashboard"
             element={<AdminDashboardFiori />}
           />
 
-          {/* TICKETS (ADD THIS) */}
+          {/* TICKETS */}
           <Route
             path="/admin/tickets"
             element={<AdminTickets />}
           />
           <Route path="/admin/ticket-dashboard" element={<AdminTicketDashboard />} />
-          <Route
-            path="/admin/employees"
-            element={<AdminEmployeeMaster />}
-          />
 
           <Route
             path="/admin/assets"
@@ -121,11 +147,6 @@ export default function AppRoutes() {
           <Route
             path="/admin/assets/history"
             element={<AssetHistoryPage />}
-          />
-
-          <Route
-            path="/admin/assets/upload-excel"
-            element={<AssetExcelUpload />}
           />
 
           <Route
@@ -173,7 +194,7 @@ export default function AppRoutes() {
       {/* ================= FALLBACK ================= */}
       <Route
         path="/admin/*"
-        element={<Navigate to="/admin/dashboard" replace />}
+        element={<AdminIndexRedirect />}
       />
       <Route
         path="*"

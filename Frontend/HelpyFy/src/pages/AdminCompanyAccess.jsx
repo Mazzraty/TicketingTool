@@ -382,6 +382,7 @@ export default function AdminCompanyAccess() {
       user: "User",
       company_admin: "Company Admin",
       it_support: "IT Support",
+      hr: "HR",
     };
     return roleMap[role] || role;
   };
@@ -392,6 +393,7 @@ export default function AdminCompanyAccess() {
       user: "bg-[#DEEBFF] text-[#0747A6]",
       company_admin: "bg-[#EAE6FF] text-[#403294]",
       it_support: "bg-[#FFF0B3] text-[#172B4D]",
+      hr: "bg-[#E3FCEF] text-[#006644]",
     };
     return colorMap[role] || "bg-[#DFE1E6] text-[#42526E]";
   };
@@ -504,6 +506,7 @@ export default function AdminCompanyAccess() {
                     <option value="user">User</option>
                     <option value="company_admin">Company Admin</option>
                     <option value="it_support">IT Support</option>
+                    <option value="hr">HR</option>
                   </SelectBox>
                 </Field>
               </div>

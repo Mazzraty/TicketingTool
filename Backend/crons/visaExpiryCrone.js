@@ -58,11 +58,22 @@ const getTransporter = () => {
    Admins / HR of that company (+ optional global fallback list)
 ========================= */
 const getRecipients = async (companyId) => {
+  const ROLES = ["hr", "company_admin"];
+
   const users = await User.find({
-    role: { $in: ["admin", "hr"] }, // ⚠️ adjust roles to match yours
     $or: [
-      { companyId },
-      { "companyAccess.companyId": companyId, "companyAccess.revokedAt": null },
+      // role stored directly on the user for their own company
+      { role: { $in: ROLES }, companyId },
+      // role granted through Company Access (not revoked)
+      {
+        companyAccess: {
+          $elemMatch: {
+            companyId,
+            role: { $in: ROLES },
+            revokedAt: null,
+          },
+        },
+      },
     ],
   }).select("email");
 
@@ -243,3 +254,8 @@ export const startVisaExpiryCron = () => {
   );
   console.log(`[visa-cron] scheduled "${SCHEDULE}" (${TZ})`);
 };
+
+/* =========================
+   AUTO-START (imported from server.js like your other crons)
+========================= */
+startVisaExpiryCron();
