@@ -218,8 +218,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
       {/* MENU */}
       <div className="flex-1 overflow-y-auto px-2.5 py-4 space-y-5">
-        {/* USER MENU */}
-        {role === "user" && (
+        {/* USER MENU (normal users + HR) */}
+        {(role === "user" || role === "hr") && (
           <div>
             <SectionLabel>User menu</SectionLabel>
 
@@ -229,6 +229,22 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <NavItem to="/tickets" icon={Ticket} label="My Tickets" />
               <NavItem to="/my-assets" icon={Package} label="My Assets" />
               <NavItem to="/profile" icon={User} label="Profile" />
+            </div>
+          </div>
+        )}
+
+        {/* HR MENU (on top of the user menu) */}
+        {role === "hr" && (
+          <div>
+            <SectionLabel>HR</SectionLabel>
+
+            <div className="space-y-0.5">
+              <NavItem to="/admin/employees" icon={Users} label="Employee Master" />
+              <NavItem
+                to="/admin/assets/upload-excel"
+                icon={Upload}
+                label="Employee Upload"
+              />
             </div>
           </div>
         )}

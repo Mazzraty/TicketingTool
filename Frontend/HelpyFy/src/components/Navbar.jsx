@@ -274,6 +274,17 @@ export default function Navbar() {
         { label: "Vendors", path: "/admin/software-dashboard" },
       ];
     }
+
+    // HR: normal user tabs + Employee Master
+    if (role === "hr") {
+      return [
+        { label: "Dashboard", path: "/" },
+        { label: "Create Ticket", path: "/create" },
+        { label: "My Tickets", path: "/tickets" },
+        { label: "Employees", path: "/admin/employees" },
+      ];
+    }
+
     return [
       { label: "Dashboard", path: "/" },
       { label: "Create Ticket", path: "/create" },
@@ -283,9 +294,9 @@ export default function Navbar() {
 
   // NEW: "Create" button target (Jira-style primary action)
   const createPath = isAdminRole ? "/admin/tickets" : "/create";
-  // hidden for super_admin, it_support and plain users
-  // (users already have the "Create Ticket" tab and sidebar link)
-  const showCreate = !["super_admin", "it_support", "user"].includes(role);
+  // hidden for super_admin, it_support, plain users and HR
+  // (they already have the "Create Ticket" tab and sidebar link)
+  const showCreate = !["super_admin", "it_support", "user", "hr"].includes(role);
 
   const isActive = (path) =>
     location.pathname === path

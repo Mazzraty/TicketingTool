@@ -58,7 +58,7 @@ export default function AppRoutes() {
       <Route path="/register" element={<Register />} />
 
       {/* ================= USER ROUTES ================= */}
-      <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["user", "hr"]} />}>
 
         <Route element={<Layout />}>
 
