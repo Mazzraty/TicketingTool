@@ -1,7 +1,7 @@
 import express from "express";
 import {
   getCompanies,
-  createCompany
+  createCompany,getPublicCompanies
 } from "../controllers/companyController.js";
 
 import {
@@ -11,21 +11,9 @@ import {
 
 const router = express.Router();
 
-/* =========================
-   🔍 GET COMPANIES
-   (PUBLIC FOR REGISTRATION)
-========================= */
-router.get("/", getCompanies);
-
-/* =========================
-   🏢 CREATE COMPANY
-   (SUPER ADMIN ONLY)
-========================= */
-router.post(
-  "/",
-  protect,
-  roleCheck("super_admin"),
-  createCompany
-);
+// routes/companyRoutes.js
+router.get("/public", getPublicCompanies);       
+router.get("/", protect, getCompanies);          
+router.post("/", protect, roleCheck("super_admin"), createCompany);
 
 export default router;
