@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
 import {
   Search,
   Plus,
@@ -10,6 +11,8 @@ import {
   ChevronRight,
   ChevronDown,
   Upload,
+  Download,
+  Trash2,
   Users,
   Building2,
   ShieldAlert,
@@ -28,6 +31,7 @@ const btnBase =
   "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] px-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:cursor-not-allowed disabled:opacity-50";
 const btnPrimary = `${btnBase} bg-[#0052CC] text-white hover:bg-[#0065FF] active:bg-[#0747A6]`;
 const btnDefault = `${btnBase} bg-[rgba(9,30,66,0.04)] text-[#42526E] hover:bg-[rgba(9,30,66,0.08)] active:bg-[#DEEBFF] active:text-[#0052CC]`;
+const btnDanger = `${btnBase} bg-[#DE350B] text-white hover:bg-[#FF5630] active:bg-[#BF2600]`;
 const btnSubtle = `${btnBase} bg-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
 
 /* ============================================================
@@ -70,7 +74,7 @@ const startOfDay = (d) => {
 const daysUntil = (date) =>
   Math.round((startOfDay(date) - startOfDay(new Date())) / (1000 * 60 * 60 * 24));
 
-// one source of truth for badge, stat cards and list filter
+// one source of truth for badge, stat cards, list filter and export
 const EXPIRING_DAYS = 30;
 const visaStatus = (date) => {
   if (!date) return "none";
@@ -78,6 +82,13 @@ const visaStatus = (date) => {
   if (d < 0) return "expired";
   if (d < EXPIRING_DAYS) return "expiring";
   return "active";
+};
+
+const STATUS_LABEL = {
+  expired: "Expired",
+  expiring: "Expiring soon",
+  active: "Active",
+  none: "—",
 };
 
 const toDateInput = (d) => (d ? String(d).slice(0, 10) : "");
@@ -270,10 +281,13 @@ export default function AdminEmployeeMaster() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [newEmployee, setNewEmployee] = useState(EMPTY_EMPLOYEE);
+  const [deleteTarget, setDeleteTarget] = useState(null); // employee being deleted
+  const [deleting, setDeleting] = useState(false);
 
   // ================= USER INFO =================
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
+  const canDelete = user?.role !== "hr"; // backend: delete is adminOnly
 
   // ================= LOAD EMPLOYEES & COMPANIES =================
   const loadEmployees = async (companyId = companyFilter) => {
@@ -345,6 +359,33 @@ export default function AdminEmployeeMaster() {
     }
   };
 
+  // ================= DELETE EMPLOYEE =================
+  // Blocked when the employee still has assets assigned.
+  // The backend is the source of truth (it returns 400/409 with a message);
+  // assignedAssetsCount is only used for a quick UI hint if your API sends it.
+  const hasAssets = (emp) => Number(emp?.assignedAssetsCount || 0) > 0;
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeleting(true);
+      await api.delete(`/employees/${deleteTarget._id}`);
+      toast.success("Employee deleted");
+      setDeleteTarget(null);
+      // go back a page if we just removed the last row on this page
+      if (paginated.length === 1 && page > 1) setPage(page - 1);
+      loadEmployees();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message ||
+          "Cannot delete this employee. Unassign their assets first."
+      );
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // ================= VISA COUNTS =================
   const expiredCount = useMemo(
     () => employees.filter((e) => visaStatus(e.visaExpiryDate) === "expired").length,
@@ -380,6 +421,51 @@ export default function AdminEmployeeMaster() {
 
     return list;
   }, [employees, search, visaFilter]);
+
+  // ================= EXCEL EXPORT (all rows matching current filters) =================
+  const exportToExcel = () => {
+    if (filteredEmployees.length === 0) {
+      return toast.error("No employees to export");
+    }
+
+    const rows = filteredEmployees.map((e) => ({
+      "Staff Code": e.staffCode || "",
+      Name: tidy(e.name),
+      Company: e.company?.name || e.companyName || e.company || "",
+      Department: tidy(e.department),
+      Designation: tidy(e.designation),
+      "Visa No": e.visaNo || "",
+      "Visa Expiry": e.visaExpiryDate ? new Date(e.visaExpiryDate) : "",
+      "Days Left": e.visaExpiryDate ? daysUntil(e.visaExpiryDate) : "",
+      "Visa Status": STATUS_LABEL[visaStatus(e.visaExpiryDate)],
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      cellDates: true,
+      dateNF: "dd-mmm-yyyy",
+    });
+
+    ws["!cols"] = [
+      { wch: 12 }, // Staff Code
+      { wch: 28 }, // Name
+      { wch: 24 }, // Company
+      { wch: 20 }, // Department
+      { wch: 22 }, // Designation
+      { wch: 16 }, // Visa No
+      { wch: 14 }, // Visa Expiry
+      { wch: 10 }, // Days Left
+      { wch: 16 }, // Visa Status
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Employees");
+
+    const suffix = visaFilter !== "all" ? `_visa-${visaFilter}` : "";
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `employees${suffix}_${date}.xlsx`);
+
+    toast.success(`Exported ${rows.length} employee${rows.length === 1 ? "" : "s"}`);
+  };
 
   // ================= PAGINATION =================
   const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
@@ -436,6 +522,14 @@ export default function AdminEmployeeMaster() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={exportToExcel}
+              disabled={loading || filteredEmployees.length === 0}
+              className={btnDefault}
+            >
+              <Download size={14} />
+              Export Excel
+            </button>
             <button
               onClick={() => (window.location.href = "/admin/assets/upload-excel")}
               className={btnDefault}
@@ -676,19 +770,36 @@ export default function AdminEmployeeMaster() {
                         <VisaBadge expiryDate={emp.visaExpiryDate} />
                       </td>
                       <td className="px-4 py-2.5 text-right">
-                        <button
-                          onClick={() => {
-                            setEditId(emp._id);
-                            setEditForm({
-                              ...emp,
-                              visaExpiryDate: toDateInput(emp.visaExpiryDate),
-                            });
-                          }}
-                          className={btnSubtle}
-                        >
-                          <Pencil size={14} />
-                          Edit
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => {
+                              setEditId(emp._id);
+                              setEditForm({
+                                ...emp,
+                                visaExpiryDate: toDateInput(emp.visaExpiryDate),
+                              });
+                            }}
+                            className={btnSubtle}
+                          >
+                            <Pencil size={14} />
+                            Edit
+                          </button>
+                          {canDelete && (
+                          <button
+                            onClick={() => setDeleteTarget(emp)}
+                            disabled={hasAssets(emp)}
+                            title={
+                              hasAssets(emp)
+                                ? `Has ${emp.assignedAssetsCount} asset(s) assigned. Unassign them first.`
+                                : "Delete employee"
+                            }
+                            className={`${btnSubtle} hover:!bg-[#FFEBE6] hover:!text-[#BF2600]`}
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -852,6 +963,43 @@ export default function AdminEmployeeMaster() {
               />
             </Field>
           </div>
+        </Modal>
+      )}
+
+      {/* DELETE CONFIRM MODAL */}
+      {deleteTarget && (
+        <Modal
+          title="Delete employee?"
+          onClose={() => !deleting && setDeleteTarget(null)}
+          footer={
+            <>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className={btnSubtle}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className={btnDanger}
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            </>
+          }
+        >
+          <p className="text-sm text-[#42526E]">
+            You are about to delete{" "}
+            <span className="font-semibold text-[#172B4D]">
+              {tidy(deleteTarget.name)}
+            </span>{" "}
+            ({deleteTarget.staffCode}). This can't be undone.
+          </p>
+          <p className="mt-2 text-xs text-[#6B778C]">
+            Employees with assets assigned can't be deleted. Unassign their assets first.
+          </p>
         </Modal>
       )}
 

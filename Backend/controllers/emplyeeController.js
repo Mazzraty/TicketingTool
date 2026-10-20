@@ -312,15 +312,29 @@ export const deleteEmployee = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user, req.query);
 
-    const emp = await EmployeeMaster.findOneAndDelete({
-      _id: req.params.id,
-      ...filter,
-    });
-
+    // 1. make sure the employee exists within the caller's company scope
+    const emp = await EmployeeMaster.findOne({ _id: req.params.id, ...filter });
     if (!emp) {
       return res.status(404).json({ message: "Employee not found" });
     }
 
+    // 2. block delete if any asset is still assigned to this employee
+    const assignedCount = await Asset.countDocuments({
+      assignedTo: emp._id,
+      // if you keep returned/history records, only count active ones, e.g.:
+      // status: "assigned",
+    });
+
+    if (assignedCount > 0) {
+      return res.status(409).json({
+        message: `Cannot delete ${emp.name}: ${assignedCount} asset${
+          assignedCount === 1 ? " is" : "s are"
+        } still assigned. Unassign them first.`,
+      });
+    }
+
+    // 3. safe to delete
+    await emp.deleteOne();
     res.json({ msg: "Deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
