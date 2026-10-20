@@ -8,7 +8,7 @@ import connectDB from "./config/db.js";
 // cron
 import "./crons/softwareCronesExpiry.js";
 import "./crons/autoCloseTicket.js";  
-
+import "./crons/visaExpiryCrone.js";
 // routes
 import authRoutes from "./routes/authRoutes.js";
 import companyRoutes from "./routes/companyRoutes.js";
@@ -111,7 +111,6 @@ app.use((err, req, res, next) => {
     message: err.message || "Server Error"
   });
 });
-
 /* =========================
    🚀 START SERVER
 ========================= */

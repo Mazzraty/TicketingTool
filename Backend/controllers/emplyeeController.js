@@ -3,6 +3,9 @@ import Asset from "../models/assetSchema.js";
 import Company from "../models/comapnySchema.js";
 import mongoose from "mongoose";
 
+/* =========================
+   HELPERS
+========================= */
 const normalizeCompanyId = (value) => {
   if (!value) return null;
   if (typeof value === "object") {
@@ -72,6 +75,83 @@ const getCompanyFilter = (user, query = {}) => {
 };
 
 /* =========================
+   HELPER: DATE PARSER
+   Accepts: Date, Excel serial number, "YYYY-MM-DD",
+            "DD/MM/YYYY", "DD-MM-YYYY", "DD.MM.YYYY"
+   Empty -> null, invalid -> throws (status 400)
+========================= */
+const parseDate = (value, label = "date") => {
+  if (value === undefined || value === null || value === "") return null;
+
+  let d;
+
+  if (value instanceof Date) {
+    d = value;
+  } else if (typeof value === "number") {
+    // Excel serial date
+    d = new Date(Math.round((value - 25569) * 86400 * 1000));
+  } else {
+    const s = String(value).trim();
+    if (!s) return null;
+
+    const dmy = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+    if (dmy) {
+      d = new Date(Date.UTC(+dmy[3], +dmy[2] - 1, +dmy[1]));
+    } else if (/^\d{5}$/.test(s)) {
+      d = new Date(Math.round((Number(s) - 25569) * 86400 * 1000));
+    } else {
+      d = new Date(s);
+    }
+  }
+
+  if (!d || isNaN(d.getTime())) {
+    const err = new Error(`Invalid ${label}`);
+    err.status = 400;
+    throw err;
+  }
+
+  return d;
+};
+
+/* =========================
+   HELPER: WHITELIST EMPLOYEE FIELDS
+   Stops clients from setting companyId, company,
+   visaAlertStage, visaAlertSentAt, etc. via the body
+========================= */
+const EMPLOYEE_FIELDS = [
+  "staffCode",
+  "name",
+  "dateOfJoining",
+  "division",
+  "department",
+  "designation",
+  "placeOfWork",
+  "visaNo",
+  "visaExpiryDate",
+  "status",
+];
+
+const pickEmployeeFields = (body = {}) => {
+  const out = {};
+
+  for (const key of EMPLOYEE_FIELDS) {
+    if (body[key] !== undefined) out[key] = body[key];
+  }
+
+  if (typeof out.staffCode === "string") out.staffCode = out.staffCode.trim();
+  if (typeof out.name === "string") out.name = out.name.trim();
+
+  if ("dateOfJoining" in out) {
+    out.dateOfJoining = parseDate(out.dateOfJoining, "dateOfJoining");
+  }
+  if ("visaExpiryDate" in out) {
+    out.visaExpiryDate = parseDate(out.visaExpiryDate, "visaExpiryDate");
+  }
+
+  return out;
+};
+
+/* =========================
    GET ALL EMPLOYEES
 ========================= */
 export const getEmployees = async (req, res) => {
@@ -115,18 +195,18 @@ export const getEmployee = async (req, res) => {
 ========================= */
 export const createEmployee = async (req, res) => {
   try {
-    const { staffCode, name, companyId: bodyCompanyId } = req.body;
+    const data = pickEmployeeFields(req.body);
 
-    if (!staffCode || !name) {
+    if (!data.staffCode || !data.name) {
       return res.status(400).json({
         message: "staffCode and name required",
       });
     }
 
-    // ✅ Use companyId from body for super_admin, or from user for regular admin
+    // ✅ super_admin: selected company or body companyId; others: own company
     const targetCompanyId =
       req.user.role === "super_admin"
-        ? req.user.companyId || bodyCompanyId
+        ? req.user.companyId || req.body.companyId
         : req.user.companyId;
 
     if (!targetCompanyId) {
@@ -135,8 +215,18 @@ export const createEmployee = async (req, res) => {
       });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(normalizeCompanyId(targetCompanyId))) {
+      return res.status(400).json({ message: "Company ID is invalid" });
+    }
+
+    // ✅ Always read the name from the DB (req.user.companyName can be stale)
+    const company = await Company.findById(targetCompanyId).select("name");
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
     const exists = await EmployeeMaster.findOne({
-      staffCode,
+      staffCode: data.staffCode,
       companyId: targetCompanyId,
     });
 
@@ -146,22 +236,21 @@ export const createEmployee = async (req, res) => {
       });
     }
 
-    // ✅ Get company name
-    let companyName = req.user.companyName || "";
-    if (req.user.role === "super_admin" && targetCompanyId) {
-      const company = await Company.findById(targetCompanyId).select("name");
-      companyName = company?.name || "";
-    }
-
     const emp = await EmployeeMaster.create({
-      ...req.body,
+      ...data,
       companyId: targetCompanyId,
-      company: companyName,
+      company: company.name || "",
+      // visaAlertStage defaults to "" -> the visa cron picks this employee up
+      // on its next run if the visa is already expiring/expired
     });
 
     res.json(emp);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    // unique index { companyId, staffCode } race condition
+    if (err.code === 11000) {
+      return res.status(400).json({ message: "Employee already exists" });
+    }
+    res.status(err.status || 500).json({ message: err.message });
   }
 };
 
@@ -171,14 +260,21 @@ export const createEmployee = async (req, res) => {
 export const updateEmployee = async (req, res) => {
   try {
     const filter = getCompanyFilter(req.user, req.query);
+    const data = pickEmployeeFields(req.body);
+
+    // Visa date changed -> let the cron re-evaluate the alert stage from scratch
+    if ("visaExpiryDate" in data) {
+      data.visaAlertStage = "";
+      data.visaAlertSentAt = null;
+    }
 
     const emp = await EmployeeMaster.findOneAndUpdate(
       {
         _id: req.params.id,
         ...filter,
       },
-      req.body,
-      { new: true }
+      { $set: data },
+      { new: true, runValidators: true }
     );
 
     if (!emp) {
@@ -187,7 +283,12 @@ export const updateEmployee = async (req, res) => {
 
     res.json(emp);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    if (err.code === 11000) {
+      return res
+        .status(400)
+        .json({ message: "Staff code already exists in this company" });
+    }
+    res.status(err.status || 500).json({ message: err.message });
   }
 };
 
@@ -302,17 +403,29 @@ export const bulkUploadEmployees = async (req, res) => {
           continue;
         }
 
+        // ✅ Dates (supports Excel serials, YYYY-MM-DD, DD/MM/YYYY)
+        const dateOfJoining = parseDate(
+          e.dateOfJoining || e["Date Of Joining"],
+          "dateOfJoining"
+        );
+        const visaExpiryDate = parseDate(
+          e.visaExpiryDate ||
+            e.visaExpiry ||
+            e["Visa Expiry Date"] ||
+            e["Visa Expiry"],
+          "visaExpiryDate"
+        );
+
         await EmployeeMaster.create({
           staffCode,
           name,
-          department: e.department || "",
-          designation: e.designation || "",
-          division: e.division || "",
-          placeOfWork: e.placeOfWork || "",
-          visaNo: e.visaNo || "",
-          dateOfJoining: e.dateOfJoining
-            ? new Date(e.dateOfJoining)
-            : null,
+          department: clean(e.department),
+          designation: clean(e.designation),
+          division: clean(e.division),
+          placeOfWork: clean(e.placeOfWork),
+          visaNo: clean(e.visaNo || e["Visa No"]),
+          dateOfJoining,
+          visaExpiryDate, // ✅ now saved, so the visa cron + stats work
           status: "active",
 
           companyId: targetCompanyIdString,
@@ -378,7 +491,7 @@ export const bulkUploadEmployees = async (req, res) => {
           soti: a.soti || "",
           notes: a.notes || "",
 
-          companyId: targetCompanyId,
+          companyId: targetCompanyIdString,
         });
 
         inserted++;

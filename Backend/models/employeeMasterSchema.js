@@ -68,7 +68,12 @@ const employeeSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-
+    visaAlertStage: {
+      type: String,
+      enum: ["", "30d", "15d", "7d", "expired"],
+      default: "",
+    },
+    visaAlertSentAt: { type: Date, default: null },
     status: {
       type: String,
       enum: ["active", "inactive"],
