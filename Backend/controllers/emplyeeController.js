@@ -114,6 +114,19 @@ const parseDate = (value, label = "date") => {
 };
 
 /* =========================
+   HELPER: COMPARE VALUES
+   Used by bulk upload to detect whether a field really changed
+========================= */
+const isSame = (a, b) => {
+  if (a instanceof Date || b instanceof Date) {
+    const ta = a ? new Date(a).getTime() : null;
+    const tb = b ? new Date(b).getTime() : null;
+    return ta === tb;
+  }
+  return (a ?? "") === (b ?? "");
+};
+
+/* =========================
    HELPER: WHITELIST EMPLOYEE FIELDS
    Stops clients from setting companyId, company,
    visaAlertStage, visaAlertSentAt, etc. via the body
@@ -203,7 +216,7 @@ export const createEmployee = async (req, res) => {
       });
     }
 
-    // ✅ super_admin: selected company or body companyId; others: own company
+    // super_admin: selected company or body companyId; others: own company
     const targetCompanyId =
       req.user.role === "super_admin"
         ? req.user.companyId || req.body.companyId
@@ -219,7 +232,7 @@ export const createEmployee = async (req, res) => {
       return res.status(400).json({ message: "Company ID is invalid" });
     }
 
-    // ✅ Always read the name from the DB (req.user.companyName can be stale)
+    // Always read the name from the DB (req.user.companyName can be stale)
     const company = await Company.findById(targetCompanyId).select("name");
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
@@ -316,6 +329,9 @@ export const deleteEmployee = async (req, res) => {
 
 /* =========================
    BULK UPLOAD (EMPLOYEES + ASSETS)
+   - new staff code      -> inserted
+   - existing staff code -> updated (only changed, non-empty fields)
+   - nothing changed     -> unchanged
 ========================= */
 export const bulkUploadEmployees = async (req, res) => {
   try {
@@ -368,11 +384,13 @@ export const bulkUploadEmployees = async (req, res) => {
     const clean = (v) => (v ? v.toString().trim() : "");
 
     let inserted = 0;
+    let updated = 0;
+    let unchanged = 0;
     let skipped = 0;
     let failedRows = [];
 
     /* =========================
-       EMPLOYEES
+       EMPLOYEES (insert new, update existing)
     ========================= */
     for (const e of employees) {
       try {
@@ -386,24 +404,14 @@ export const bulkUploadEmployees = async (req, res) => {
 
         if (!staffCode || !name) {
           skipped++;
-          continue;
-        }
-
-        const exists = await EmployeeMaster.findOne({
-          staffCode,
-          companyId: targetCompanyIdString,
-        });
-
-        if (exists) {
-          skipped++;
           failedRows.push({
             row: e,
-            reason: `staffCode "${staffCode}" already exists in this company`,
+            reason: "staffCode and name are required",
           });
           continue;
         }
 
-        // ✅ Dates (supports Excel serials, YYYY-MM-DD, DD/MM/YYYY)
+        // Dates (supports Excel serials, YYYY-MM-DD, DD/MM/YYYY)
         const dateOfJoining = parseDate(
           e.dateOfJoining || e["Date Of Joining"],
           "dateOfJoining"
@@ -416,8 +424,7 @@ export const bulkUploadEmployees = async (req, res) => {
           "visaExpiryDate"
         );
 
-        await EmployeeMaster.create({
-          staffCode,
+        const incoming = {
           name,
           department: clean(e.department),
           designation: clean(e.designation),
@@ -425,9 +432,50 @@ export const bulkUploadEmployees = async (req, res) => {
           placeOfWork: clean(e.placeOfWork),
           visaNo: clean(e.visaNo || e["Visa No"]),
           dateOfJoining,
-          visaExpiryDate, // ✅ now saved, so the visa cron + stats work
-          status: "active",
+          visaExpiryDate,
+        };
 
+        const existing = await EmployeeMaster.findOne({
+          staffCode,
+          companyId: targetCompanyIdString,
+        });
+
+        /* ---------- UPDATE existing employee ---------- */
+        if (existing) {
+          const changes = {};
+
+          for (const [key, value] of Object.entries(incoming)) {
+            // empty cells never erase existing data
+            if (value === "" || value === null || value === undefined) continue;
+            if (!isSame(existing[key], value)) changes[key] = value;
+          }
+
+          if (Object.keys(changes).length === 0) {
+            unchanged++;
+            continue;
+          }
+
+          // visa date changed -> let the visa cron re-evaluate the alert
+          if ("visaExpiryDate" in changes) {
+            changes.visaAlertStage = "";
+            changes.visaAlertSentAt = null;
+          }
+
+          await EmployeeMaster.updateOne(
+            { _id: existing._id, companyId: targetCompanyIdString },
+            { $set: changes },
+            { runValidators: true }
+          );
+
+          updated++;
+          continue;
+        }
+
+        /* ---------- INSERT new employee ---------- */
+        await EmployeeMaster.create({
+          staffCode,
+          ...incoming,
+          status: "active",
           companyId: targetCompanyIdString,
           company: targetCompanyName,
         });
@@ -504,6 +552,8 @@ export const bulkUploadEmployees = async (req, res) => {
     return res.json({
       success: true,
       inserted,
+      updated,
+      unchanged,
       skipped,
       total: employees.length + assets.length,
       failedRows,
