@@ -26,6 +26,7 @@ const ALLOWED_EMPLOYEE_FIELDS = [
   "division",
   "placeOfWork",
   "visaNo",
+  "visaExpiryDate",
   "dateOfJoining",
 ];
 
@@ -39,8 +40,58 @@ const SHEET_COLUMNS = [
   { label: "Place Of Work", key: "placeOfWork" },
   { label: "Designation", key: "designation" },
   { label: "Visa No.", key: "visaNo" },
+  { label: "Visa Expiry Date", key: "visaExpiryDate" },
   { label: "Company", key: "company" },
 ];
+
+const DATE_KEYS = ["dateOfJoining", "visaExpiryDate"];
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/* =========================
+   DATE NORMALIZER
+   Accepts: YYYY-MM-DD, DD/MM/YYYY (also - and .), Excel serial,
+            or anything the browser can parse ("15-Mar-2027").
+   Returns "YYYY-MM-DD" when valid, "" when empty,
+   or the original text when it can't be understood (row shows as Invalid).
+========================= */
+const pad = (n) => String(n).padStart(2, "0");
+
+const buildIso = (y, m, d) => {
+  const dt = new Date(Date.UTC(+y, +m - 1, +d));
+  if (
+    dt.getUTCFullYear() !== +y ||
+    dt.getUTCMonth() !== +m - 1 ||
+    dt.getUTCDate() !== +d
+  ) {
+    return null;
+  }
+  return `${y}-${pad(m)}-${pad(d)}`;
+};
+
+const normalizeDate = (value) => {
+  const s = value != null ? value.toString().trim() : "";
+  if (!s) return "";
+
+  let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (m) return buildIso(m[1], m[2], m[3]) || s;
+
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (m) return buildIso(m[3], m[2], m[1]) || s;
+
+  if (/^\d{5}$/.test(s)) {
+    const dt = new Date(Math.round((Number(s) - 25569) * 86400 * 1000));
+    return dt.toISOString().slice(0, 10);
+  }
+
+  const dt = new Date(s);
+  if (!isNaN(dt.getTime())) {
+    return buildIso(dt.getFullYear(), dt.getMonth() + 1, dt.getDate()) || s;
+  }
+
+  return s;
+};
+
+const dateOk = (v) => !v || ISO_DATE.test(v);
 
 /* ================= UI HELPERS (styling only, no logic) ================= */
 // Atlassian / Jira Service Management styling
@@ -140,6 +191,23 @@ export default function EmployeeExcelUpload() {
   const clean = (v) => (v != null && v !== "" ? v.toString().trim() : "");
 
   /* =========================
+     BUILD ONE REVIEW ROW (shared by Excel file + paste sheet)
+  ========================= */
+  const buildRow = (r) => ({
+    type: "Employee",
+    company: clean(r.company),
+    staffCode: clean(r.staffCode),
+    name: clean(r.name),
+    department: clean(r.department),
+    designation: clean(r.designation),
+    division: clean(r.division),
+    placeOfWork: clean(r.placeOfWork),
+    visaNo: clean(r.visaNo),
+    visaExpiryDate: normalizeDate(r.visaExpiryDate),
+    dateOfJoining: normalizeDate(r.dateOfJoining),
+  });
+
+  /* =========================
      FUZZY MATCH ENGINE
   ========================= */
   const similarity = (a, b) => {
@@ -209,8 +277,10 @@ export default function EmployeeExcelUpload() {
 
     reader.onload = (event) => {
       try {
+        // cellDates + dateNF => real Excel date cells come out as YYYY-MM-DD (no day/month mix-ups)
         const workbook = XLSX.read(event.target.result, {
           type: "array",
+          cellDates: true,
         });
 
         const sheet =
@@ -219,6 +289,7 @@ export default function EmployeeExcelUpload() {
         const json = XLSX.utils.sheet_to_json(sheet, {
           defval: "",
           raw: false,
+          dateNF: "yyyy-mm-dd",
         });
 
         if (!json.length) {
@@ -228,25 +299,9 @@ export default function EmployeeExcelUpload() {
 
         setFileType("Employee");
 
-        const formatted = json.map((r) => {
-          const row = fuzzyMapRow(
-            r,
-            ALLOWED_EMPLOYEE_FIELDS
-          );
-
-          return {
-            type: "Employee",
-            company: clean(row.company),
-            staffCode: clean(row.staffCode),
-            name: clean(row.name),
-            department: clean(row.department),
-            designation: clean(row.designation),
-            division: clean(row.division),
-            placeOfWork: clean(row.placeOfWork),
-            visaNo: clean(row.visaNo),
-            dateOfJoining: clean(row.dateOfJoining),
-          };
-        });
+        const formatted = json.map((r) =>
+          buildRow(fuzzyMapRow(r, ALLOWED_EMPLOYEE_FIELDS))
+        );
 
         setRows(formatted);
       } catch (err) {
@@ -314,18 +369,7 @@ export default function EmployeeExcelUpload() {
   const loadSheetIntoRows = () => {
     const formatted = sheetRows
       .filter((r) => r.staffCode || r.name)
-      .map((r) => ({
-        type: "Employee",
-        company: clean(r.company),
-        staffCode: clean(r.staffCode),
-        name: clean(r.name),
-        department: clean(r.department),
-        designation: clean(r.designation),
-        division: clean(r.division),
-        placeOfWork: clean(r.placeOfWork),
-        visaNo: clean(r.visaNo),
-        dateOfJoining: clean(r.dateOfJoining),
-      }));
+      .map((r) => buildRow(r));
 
     if (formatted.length === 0) {
       toast.error("Sheet is empty — paste or type employee details first");
@@ -338,8 +382,14 @@ export default function EmployeeExcelUpload() {
     toast.success(`${formatted.length} rows loaded — review below and click Upload`);
   };
 
+  // staff code + name required, dates (if given) must be understood
   const isValid = (r) => {
-    return r.staffCode && r.name;
+    return (
+      r.staffCode &&
+      r.name &&
+      dateOk(r.dateOfJoining) &&
+      dateOk(r.visaExpiryDate)
+    );
   };
 
   const validCount = rows.filter(isValid).length;
@@ -380,20 +430,28 @@ export default function EmployeeExcelUpload() {
         payload
       );
 
-      const { inserted, skipped, failedRows } = res.data;
+      const { inserted = 0, updated = 0, unchanged = 0, skipped = 0, failedRows } =
+        res.data;
 
-      if (inserted > 0) {
-        toast.success(`Employees Inserted: ${inserted}${skipped ? `, Skipped: ${skipped}` : ""}`);
+      const parts = [];
+      if (inserted) parts.push(`Added: ${inserted}`);
+      if (updated) parts.push(`Updated: ${updated}`);
+      if (unchanged) parts.push(`No changes: ${unchanged}`);
+      if (skipped) parts.push(`Skipped: ${skipped}`);
+
+      if (inserted > 0 || updated > 0) {
+        toast.success(parts.join(", "));
       } else {
         toast.error(
-          skipped > 0
-            ? `Nothing inserted — ${skipped} row(s) skipped (likely duplicate staffCode)`
-            : "Nothing was inserted"
+          parts.length
+            ? `Nothing added or updated — ${parts.join(", ")}`
+            : "Nothing was added or updated"
         );
       }
 
       if (failedRows?.length) {
         console.warn("Bulk upload failed rows:", failedRows);
+        toast.error(`${failedRows.length} row(s) failed — see console for details`);
       }
 
       setRows([]);
@@ -473,7 +531,8 @@ export default function EmployeeExcelUpload() {
               Employee Excel Upload
             </h1>
             <p className="mt-1 text-sm text-[#5E6C84]">
-              Bulk Employee Upload — upload an Excel file or paste rows from Excel
+              Bulk employee upload — new staff codes are added, existing ones are
+              updated. Upload an Excel file or paste rows from Excel.
             </p>
           </div>
 
@@ -513,7 +572,7 @@ export default function EmployeeExcelUpload() {
         {/* IN-PAGE PASTE SHEET */}
         <Card
           title="Paste from Excel"
-          subtitle="Copy employee details from Excel (data rows only, no header) and paste into the box below"
+          subtitle="Copy employee details from Excel (data rows only, no header, same column order as the grid) and paste into the box below"
           actions={
             <>
               <button onClick={addSheetRow} className={btnDefault}>
@@ -580,7 +639,8 @@ export default function EmployeeExcelUpload() {
                           onChange={(e) =>
                             updateSheetCell(rowIdx, col.key, e.target.value)
                           }
-                          className="h-9 w-full min-w-[120px] bg-transparent px-2 text-sm text-[#172B4D] outline-none hover:bg-[#F4F5F7] focus:bg-white focus:shadow-[inset_0_0_0_2px_#4C9AFF]"
+                          placeholder={DATE_KEYS.includes(col.key) ? "DD/MM/YYYY" : ""}
+                          className="h-9 w-full min-w-[120px] bg-transparent px-2 text-sm text-[#172B4D] outline-none placeholder:text-[#C1C7D0] hover:bg-[#F4F5F7] focus:bg-white focus:shadow-[inset_0_0_0_2px_#4C9AFF]"
                         />
                       </td>
                     ))}
@@ -591,8 +651,9 @@ export default function EmployeeExcelUpload() {
           </div>
 
           <p className="mt-2 text-xs text-[#6B778C]">
-            Staff code and Name are required. Rows missing either one will be
-            skipped.
+            Staff code and Name are required. Dates can be DD/MM/YYYY or
+            YYYY-MM-DD. If a staff code already exists in the company, its
+            details are updated; empty cells never erase existing data.
           </p>
         </Card>
 
@@ -603,7 +664,7 @@ export default function EmployeeExcelUpload() {
         {/* UPLOAD CARD */}
         <Card
           title="Upload Excel file"
-          subtitle="The first sheet is read. Column headers are matched automatically (e.g. Staff Code, Name, Department)"
+          subtitle="The first sheet is read. Column headers are matched automatically (e.g. Staff Code, Name, Visa Expiry Date)"
         >
           {/* DROP ZONE */}
           <label
@@ -660,7 +721,7 @@ export default function EmployeeExcelUpload() {
               title="Review"
               subtitle={
                 invalidCount > 0
-                  ? "Rows missing a staff code or name will be skipped"
+                  ? "Rows missing a staff code or name, or with an unreadable date, will be skipped"
                   : "All rows are ready to upload"
               }
               actions={
@@ -694,7 +755,7 @@ export default function EmployeeExcelUpload() {
               }
             >
               <div className="-m-4 overflow-x-auto">
-                <table className="w-full min-w-[1000px] border-collapse text-sm">
+                <table className="w-full min-w-[1100px] border-collapse text-sm">
                   <thead>
                     <tr className="border-b-2 border-[#DFE1E6] text-left">
                       <th className="px-4 py-2.5 text-xs font-semibold text-[#5E6C84]">
@@ -732,11 +793,17 @@ export default function EmployeeExcelUpload() {
                                 ? "font-medium text-[#0052CC]"
                                 : k === "name"
                                   ? "font-medium text-[#172B4D]"
-                                  : "text-[#42526E]"
+                                  : DATE_KEYS.includes(k) && v && !dateOk(v)
+                                    ? "font-medium text-[#BF2600]"
+                                    : "text-[#42526E]"
                               }`}
                           >
                             {(k === "staffCode" || k === "name") && !v ? (
                               <span className="text-[#BF2600]">Missing</span>
+                            ) : DATE_KEYS.includes(k) && v && !dateOk(v) ? (
+                              <span title="Use DD/MM/YYYY or YYYY-MM-DD">
+                                {v} (invalid date)
+                              </span>
                             ) : (
                               v
                             )}
