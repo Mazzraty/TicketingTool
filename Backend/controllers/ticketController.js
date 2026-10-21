@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Ticket from "../models/ticketSchema.js";
 import Company from "../models/comapnySchema.js";
 import Employee from "../models/employeeMasterSchema.js";
@@ -29,6 +30,25 @@ const escapeHtml = (value = "") =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+
+// Log the real error, send a generic message to the client
+const serverError = (res, err, fallback = "Server error") => {
+  console.error(err);
+  return res.status(500).json({ success: false, message: fallback });
+};
+
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+// super_admin can touch any ticket; everyone else only their own company's
+const canAccessTicket = (user, ticket) =>
+  user.role === "super_admin" ||
+  String(ticket.companyId?._id || ticket.companyId) === String(user.companyId);
+
+const invalidId = (res) =>
+  res.status(400).json({ success: false, message: "Invalid ticket ID" });
+
+const accessDenied = (res) =>
+  res.status(403).json({ success: false, message: "Access denied" });
 
 /* ======================================================
    ✅ CREATE TICKET
@@ -310,12 +330,7 @@ export const createTicket = async (req, res) => {
       data: ticket,
     });
   } catch (error) {
-    console.error("Create ticket error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to create ticket",
-    });
+    return serverError(res, error, "Failed to create ticket");
   }
 };
 
@@ -337,7 +352,7 @@ export const getUserTickets = async (req, res) => {
     }
 
     // Search by ticket number, title or description
-    if (search?.trim()) {
+    if (typeof search === "string" && search.trim()) {
       const safe = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const regex = new RegExp(safe, "i");
       filter.$or = [
@@ -363,7 +378,7 @@ export const getUserTickets = async (req, res) => {
       totalPages: Math.max(1, Math.ceil(total / limit)),
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return serverError(res, err);
   }
 };
 
@@ -372,8 +387,8 @@ export const getUserTickets = async (req, res) => {
 ====================================================== */
 export const getAllTickets = async (req, res) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(1000, Math.max(1, Number(req.query.limit) || 10));
 
     let filter = {};
 
@@ -384,7 +399,11 @@ export const getAllTickets = async (req, res) => {
     } else if (req.user.role === "super_admin") {
       // super_admin can optionally scope the list to a single company
       // via ?companyId=..., otherwise sees every company's tickets
-      const selectedCompanyId = req.user.companyId || req.query.companyId;
+      const queryCompanyId =
+        typeof req.query.companyId === "string" && isValidId(req.query.companyId)
+          ? req.query.companyId
+          : null;
+      const selectedCompanyId = req.user.companyId || queryCompanyId;
       filter = selectedCompanyId ? { companyId: selectedCompanyId } : {};
     }
 
@@ -392,6 +411,8 @@ export const getAllTickets = async (req, res) => {
       .populate("userId", "name email employeeId department position")
       .populate("employeeId", "name staffCode department designation")
       .populate("companyId", "name code")
+      .populate("assignedTo", "name email")
+      .populate("statusHistory.changedBy", "name email role")
       .populate({
         path: "escalation.escalatedBy",
         select: "name email",
@@ -411,12 +432,7 @@ export const getAllTickets = async (req, res) => {
       total,
     });
   } catch (err) {
-    console.error(err);
-
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return serverError(res, err);
   }
 };
 
@@ -425,10 +441,14 @@ export const getAllTickets = async (req, res) => {
 ====================================================== */
 export const getTicketById = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) return invalidId(res);
+
     const ticket = await Ticket.findById(req.params.id)
       .populate("userId", "name email employeeId")
       .populate("employeeId", "name staffCode department designation")
       .populate("companyId", "name code")
+      .populate("assignedTo", "name email")
+      .populate("statusHistory.changedBy", "name email role")
       .populate({
         path: "escalation.escalatedBy",
         select: "name email",
@@ -442,19 +462,13 @@ export const getTicketById = async (req, res) => {
       });
     }
 
-    if (req.user.role !== "super_admin" || req.user.companyId) {
-      const ticketCompanyId =
-        ticket.companyId && ticket.companyId._id
-          ? ticket.companyId._id.toString()
-          : ticket.companyId?.toString();
-      const userCompanyId = req.user.companyId?.toString() || null;
+    // the ticket's own creator may always view it; admins only within their company
+    const isOwner =
+      ticket.userId &&
+      String(ticket.userId._id || ticket.userId) === String(req.user.id);
 
-      if (ticketCompanyId && ticketCompanyId !== userCompanyId) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-      }
+    if (!isOwner && !canAccessTicket(req.user, ticket)) {
+      return accessDenied(res);
     }
 
     res.json({
@@ -462,10 +476,7 @@ export const getTicketById = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return serverError(res, err);
   }
 };
 
@@ -485,6 +496,8 @@ export const updateStatus = async (req, res) => {
       repairDate,
       cost,
     } = req.body;
+
+    if (!isValidId(req.params.id)) return invalidId(res);
 
     const allowed = ["Open", "In Progress", "Resolved", "Closed", "Rejected"];
 
@@ -512,9 +525,11 @@ export const updateStatus = async (req, res) => {
       });
     }
 
+    if (!canAccessTicket(req.user, ticket)) return accessDenied(res);
+
     ticket.status = status;
 
-    if (resolutionNote?.trim()) {
+    if (typeof resolutionNote === "string" && resolutionNote.trim()) {
       ticket.resolutionNote = resolutionNote.trim();
     }
 
@@ -642,7 +657,7 @@ export const updateStatus = async (req, res) => {
     // REJECTED
     // ============================
     if (status === "Rejected") {
-      if (!rejectionReason?.trim()) {
+      if (typeof rejectionReason !== "string" || !rejectionReason.trim()) {
         return res.status(400).json({
           success: false,
           message: "A reason is required to reject a ticket",
@@ -694,6 +709,8 @@ export const updateStatus = async (req, res) => {
 
     // ============================
     // STATUS HISTORY
+    // (notes starting "Status changed to" / "Ticket rejected" are what the
+    //  admin UI uses to show who moved the ticket to each status)
     // ============================
     ticket.statusHistory.push({
       status,
@@ -762,12 +779,7 @@ export const updateStatus = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    console.error(err);
-
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return serverError(res, err);
   }
 };
 
@@ -776,6 +788,8 @@ export const updateStatus = async (req, res) => {
 ====================================================== */
 export const editTicket = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) return invalidId(res);
+
     const ticket = await Ticket.findById(req.params.id);
 
     if (!ticket) {
@@ -820,15 +834,18 @@ export const editTicket = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return serverError(res, err);
   }
 };
 
 /* ======================================================
    ✅ DELETE ATTACHMENT
+   Allowed for the ticket's creator, or an admin of the same company.
 ====================================================== */
 export const deleteAttachment = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) return invalidId(res);
+
     const { attachment } = req.body;
 
     const ticket = await Ticket.findById(req.params.id);
@@ -840,6 +857,14 @@ export const deleteAttachment = async (req, res) => {
       });
     }
 
+    const isOwner =
+      ticket.userId && ticket.userId.toString() === String(req.user.id);
+    const isAdminOfCompany =
+      ["super_admin", "company_admin", "it_support"].includes(req.user.role) &&
+      canAccessTicket(req.user, ticket);
+
+    if (!isOwner && !isAdminOfCompany) return accessDenied(res);
+
     ticket.attachments = ticket.attachments.filter((a) => a !== attachment);
 
     await ticket.save();
@@ -850,7 +875,7 @@ export const deleteAttachment = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return serverError(res, err);
   }
 };
 
@@ -859,6 +884,8 @@ export const deleteAttachment = async (req, res) => {
 ====================================================== */
 export const confirmResolution = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) return invalidId(res);
+
     const ticket = await Ticket.findById(req.params.id);
 
     if (!ticket) {
@@ -894,6 +921,15 @@ export const confirmResolution = async (req, res) => {
       { _id: ticket._id, userId: req.user.id, status: "Resolved" },
       {
         $set: { status: "Closed", closedAt: new Date(), autoCloseAt: null },
+        // record who closed it so the admin UI can show "Closed by"
+        $push: {
+          statusHistory: {
+            status: "Closed",
+            changedAt: new Date(),
+            changedBy: req.user.id,
+            note: "Status changed to Closed (confirmed by user)",
+          },
+        },
       },
       { new: true }
     );
@@ -950,7 +986,7 @@ export const confirmResolution = async (req, res) => {
       data: confirmedTicket,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return serverError(res, err);
   }
 };
 
@@ -960,6 +996,8 @@ export const confirmResolution = async (req, res) => {
 ====================================================== */
 export const reopenTicket = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) return invalidId(res);
+
     const ticket = await Ticket.findById(req.params.id);
 
     if (!ticket) {
@@ -1042,7 +1080,7 @@ export const reopenTicket = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return serverError(res, err);
   }
 };
 
@@ -1051,6 +1089,8 @@ export const reopenTicket = async (req, res) => {
 ====================================================== */
 export const sendTicketReminder = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) return invalidId(res);
+
     const ticket = await Ticket.findById(req.params.id);
 
     if (!ticket) {
@@ -1092,7 +1132,10 @@ export const sendTicketReminder = async (req, res) => {
       }
     }
 
-    const note = req.body?.message?.trim() || "";
+    const note =
+      typeof req.body?.message === "string"
+        ? req.body.message.trim().slice(0, 500)
+        : "";
 
     ticket.lastReminderAt = new Date();
     ticket.reminderCount = (ticket.reminderCount || 0) + 1;
@@ -1177,8 +1220,7 @@ export const sendTicketReminder = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+    return serverError(res, err);
   }
 };
 
@@ -1188,6 +1230,8 @@ export const sendTicketReminder = async (req, res) => {
 ====================================================== */
 export const addReview = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) return invalidId(res);
+
     const { review, rating } = req.body;
     const numericRating = Number(rating);
 
@@ -1234,7 +1278,7 @@ export const addReview = async (req, res) => {
       });
     }
 
-    ticket.review = review || "";
+    ticket.review = typeof review === "string" ? review.trim().slice(0, 1000) : "";
     ticket.rating = numericRating;
     ticket.ratingSource = "user";
     ticket.reviewedAt = new Date();
@@ -1247,10 +1291,7 @@ export const addReview = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return serverError(res, err);
   }
 };
 
@@ -1261,12 +1302,18 @@ export const getTicketStats = async (req, res) => {
   try {
     // super_admin can optionally scope the stats to a single company
     // via ?companyId=..., matching the same behaviour as getAllTickets
-    const filter =
-      req.user.role === "super_admin"
-        ? req.user.companyId || req.query.companyId
-          ? { companyId: req.user.companyId || req.query.companyId }
-          : {}
-        : { companyId: req.user.companyId };
+    let filter;
+
+    if (req.user.role === "super_admin") {
+      const queryCompanyId =
+        typeof req.query.companyId === "string" && isValidId(req.query.companyId)
+          ? req.query.companyId
+          : null;
+      const selectedCompanyId = req.user.companyId || queryCompanyId;
+      filter = selectedCompanyId ? { companyId: selectedCompanyId } : {};
+    } else {
+      filter = { companyId: req.user.companyId };
+    }
 
     const total = await Ticket.countDocuments(filter);
 
@@ -1301,12 +1348,7 @@ export const getTicketStats = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error(err);
-
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return serverError(res, err);
   }
 };
 
@@ -1315,6 +1357,8 @@ export const getTicketStats = async (req, res) => {
 ====================================================== */
 export const deleteTicket = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) return invalidId(res);
+
     const ticket = await Ticket.findById(req.params.id);
 
     if (!ticket) {
@@ -1324,15 +1368,7 @@ export const deleteTicket = async (req, res) => {
       });
     }
 
-    if (
-      req.user.role !== "super_admin" &&
-      ticket.companyId.toString() !== req.user.companyId.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied",
-      });
-    }
+    if (!canAccessTicket(req.user, ticket)) return accessDenied(res);
 
     await ticket.deleteOne();
 
@@ -1341,10 +1377,7 @@ export const deleteTicket = async (req, res) => {
       message: "Ticket deleted successfully",
     });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return serverError(res, err);
   }
 };
 
@@ -1390,7 +1423,7 @@ export const createManualTicket = async (req, res) => {
         req.user.companyAccess?.[0]?.companyId;
     }
 
-    if (!companyId) {
+    if (!companyId || !isValidId(companyId)) {
       return res.status(400).json({
         success: false,
         message: "Company is not assigned to this user",
@@ -1434,7 +1467,8 @@ export const createManualTicket = async (req, res) => {
     // ==================================================
     // REQUESTER: employee OR outside-company person (by name)
     // ==================================================
-    const cleanExternalName = (externalName || "").trim();
+    const cleanExternalName =
+      typeof externalName === "string" ? externalName.trim() : "";
     const isExternalRequester = !employeeId && !!cleanExternalName;
 
     if (!employeeId && !cleanExternalName) {
@@ -1449,6 +1483,12 @@ export const createManualTicket = async (req, res) => {
     let employeeDepartment = "";
 
     if (employeeId) {
+      if (!isValidId(employeeId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid employee",
+        });
+      }
       const employee = await Employee.findById(employeeId);
       if (!employee) {
         return res.status(404).json({
@@ -1466,6 +1506,12 @@ export const createManualTicket = async (req, res) => {
     }
 
     if (assetId) {
+      if (!isValidId(assetId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid asset",
+        });
+      }
       const asset = await Asset.findById(assetId);
       if (asset && String(asset.companyId) !== String(companyId)) {
         return res.status(400).json({
@@ -1550,12 +1596,7 @@ export const createManualTicket = async (req, res) => {
       ticket,
     });
   } catch (error) {
-    console.error("Create Manual Ticket Error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return serverError(res, error);
   }
 };
 
@@ -1564,7 +1605,10 @@ export const createManualTicket = async (req, res) => {
 ====================================================== */
 export const escalateTicket = async (req, res) => {
   try {
-    const { reason } = req.body;
+    if (!isValidId(req.params.id)) return invalidId(res);
+
+    const reason =
+      typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : "";
 
     const ticket = await Ticket.findById(req.params.id);
 
@@ -1582,12 +1626,14 @@ export const escalateTicket = async (req, res) => {
       });
     }
 
+    if (!canAccessTicket(req.user, ticket)) return accessDenied(res);
+
     ticket.assignedRole = "super_admin";
 
     // Nested `escalation` object (matches ticketSchema).
     ticket.escalation.isEscalated = true;
     ticket.escalation.level = (ticket.escalation.level || 0) + 1;
-    ticket.escalation.reason = reason || "";
+    ticket.escalation.reason = reason;
     ticket.escalation.escalatedBy = req.user.id;
     ticket.escalation.escalatedAt = new Date();
 
@@ -1625,10 +1671,7 @@ export const escalateTicket = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return serverError(res, err);
   }
 };
 
@@ -1637,9 +1680,11 @@ export const escalateTicket = async (req, res) => {
 ====================================================== */
 export const addSlaBreachReason = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) return invalidId(res);
+
     const { reason, leg } = req.body; // leg: "response" | "resolution"
 
-    if (!reason?.trim()) {
+    if (typeof reason !== "string" || !reason.trim()) {
       return res.status(400).json({
         success: false,
         message: "Reason is required",
@@ -1654,6 +1699,8 @@ export const addSlaBreachReason = async (req, res) => {
         message: "Ticket not found",
       });
     }
+
+    if (!canAccessTicket(req.user, ticket)) return accessDenied(res);
 
     if (leg === "response") {
       ticket.sla.firstResponseBreachReason = reason.trim();
@@ -1670,11 +1717,7 @@ export const addSlaBreachReason = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return serverError(res, err);
   }
 };
 
@@ -1683,6 +1726,8 @@ export const addSlaBreachReason = async (req, res) => {
 ====================================================== */
 export const updateTicketPriority = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) return invalidId(res);
+
     const { priority } = req.body;
     const allowedPriorities = ["Low", "Medium", "High", "Critical"];
 
@@ -1710,15 +1755,7 @@ export const updateTicketPriority = async (req, res) => {
     }
 
     // it_support is scoped to their own company; super_admin can touch any ticket
-    if (
-      req.user.role === "it_support" &&
-      String(ticket.companyId) !== String(req.user.companyId)
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied",
-      });
-    }
+    if (!canAccessTicket(req.user, ticket)) return accessDenied(res);
 
     const oldPriority = ticket.priority;
 
@@ -1769,10 +1806,6 @@ export const updateTicketPriority = async (req, res) => {
       data: ticket,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return serverError(res, err);
   }
 };

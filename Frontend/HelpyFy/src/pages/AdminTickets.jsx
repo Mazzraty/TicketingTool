@@ -330,7 +330,7 @@ const SlaDetailPanel = ({ ticket, now, onOpenReason }) => {
 const getReporterName = (ticket) => {
   if (ticket.userId?.name) return ticket.userId.name;
   if (ticket.employeeId?.name) return ticket.employeeId.name;
-  if (ticket.externalName) return ticket.externalName; // NEW: outside-company requester
+  if (ticket.externalName) return ticket.externalName; // outside-company requester
   if (ticket.assignedTo?.name) return ticket.assignedTo.name;
   const creatorLabel =
     ticket.createdByType === "super_admin" ? "Super Admin"
@@ -342,7 +342,7 @@ const getReporterName = (ticket) => {
 const getReporterSubtext = (ticket) => {
   if (ticket.userId?.email) return ticket.userId.email;
   if (ticket.employeeId?.staffCode) return `Staff Code: ${ticket.employeeId.staffCode}`;
-  if (ticket.externalName) return "Outside company"; // NEW
+  if (ticket.externalName) return "Outside company";
   if (ticket.assignedTo?.email) return ticket.assignedTo.email;
   if (ticket.createdByType) {
     const label = ticket.createdByType.replace("_", " ");
@@ -350,12 +350,96 @@ const getReporterSubtext = (ticket) => {
   }
   return "—";
 };
+
+/* ================= HANDLED-BY (who moved the ticket, from statusHistory) ================= */
+// Only genuine status changes count. Reminders, priority changes and escalations
+// also push statusHistory entries (with the current status), so they are ignored here.
+const isRealStatusChange = (h) =>
+  /^(Status changed to|Ticket rejected)/.test(h?.note || "");
+
+const getHandlers = (ticket) => {
+  const history = Array.isArray(ticket.statusHistory) ? ticket.statusHistory : [];
+
+  // latest genuine change to `status`
+  const lastChange = (status) =>
+    [...history].reverse().find((h) => h.status === status && isRealStatusChange(h));
+
+  // show a step only while the ticket is still at or past it
+  // (a reopened ticket shouldn't keep showing an old "Resolved by")
+  const visibleFor = {
+    "In Progress": ["In Progress", "Resolved", "Closed"],
+    Resolved: ["Resolved", "Closed"],
+    Closed: ["Closed"],
+    Rejected: ["Rejected"],
+  };
+
+  const rows = [
+    ["In Progress", "In progress by"],
+    ["Resolved", "Resolved by"],
+    ["Closed", "Closed by"],
+    ["Rejected", "Rejected by"],
+  ]
+    .filter(([status]) => visibleFor[status].includes(ticket.status))
+    .map(([status, label]) => {
+      const h = lastChange(status);
+      if (!h) return null;
+      const autoClosed = /auto-closed/i.test(h.note || "");
+      const who =
+        h.changedBy && typeof h.changedBy === "object" && (h.changedBy.name || h.changedBy.email)
+          ? h.changedBy
+          : autoClosed
+            ? { name: "System", role: "" }
+            : null;
+      return who ? { label, who, at: h.changedAt } : null;
+    })
+    .filter(Boolean);
+
+  // older tickets with no history: fall back to the assignee
+  if (
+    rows.length === 0 &&
+    ticket.assignedTo?.name &&
+    ["In Progress", "Resolved", "Closed"].includes(ticket.status)
+  ) {
+    rows.push({ label: "Assigned to", who: ticket.assignedTo, at: null });
+  }
+
+  return rows;
+};
+
 /* ================= SMALL SHARED PIECES ================= */
 const Avatar = ({ name, size = "w-8 h-8 text-xs" }) => (
   <span className={`${size} rounded-full bg-[#E9F2FF] text-[#0055CC] flex items-center justify-center font-semibold shrink-0`}>
     {name ? name.charAt(0).toUpperCase() : "?"}
   </span>
 );
+
+const HandledBy = ({ ticket }) => {
+  const rows = getHandlers(ticket);
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-3 border border-[#DCDFE4] rounded-[3px] divide-y divide-[#EBECF0]">
+      {rows.map((r) => (
+        <div key={r.label} className="flex items-center gap-2.5 px-3 py-2">
+          <Avatar name={r.who.name || r.who.email} size="w-6 h-6 text-[11px]" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-[#626F86]">{r.label}</p>
+            <p className="text-sm text-[#172B4D] truncate">
+              {r.who.name || r.who.email}
+              {r.who.role && (
+                <span className="ml-1.5 text-xs text-[#626F86]">
+                  · {r.who.role.replace("_", " ")}
+                </span>
+              )}
+            </p>
+          </div>
+          {r.at && (
+            <span className="text-xs text-[#626F86] shrink-0">{formatDateTime(r.at)}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const Lozenge = ({ status, children }) => {
   const [bg, fg] = STATUS_LOZ[status] || STATUS_LOZ.Closed;
@@ -485,7 +569,10 @@ export default function AdminTickets() {
           ...(isSuperAdmin && companyFilter && companyFilter !== "All" ? { companyId: companyFilter } : {}),
         },
       });
-      setTickets(res?.data?.data || []);
+      const list = res?.data?.data || [];
+      setTickets(list);
+      // keep the open detail panel in sync with fresh data (names, status, history)
+      setSelected((prev) => (prev ? list.find((t) => t._id === prev._id) || prev : prev));
     } catch {
       toast.error("Failed to load tickets");
     } finally {
@@ -1030,12 +1117,13 @@ export default function AdminTickets() {
             </div>
 
             <div className="p-5 flex flex-col gap-6 overflow-y-auto flex-1">
-              {/* Description */}
+              {/* Description + who handled it */}
               <div>
                 <p className={SECTION_TITLE}>Description</p>
                 <div className="text-sm text-[#172B4D] leading-relaxed whitespace-pre-wrap">
                   {selected.description || <span className="text-[#626F86]">No description provided.</span>}
                 </div>
+                <HandledBy ticket={selected} />
               </div>
 
               {/* Reminder banner */}
@@ -1345,6 +1433,15 @@ export default function AdminTickets() {
                       {renderReminderBadge(t)}
                     </div>
 
+                    {(() => {
+                      const h = getHandlers(t).filter((r) => r.label !== "Assigned to").slice(-1)[0];
+                      return h ? (
+                        <p className="text-xs text-[#626F86] mb-2">
+                          {h.label}: <span className="text-[#172B4D]">{h.who.name || h.who.email}</span>
+                        </p>
+                      ) : null;
+                    })()}
+
                     {t.resolutionNote && (
                       <p className="text-xs text-[#626F86] mb-2 flex items-start gap-1">
                         <IconNote className="w-3 h-3 shrink-0 mt-0.5" />
@@ -1405,6 +1502,7 @@ export default function AdminTickets() {
                       const reminded = hasActiveReminder(t);
                       const isSelected = selected?._id === t._id;
                       const closedDate = t.closedAt || t.resolvedAt;
+                      const handler = getHandlers(t).filter((r) => r.label !== "Assigned to").slice(-1)[0];
                       return (
                         <tr
                           key={t._id}
@@ -1424,6 +1522,14 @@ export default function AdminTickets() {
                               <div className="flex items-center gap-2 mt-0.5 text-xs text-[#626F86]">
                                 {renderReminderBadge(t)}
                                 {t.rating ? <span className="text-[#F5CD47]">★ {t.rating}</span> : null}
+                                {handler && (
+                                  <span
+                                    className="truncate max-w-[150px]"
+                                    title={`${handler.label} ${handler.who.name || handler.who.email}`}
+                                  >
+                                    {handler.label.replace(" by", "")}: {handler.who.name || handler.who.email}
+                                  </span>
+                                )}
                                 {t.resolutionType === "External Vendor" && (
                                   <span className="inline-flex items-center gap-0.5 text-[#5E4DB2]" title={t.vendorDetails?.vendorName}>
                                     <IconWrench className="w-3 h-3" /> Vendor
