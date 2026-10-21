@@ -77,17 +77,18 @@ export default function Register() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, navigate]);
 
-  const loadCompanies = async () => {
-    setCompaniesLoading(true);
-    try {
-      const res = await api.get("/companies");
-      setCompanies(res.data.companies || []);
-    } catch (err) {
-      toast.error("Failed to load companies");
-    } finally {
-      setCompaniesLoading(false);
-    }
-  };
+const loadCompanies = async () => {
+  setCompaniesLoading(true);
+  try {
+    const url = user ? "/companies" : "/companies/public";
+    const res = await api.get(url);
+    setCompanies(res.data.companies || []);
+  } catch (err) {
+    toast.error("Failed to load companies");
+  } finally {
+    setCompaniesLoading(false);
+  }
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
