@@ -48,6 +48,7 @@ export default function Register() {
 
   const [companies, setCompanies] = useState([]);
   const [companiesLoading, setCompaniesLoading] = useState(true);
+  const [companiesError, setCompaniesError] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -77,18 +78,22 @@ export default function Register() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, navigate]);
 
-const loadCompanies = async () => {
-  setCompaniesLoading(true);
-  try {
-    const url = user ? "/companies" : "/companies/public";
-    const res = await api.get(url);
-    setCompanies(res.data.companies || []);
-  } catch (err) {
-    toast.error("Failed to load companies");
-  } finally {
-    setCompaniesLoading(false);
-  }
-};
+  const loadCompanies = async () => {
+    setCompaniesLoading(true);
+    setCompaniesError(false);
+    try {
+      // logged-in admins get their scoped list; visitors get the public list
+      const url = user ? "/companies" : "/companies/public";
+      const res = await api.get(url);
+      setCompanies(res.data.companies || []);
+    } catch (err) {
+      console.error("LOAD COMPANIES ERROR:", err.response?.status, err.response?.data || err.message);
+      setCompaniesError(true);
+      toast.error("Failed to load companies");
+    } finally {
+      setCompaniesLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -276,6 +281,8 @@ const loadCompanies = async () => {
                 <option value="">
                   {companiesLoading
                     ? "Loading companies…"
+                    : companiesError
+                    ? "Could not load companies"
                     : companies.length === 0
                     ? "No companies available"
                     : "Select company"}
@@ -295,6 +302,15 @@ const loadCompanies = async () => {
               <svg viewBox="0 0 20 20" fill="none" className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-[#8a978f] pointer-events-none">
                 <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
+              {companiesError && (
+                <button
+                  type="button"
+                  onClick={loadCompanies}
+                  className="absolute -bottom-5 left-1 text-[11px] font-medium text-[#2f5c42] hover:underline"
+                >
+                  Retry
+                </button>
+              )}
             </div>
 
             <FloatingInput

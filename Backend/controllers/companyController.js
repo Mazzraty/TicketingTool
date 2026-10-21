@@ -19,12 +19,15 @@ const pick = (src, spec) => {
   return out;
 };
 
-// PUBLIC: no auth, so expose the minimum. Never return `code` here if
-// it is used for joining or inviting.
+/* =========================
+   PUBLIC (no login) - registration dropdown
+   Returns only _id + name.
+   `$ne: false` also matches older companies that have no isActive field.
+========================= */
 export const getPublicCompanies = async (req, res) => {
   try {
     noStore(res);
-    const companies = await Company.find({ isActive: true })
+    const companies = await Company.find({ isActive: { $ne: false } })
       .select("name")
       .sort("name")
       .lean();
@@ -35,7 +38,9 @@ export const getPublicCompanies = async (req, res) => {
   }
 };
 
-// AUTHENTICATED: scoped by role
+/* =========================
+   AUTHENTICATED - scoped by role
+========================= */
 export const getCompanies = async (req, res) => {
   try {
     noStore(res);
@@ -64,6 +69,9 @@ export const getCompanies = async (req, res) => {
   }
 };
 
+/* =========================
+   CREATE COMPANY (super_admin only - enforced in the route)
+========================= */
 export const createCompany = async (req, res) => {
   try {
     const { name, code, description, location, settings } = req.body;
@@ -83,7 +91,8 @@ export const createCompany = async (req, res) => {
     const company = await Company.create({
       name: trimmedName,
       code: trimmedCode,
-      description: typeof description === "string" ? description.trim().slice(0, 500) : "",
+      description:
+        typeof description === "string" ? description.trim().slice(0, 500) : "",
       location: pick(location, { country: "string", city: "string", address: "string" }),
       settings: pick(settings, {
         allowMultiBranch: "boolean",

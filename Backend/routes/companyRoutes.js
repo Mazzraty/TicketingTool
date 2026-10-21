@@ -1,19 +1,23 @@
+// routes/companyRoutes.js
 import express from "express";
 import {
   getCompanies,
-  createCompany,getPublicCompanies
+  getPublicCompanies,
+  createCompany,
 } from "../controllers/companyController.js";
 
-import {
-  protect,
-  roleCheck
-} from "../middleware/authMiddleware.js";
+import { protect, roleCheck } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// routes/companyRoutes.js
-router.get("/public", getPublicCompanies);       
-router.get("/", protect, getCompanies);          
+// PUBLIC: registration dropdown (id + name only).
+// Keep this ABOVE any "/:id" route.
+router.get("/public", getPublicCompanies);
+
+// LOGGED-IN: scoped by role
+router.get("/", protect, getCompanies);
+
+// SUPER ADMIN ONLY
 router.post("/", protect, roleCheck("super_admin"), createCompany);
 
 export default router;
