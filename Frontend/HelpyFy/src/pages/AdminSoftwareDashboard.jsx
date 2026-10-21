@@ -11,8 +11,8 @@ import {
   Building2,
   Layers,
   CheckCircle2,
-  XCircle,
-  RefreshCcw,
+  ShieldAlert,
+  Clock,
   Pencil,
   Trash2,
   X,
@@ -23,8 +23,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-/* ================= UI HELPERS (styling only, no logic) ================= */
-// Atlassian / Jira Service Management styling
+/* ================= UI TOKENS (Atlassian / Jira Service Management) ================= */
 const inputCls =
   "h-9 w-full rounded-[3px] border-2 border-[#DFE1E6] bg-[#FAFBFC] px-2.5 text-sm text-[#172B4D] " +
   "placeholder:text-[#7A869A] transition-colors hover:bg-[#EBECF0] " +
@@ -35,13 +34,6 @@ const btnBase =
 const btnPrimary = `${btnBase} bg-[#0052CC] text-white hover:bg-[#0065FF] active:bg-[#0747A6]`;
 const btnDanger = `${btnBase} bg-[#DE350B] text-white hover:bg-[#FF5630] active:bg-[#BF2600]`;
 const btnSubtle = `${btnBase} bg-transparent text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]`;
-
-// Jira lozenge palette
-const STATUS_STYLES = {
-  Active: "bg-[#E3FCEF] text-[#006644]",
-  Expired: "bg-[#FFEBE6] text-[#BF2600]",
-  Renewed: "bg-[#DEEBFF] text-[#0747A6]",
-};
 
 const EMPTY_FORM = {
   serviceName: "",
@@ -54,13 +46,95 @@ const EMPTY_FORM = {
   status: "Active",
 };
 
+/* ================= EXPIRY HELPERS ================= */
+const DAY_OPTIONS = [7, 15, 30, 60, 90];
+const DEFAULT_EXPIRING_DAYS = 30;
+
+const startOfDay = (d) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+};
+
+// whole days from today to the date (negative = already expired)
+const daysUntil = (date) =>
+  Math.round((startOfDay(date) - startOfDay(new Date())) / (1000 * 60 * 60 * 24));
+
+// none | expired | expiring | active — single source of truth for cards, badge and filter
+const expiryState = (date, expiringDays) => {
+  if (!date) return "none";
+  const d = daysUntil(date);
+  if (d < 0) return "expired";
+  if (d <= expiringDays) return "expiring";
+  return "active";
+};
+
+const formatDate = (d) => {
+  if (!d) return "—";
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return "—";
+  return dt.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
 function initials(name = "") {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join("") || "?";
+  return (
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase())
+      .join("") || "?"
+  );
+}
+
+/* ================= SMALL COMPONENTS ================= */
+function Lozenge({ tone, children }) {
+  const tones = {
+    success: "bg-[#E3FCEF] text-[#006644]",
+    warning: "bg-[#FFF0B3] text-[#172B4D]",
+    danger: "bg-[#FFEBE6] text-[#BF2600]",
+    info: "bg-[#DEEBFF] text-[#0747A6]",
+  };
+  return (
+    <span
+      className={`inline-block rounded-[3px] px-1.5 py-0.5 text-[11px] font-bold uppercase leading-4 tracking-wide ${tones[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function StatusBadge({ item, expiringDays }) {
+  const state = expiryState(item.expiryDate, expiringDays);
+  if (state === "expired") return <Lozenge tone="danger">Expired</Lozenge>;
+  if (state === "expiring") return <Lozenge tone="warning">Expiring soon</Lozenge>;
+  if (item.status === "Renewed") return <Lozenge tone="info">Renewed</Lozenge>;
+  if (item.status === "Expired") return <Lozenge tone="danger">Expired</Lozenge>;
+  return <Lozenge tone="success">Active</Lozenge>;
+}
+
+// "24 days overdue" / "in 8 days" / "Expires today"
+function ExpiryNote({ date, expiringDays }) {
+  if (!date) return null;
+  const d = daysUntil(date);
+  if (d === 0) return <span className="text-xs text-[#974F0C]">Expires today</span>;
+  if (d < 0)
+    return (
+      <span className="text-xs text-[#BF2600]">
+        {Math.abs(d)} day{Math.abs(d) === 1 ? "" : "s"} overdue
+      </span>
+    );
+  if (d <= expiringDays)
+    return (
+      <span className="text-xs text-[#974F0C]">
+        in {d} day{d === 1 ? "" : "s"}
+      </span>
+    );
+  return null;
 }
 
 function Field({ label, required, className = "", children }) {
@@ -93,34 +167,41 @@ function SelectBox({ children, className = "", ...props }) {
   );
 }
 
-function StatCard({ label, value, icon: Icon, accent }) {
-  return (
-    <div className="flex items-center gap-3 rounded-[3px] border border-[#DFE1E6] bg-white px-4 py-3">
+// Static stat card, or a clickable filter card when onClick is passed
+function StatCard({ label, value, icon: Icon, accent, onClick, active, hint }) {
+  const content = (
+    <>
       <div
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[3px]"
         style={{ backgroundColor: `${accent}1A`, color: accent }}
       >
         <Icon size={20} />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 text-left">
         <p className="truncate text-xs font-semibold text-[#5E6C84]">{label}</p>
         <p className="text-2xl font-medium leading-7 text-[#172B4D]">{value}</p>
+        {hint && <p className="mt-0.5 text-[11px] text-[#6B778C]">{hint}</p>}
       </div>
-    </div>
+    </>
   );
-}
 
-function FilterChip({ active, onClick, children }) {
+  const base = "flex w-full items-center gap-4 rounded-[3px] border bg-white px-4 py-3";
+
+  if (!onClick) {
+    return <div className={`${base} border-[#DFE1E6]`}>{content}</div>;
+  }
+
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`h-8 rounded-[3px] px-3 text-sm font-medium transition-colors ${
-        active
-          ? "bg-[#172B4D] text-white"
-          : "bg-[rgba(9,30,66,0.04)] text-[#42526E] hover:bg-[rgba(9,30,66,0.08)]"
+      aria-pressed={!!active}
+      className={`${base} cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[#4C9AFF] ${
+        active ? "border-[#4C9AFF] bg-[#DEEBFF]" : "border-[#DFE1E6] hover:bg-[#F4F5F7]"
       }`}
+      style={active ? { boxShadow: `inset 3px 0 0 ${accent}` } : undefined}
     >
-      {children}
+      {content}
     </button>
   );
 }
@@ -128,15 +209,20 @@ function FilterChip({ active, onClick, children }) {
 // Modal shell: header + body. Pass onSubmit to render the body as a <form>.
 function ModalShell({ title, subtitle, onClose, onSubmit, children }) {
   const Body = onSubmit ? "form" : "div";
+
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(9,30,66,0.54)] p-4 sm:pt-[8vh]">
       <div className="w-full max-w-2xl rounded-[3px] bg-white shadow-[0_8px_16px_-4px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
         <div className="flex items-start justify-between px-6 pb-2 pt-5">
           <div>
             <h2 className="text-xl font-medium text-[#172B4D]">{title}</h2>
-            {subtitle && (
-              <p className="mt-0.5 text-sm text-[#5E6C84]">{subtitle}</p>
-            )}
+            {subtitle && <p className="mt-0.5 text-sm text-[#5E6C84]">{subtitle}</p>}
           </div>
           <button
             type="button"
@@ -155,21 +241,21 @@ function ModalShell({ title, subtitle, onClose, onSubmit, children }) {
 
 const thCls = "px-4 py-2.5 text-left text-xs font-semibold text-[#5E6C84]";
 
+/* ================= PAGE ================= */
 export default function AdminSoftwareDashboard() {
   const [softwares, setSoftwares] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
   const [companyFilter, setCompanyFilter] = useState("All"); // super_admin scoping
+  const [expiryFilter, setExpiryFilter] = useState("all"); // all | expired | expiring
+  const [expiringDays, setExpiringDays] = useState(DEFAULT_EXPIRING_DAYS);
   const [page, setPage] = useState(1);
 
   const limit = 8;
 
   const [addModal, setAddModal] = useState(false);
-
   const [editModal, setEditModal] = useState(false);
   const [editData, setEditData] = useState(null);
-
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -178,12 +264,11 @@ export default function AdminSoftwareDashboard() {
   const [companies, setCompanies] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
 
-  /* =========================
-     LOAD COMPANIES (once)
-  ========================= */
+  /* ---------- LOAD COMPANIES (once, super_admin only) ---------- */
   useEffect(() => {
-    loadCompanies();
-  }, []);
+    if (user?.role === "super_admin") loadCompanies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role]);
 
   const loadCompanies = async () => {
     try {
@@ -194,10 +279,7 @@ export default function AdminSoftwareDashboard() {
     }
   };
 
-  /* =========================
-     FETCH SOFTWARES
-     Refetches whenever the super-admin company filter changes
-  ========================= */
+  /* ---------- FETCH SOFTWARES (refetch when super-admin company filter changes) ---------- */
   useEffect(() => {
     fetchSoftwares(companyFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -221,9 +303,7 @@ export default function AdminSoftwareDashboard() {
     }
   };
 
-  /* =========================
-     ADD SOFTWARE
-  ========================= */
+  /* ---------- ADD ---------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -240,7 +320,6 @@ export default function AdminSoftwareDashboard() {
       };
 
       await api.post("/software", payload);
-
       toast.success("Vendor added successfully");
 
       setForm(EMPTY_FORM);
@@ -252,9 +331,7 @@ export default function AdminSoftwareDashboard() {
     }
   };
 
-  /* =========================
-     DELETE SOFTWARE
-  ========================= */
+  /* ---------- DELETE ---------- */
   const confirmDelete = async () => {
     if (!deleteTarget) return;
 
@@ -266,38 +343,36 @@ export default function AdminSoftwareDashboard() {
       fetchSoftwares();
     } catch (err) {
       console.error(err);
-      toast.error("Failed to delete vendor");
+      toast.error(err?.response?.data?.message || "Failed to delete vendor");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  /* =========================
-     OPEN EDIT
-  ========================= */
+  /* ---------- EDIT ---------- */
   const openEdit = (item) => {
     setEditData({
       ...item,
       purchaseDate: item.purchaseDate ? item.purchaseDate.split("T")[0] : "",
       expiryDate: item.expiryDate ? item.expiryDate.split("T")[0] : "",
     });
-
     setEditModal(true);
   };
 
-  /* =========================
-     UPDATE SOFTWARE
-  ========================= */
   const handleUpdate = async () => {
     try {
+      // send only editable fields (never the populated company object / _id)
       const payload = {
-        ...editData,
+        serviceName: editData.serviceName,
+        vendor: editData.vendor,
         durationMonths: Number(editData.durationMonths) || 0,
         amount: Number(editData.amount) || 0,
+        purchaseDate: editData.purchaseDate || null,
+        expiryDate: editData.expiryDate || null,
+        status: editData.status,
       };
 
       await api.put(`/software/${editData._id}`, payload);
-
       toast.success("Vendor updated successfully");
 
       setEditModal(false);
@@ -309,70 +384,76 @@ export default function AdminSoftwareDashboard() {
     }
   };
 
-  /* =========================
-     FILTER (client-side: search + status only;
-     company scoping now happens server-side)
-  ========================= */
-  const filtered = useMemo(() => {
-    return softwares.filter((s) => {
-      const matchesSearch = `${s.serviceName} ${s.vendor} ${s.status}`
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "All" || s.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
+  /* ---------- COUNTS (driven by the same expiryState as badge + filter) ---------- */
+  const counts = useMemo(() => {
+    let expired = 0;
+    let expiring = 0;
+    softwares.forEach((s) => {
+      const st = expiryState(s.expiryDate, expiringDays);
+      if (st === "expired") expired++;
+      else if (st === "expiring") expiring++;
     });
-  }, [softwares, search, statusFilter]);
+    return {
+      total: softwares.length,
+      expired,
+      expiring,
+      active: softwares.length - expired - expiring,
+    };
+  }, [softwares, expiringDays]);
 
-  /* =========================
-     PAGINATION
-  ========================= */
+  const toggleExpiryFilter = (value) =>
+    setExpiryFilter((cur) => (cur === value ? "all" : value));
+
+  /* ---------- FILTER: search + expiry (company scoping is server-side) ---------- */
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+
+    let list = softwares.filter((s) =>
+      `${s.serviceName} ${s.vendor} ${s.companyId?.name || ""}`
+        .toLowerCase()
+        .includes(q)
+    );
+
+    if (expiryFilter !== "all") {
+      list = list
+        .filter((s) => expiryState(s.expiryDate, expiringDays) === expiryFilter)
+        // most urgent first: oldest expiry date at the top
+        .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+    }
+
+    return list;
+  }, [softwares, search, expiryFilter, expiringDays]);
+
+  /* ---------- PAGINATION ---------- */
   const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, companyFilter]);
+  }, [search, expiryFilter, expiringDays, companyFilter]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * limit;
     return filtered.slice(start, start + limit);
   }, [filtered, page]);
 
-  /* =========================
-     KPI
-  ========================= */
-  const kpi = useMemo(() => {
-    return {
-      total: softwares.length,
-      active: softwares.filter((s) => s.status === "Active").length,
-      expired: softwares.filter((s) => s.status === "Expired").length,
-      renewed: softwares.filter((s) => s.status === "Renewed").length,
-    };
-  }, [softwares]);
+  const hasFilters = search || companyFilter !== "All" || expiryFilter !== "all";
 
-  const kpiCards = [
-    { label: "Total vendors", value: kpi.total, icon: Layers, accent: "#42526E" },
-    { label: "Active", value: kpi.active, icon: CheckCircle2, accent: "#00875A" },
-    { label: "Expired", value: kpi.expired, icon: XCircle, accent: "#DE350B" },
-    { label: "Renewed", value: kpi.renewed, icon: RefreshCcw, accent: "#0052CC" },
-  ];
+  const clearFilters = () => {
+    setSearch("");
+    setCompanyFilter("All");
+    setExpiryFilter("all");
+  };
 
   return (
     <div className="min-h-screen bg-[#F4F5F7] text-[#172B4D]">
       <div className="mx-auto max-w-7xl px-6 py-6 lg:px-10">
-        {/* ================= BREADCRUMB + BACK ================= */}
+        {/* BREADCRUMB + BACK */}
         <div className="mb-2 flex items-center justify-between">
           <nav className="flex items-center gap-1.5 text-sm text-[#5E6C84]">
-           
             <span>Vendor Dashboard</span>
           </nav>
 
-          <button
-            onClick={() => window.history.back()}
-            className={btnSubtle}
-          >
+          <button onClick={() => window.history.back()} className={btnSubtle}>
             <ArrowLeft size={14} />
             Back
           </button>
@@ -381,40 +462,54 @@ export default function AdminSoftwareDashboard() {
         {/* HEADER */}
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-medium text-[#172B4D]">
-              Vendor Dashboard
-            </h1>
-            <p className="mt-1 text-sm text-[#5E6C84]">
-              Software & license management
-            </p>
+            <h1 className="text-2xl font-medium text-[#172B4D]">Vendor Dashboard</h1>
+            <p className="mt-1 text-sm text-[#5E6C84]">Software & license management</p>
           </div>
 
-          <button
-            onClick={() => setAddModal(true)}
-            className={btnPrimary}
-          >
+          <button onClick={() => setAddModal(true)} className={btnPrimary}>
             <Plus size={14} />
             Add vendor
           </button>
         </div>
 
-        {/* KPI */}
-        <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {kpiCards.map(({ label, value, icon, accent }) => (
-            <StatCard
-              key={label}
-              label={label}
-              value={value}
-              icon={icon}
-              accent={accent}
-            />
-          ))}
+        {/* KPI — Expired / Expiring cards are the filters */}
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Total vendors"
+            value={counts.total}
+            icon={Layers}
+            accent="#42526E"
+          />
+          <StatCard
+            label="Active"
+            value={counts.active}
+            icon={CheckCircle2}
+            accent="#00875A"
+          />
+          <StatCard
+            label="Expired"
+            value={counts.expired}
+            icon={ShieldAlert}
+            accent="#DE350B"
+            hint={expiryFilter === "expired" ? "Click to clear filter" : "Click to view list"}
+            active={expiryFilter === "expired"}
+            onClick={() => toggleExpiryFilter("expired")}
+          />
+          <StatCard
+            label={`Expiring (${expiringDays} days)`}
+            value={counts.expiring}
+            icon={Clock}
+            accent="#FF8B00"
+            hint={expiryFilter === "expiring" ? "Click to clear filter" : "Click to view list"}
+            active={expiryFilter === "expiring"}
+            onClick={() => toggleExpiryFilter("expiring")}
+          />
         </div>
 
         {/* TABLE CARD */}
         <div className="rounded-[3px] border border-[#DFE1E6] bg-white">
           {/* TOOLBAR */}
-          <div className="flex flex-col gap-3 border-b border-[#DFE1E6] p-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 border-b border-[#DFE1E6] p-3 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="relative w-full sm:w-80">
               <Search
                 size={16}
@@ -422,27 +517,15 @@ export default function AdminSoftwareDashboard() {
               />
               <input
                 className={`${inputCls} pl-8`}
-                placeholder="Search by service, vendor, or status"
+                placeholder="Search by service, vendor or company"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {["All", "Active", "Expired", "Renewed"].map((s) => (
-                <FilterChip
-                  key={s}
-                  active={statusFilter === s}
-                  onClick={() => setStatusFilter(s)}
-                >
-                  {s}
-                </FilterChip>
-              ))}
-            </div>
-
             {/* COMPANY FILTER — super_admin only */}
             {user?.role === "super_admin" && (
-              <div className="relative w-full sm:ml-auto sm:w-60">
+              <div className="relative w-full sm:w-60">
                 <Building2
                   size={15}
                   className="pointer-events-none absolute left-2.5 top-1/2 z-10 -translate-y-1/2 text-[#6B778C]"
@@ -461,7 +544,58 @@ export default function AdminSoftwareDashboard() {
                 </SelectBox>
               </div>
             )}
+
+            {hasFilters && (
+              <button onClick={clearFilters} className={btnSubtle}>
+                Clear filters
+              </button>
+            )}
           </div>
+
+          {/* ACTIVE FILTER BANNER (with days-left selector for "expiring") */}
+          {expiryFilter !== "all" && (
+            <div
+              className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2 text-sm ${
+                expiryFilter === "expired"
+                  ? "border-[#FFBDAD] bg-[#FFEBE6] text-[#BF2600]"
+                  : "border-[#FFE380] bg-[#FFFAE6] text-[#172B4D]"
+              }`}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">
+                  {expiryFilter === "expired" ? "Expired" : "Expiring within"}
+                </span>
+
+                {expiryFilter === "expiring" && (
+                  <div className="w-32">
+                    <SelectBox
+                      value={expiringDays}
+                      onChange={(e) => setExpiringDays(Number(e.target.value))}
+                      aria-label="Days left"
+                    >
+                      {DAY_OPTIONS.map((d) => (
+                        <option key={d} value={d}>
+                          {d} days
+                        </option>
+                      ))}
+                    </SelectBox>
+                  </div>
+                )}
+
+                <span className="font-medium">
+                  — {filtered.length} vendor{filtered.length === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              <button
+                onClick={() => setExpiryFilter("all")}
+                className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-xs font-medium hover:bg-[rgba(9,30,66,0.08)]"
+              >
+                <X size={12} />
+                Show all
+              </button>
+            </div>
+          )}
 
           {/* TABLE */}
           <div className="overflow-x-auto">
@@ -500,7 +634,8 @@ export default function AdminSoftwareDashboard() {
                           No vendors found
                         </p>
                         <p className="max-w-xs text-sm">
-                          Try adjusting your search or filters, or add a new vendor to get started.
+                          Try adjusting your search or filters, or add a new vendor to get
+                          started.
                         </p>
                       </div>
                     </td>
@@ -508,88 +643,70 @@ export default function AdminSoftwareDashboard() {
                 )}
 
                 {!isLoading &&
-                  paginated.map((s) => {
-                    const statusStyle =
-                      STATUS_STYLES[s.status] || STATUS_STYLES.Active;
-
-                    return (
-                      <tr
-                        key={s._id}
-                        className="border-b border-[#DFE1E6] transition-colors hover:bg-[#F4F5F7]"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[#DEEBFF] text-xs font-semibold text-[#0052CC]">
-                              {initials(s.vendor)}
-                            </div>
-                            <div>
-                              <p className="font-medium text-[#0052CC]">
-                                {s.serviceName}
-                              </p>
-                              <p className="text-xs text-[#5E6C84]">{s.vendor}</p>
-                            </div>
+                  paginated.map((s) => (
+                    <tr
+                      key={s._id}
+                      className="border-b border-[#DFE1E6] transition-colors hover:bg-[#F4F5F7]"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[#DEEBFF] text-xs font-semibold text-[#0052CC]">
+                            {initials(s.vendor)}
                           </div>
-                        </td>
+                          <div>
+                            <p className="font-medium text-[#0052CC]">{s.serviceName}</p>
+                            <p className="text-xs text-[#5E6C84]">{s.vendor}</p>
+                          </div>
+                        </div>
+                      </td>
 
-                        <td className="px-4 py-3 text-[#42526E]">
-                          <span className="inline-flex items-center gap-1.5">
-                            <Building2 size={14} className="text-[#6B778C]" />
-                            {s.companyId?.name || "—"}
-                          </span>
-                        </td>
+                      <td className="px-4 py-3 text-[#42526E]">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Building2 size={14} className="text-[#6B778C]" />
+                          {s.companyId?.name || "—"}
+                        </span>
+                      </td>
 
-                        <td className="px-4 py-3 text-[#42526E]">
-                          {s.durationMonths} months
-                        </td>
+                      <td className="px-4 py-3 text-[#42526E]">{s.durationMonths} months</td>
 
-                        <td className="px-4 py-3 font-medium text-[#172B4D]">
-                          QAR {s.amount}
-                        </td>
+                      <td className="px-4 py-3 font-medium text-[#172B4D]">QAR {s.amount}</td>
 
-                        <td className="px-4 py-3 text-[#42526E]">
-                          {s.purchaseDate
-                            ? new Date(s.purchaseDate).toLocaleDateString()
-                            : "—"}
-                        </td>
+                      <td className="px-4 py-3 text-[#42526E]">{formatDate(s.purchaseDate)}</td>
 
-                        <td className="px-4 py-3 text-[#42526E]">
-                          {s.expiryDate
-                            ? new Date(s.expiryDate).toLocaleDateString()
-                            : "—"}
-                        </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col leading-4">
+                          <span className="text-[#42526E]">{formatDate(s.expiryDate)}</span>
+                          <ExpiryNote date={s.expiryDate} expiringDays={expiringDays} />
+                        </div>
+                      </td>
 
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-block rounded-[3px] px-1.5 py-0.5 text-[11px] font-bold uppercase leading-4 tracking-wide ${statusStyle}`}
+                      <td className="px-4 py-3">
+                        <StatusBadge item={s} expiringDays={expiringDays} />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openEdit(s)}
+                            title="Edit vendor"
+                            aria-label="Edit vendor"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-[3px] text-[#42526E] transition-colors hover:bg-[#DEEBFF] hover:text-[#0052CC]"
                           >
-                            {s.status}
-                          </span>
-                        </td>
+                            <Pencil size={15} />
+                          </button>
 
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => openEdit(s)}
-                              title="Edit vendor"
-                              aria-label="Edit vendor"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-[3px] text-[#42526E] transition-colors hover:bg-[#DEEBFF] hover:text-[#0052CC]"
-                            >
-                              <Pencil size={15} />
-                            </button>
-
-                            <button
-                              onClick={() => setDeleteTarget(s)}
-                              title="Delete vendor"
-                              aria-label="Delete vendor"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-[3px] text-[#42526E] transition-colors hover:bg-[#FFEBE6] hover:text-[#BF2600]"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          <button
+                            onClick={() => setDeleteTarget(s)}
+                            title="Delete vendor"
+                            aria-label="Delete vendor"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-[3px] text-[#42526E] transition-colors hover:bg-[#FFEBE6] hover:text-[#BF2600]"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -733,11 +850,7 @@ export default function AdminSoftwareDashboard() {
           </div>
 
           <div className="flex justify-end gap-2 px-6 pb-5 pt-3">
-            <button
-              type="button"
-              onClick={() => setAddModal(false)}
-              className={btnSubtle}
-            >
+            <button type="button" onClick={() => setAddModal(false)} className={btnSubtle}>
               Cancel
             </button>
             <button type="submit" className={btnPrimary}>
@@ -759,9 +872,7 @@ export default function AdminSoftwareDashboard() {
               <input
                 className={inputCls}
                 value={editData.serviceName}
-                onChange={(e) =>
-                  setEditData({ ...editData, serviceName: e.target.value })
-                }
+                onChange={(e) => setEditData({ ...editData, serviceName: e.target.value })}
               />
             </Field>
 
@@ -798,9 +909,7 @@ export default function AdminSoftwareDashboard() {
                 type="date"
                 className={inputCls}
                 value={editData.purchaseDate || ""}
-                onChange={(e) =>
-                  setEditData({ ...editData, purchaseDate: e.target.value })
-                }
+                onChange={(e) => setEditData({ ...editData, purchaseDate: e.target.value })}
               />
             </Field>
 
@@ -809,9 +918,7 @@ export default function AdminSoftwareDashboard() {
                 type="date"
                 className={inputCls}
                 value={editData.expiryDate || ""}
-                onChange={(e) =>
-                  setEditData({ ...editData, expiryDate: e.target.value })
-                }
+                onChange={(e) => setEditData({ ...editData, expiryDate: e.target.value })}
               />
             </Field>
 
@@ -828,10 +935,7 @@ export default function AdminSoftwareDashboard() {
           </div>
 
           <div className="flex justify-end gap-2 px-6 pb-5 pt-3">
-            <button
-              onClick={() => setEditModal(false)}
-              className={btnSubtle}
-            >
+            <button onClick={() => setEditModal(false)} className={btnSubtle}>
               Cancel
             </button>
             <button onClick={handleUpdate} className={btnPrimary}>
@@ -847,17 +951,13 @@ export default function AdminSoftwareDashboard() {
           <div className="w-full max-w-md rounded-[3px] bg-white shadow-[0_8px_16px_-4px_rgba(9,30,66,0.25),0_0_1px_rgba(9,30,66,0.31)]">
             <div className="flex items-center gap-2.5 px-6 pb-2 pt-5">
               <AlertTriangle size={22} className="shrink-0 text-[#DE350B]" />
-              <h3 className="text-xl font-medium text-[#172B4D]">
-                Delete this vendor?
-              </h3>
+              <h3 className="text-xl font-medium text-[#172B4D]">Delete this vendor?</h3>
             </div>
 
             <p className="px-6 py-3 text-sm text-[#42526E]">
               This will permanently remove{" "}
-              <span className="font-medium text-[#172B4D]">
-                {deleteTarget.serviceName}
-              </span>{" "}
-              ({deleteTarget.vendor}). This action can't be undone.
+              <span className="font-medium text-[#172B4D]">{deleteTarget.serviceName}</span> (
+              {deleteTarget.vendor}). This action can't be undone.
             </p>
 
             <div className="flex justify-end gap-2 px-6 pb-5 pt-3">
@@ -868,11 +968,7 @@ export default function AdminSoftwareDashboard() {
               >
                 Cancel
               </button>
-              <button
-                onClick={confirmDelete}
-                disabled={isDeleting}
-                className={btnDanger}
-              >
+              <button onClick={confirmDelete} disabled={isDeleting} className={btnDanger}>
                 {isDeleting ? "Deleting…" : "Delete vendor"}
               </button>
             </div>
