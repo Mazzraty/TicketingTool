@@ -1,29 +1,46 @@
+import mongoose from "mongoose";
 import Asset from "../models/assetSchema.js";
 import Ticket from "../models/ticketSchema.js";
 import Employee from "../models/employeeMasterSchema.js";
 import Software from "../models/softwareSchema.js";
 
 /* =========================
+   HELPER: CAST TO OBJECTID
+   Mongoose auto-casts string ids in find/countDocuments, but NOT
+   inside aggregate() pipelines. Casting here makes the filter safe
+   for both.
+========================= */
+const toObjectId = (id) =>
+  mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+
+/* =========================
    HELPER: COMPANY FILTER
    - super_admin: sees all companies by default,
      or a single company when companyId is passed in the query
+     (the dropdown selection wins over the admin's own companyId)
    - other roles: always locked to their own companyId or active access company
 ========================= */
 export const getCompanyFilter = (user, query = {}) => {
   if (user.role === "super_admin") {
-    const selectedCompanyId = user.companyId || query.companyId;
-    return selectedCompanyId ? { companyId: selectedCompanyId } : {};
+    const selectedCompanyId =
+      query.companyId && query.companyId !== "All"
+        ? query.companyId
+        : user.companyId;
+
+    return selectedCompanyId
+      ? { companyId: toObjectId(selectedCompanyId) }
+      : {};
   }
 
   if (user.companyId) {
-    return { companyId: user.companyId };
+    return { companyId: toObjectId(user.companyId) };
   }
 
   const activeCompany = user.companyAccess?.find(
     (c) => c.isActive && c.companyId
   )?.companyId;
 
-  return activeCompany ? { companyId: activeCompany } : {};
+  return activeCompany ? { companyId: toObjectId(activeCompany) } : {};
 };
 
 /* =========================
@@ -84,17 +101,9 @@ export const getDashboardStats = async (req, res) => {
 
     const today = new Date();
 
-    const startMonth = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      1
-    );
+    const startMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    const endMonth = new Date(
-      today.getFullYear(),
-      today.getMonth() + 1,
-      0
-    );
+    const endMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
     const totalActiveLicenses = await Software.countDocuments({
       ...filter,
@@ -150,6 +159,7 @@ export const getDashboardStats = async (req, res) => {
     });
   }
 };
+
 /* =========================
    RECENT ASSETS
 ========================= */
