@@ -48,7 +48,7 @@ const EMPTY_FORM = {
 
 /* ================= EXPIRY HELPERS ================= */
 const DAY_OPTIONS = [7, 15, 30, 60, 90];
-const DEFAULT_EXPIRING_DAYS = 30;
+const DEFAULT_EXPIRING_DAYS = 90;
 
 const startOfDay = (d) => {
   const x = new Date(d);
