@@ -304,7 +304,7 @@ export default function Navbar() {
       : "text-white/70 hover:text-white hover:bg-white/5 border-transparent";
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-[#14251c] shadow-md">
+    <header className="sticky top-0 z-50 w-full bg-[#43A047] shadow-md">
       <div className="h-[72px] px-4 lg:px-8 flex items-center gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr]">
 
         {/* LOGO */}
