@@ -294,7 +294,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#43A047] shadow-[0_1px_0_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.08)]">
-      <div className="h-[65px] px-3 lg:px-5 flex items-center gap-2 lg:gap-3">
+      <div className="relative h-[65px] px-3 lg:px-5 flex items-center gap-2 lg:gap-3">
 
         {/* LOGO */}
         <Link
@@ -315,7 +315,7 @@ export default function Navbar() {
         </Link>
 
         {/* DESKTOP NAV: tabs sit on the bottom edge of the bar */}
-        <nav className="hidden lg:flex items-stretch self-stretch ml-2 gap-0.5">
+        <nav className="hidden lg:flex items-stretch self-stretch ml-2 gap-0.5 2xl:absolute 2xl:left-1/2 2xl:top-0 2xl:h-full 2xl:ml-0 2xl:-translate-x-1/2">
           {navItems.map((item) => (
             <Link
               key={item.path}
@@ -342,7 +342,7 @@ export default function Navbar() {
         )}
 
         {/* SEARCH: fills the free space, centered like Jira */}
-        <div className="hidden md:block relative flex-1 min-w-[180px] max-w-xl mx-auto" ref={searchRef}>
+        <div className="hidden md:block relative flex-1 min-w-[180px] max-w-sm ml-auto 2xl:flex-none 2xl:w-80" ref={searchRef}>
           <div
             className={`flex items-center gap-2 h-9 rounded-md px-3 transition-colors duration-150 ${
               searchOpen
