@@ -305,7 +305,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#43A047] shadow-md">
-      <div className="h-[72px] px-4 lg:px-8 flex items-center gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr]">
+      <div className="h-[65px] px-4 lg:px-8 flex items-center gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr]">
 
         {/* LOGO */}
         <Link to={navItems[0].path} className="flex items-center gap-3 flex-shrink-0 mr-2 justify-self-start">
