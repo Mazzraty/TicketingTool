@@ -305,11 +305,11 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#14251c] shadow-md">
-      <div className="h-14 px-4 lg:px-6 flex items-center gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr]">
+      <div className="h-[72px] px-4 lg:px-8 flex items-center gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr]">
 
         {/* LOGO */}
-        <Link to={navItems[0].path} className="flex items-center gap-2.5 flex-shrink-0 mr-2 justify-self-start">
-          <div className="w-9 h-9 rounded-md bg-white flex items-center justify-center p-1">
+        <Link to={navItems[0].path} className="flex items-center gap-3 flex-shrink-0 mr-2 justify-self-start">
+          <div className="w-11 h-11 rounded-lg bg-white flex items-center justify-center p-1.5">
             <img
               src="https://www.mazzraty.com/_next/image?url=%2Fimages%2FMazzraty_Logo.png&w=3840&q=75"
               alt="Mazzraty"
@@ -318,8 +318,8 @@ export default function Navbar() {
           </div>
 
           <div className="hidden sm:block leading-tight">
-            <h1 className="text-[15px] font-bold text-white">Mazzraty</h1>
-            <p className="text-[11px] text-[#d4a94c] font-medium">IT Service</p>
+            <h1 className="text-lg font-bold text-white">Mazzraty</h1>
+            <p className="text-xs text-[#d4a94c] font-medium">IT Service</p>
           </div>
         </Link>
 
@@ -404,11 +404,10 @@ export default function Navbar() {
           {/* SEARCH – always visible on desktop */}
           <div className="hidden md:block relative" ref={searchRef}>
             <div
-              className={`flex items-center gap-2 h-9 rounded-md px-3 transition-all duration-200 ${
-                searchOpen
+              className={`flex items-center gap-2 h-9 rounded-md px-3 transition-all duration-200 ${searchOpen
                   ? "w-96 bg-white ring-2 ring-[#d4a94c]"
                   : "w-64 bg-white/10 hover:bg-white/15"
-              }`}
+                }`}
             >
               <Search
                 size={16}
@@ -429,11 +428,10 @@ export default function Navbar() {
                   }
                 }}
                 placeholder={isAdminRole ? "Search tickets, assets, staff" : "Search my tickets"}
-                className={`flex-1 min-w-0 outline-none text-sm bg-transparent ${
-                  searchOpen
+                className={`flex-1 min-w-0 outline-none text-sm bg-transparent ${searchOpen
                     ? "text-gray-800 placeholder-gray-400"
                     : "text-white placeholder-white/60"
-                }`}
+                  }`}
               />
               {searchQuery ? (
                 <button
@@ -638,9 +636,8 @@ export default function Navbar() {
                     notifications.map((n) => (
                       <div
                         key={n._id}
-                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-l-[3px] ${
-                          !n.isRead ? "bg-[#f4f8f4] border-[#1f4a35]" : "border-transparent"
-                        }`}
+                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-l-[3px] ${!n.isRead ? "bg-[#f4f8f4] border-[#1f4a35]" : "border-transparent"
+                          }`}
                         onClick={async () => {
                           if (!n.isRead) {
                             await api.put(`/notifications/${n._id}/read`);
@@ -717,9 +714,8 @@ export default function Navbar() {
             </div>
             <ChevronDown
               size={14}
-              className={`text-white/60 hidden lg:block group-hover:text-white transition-transform ${
-                userMenuOpen ? "rotate-180" : ""
-              }`}
+              className={`text-white/60 hidden lg:block group-hover:text-white transition-transform ${userMenuOpen ? "rotate-180" : ""
+                }`}
             />
           </button>
 
