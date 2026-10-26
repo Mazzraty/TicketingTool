@@ -115,9 +115,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         aria-current={active ? "page" : undefined}
         className={`flex items-center ${
           collapsed ? "justify-center" : "gap-3"
-        } px-3 h-9 rounded-md text-sm transition-colors ${focusRing} ${isActive(to)}`}
+        } px-3 h-10 rounded-md text-[15px] transition-colors ${focusRing} ${isActive(to)}`}
       >
-        <Icon size={18} className={`shrink-0 ${active ? "text-[#2E7D32]" : "text-gray-500"}`} />
+        <Icon size={20} className={`shrink-0 ${active ? "text-[#2E7D32]" : "text-gray-500"}`} />
         {!collapsed && <span className="whitespace-nowrap">{label}</span>}
       </Link>
     );
@@ -136,7 +136,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           aria-expanded={open}
           className={`w-full flex items-center ${
             collapsed ? "justify-center" : "gap-3"
-          } px-3 h-9 rounded-md text-sm transition-colors ${focusRing} ${
+          } px-3 h-10 rounded-md text-[15px] transition-colors ${focusRing} ${
             hasActive && (!open || collapsed)
               ? activeCls
               : hasActive
@@ -145,14 +145,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           }`}
         >
           <Icon
-            size={18}
+            size={20}
             className={`shrink-0 ${hasActive ? "text-[#2E7D32]" : "text-gray-500"}`}
           />
           {!collapsed && (
             <>
               <span className="whitespace-nowrap flex-1 text-left">{label}</span>
               <ChevronDown
-                size={15}
+                size={16}
                 className={`shrink-0 text-gray-400 transition-transform duration-200 ${
                   open ? "rotate-180" : ""
                 }`}
@@ -162,7 +162,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         </button>
 
         {!collapsed && open && (
-          <div className="mt-0.5 mb-1 ml-[21px] pl-2.5 border-l border-gray-200 space-y-0.5">
+          <div className="mt-0.5 mb-1 ml-[23px] pl-2.5 border-l border-gray-200 space-y-0.5">
             {children.map(({ to, icon: ChildIcon, label: childLabel }) => {
               const active = location.pathname === to;
               return (
@@ -170,12 +170,12 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                   key={to}
                   to={to}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-2.5 px-3 h-8 rounded-md text-[13px] transition-colors ${focusRing} ${isActive(
+                  className={`flex items-center gap-2.5 px-3 h-9 rounded-md text-sm transition-colors ${focusRing} ${isActive(
                     to
                   )}`}
                 >
                   <ChildIcon
-                    size={15}
+                    size={17}
                     className={`shrink-0 ${active ? "text-[#2E7D32]" : "text-gray-400"}`}
                   />
                   <span className="whitespace-nowrap">{childLabel}</span>
@@ -190,7 +190,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   const SectionLabel = ({ children }) =>
     !collapsed ? (
-      <p className="text-xs font-semibold text-gray-500 px-3 mb-1.5">{children}</p>
+      <p className="text-[13px] font-semibold text-gray-500 px-3 mb-2">{children}</p>
     ) : (
       <div className="h-px bg-gray-200 mx-3 mb-2" />
     );
@@ -213,8 +213,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <LifeBuoy size={18} />
             </div>
             <div className="min-w-0 leading-tight">
-              <p className="text-sm font-semibold text-gray-900 truncate">Service desk</p>
-              <p className="text-xs text-gray-500 truncate">IT support project</p>
+              <p className="text-base font-semibold text-gray-900 truncate">Service desk</p>
+              <p className="text-[13px] text-gray-500 truncate">IT support project</p>
             </div>
           </div>
         )}
@@ -315,8 +315,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
           {!collapsed && (
             <div className="flex-1 min-w-0 leading-tight">
-              <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || "Guest"}</p>
-              <p className="text-xs text-gray-500 capitalize mt-0.5">{role.replace("_", " ")}</p>
+              <p className="text-[15px] font-semibold text-gray-900 truncate">{user?.name || "Guest"}</p>
+              <p className="text-[13px] text-gray-500 capitalize mt-0.5">{role.replace("_", " ")}</p>
             </div>
           )}
         </div>
