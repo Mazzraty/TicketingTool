@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axios.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import toast from "react-hot-toast";
@@ -403,10 +404,69 @@ const SummaryRow = ({ label, children }) => (
 );
 
 /* ======================================================
+   POPUP: BLOCK NEW TICKET WHILE RESOLVED TICKETS ARE PENDING
+====================================================== */
+const PendingResolvedModal = ({ tickets, total, onGo, onDismiss }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#091E42]/40 px-4">
+    <div className="w-full max-w-md bg-white rounded-lg shadow-2xl border border-[#DFE1E6] overflow-hidden">
+      <div className="flex items-start gap-3 px-5 py-4 border-b border-[#DFE1E6]">
+        <div className="p-1.5 rounded-[4px] bg-[#FFF3D6]">
+          <AlertCircle className="w-5 h-5 text-[#B7791F]" />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-[#172B4D]">
+            Close your resolved tickets first
+          </h3>
+          <p className="mt-1 text-sm text-[#626F86] leading-relaxed">
+            You have {total} resolved ticket{total !== 1 ? "s" : ""} waiting for your
+            confirmation. Please rate and close {total !== 1 ? "them" : "it"} (or reopen{" "}
+            {total !== 1 ? "them" : "it"} if the issue is not fixed) before creating a new
+            ticket.
+          </p>
+        </div>
+      </div>
+
+      <ul className="px-5 py-3 space-y-1.5 max-h-48 overflow-auto">
+        {tickets.map((t) => (
+          <li
+            key={t._id}
+            className="px-3 py-2 rounded-[4px] bg-[#F7F8F9] border border-[#EBECF0] text-sm text-[#172B4D] truncate"
+          >
+            {t.ticketNumber ? `${t.ticketNumber} · ` : ""}
+            {t.title}
+          </li>
+        ))}
+        {total > tickets.length && (
+          <li className="text-xs text-[#626F86] px-1">and {total - tickets.length} more</li>
+        )}
+      </ul>
+
+      <div className="flex justify-end gap-2 px-5 py-3.5 bg-[#F7F8F9] border-t border-[#DFE1E6]">
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="rounded-[4px] px-3 py-2 text-sm font-medium text-[#172B4D] hover:bg-[#EBECF0] cursor-pointer"
+        >
+          Later
+        </button>
+        <button
+          type="button"
+          onClick={onGo}
+          className="rounded-[4px] bg-[#0B6E76] px-4 py-2 text-sm font-medium text-white hover:bg-[#095A61] cursor-pointer"
+        >
+          Go to My Tickets
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+/* ======================================================
    PAGE
 ====================================================== */
 export default function CreateTicket() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const userDepartment = getUserDepartment(user?.department);
 
   const [form, setForm] = useState({
@@ -427,6 +487,11 @@ export default function CreateTicket() {
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // ⛔ Pending Resolved tickets (must be closed/reopened before a new one)
+  const [pendingResolved, setPendingResolved] = useState([]); // first page only, for display
+  const [pendingCount, setPendingCount] = useState(0);
+  const [showPendingModal, setShowPendingModal] = useState(false);
 
   // ⚡ Auto-suggestion state
   const [autoSuggested, setAutoSuggested] = useState(null); // { impact, urgency, matched } | null
@@ -455,6 +520,32 @@ export default function CreateTicket() {
       });
     }
   };
+
+  // Check for Resolved tickets the user has not rated/closed/reopened yet.
+  // /tickets/my is paginated, so use the per-status count from the API
+  // and only keep the first page for the popup list.
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await api.get("/tickets/my", { params: { status: "Resolved" } });
+        const count = res.data?.counts?.Resolved ?? res.data?.total ?? 0;
+
+        if (!cancelled && count > 0) {
+          setPendingResolved(res.data?.data || []);
+          setPendingCount(count);
+          setShowPendingModal(true);
+        }
+      } catch (err) {
+        console.error("Failed to check resolved tickets", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load the employee's real department from their employee master record.
   // The backend also resolves it on submit, so this is for display only.
@@ -686,6 +777,12 @@ export default function CreateTicket() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // ⛔ Block new tickets while Resolved tickets are still pending
+    if (pendingCount > 0) {
+      setShowPendingModal(true);
+      return;
+    }
+
     if (!validateForm()) {
       toast.error("Please fix the errors above");
       return;
@@ -765,6 +862,8 @@ export default function CreateTicket() {
 
   const aiCanRun = !aiLoading && form.title.trim() && form.description.trim();
 
+  const submitBlocked = loading || pendingCount > 0;
+
   return (
     <div
       className="min-h-screen bg-[#F4F5F7]"
@@ -774,6 +873,16 @@ export default function CreateTicket() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
       `}</style>
+
+      {/* ⛔ PENDING RESOLVED POPUP */}
+      {showPendingModal && (
+        <PendingResolvedModal
+          tickets={pendingResolved}
+          total={pendingCount}
+          onGo={() => navigate("/my-tickets")}
+          onDismiss={() => setShowPendingModal(false)}
+        />
+      )}
 
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* PAGE HEADER */}
@@ -790,7 +899,7 @@ export default function CreateTicket() {
           <button
             type="submit"
             form="create-ticket-form"
-            disabled={loading}
+            disabled={submitBlocked}
             className="hidden sm:inline-flex items-center gap-1.5 rounded-[4px] bg-[#0B6E76] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#095A61] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? (
@@ -801,6 +910,26 @@ export default function CreateTicket() {
             {loading ? "Submitting..." : "Submit ticket"}
           </button>
         </div>
+
+        {/* ⛔ PENDING RESOLVED BANNER (stays visible after "Later") */}
+        {pendingCount > 0 && (
+          <div className="mb-4 flex items-center justify-between gap-3 flex-wrap px-3 py-2.5 rounded-[4px] bg-[#FFF3D6] border border-[#F5DFA8]">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-[#B7791F] shrink-0" />
+              <p className="text-sm text-[#7A4B00]">
+                Rate and close your {pendingCount} resolved ticket
+                {pendingCount !== 1 ? "s" : ""} to create a new one.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/my-tickets")}
+              className="text-sm font-medium text-[#0B6E76] hover:underline cursor-pointer"
+            >
+              Go to My Tickets
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
           {/* ================= FORM ================= */}
@@ -1248,15 +1377,17 @@ export default function CreateTicket() {
             {/* SUBMIT */}
             <div className="flex items-center justify-between gap-4 pt-1">
               <p className="text-xs text-[#626F86]">
-                {isReady
-                  ? "All required fields are filled in"
-                  : `${checklist.length - doneCount} required item${
-                      checklist.length - doneCount !== 1 ? "s" : ""
-                    } left`}
+                {pendingCount > 0
+                  ? "Close your resolved tickets to enable submit"
+                  : isReady
+                    ? "All required fields are filled in"
+                    : `${checklist.length - doneCount} required item${
+                        checklist.length - doneCount !== 1 ? "s" : ""
+                      } left`}
               </p>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={submitBlocked}
                 className="inline-flex items-center gap-1.5 rounded-[4px] bg-[#0B6E76] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#095A61] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? (
