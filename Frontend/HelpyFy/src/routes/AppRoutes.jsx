@@ -28,7 +28,7 @@ import AdminTicketDashboard from "../pages/AdminTicketDashboard.jsx";
 import ITSupportUsers from "../pages/itSupport/ItSupportUsers.jsx"
 import ITSupportEmployeeView from "../pages/itSupport/ItSupportEmployeeView.jsx"
 import CreateManualTicket from "../pages/itSupport/CreateManualTicket.jsx";
-import TaskManagement from "../pages/TaskManagement.jsx"; // NEW
+import TaskManagement from "../pages/TaskManger.jsx";
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
