@@ -3,7 +3,7 @@ import express from "express";
 import multer from "multer";
 import fs from "fs";
 import path from "path";
-import { protect } from "../middleware/authMiddleware.js"; // <-- adjust to your auth middleware
+import { protect } from "../middleware/authMiddleware.js"; 
 import {
   getAssignees,
   createTask,
