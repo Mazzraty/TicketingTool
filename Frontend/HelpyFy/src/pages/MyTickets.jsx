@@ -787,9 +787,10 @@ export default function MyTickets() {
         </div>
       </div>
 
-      {/* ================= DETAIL DRAWER ================= */}
+      {/* ================= DETAIL DRAWER =================
+          z-[60] so it sits above the sticky navbar (z-50) */}
       {detail && (
-        <div className="fixed inset-0 z-40">
+        <div className="fixed inset-0 z-[60]">
           <div
             className="absolute inset-0 bg-[#091E42]/30"
             onClick={() => setDetailId(null)}
@@ -1011,9 +1012,10 @@ export default function MyTickets() {
         </div>
       )}
 
-      {/* ================= EDIT MODAL ================= */}
+      {/* ================= EDIT MODAL =================
+          z-[70] so it opens above the drawer */}
       {editModal && editData && (
-        <div className="fixed inset-0 bg-[#091E42]/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-[#091E42]/40 flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg border border-[#DFE1E6]">
             <div className="border-b border-[#DFE1E6] px-6 py-4 flex items-center justify-between">
               <div>
@@ -1098,9 +1100,10 @@ export default function MyTickets() {
         </div>
       )}
 
-      {/* ================= REVIEW MODAL ================= */}
+      {/* ================= REVIEW MODAL =================
+          z-[70] so it opens above the drawer */}
       {reviewModal && selectedTicket && (
-        <div className="fixed inset-0 bg-[#091E42]/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-[#091E42]/40 flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg border border-[#DFE1E6]">
             <div className="border-b border-[#DFE1E6] px-6 py-4">
               <h2 className="text-lg font-semibold text-[#172B4D]">
