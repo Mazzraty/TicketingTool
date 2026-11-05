@@ -7,7 +7,7 @@ import connectDB from "./config/db.js";
 
 // cron
 import "./crons/softwareCronesExpiry.js";
-import "./crons/autoCloseTicket.js";  
+import "./crons/autoCloseTicket.js";
 import "./crons/visaExpiryCrone.js";
 // routes
 import authRoutes from "./routes/authRoutes.js";
@@ -19,10 +19,11 @@ import softwareRoutes from "./routes/softwareRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import aiRoutes from "./routes/aiRotes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
-import searchRoutes from "./routes/searchRoutes.js"; 
+import searchRoutes from "./routes/searchRoutes.js";
 import superAdminRoutes from "./routes/superAdminRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import ticketDashboardRoutes from "./routes/adminTicketRooutes.js";
+import taskRoutes from "./routes/taskRoutes.js"; // NEW: IT support tasks
 // 🔗 Connect DB
 connectDB();
 
@@ -32,7 +33,7 @@ app.set("trust proxy", 1);
 
 /* =========================
    🌐 CORS CONFIG
-// ========================= */
+========================= */
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
@@ -68,6 +69,7 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 /* =========================
    📁 STATIC FILES
+   (also serves task photos from /uploads/tasks)
 ========================= */
 app.use("/uploads", express.static("uploads"));
 
@@ -87,13 +89,15 @@ app.use("/api/tickets", ticketRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/assets", assetRoutes);
 app.use("/api/software", softwareRoutes);
-app.use("/api/dashboard",dashboardRoutes );
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/ticket-dashboard",ticketDashboardRoutes );
+app.use("/api/ticket-dashboard", ticketDashboardRoutes);
+app.use("/api/tasks", taskRoutes); // NEW
+
 /* =========================
    ❌ 404 HANDLER
 ========================= */
@@ -111,6 +115,7 @@ app.use((err, req, res, next) => {
     message: err.message || "Server Error"
   });
 });
+
 /* =========================
    🚀 START SERVER
 ========================= */

@@ -256,9 +256,13 @@ export default function Navbar() {
 
   const navItems = useMemo(() => {
     if (isAdminRole) {
+      // Tasks tab: super_admin assigns, it_support works on their tasks
+      const canSeeTasks = role === "super_admin" || role === "it_support";
+
       return [
         { label: "Dashboard", path: "/admin/dashboard" },
         { label: "Tickets", path: "/admin/tickets" },
+        ...(canSeeTasks ? [{ label: "Tasks", path: "/admin/tasks" }] : []),
         { label: "Assets", path: "/admin/assets/fiori" },
         { label: "Employees", path: "/admin/employees" },
         { label: "Vendors", path: "/admin/software-dashboard" },

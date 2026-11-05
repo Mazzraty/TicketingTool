@@ -1,0 +1,566 @@
+// pages/TaskManagement.jsx
+import { useEffect, useState, useCallback } from "react";
+import api from "../api/axios";
+import toast from "react-hot-toast";
+import { useAuth } from "../auth/AuthContext";
+
+/* ================= CONSTANTS ================= */
+const T = {
+  text: "#172B4D",
+  muted: "#626F86",
+  border: "#DCDFE4",
+  borderSoft: "#EBECF0",
+  canvas: "#F7F8F9",
+  brand: "#0C66E4",
+  good: "#1F845A",
+  bad: "#C9372C",
+};
+
+const SOURCES = ["IT", "Store", "New Purchase"];
+const PRIORITIES = ["Low", "Medium", "High", "Critical"];
+
+const STATUS_STYLE = {
+  Assigned: ["#DEEBFF", "#0747A6"],
+  "In Progress": ["#FFF0B3", "#7F5F01"],
+  Completed: ["#DCFFF1", "#216E4E"],
+};
+
+// Uploaded photos are served from the server root, not from /api
+const FILE_BASE = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
+
+const inputCls =
+  "h-9 w-full rounded-[3px] border bg-white text-sm px-2 outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:bg-[#F7F8F9] disabled:text-[#626F86]";
+const textareaCls =
+  "w-full rounded-[3px] border bg-white text-sm p-2 outline-none focus:ring-2 focus:ring-[#4C9AFF] disabled:bg-[#F7F8F9]";
+const btnPrimary =
+  "h-9 px-4 rounded-[3px] text-sm font-medium text-white disabled:opacity-50";
+const btnGhost =
+  "h-9 px-4 rounded-[3px] border text-sm font-medium bg-white hover:bg-[#F7F8F9] disabled:opacity-50";
+
+const todayStr = () => new Date().toISOString().split("T")[0];
+const fmt = (d) => (d ? new Date(d).toLocaleString() : "—");
+const errMsg = (e) => e?.response?.data?.message || "Something went wrong";
+
+/* ================= SMALL PIECES ================= */
+const Badge = ({ label, colors }) => {
+  const [bg, fg] = colors || ["#DFE1E6", "#42526E"];
+  return (
+    <span
+      className="inline-flex items-center px-1.5 h-5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide whitespace-nowrap"
+      style={{ backgroundColor: bg, color: fg }}
+    >
+      {label}
+    </span>
+  );
+};
+
+const Field = ({ label, children, hint }) => (
+  <label className="block">
+    <span className="block text-xs font-semibold mb-1" style={{ color: T.muted }}>{label}</span>
+    {children}
+    {hint && <span className="block text-[11px] mt-1" style={{ color: T.muted }}>{hint}</span>}
+  </label>
+);
+
+const Section = ({ title, children, aside }) => (
+  <section className="border rounded-[3px] bg-white" style={{ borderColor: T.border }}>
+    <header className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: T.borderSoft }}>
+      <h3 className="text-sm font-semibold">{title}</h3>
+      {aside}
+    </header>
+    <div className="p-4">{children}</div>
+  </section>
+);
+
+const Modal = ({ title, onClose, children, wide }) => (
+  <div className="fixed inset-0 z-50 bg-black/40 overflow-y-auto p-4" onMouseDown={onClose}>
+    <div
+      className={`mx-auto bg-[#F7F8F9] rounded-[3px] shadow-xl ${wide ? "max-w-4xl" : "max-w-xl"}`}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <header className="flex items-center justify-between px-5 py-3 border-b bg-white rounded-t-[3px]" style={{ borderColor: T.border }}>
+        <h2 className="text-base font-semibold">{title}</h2>
+        <button onClick={onClose} aria-label="Close" className="text-xl leading-none px-2" style={{ color: T.muted }}>×</button>
+      </header>
+      <div className="p-5 space-y-4">{children}</div>
+    </div>
+  </div>
+);
+
+const ProgressBar = ({ value }) => (
+  <div className="flex items-center gap-2 min-w-[110px]">
+    <div className="h-1.5 flex-1 rounded-full overflow-hidden" style={{ backgroundColor: T.borderSoft }}>
+      <div className="h-full rounded-full" style={{ width: `${value}%`, backgroundColor: value === 100 ? T.good : T.brand }} />
+    </div>
+    <span className="text-xs w-9 text-right" style={{ color: T.muted }}>{value}%</span>
+  </div>
+);
+
+/* ================= CREATE TASK (super_admin) ================= */
+function CreateTaskModal({ onClose, onCreated }) {
+  const [companies, setCompanies] = useState([]);
+  const [assignees, setAssignees] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    companyId: "",
+    assignedTo: "",
+    priority: "Medium",
+    deadline: "",
+  });
+
+  useEffect(() => {
+    api.get("/companies").then((r) => setCompanies(r.data.companies || [])).catch(() => {});
+    api.get("/tasks/assignees").then((r) => setAssignees(r.data || [])).catch(() => toast.error("Failed to load IT support users"));
+  }, []);
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) return toast.error("Title is required");
+    if (!form.companyId) return toast.error("Select a company");
+    if (!form.assignedTo) return toast.error("Select who to assign the task to");
+    if (!form.deadline) return toast.error("Set a deadline");
+
+    setSaving(true);
+    try {
+      await api.post("/tasks", { ...form, deadline: new Date(form.deadline).toISOString() });
+      toast.success("Task assigned");
+      onCreated();
+      onClose();
+    } catch (err) {
+      toast.error(errMsg(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal title="Assign new task" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <Field label="Title *">
+          <input className={inputCls} style={{ borderColor: T.border }} value={form.title} onChange={set("title")} maxLength={200} />
+        </Field>
+        <Field label="Description">
+          <textarea className={textareaCls} style={{ borderColor: T.border }} rows={3} value={form.description} onChange={set("description")} maxLength={2000} />
+        </Field>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Company *">
+            <select className={inputCls} style={{ borderColor: T.border }} value={form.companyId} onChange={set("companyId")}>
+              <option value="">Select company</option>
+              {companies.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Assigned to *">
+            <select className={inputCls} style={{ borderColor: T.border }} value={form.assignedTo} onChange={set("assignedTo")}>
+              <option value="">Select IT support</option>
+              {assignees.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Priority">
+            <select className={inputCls} style={{ borderColor: T.border }} value={form.priority} onChange={set("priority")}>
+              {PRIORITIES.map((p) => <option key={p}>{p}</option>)}
+            </select>
+          </Field>
+          <Field label="Deadline *">
+            <input type="datetime-local" className={inputCls} style={{ borderColor: T.border }} value={form.deadline} onChange={set("deadline")} />
+          </Field>
+        </div>
+
+        <p className="text-xs" style={{ color: T.muted }}>Assigned time is recorded automatically when you save.</p>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" className={btnGhost} style={{ borderColor: T.border }} onClick={onClose}>Cancel</button>
+          <button type="submit" className={btnPrimary} style={{ backgroundColor: T.brand }} disabled={saving}>
+            {saving ? "Saving..." : "Assign task"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ================= TASK DETAIL ================= */
+function TaskDetail({ id, user, onClose, onChanged }) {
+  const [task, setTask] = useState(null);
+  const [materials, setMaterials] = useState([]);
+  const [daily, setDaily] = useState({ date: todayStr(), percentToday: "", note: "" });
+  const [closing, setClosing] = useState({ delayJustification: "", note: "" });
+  const [files, setFiles] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const { data } = await api.get(`/tasks/${id}`);
+    setTask(data);
+    setMaterials(
+      (data.materials || []).map((m) => ({
+        item: m.item,
+        qty: m.qty,
+        collectedFrom: m.collectedFrom,
+        date: m.date ? m.date.split("T")[0] : "",
+      }))
+    );
+  }, [id]);
+
+  useEffect(() => {
+    load().catch((e) => { toast.error(errMsg(e)); onClose(); });
+  }, [load, onClose]);
+
+  if (!task) return <Modal title="Loading..." onClose={onClose} wide><p className="text-sm">Loading task...</p></Modal>;
+
+  const myId = String(user?.id || user?._id);
+  const isOwner = String(task.assignedTo?._id) === myId || user?.role === "super_admin";
+  const closed = task.status === "Completed";
+  const editable = isOwner && !closed;
+  const isLate = !closed && new Date() > new Date(task.deadline);
+
+  const run = async (fn, okMsg) => {
+    setBusy(true);
+    try {
+      await fn();
+      toast.success(okMsg);
+      await load();
+      onChanged();
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* ----- materials ----- */
+  const setRow = (i, k, v) => setMaterials((rows) => rows.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
+  const addRow = () => setMaterials((rows) => [...rows, { item: "", qty: 1, collectedFrom: "IT", date: todayStr() }]);
+  const removeRow = (i) => setMaterials((rows) => rows.filter((_, idx) => idx !== i));
+  const saveMaterials = () => run(() => api.put(`/tasks/${id}/materials`, { materials }), "Materials saved");
+
+  /* ----- daily update ----- */
+  const addDaily = () => {
+    if (daily.percentToday === "") return toast.error("Enter the % completed today");
+    return run(async () => {
+      await api.post(`/tasks/${id}/daily`, daily);
+      setDaily({ date: todayStr(), percentToday: "", note: "" });
+    }, "Daily update saved");
+  };
+
+  /* ----- close ----- */
+  const closeTask = () => {
+    if (isLate && !closing.delayJustification.trim()) {
+      return toast.error("Deadline has passed - add a delay justification");
+    }
+    if (!window.confirm("Close this task? This cannot be undone.")) return;
+
+    const fd = new FormData();
+    fd.append("delayJustification", closing.delayJustification);
+    fd.append("note", closing.note);
+    files.forEach((f) => fd.append("photos", f));
+    return run(() => api.post(`/tasks/${id}/close`, fd), "Task closed");
+  };
+
+  const onPickFiles = (e) => {
+    const picked = Array.from(e.target.files || []);
+    if (picked.length > 5) toast.error("Max 5 photos");
+    setFiles(picked.slice(0, 5));
+  };
+
+  return (
+    <Modal title={task.title} onClose={onClose} wide>
+      {/* ASSIGNMENT */}
+      <Section title="Assignment" aside={<Badge label={task.status} colors={STATUS_STYLE[task.status]} />}>
+        {task.description && <p className="text-sm mb-3 whitespace-pre-wrap">{task.description}</p>}
+        <dl className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+          <div><dt className="text-xs font-semibold" style={{ color: T.muted }}>Assigned to</dt><dd>{task.assignedTo?.name || "—"}</dd></div>
+          <div><dt className="text-xs font-semibold" style={{ color: T.muted }}>Assigned time</dt><dd>{fmt(task.assignedAt)}</dd></div>
+          <div>
+            <dt className="text-xs font-semibold" style={{ color: T.muted }}>Deadline</dt>
+            <dd style={{ color: isLate ? T.bad : T.text }}>{fmt(task.deadline)}{isLate && " (overdue)"}</dd>
+          </div>
+          <div><dt className="text-xs font-semibold" style={{ color: T.muted }}>Progress</dt><dd><ProgressBar value={task.progress} /></dd></div>
+        </dl>
+      </Section>
+
+      {/* MATERIAL CONSUMED */}
+      <Section
+        title="Material consumed"
+        aside={editable && (
+          <div className="flex gap-2">
+            <button className={btnGhost + " !h-8 !px-3"} style={{ borderColor: T.border }} onClick={addRow} disabled={busy}>+ Add row</button>
+            <button className={btnPrimary + " !h-8 !px-3"} style={{ backgroundColor: T.brand }} onClick={saveMaterials} disabled={busy}>Save</button>
+          </div>
+        )}
+      >
+        {materials.length === 0 ? (
+          <p className="text-sm text-center py-4" style={{ color: T.muted }}>No material recorded</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left min-w-[640px]">
+              <thead>
+                <tr className="border-b" style={{ borderColor: T.border }}>
+                  {["SN", "Item", "Qty", "Collected from", "Date", ""].map((h) => (
+                    <th key={h} className="py-2 px-1 text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {materials.map((m, i) => (
+                  <tr key={i} className="border-b last:border-0" style={{ borderColor: T.borderSoft }}>
+                    <td className="py-2 px-1 w-10">{i + 1}</td>
+                    <td className="py-2 px-1">
+                      <input className={inputCls} style={{ borderColor: T.border }} value={m.item} disabled={!editable}
+                        onChange={(e) => setRow(i, "item", e.target.value)} />
+                    </td>
+                    <td className="py-2 px-1 w-20">
+                      <input type="number" min={1} className={inputCls} style={{ borderColor: T.border }} value={m.qty} disabled={!editable}
+                        onChange={(e) => setRow(i, "qty", e.target.value)} />
+                    </td>
+                    <td className="py-2 px-1 w-40">
+                      <select className={inputCls} style={{ borderColor: T.border }} value={m.collectedFrom} disabled={!editable}
+                        onChange={(e) => setRow(i, "collectedFrom", e.target.value)}>
+                        {SOURCES.map((s) => <option key={s}>{s}</option>)}
+                      </select>
+                    </td>
+                    <td className="py-2 px-1 w-40">
+                      <input type="date" className={inputCls} style={{ borderColor: T.border }} value={m.date} disabled={!editable}
+                        onChange={(e) => setRow(i, "date", e.target.value)} />
+                    </td>
+                    <td className="py-2 px-1 w-8">
+                      {editable && <button onClick={() => removeRow(i)} aria-label="Remove row" className="text-lg" style={{ color: T.bad }}>×</button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
+
+      {/* DAILY UPDATION */}
+      <Section title="Daily updation">
+        {editable && (
+          <div className="grid grid-cols-1 sm:grid-cols-[160px_160px_1fr_auto] gap-3 items-end mb-4">
+            <Field label="Date">
+              <input type="date" className={inputCls} style={{ borderColor: T.border }} max={todayStr()}
+                value={daily.date} onChange={(e) => setDaily((d) => ({ ...d, date: e.target.value }))} />
+            </Field>
+            <Field label="% completed today">
+              <input type="number" min={0} max={100} className={inputCls} style={{ borderColor: T.border }}
+                value={daily.percentToday} onChange={(e) => setDaily((d) => ({ ...d, percentToday: e.target.value }))} />
+            </Field>
+            <Field label="Note">
+              <input className={inputCls} style={{ borderColor: T.border }} maxLength={1000}
+                value={daily.note} onChange={(e) => setDaily((d) => ({ ...d, note: e.target.value }))} />
+            </Field>
+            <button className={btnPrimary} style={{ backgroundColor: T.brand }} onClick={addDaily} disabled={busy}>Add update</button>
+          </div>
+        )}
+
+        {task.dailyUpdates?.length ? (
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b" style={{ borderColor: T.border }}>
+                {["Date", "% today", "Note", "By"].map((h) => (
+                  <th key={h} className="py-2 px-1 text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[...task.dailyUpdates]
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .map((u) => (
+                  <tr key={u._id} className="border-b last:border-0" style={{ borderColor: T.borderSoft }}>
+                    <td className="py-2 px-1">{new Date(u.date).toLocaleDateString(undefined, { timeZone: "UTC" })}</td>
+                    <td className="py-2 px-1 font-medium">{u.percentToday}%</td>
+                    <td className="py-2 px-1">{u.note || "—"}</td>
+                    <td className="py-2 px-1" style={{ color: T.muted }}>{u.updatedBy?.name || "—"}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="text-sm text-center py-3" style={{ color: T.muted }}>No daily updates yet</p>
+        )}
+      </Section>
+
+      {/* CLOSING DETAILS */}
+      <Section title="Closing details">
+        {closed ? (
+          <div className="space-y-3 text-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge
+                label={task.closing?.completedOnTime ? "Completed on time" : "Completed late"}
+                colors={task.closing?.completedOnTime ? STATUS_STYLE.Completed : ["#FFEDEB", "#AE2E24"]}
+              />
+              <span style={{ color: T.muted }}>Closed {fmt(task.closing?.completedAt)}</span>
+            </div>
+            {!task.closing?.completedOnTime && (
+              <div>
+                <p className="text-xs font-semibold" style={{ color: T.muted }}>Delay justification</p>
+                <p className="whitespace-pre-wrap">{task.closing?.delayJustification}</p>
+              </div>
+            )}
+            {task.closing?.note && (
+              <div>
+                <p className="text-xs font-semibold" style={{ color: T.muted }}>Note</p>
+                <p className="whitespace-pre-wrap">{task.closing.note}</p>
+              </div>
+            )}
+            {task.closing?.photos?.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold mb-1" style={{ color: T.muted }}>Photos</p>
+                <div className="flex flex-wrap gap-2">
+                  {task.closing.photos.map((p) => (
+                    <a key={p} href={`${FILE_BASE}${p}`} target="_blank" rel="noreferrer">
+                      <img src={`${FILE_BASE}${p}`} alt="Task photo" className="h-24 w-24 object-cover rounded-[3px] border" style={{ borderColor: T.border }} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : editable ? (
+          <div className="space-y-4">
+            <p className="text-sm">
+              Completed on time:{" "}
+              <b style={{ color: isLate ? T.bad : T.good }}>{isLate ? "No - deadline passed" : "Yes"}</b>
+              <span className="text-xs ml-2" style={{ color: T.muted }}>(decided automatically when you close)</span>
+            </p>
+
+            {isLate && (
+              <Field label="Delay justification *">
+                <textarea className={textareaCls} style={{ borderColor: T.border }} rows={3} maxLength={2000}
+                  value={closing.delayJustification}
+                  onChange={(e) => setClosing((c) => ({ ...c, delayJustification: e.target.value }))} />
+              </Field>
+            )}
+
+            <Field label="Upload picture (optional)" hint="Up to 5 images, 5 MB each">
+              <input type="file" accept="image/*" multiple onChange={onPickFiles} className="block text-sm" />
+            </Field>
+            {files.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {files.map((f) => (
+                  <img key={f.name + f.size} src={URL.createObjectURL(f)} alt={f.name}
+                    className="h-20 w-20 object-cover rounded-[3px] border" style={{ borderColor: T.border }} />
+                ))}
+              </div>
+            )}
+
+            <Field label="Note">
+              <textarea className={textareaCls} style={{ borderColor: T.border }} rows={3} maxLength={2000}
+                value={closing.note} onChange={(e) => setClosing((c) => ({ ...c, note: e.target.value }))} />
+            </Field>
+
+            <div className="flex justify-end">
+              <button className={btnPrimary} style={{ backgroundColor: T.good }} onClick={closeTask} disabled={busy}>
+                Close task
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: T.muted }}>Only the assigned IT support user can close this task.</p>
+        )}
+      </Section>
+    </Modal>
+  );
+}
+
+/* ================= PAGE ================= */
+export default function TaskManagement() {
+  const { user } = useAuth();
+  const isSuper = user?.role === "super_admin";
+
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [openId, setOpenId] = useState(null);
+
+  const fetchTasks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get("/tasks", { params: statusFilter ? { status: statusFilter } : {} });
+      setTasks(data);
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
+
+  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+
+  const closeDetail = useCallback(() => setOpenId(null), []);
+
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: T.canvas, color: T.text }}>
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-6">
+        <nav className="text-xs mb-2" style={{ color: T.muted }}>Service desk <span className="mx-1">/</span> Tasks</nav>
+
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+          <div>
+            <h1 className="text-2xl font-medium">{isSuper ? "IT support tasks" : "My tasks"}</h1>
+            <p className="text-sm mt-1" style={{ color: T.muted }}>
+              {isSuper ? "Assign work and track progress" : "Tasks assigned to you"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select aria-label="Status" className={inputCls + " !w-40"} style={{ borderColor: T.border }}
+              value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">All statuses</option>
+              <option>Assigned</option>
+              <option>In Progress</option>
+              <option>Completed</option>
+            </select>
+            {isSuper && (
+              <button className={btnPrimary} style={{ backgroundColor: T.brand }} onClick={() => setShowCreate(true)}>
+                + Assign task
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white border rounded-[3px] overflow-x-auto" style={{ borderColor: T.border }}>
+          <table className="w-full text-sm text-left min-w-[860px]">
+            <thead>
+              <tr className="border-b" style={{ borderColor: T.border }}>
+                {["Task", "Assigned to", "Assigned time", "Deadline", "Progress", "Status"].map((h) => (
+                  <th key={h} className="py-3 px-4 text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={6} className="py-10 text-center" style={{ color: T.muted }}>Loading...</td></tr>
+              ) : tasks.length === 0 ? (
+                <tr><td colSpan={6} className="py-10 text-center" style={{ color: T.muted }}>No tasks found</td></tr>
+              ) : (
+                tasks.map((t) => {
+                  const overdue = t.status !== "Completed" && new Date(t.deadline) < new Date();
+                  return (
+                    <tr key={t._id} onClick={() => setOpenId(t._id)}
+                      className="border-b last:border-0 cursor-pointer hover:bg-[#F7F8F9]" style={{ borderColor: T.borderSoft }}>
+                      <td className="py-3 px-4 font-medium">{t.title}</td>
+                      <td className="py-3 px-4">{t.assignedTo?.name || "—"}</td>
+                      <td className="py-3 px-4">{fmt(t.assignedAt)}</td>
+                      <td className="py-3 px-4" style={{ color: overdue ? T.bad : T.text }}>
+                        {fmt(t.deadline)}{overdue && <span className="ml-1 text-xs font-semibold">OVERDUE</span>}
+                      </td>
+                      <td className="py-3 px-4"><ProgressBar value={t.progress} /></td>
+                      <td className="py-3 px-4"><Badge label={t.status} colors={STATUS_STYLE[t.status]} /></td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showCreate && <CreateTaskModal onClose={() => setShowCreate(false)} onCreated={fetchTasks} />}
+      {openId && <TaskDetail id={openId} user={user} onClose={closeDetail} onChanged={fetchTasks} />}
+    </div>
+  );
+}

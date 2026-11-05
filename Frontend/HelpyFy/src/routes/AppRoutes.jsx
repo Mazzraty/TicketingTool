@@ -28,6 +28,7 @@ import AdminTicketDashboard from "../pages/AdminTicketDashboard.jsx";
 import ITSupportUsers from "../pages/itSupport/ItSupportUsers.jsx"
 import ITSupportEmployeeView from "../pages/itSupport/ItSupportEmployeeView.jsx"
 import CreateManualTicket from "../pages/itSupport/CreateManualTicket.jsx";
+import TaskManagement from "../pages/TaskManagement.jsx"; // NEW
 // LAYOUTS
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import Layout from "../layouts/MainLayout.jsx";
@@ -112,6 +113,21 @@ export default function AppRoutes() {
           <Route
             path="/admin/assets/upload-excel"
             element={<AssetExcelUpload />}
+          />
+        </Route>
+      </Route>
+
+      {/* ================= TASKS (NEW) =================
+          super_admin assigns, it_support works on their tasks */}
+      <Route
+        element={
+          <ProtectedRoute allowedRoles={["super_admin", "it_support"]} />
+        }
+      >
+        <Route element={<AdminLayout />}>
+          <Route
+            path="/admin/tasks"
+            element={<TaskManagement />}
           />
         </Route>
       </Route>
