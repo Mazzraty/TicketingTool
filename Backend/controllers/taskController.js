@@ -26,7 +26,9 @@ const dayKey = (d) => new Date(d).toISOString().split("T")[0];
 const removeFiles = (files = []) =>
   files.forEach((f) => fs.unlink(f.path, () => {}));
 
-// Same pattern as generateTicketNumber: <companyCode>-<year>-<6 digit sequence>
+// Same pattern as generateTicketNumber, with a task type code so it never
+// looks like a ticket number: <companyCode>-TSK-<year>-<6 digit sequence>
+const TASK_TYPE_CODE = "TSK"; // change this if you want a different code
 const generateTaskNumber = async (companyId, companyCode) => {
   const year = new Date().getFullYear();
 
@@ -37,7 +39,7 @@ const generateTaskNumber = async (companyId, companyCode) => {
   );
 
   const sequence = String(counter.sequence).padStart(6, "0");
-  return `${companyCode}-${year}-${sequence}`;
+  return `${companyCode}-${TASK_TYPE_CODE}-${year}-${sequence}`;
 };
 
 const loadTask = async (id, user) => {

@@ -36,7 +36,7 @@ const taskSchema = new Schema(
       index: true,
     },
 
-    /* Company-wise task number, e.g. "AQC-2026-000001" */
+    /* Company-wise task number, e.g. "AQC-TSK-2026-000001" */
     taskNumber: { type: String, trim: true, maxlength: 40 },
 
     title: { type: String, required: true, trim: true, maxlength: 200 },
