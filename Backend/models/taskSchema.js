@@ -35,6 +35,10 @@ const taskSchema = new Schema(
       required: true,
       index: true,
     },
+
+    /* Company-wise task number, e.g. "AQC-2026-000001" */
+    taskNumber: { type: String, trim: true, maxlength: 40 },
+
     title: { type: String, required: true, trim: true, maxlength: 200 },
     description: { type: String, trim: true, maxlength: 2000, default: "" },
     priority: {
@@ -72,6 +76,12 @@ const taskSchema = new Schema(
     },
   },
   { timestamps: true }
+);
+
+// A task number is unique inside one company (old tasks without a number are ignored)
+taskSchema.index(
+  { companyId: 1, taskNumber: 1 },
+  { unique: true, partialFilterExpression: { taskNumber: { $type: "string" } } }
 );
 
 export default mongoose.model("Task", taskSchema);

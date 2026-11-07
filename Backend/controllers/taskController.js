@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import mongoose from "mongoose";
 import Task from "../models/taskSchema.js";
+import TaskCounter from "../models/taskCounterSchema.js";
 import User from "../models/userShema.js"; 
 import { getCompanyFilter } from "./dashboardController.js";
 
@@ -24,6 +25,20 @@ const dayKey = (d) => new Date(d).toISOString().split("T")[0];
 
 const removeFiles = (files = []) =>
   files.forEach((f) => fs.unlink(f.path, () => {}));
+
+// Same pattern as generateTicketNumber: <companyCode>-<year>-<6 digit sequence>
+const generateTaskNumber = async (companyId, companyCode) => {
+  const year = new Date().getFullYear();
+
+  const counter = await TaskCounter.findOneAndUpdate(
+    { companyId, year },
+    { $inc: { sequence: 1 }, $setOnInsert: { companyId, year } },
+    { new: true, upsert: true }
+  );
+
+  const sequence = String(counter.sequence).padStart(6, "0");
+  return `${companyCode}-${year}-${sequence}`;
+};
 
 const loadTask = async (id, user) => {
   if (!mongoose.Types.ObjectId.isValid(id)) return { error: [400, "Invalid task id"] };
@@ -78,8 +93,15 @@ export const createTask = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(cid))
       return res.status(400).json({ message: "Company is required" });
 
+    const company = await mongoose.model("Company").findById(cid).select("code").lean();
+    if (!company) return res.status(400).json({ message: "Company not found" });
+    if (!company.code) return res.status(400).json({ message: "Company code is missing" });
+
+    const taskNumber = await generateTaskNumber(cid, company.code);
+
     const task = await Task.create({
       companyId: cid,
+      taskNumber,
       title: title.trim().slice(0, 200),
       description: typeof description === "string" ? description.trim().slice(0, 2000) : "",
       priority: PRIORITIES.includes(priority) ? priority : "Medium",

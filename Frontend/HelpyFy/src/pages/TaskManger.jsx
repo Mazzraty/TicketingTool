@@ -41,6 +41,8 @@ const btnGhost =
 const todayStr = () => new Date().toISOString().split("T")[0];
 const fmt = (d) => (d ? new Date(d).toLocaleString() : "—");
 const errMsg = (e) => e?.response?.data?.message || "Something went wrong";
+// Company-wise task number, e.g. "AQC-2026-000001" (older tasks have none)
+const taskLabel = (t) => t?.taskNumber || "";
 
 /* ================= SMALL PIECES ================= */
 const Badge = ({ label, colors }) => {
@@ -270,7 +272,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   };
 
   return (
-    <Modal title={task.title} onClose={onClose} wide>
+    <Modal title={taskLabel(task) ? `${taskLabel(task)} - ${task.title}` : task.title} onClose={onClose} wide>
       {/* ASSIGNMENT */}
       <Section title="Assignment" aside={<Badge label={task.status} colors={STATUS_STYLE[task.status]} />}>
         {task.description && <p className="text-sm mb-3 whitespace-pre-wrap">{task.description}</p>}
@@ -532,25 +534,26 @@ export default function TaskManagement() {
         </div>
 
         <div className="bg-white border rounded-[3px] overflow-x-auto" style={{ borderColor: T.border }}>
-          <table className="w-full text-sm text-left min-w-[860px]">
+          <table className="w-full text-sm text-left min-w-[940px]">
             <thead>
               <tr className="border-b" style={{ borderColor: T.border }}>
-                {["Task", "Assigned to", "Assigned time", "Deadline", "Progress", "Status"].map((h) => (
+                {["Task No", "Task", "Assigned to", "Assigned time", "Deadline", "Progress", "Status"].map((h) => (
                   <th key={h} className="py-3 px-4 text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="py-10 text-center" style={{ color: T.muted }}>Loading...</td></tr>
+                <tr><td colSpan={7} className="py-10 text-center" style={{ color: T.muted }}>Loading...</td></tr>
               ) : tasks.length === 0 ? (
-                <tr><td colSpan={6} className="py-10 text-center" style={{ color: T.muted }}>No tasks found</td></tr>
+                <tr><td colSpan={7} className="py-10 text-center" style={{ color: T.muted }}>No tasks found</td></tr>
               ) : (
                 tasks.map((t) => {
                   const overdue = t.status !== "Completed" && new Date(t.deadline) < new Date();
                   return (
                     <tr key={t._id} onClick={() => setOpenId(t._id)}
                       className="border-b last:border-0 cursor-pointer hover:bg-[#F7F8F9]" style={{ borderColor: T.borderSoft }}>
+                      <td className="py-3 px-4 font-semibold whitespace-nowrap" style={{ color: T.brand }}>{taskLabel(t) || "—"}</td>
                       <td className="py-3 px-4 font-medium">{t.title}</td>
                       <td className="py-3 px-4">{t.assignedTo?.name || "—"}</td>
                       <td className="py-3 px-4">{fmt(t.assignedAt)}</td>
