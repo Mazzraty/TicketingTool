@@ -4,7 +4,8 @@ import {
   createTicket, createManualTicket, getAllTickets, getUserTickets, updateStatus, deleteTicket, getTicketStats, editTicket, addReview, getTicketById, reopenTicket, confirmResolution,
   deleteAttachment,
   escalateTicket,
-  addSlaBreachReason, updateTicketPriority, sendTicketReminder
+  addSlaBreachReason, updateTicketPriority, sendTicketReminder,
+  getResolvers
 } from "../controllers/ticketController.js";
 
 // FIXED: was imported twice, from two different (and inconsistent) paths
@@ -52,6 +53,19 @@ router.get(
   companyCheck,
   adminOnly,
   getTicketStats
+);
+
+// ======================================================
+// "SOLVED BY" LIST (IT support users + super admins)
+// NOTE: must stay ABOVE router.get("/:id") or Express will
+// treat "resolvers" as a ticket ID.
+// ======================================================
+router.get(
+  "/resolvers",
+  protect,
+  companyCheck,
+  adminOnly,
+  getResolvers
 );
 // ======================================================
 // USER ROUTES (COMPANY ISOLATED)

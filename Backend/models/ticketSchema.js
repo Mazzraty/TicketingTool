@@ -242,6 +242,34 @@ const ticketSchema = new mongoose.Schema(
       enum: ["Internal", "External Vendor"],
       default: "Internal",
     },
+
+    // =========================
+    // WHO SOLVED IT (IT support employee or super admin)
+    // IT support staff don't log in to the system, so this is picked
+    // manually in the Resolve/Close modal. Name is stored as a snapshot
+    // so it survives employee edits/deletes.
+    // =========================
+    resolvedBy: {
+      kind: {
+        type: String,
+        enum: ["", "it_support", "employee", "super_admin"],
+        default: "",
+      },
+      refId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+      },
+      name: {
+        type: String,
+        default: "",
+      },
+      // "IT Support" | "Super Admin"
+      label: {
+        type: String,
+        default: "",
+      },
+    },
+
     rejectedAt: {
       type: Date,
       default: null,

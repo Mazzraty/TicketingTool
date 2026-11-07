@@ -481,6 +481,60 @@ export const getTicketById = async (req, res) => {
 };
 
 /* ======================================================
+   ✅ GET RESOLVERS (IT support users + super admins)
+   Used by the Resolve/Close modal's "Solved by" dropdown.
+   Same IT support users as the Task page's "Assigned to" list.
+====================================================== */
+export const getResolvers = async (req, res) => {
+  try {
+    const queryCompanyId =
+      typeof req.query.companyId === "string" && isValidId(req.query.companyId)
+        ? req.query.companyId
+        : null;
+
+    const companyId =
+      req.user.role === "super_admin"
+        ? req.user.companyId || queryCompanyId
+        : req.user.companyId;
+
+    // IT support users (same people shown in the Task page's "Assigned to" list)
+    const itFilter = companyId
+      ? {
+          role: "it_support",
+          $or: [
+            { companyId },
+            { companyAccess: { $elemMatch: { companyId, isActive: true } } },
+          ],
+        }
+      : { role: "it_support" };
+
+    const [itUsers, superAdmins] = await Promise.all([
+      User.find(itFilter).select("name email").sort({ name: 1 }),
+      User.find({ role: "super_admin" }).select("name email").sort({ name: 1 }),
+    ]);
+
+    const data = [
+      ...itUsers.map((u) => ({
+        value: `it_support:${u._id}`,
+        name: u.name || u.email,
+        label: "IT Support",
+        sub: u.email || "",
+      })),
+      ...superAdmins.map((u) => ({
+        value: `super_admin:${u._id}`,
+        name: u.name || u.email,
+        label: "Super Admin",
+        sub: u.email || "",
+      })),
+    ];
+
+    res.json({ success: true, data });
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+/* ======================================================
    ✅ UPDATE STATUS (ADMIN)
 ====================================================== */
 export const updateStatus = async (req, res) => {
@@ -495,6 +549,7 @@ export const updateStatus = async (req, res) => {
       complaintDescription,
       repairDate,
       cost,
+      resolvedBy, // "employee:<id>" | "super_admin:<id>"
     } = req.body;
 
     if (!isValidId(req.params.id)) return invalidId(res);
@@ -531,6 +586,85 @@ export const updateStatus = async (req, res) => {
 
     if (typeof resolutionNote === "string" && resolutionNote.trim()) {
       ticket.resolutionNote = resolutionNote.trim();
+    }
+
+    // ============================
+    // WHO SOLVED IT (Resolved / Closed)
+    // ============================
+    let solverNameForHistory = "";
+
+    if (status === "Resolved" || status === "Closed") {
+      if (typeof resolvedBy === "string" && resolvedBy.includes(":")) {
+        const [kind, refId] = resolvedBy.split(":");
+
+        if (!isValidId(refId) || !["it_support", "employee", "super_admin"].includes(kind)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid 'solved by' selection",
+          });
+        }
+
+        if (kind === "it_support") {
+          const it = await User.findOne({ _id: refId, role: "it_support" });
+
+          if (!it) {
+            return res.status(400).json({
+              success: false,
+              message: "Selected IT support user not found",
+            });
+          }
+
+          ticket.resolvedBy = {
+            kind,
+            refId: it._id,
+            name: it.name || it.email,
+            label: "IT Support",
+          };
+        } else if (kind === "employee") {
+          const emp = await Employee.findOne({
+            _id: refId,
+            companyId: ticket.companyId,
+          });
+
+          if (!emp) {
+            return res.status(400).json({
+              success: false,
+              message: "Selected employee not found in this company",
+            });
+          }
+
+          ticket.resolvedBy = {
+            kind,
+            refId: emp._id,
+            name: emp.name,
+            label: "IT Support",
+          };
+        } else {
+          const sa = await User.findOne({ _id: refId, role: "super_admin" });
+
+          if (!sa) {
+            return res.status(400).json({
+              success: false,
+              message: "Selected super admin not found",
+            });
+          }
+
+          ticket.resolvedBy = {
+            kind,
+            refId: sa._id,
+            name: sa.name || sa.email,
+            label: "Super Admin",
+          };
+        }
+
+        solverNameForHistory = ticket.resolvedBy.name;
+      } else if (!ticket.resolvedBy?.name) {
+        // nothing sent and nothing already saved
+        return res.status(400).json({
+          success: false,
+          message: "Please select who solved this ticket",
+        });
+      }
     }
 
     // ============================
@@ -705,6 +839,9 @@ export const updateStatus = async (req, res) => {
       // clear the old breach reason on reopen since resolution
       // is being redone from scratch
       ticket.sla.breachReason = "";
+
+      // clear who solved it — resolution is being redone
+      ticket.resolvedBy = { kind: "", refId: null, name: "", label: "" };
     }
 
     // ============================
@@ -712,6 +849,10 @@ export const updateStatus = async (req, res) => {
     // (notes starting "Status changed to" / "Ticket rejected" are what the
     //  admin UI uses to show who moved the ticket to each status)
     // ============================
+    const solvedSuffix = solverNameForHistory
+      ? ` — solved by ${solverNameForHistory}`
+      : "";
+
     ticket.statusHistory.push({
       status,
       changedAt: new Date(),
@@ -720,8 +861,8 @@ export const updateStatus = async (req, res) => {
         status === "Rejected"
           ? `Ticket rejected: ${rejectionReason.trim()}`
           : status === "Resolved"
-          ? `Status changed to ${status}${vendorSummaryForHistory}. Auto-closes in ${AUTO_CLOSE_DAYS} days unless reopened.`
-          : `Status changed to ${status}${vendorSummaryForHistory}`,
+          ? `Status changed to ${status}${vendorSummaryForHistory}${solvedSuffix}. Auto-closes in ${AUTO_CLOSE_DAYS} days unless reopened.`
+          : `Status changed to ${status}${vendorSummaryForHistory}${solvedSuffix}`,
     });
 
     await ticket.save();
@@ -1046,6 +1187,9 @@ export const reopenTicket = async (req, res) => {
     ticket.sla.resolutionBreached = false;
     ticket.sla.status = "Running";
     ticket.sla.breachReason = "";
+
+    // clear who solved it — resolution is being redone
+    ticket.resolvedBy = { kind: "", refId: null, name: "", label: "" };
 
     ticket.statusHistory.push({
       status: "Open",

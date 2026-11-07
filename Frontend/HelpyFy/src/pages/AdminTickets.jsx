@@ -403,7 +403,26 @@ const getHandlers = (ticket) => {
     rows.push({ label: "Assigned to", who: ticket.assignedTo, at: null });
   }
 
+  // Who actually solved it (IT support employee / super admin picked in the modal).
+  // This replaces the "Resolved by" row, which would only show the logged-in admin.
+  if (ticket.resolvedBy?.name && ["Resolved", "Closed"].includes(ticket.status)) {
+    const solved = {
+      label: "Solved by",
+      who: { name: ticket.resolvedBy.name, role: ticket.resolvedBy.label },
+      at: ticket.resolvedAt || ticket.closedAt || null,
+    };
+    const idx = rows.findIndex((r) => r.label === "Resolved by");
+    if (idx >= 0) rows[idx] = solved;
+    else rows.push(solved);
+  }
+
   return rows;
+};
+
+// Row to show in the list/table: the solver if there is one, otherwise the last step.
+const getListHandler = (ticket) => {
+  const rows = getHandlers(ticket).filter((r) => r.label !== "Assigned to");
+  return rows.find((r) => r.label === "Solved by") || rows.slice(-1)[0];
 };
 
 /* ================= SMALL SHARED PIECES ================= */
@@ -496,6 +515,11 @@ export default function AdminTickets() {
   const [vendorCost, setVendorCost] = useState("");
   const [vendorReceipt, setVendorReceipt] = useState(null);
 
+  // "Solved by" (IT support employees + super admins)
+  const [resolvers, setResolvers] = useState([]);
+  const [resolversLoading, setResolversLoading] = useState(false);
+  const [resolvedBy, setResolvedBy] = useState(""); // "employee:<id>" | "super_admin:<id>"
+
   const [rejectionReason, setRejectionReason] = useState("");
 
   const [breachModal, setBreachModal] = useState(null);
@@ -556,6 +580,22 @@ export default function AdminTickets() {
       setCompanies(res.data.companies || []);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // IT support employees + super admins for the "Solved by" dropdown
+  const loadResolvers = async (ticket) => {
+    try {
+      setResolversLoading(true);
+      const res = await api.get("/tickets/resolvers", {
+        params: { companyId: ticket.companyId?._id || ticket.companyId },
+      });
+      setResolvers(res?.data?.data || []);
+    } catch {
+      toast.error("Failed to load IT support list");
+      setResolvers([]);
+    } finally {
+      setResolversLoading(false);
     }
   };
 
@@ -624,6 +664,14 @@ export default function AdminTickets() {
           : ""
       );
       setVendorReceipt(null);
+
+      // pre-fill "Solved by" if it was already saved (e.g. closing a resolved ticket)
+      setResolvedBy(
+        ticket.resolvedBy?.kind && ticket.resolvedBy?.refId
+          ? `${ticket.resolvedBy.kind}:${ticket.resolvedBy.refId}`
+          : ""
+      );
+      if (targetStatus !== "Rejected") loadResolvers(ticket);
 
       setStatusModal({ ticket, targetStatus });
       return;
@@ -707,6 +755,8 @@ export default function AdminTickets() {
     setVendorRepairDate("");
     setVendorCost("");
     setVendorReceipt(null);
+    setResolvedBy("");
+    setResolvers([]);
   };
 
   const confirmStatusModal = async () => {
@@ -727,6 +777,9 @@ export default function AdminTickets() {
     if (!resolutionNote.trim()) {
       return toast.error("Please add a resolution note before continuing");
     }
+    if (!resolvedBy) {
+      return toast.error("Please select who solved this ticket");
+    }
     if (isModalTicketBreached && !breachReason.trim()) {
       return toast.error("Please explain why the SLA was breached");
     }
@@ -744,6 +797,7 @@ export default function AdminTickets() {
     const formData = new FormData();
     formData.append("resolutionNote", resolutionNote.trim());
     formData.append("resolutionType", resolutionType);
+    formData.append("resolvedBy", resolvedBy);
 
     if (isModalTicketBreached) formData.append("slaBreachReason", breachReason.trim());
 
@@ -892,6 +946,7 @@ export default function AdminTickets() {
         t.userId?.email?.toLowerCase().includes(s) ||
         t.priority?.toLowerCase().includes(s) ||
         t.status?.toLowerCase().includes(s) ||
+        t.resolvedBy?.name?.toLowerCase().includes(s) ||
         slaState.includes(s);
 
       const matchesFilter =
@@ -1158,6 +1213,12 @@ export default function AdminTickets() {
                   {detailRow("Created", formatDateTime(selected.createdAt))}
                   {detailRow("Resolved", formatDateTime(selected.resolvedAt))}
                   {detailRow("Closed", formatDateTime(selected.closedAt))}
+                  {detailRow("Solved by", selected.resolvedBy?.name ? (
+                    <span>
+                      {selected.resolvedBy.name}{" "}
+                      <span className="text-xs text-[#626F86]">· {selected.resolvedBy.label}</span>
+                    </span>
+                  ) : "—")}
                 </dl>
               </div>
 
@@ -1434,7 +1495,7 @@ export default function AdminTickets() {
                     </div>
 
                     {(() => {
-                      const h = getHandlers(t).filter((r) => r.label !== "Assigned to").slice(-1)[0];
+                      const h = getListHandler(t);
                       return h ? (
                         <p className="text-xs text-[#626F86] mb-2">
                           {h.label}: <span className="text-[#172B4D]">{h.who.name || h.who.email}</span>
@@ -1502,7 +1563,7 @@ export default function AdminTickets() {
                       const reminded = hasActiveReminder(t);
                       const isSelected = selected?._id === t._id;
                       const closedDate = t.closedAt || t.resolvedAt;
-                      const handler = getHandlers(t).filter((r) => r.label !== "Assigned to").slice(-1)[0];
+                      const handler = getListHandler(t);
                       return (
                         <tr
                           key={t._id}
@@ -1656,6 +1717,44 @@ export default function AdminTickets() {
                 autoFocus
               />
               <p className="text-xs text-[#626F86] mt-1.5">Saved with the ticket so anyone can see how it was handled.</p>
+
+              {/* SOLVED BY */}
+              <div className="mt-4">
+                <label className={LABEL}>Solved by <span className="text-[#C9372C]">*</span></label>
+                <select
+                  value={resolvedBy}
+                  onChange={(e) => setResolvedBy(e.target.value)}
+                  disabled={resolversLoading}
+                  className={`${FIELD} h-8 cursor-pointer`}
+                >
+                  <option value="">
+                    {resolversLoading ? "Loading…" : "Select who solved this ticket"}
+                  </option>
+
+                  {resolvers.some((r) => r.label === "IT Support") && (
+                    <optgroup label="IT Support">
+                      {resolvers
+                        .filter((r) => r.label === "IT Support")
+                        .map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.name}{r.sub ? ` (${r.sub})` : ""}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+
+                  {resolvers.some((r) => r.label === "Super Admin") && (
+                    <optgroup label="Super Admin">
+                      {resolvers
+                        .filter((r) => r.label === "Super Admin")
+                        .map((r) => (
+                          <option key={r.value} value={r.value}>{r.name}</option>
+                        ))}
+                    </optgroup>
+                  )}
+                </select>
+                <p className="text-xs text-[#626F86] mt-1.5">The IT support team member or super admin who actually fixed the issue.</p>
+              </div>
 
               <div className="mt-4">
                 <label className={LABEL}>Resolution type <span className="text-[#C9372C]">*</span></label>
