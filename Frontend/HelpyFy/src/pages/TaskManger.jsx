@@ -17,6 +17,7 @@ const T = {
 };
 
 const SOURCES = ["IT", "Store", "New Purchase"];
+const UOMS = ["Nos", "Pcs", "Set", "Box", "Roll", "Meter", "Kg", "Ltr"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
 
 const STATUS_STYLE = {
@@ -199,6 +200,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
       (data.materials || []).map((m) => ({
         item: m.item,
         qty: m.qty,
+        uom: m.uom || "Nos", // older rows saved before UOM existed
         collectedFrom: m.collectedFrom,
         date: m.date ? m.date.split("T")[0] : "",
       }))
@@ -233,7 +235,8 @@ function TaskDetail({ id, user, onClose, onChanged }) {
 
   /* ----- materials ----- */
   const setRow = (i, k, v) => setMaterials((rows) => rows.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
-  const addRow = () => setMaterials((rows) => [...rows, { item: "", qty: 1, collectedFrom: "IT", date: todayStr() }]);
+  const addRow = () =>
+    setMaterials((rows) => [...rows, { item: "", qty: 1, uom: "Nos", collectedFrom: "IT", date: todayStr() }]);
   const removeRow = (i) => setMaterials((rows) => rows.filter((_, idx) => idx !== i));
   const saveMaterials = () => run(() => api.put(`/tasks/${id}/materials`, { materials }), "Materials saved");
 
@@ -296,10 +299,10 @@ function TaskDetail({ id, user, onClose, onChanged }) {
           <p className="text-sm text-center py-4" style={{ color: T.muted }}>No material recorded</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left min-w-[640px]">
+            <table className="w-full text-sm text-left min-w-[720px]">
               <thead>
                 <tr className="border-b" style={{ borderColor: T.border }}>
-                  {["SN", "Item", "Qty", "Collected from", "Date", ""].map((h) => (
+                  {["SN", "Item", "Qty", "UOM", "Collected from", "Date", ""].map((h) => (
                     <th key={h} className="py-2 px-1 text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
                   ))}
                 </tr>
@@ -315,6 +318,12 @@ function TaskDetail({ id, user, onClose, onChanged }) {
                     <td className="py-2 px-1 w-20">
                       <input type="number" min={1} className={inputCls} style={{ borderColor: T.border }} value={m.qty} disabled={!editable}
                         onChange={(e) => setRow(i, "qty", e.target.value)} />
+                    </td>
+                    <td className="py-2 px-1 w-28">
+                      <select className={inputCls} style={{ borderColor: T.border }} value={m.uom} disabled={!editable}
+                        onChange={(e) => setRow(i, "uom", e.target.value)}>
+                        {UOMS.map((u) => <option key={u}>{u}</option>)}
+                      </select>
                     </td>
                     <td className="py-2 px-1 w-40">
                       <select className={inputCls} style={{ borderColor: T.border }} value={m.collectedFrom} disabled={!editable}

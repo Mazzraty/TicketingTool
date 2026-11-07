@@ -168,6 +168,11 @@ export const saveMaterials = async (req, res) => {
       const qty = Number(r.qty);
       if (!Number.isFinite(qty) || qty < 1)
         return res.status(400).json({ message: `Row ${i + 1}: quantity must be at least 1` });
+
+      const uom = typeof r.uom === "string" ? r.uom.trim() : "";
+      if (!uom)
+        return res.status(400).json({ message: `Row ${i + 1}: select a unit of measure` });
+
       if (!SOURCES.includes(r.collectedFrom))
         return res.status(400).json({ message: `Row ${i + 1}: select where it was collected from` });
 
@@ -175,7 +180,13 @@ export const saveMaterials = async (req, res) => {
       if (r.date && isNaN(date))
         return res.status(400).json({ message: `Row ${i + 1}: invalid date` });
 
-      clean.push({ item: item.slice(0, 200), qty, collectedFrom: r.collectedFrom, date });
+      clean.push({
+        item: item.slice(0, 200),
+        qty,
+        uom: uom.slice(0, 50),
+        collectedFrom: r.collectedFrom,
+        date,
+      });
     }
 
     task.materials = clean;

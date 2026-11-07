@@ -7,6 +7,7 @@ const { Schema } = mongoose;
 const materialSchema = new Schema({
   item: { type: String, required: true, trim: true, maxlength: 200 },
   qty: { type: Number, required: true, min: 1 },
+  uom: { type: String, required: true, trim: true, maxlength: 50 },
   collectedFrom: {
     type: String,
     enum: ["IT", "Store", "New Purchase"],
@@ -41,7 +42,7 @@ const taskSchema = new Schema(
       enum: ["Low", "Medium", "High", "Critical"],
       default: "Medium",
     },
-    ticketId: { type: Schema.Types.ObjectId, ref: "Ticket" }, // optional link
+    ticketId: { type: Schema.Types.ObjectId, ref: "Ticket" },
 
     /* Assignment */
     assignedTo: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
