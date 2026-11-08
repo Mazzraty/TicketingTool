@@ -335,7 +335,8 @@ const getReporterName = (ticket) => {
   const creatorLabel =
     ticket.createdByType === "super_admin" ? "Super Admin"
       : ticket.createdByType === "it_support" ? "IT Support"
-        : ticket.createdByType === "company_admin" ? "Company Admin" : null;
+        : ticket.createdByType === "company_admin" ? "Company Admin"
+          : ticket.createdByType === "hr" ? "HR" : null;
   return creatorLabel || "Unknown";
 };
 

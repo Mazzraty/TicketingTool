@@ -414,7 +414,8 @@ const ticketSchema = new mongoose.Schema(
         "user",
         "it_support",
         "company_admin",
-        "super_admin"
+        "super_admin",
+        "hr"
       ],
       default: "user",
     },
