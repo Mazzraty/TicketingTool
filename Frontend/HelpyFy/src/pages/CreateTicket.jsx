@@ -879,7 +879,7 @@ export default function CreateTicket() {
         <PendingResolvedModal
           tickets={pendingResolved}
           total={pendingCount}
-          onGo={() => navigate("/my-tickets")}
+          onGo={() => navigate("/tickets")}
           onDismiss={() => setShowPendingModal(false)}
         />
       )}
@@ -923,7 +923,7 @@ export default function CreateTicket() {
             </div>
             <button
               type="button"
-              onClick={() => navigate("/my-tickets")}
+              onClick={() => navigate("/tickets")}
               className="text-sm font-medium text-[#0B6E76] hover:underline cursor-pointer"
             >
               Go to My Tickets

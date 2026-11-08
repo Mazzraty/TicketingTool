@@ -44,6 +44,8 @@ export const register = async (req, res) => {
   try {
     console.log("REGISTER REQUEST BODY:", { ...req.body, password: "[hidden]" });
 
+    // NOTE: "role" is intentionally NOT read from the request.
+    // Everyone who signs up publicly is a regular "user".
     const {
       name,
       email,
@@ -52,23 +54,43 @@ export const register = async (req, res) => {
       position,
       department,
       companyId: companyIdentifier,
-      role: requestedRole,
     } = req.body;
+
+    // Basic validation
+    if (!name || !email || !password || !staffCode || !companyIdentifier) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, password, staff code and company are required",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters",
+      });
+    }
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 1️⃣ check user already exists
+    // 1️⃣ Check user already exists
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ msg: "Email already exists" });
     }
 
-    // 2️⃣ FIND EMPLOYEE
-    // Staff codes are unique per company, so scope the lookup to the
-    // selected company when one was provided.
+    // 2️⃣ Company validation
+    const company = await Company.findById(companyIdentifier);
+    if (!company) {
+      return res.status(400).json({
+        msg: "Selected company does not exist",
+      });
+    }
+
+    // 3️⃣ Find employee (staff codes are unique per company)
     const employee = await EmployeeMaster.findOne({
       staffCode: new RegExp(`^${escapeRegex(staffCode)}$`),
-      ...(companyIdentifier ? { companyId: companyIdentifier } : {}),
+      companyId: companyIdentifier,
     });
 
     if (!employee) {
@@ -78,7 +100,7 @@ export const register = async (req, res) => {
       });
     }
 
-    // 3️⃣ CHECK IF EMPLOYEE ALREADY LINKED
+    // 4️⃣ Check employee is not already linked to a user
     const alreadyLinked = await User.findOne({
       employeeRef: employee._id,
     });
@@ -90,23 +112,10 @@ export const register = async (req, res) => {
       });
     }
 
-    // 4️⃣ COMPANY VALIDATION
-    let company = null;
-
-    if (companyIdentifier) {
-      company = await Company.findById(companyIdentifier);
-
-      if (!company) {
-        return res.status(400).json({
-          msg: "Selected company does not exist",
-        });
-      }
-    }
-
-    // 5️⃣ HASH PASSWORD
+    // 5️⃣ Hash password
     const hash = await bcrypt.hash(password, 10);
 
-    // 6️⃣ CREATE USER (LINKED PROPERLY)
+    // 6️⃣ Create user (role is always "user")
     const user = await User.create({
       name,
       email: normalizedEmail,
@@ -115,25 +124,22 @@ export const register = async (req, res) => {
       staffCode: employee.staffCode,
       employeeRef: employee._id,
 
-      // Real values from the employee master (fall back to the form)
       position: employee.designation || position,
       department: employee.department || department,
-      role: requestedRole || "user",
+      role: "user",
       companyId: companyIdentifier,
 
-      companyAccess: companyIdentifier
-        ? [
-            {
-              companyId: companyIdentifier,
-              companyName: company?.name || "",
-              role: requestedRole || "user",
-              department: employee.department || department,
-              position: employee.designation || position,
-              permissions: [],
-              isActive: true,
-            },
-          ]
-        : [],
+      companyAccess: [
+        {
+          companyId: companyIdentifier,
+          companyName: company.name || "",
+          role: "user",
+          department: employee.department || department,
+          position: employee.designation || position,
+          permissions: [],
+          isActive: true,
+        },
+      ],
     });
 
     return res.status(201).json({
@@ -224,6 +230,7 @@ export const login = async (req, res) => {
 
     res.json({
       success: true,
+      token,
       user: userData,
     });
   } catch (err) {
@@ -308,6 +315,7 @@ export const switchCompany = async (req, res) => {
       success: true,
       message: "Company switched successfully",
       companyId: companyId,
+      token: newToken,
     });
   } catch (err) {
     console.error("SWITCH COMPANY ERROR:", err);
