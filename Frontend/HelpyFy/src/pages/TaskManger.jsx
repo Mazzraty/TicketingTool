@@ -19,11 +19,18 @@ const T = {
 const SOURCES = ["IT", "Store", "New Purchase"];
 const UOMS = ["Nos", "Pcs", "Set", "Box", "Roll", "Meter", "Kg", "Ltr"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
+const RECURRENCES = ["None", "Daily", "Weekly", "Monthly", "Quarterly"];
 
 const STATUS_STYLE = {
   Assigned: ["#DEEBFF", "#0747A6"],
   "In Progress": ["#FFF0B3", "#7F5F01"],
   Completed: ["#DCFFF1", "#216E4E"],
+};
+
+const ACCEPT_STYLE = {
+  Pending: ["#FFF0B3", "#7F5F01"],
+  Accepted: ["#DCFFF1", "#216E4E"],
+  Rejected: ["#FFEDEB", "#AE2E24"],
 };
 
 // Uploaded photos are served from the server root, not from /api
@@ -41,8 +48,16 @@ const btnGhost =
 const todayStr = () => new Date().toISOString().split("T")[0];
 const fmt = (d) => (d ? new Date(d).toLocaleString() : "—");
 const errMsg = (e) => e?.response?.data?.message || "Something went wrong";
-// Company-wise task number, e.g. "AQC-2026-000001" (older tasks have none)
+// Company-wise task number, e.g. "AQC-TSK-2026-000001" (older tasks have none)
 const taskLabel = (t) => t?.taskNumber || "";
+// Value for <input type="datetime-local"> in the user's local time
+const toLocalInput = (d) => {
+  const x = new Date(d);
+  x.setMinutes(x.getMinutes() - x.getTimezoneOffset());
+  return x.toISOString().slice(0, 16);
+};
+// Older tasks have no acceptance field - treat them as accepted
+const accOf = (t) => t?.acceptance?.status || "Accepted";
 
 /* ================= SMALL PIECES ================= */
 const Badge = ({ label, colors }) => {
@@ -111,6 +126,7 @@ function CreateTaskModal({ onClose, onCreated }) {
     assignedTo: "",
     priority: "Medium",
     deadline: "",
+    recurrence: "None",
   });
 
   useEffect(() => {
@@ -171,6 +187,13 @@ function CreateTaskModal({ onClose, onCreated }) {
           <Field label="Deadline *">
             <input type="datetime-local" className={inputCls} style={{ borderColor: T.border }} value={form.deadline} onChange={set("deadline")} />
           </Field>
+          <Field label="Continuous (repeat)" hint="A new task is created automatically when this one is closed">
+            <select className={inputCls} style={{ borderColor: T.border }} value={form.recurrence} onChange={set("recurrence")}>
+              {RECURRENCES.map((r) => (
+                <option key={r} value={r}>{r === "None" ? "One-time" : r}</option>
+              ))}
+            </select>
+          </Field>
         </div>
 
         <p className="text-xs" style={{ color: T.muted }}>Assigned time is recorded automatically when you save.</p>
@@ -200,11 +223,12 @@ function TaskDetail({ id, user, onClose, onChanged }) {
     setTask(data);
     setMaterials(
       (data.materials || []).map((m) => ({
+        serialNo: m.serialNo || "",
         item: m.item,
         qty: m.qty,
         uom: m.uom || "Nos", // older rows saved before UOM existed
         collectedFrom: m.collectedFrom,
-        date: m.date ? m.date.split("T")[0] : "",
+        consumedAt: toLocalInput(m.consumedAt || m.date || new Date()), // older rows only had `date`
       }))
     );
   }, [id]);
@@ -216,9 +240,11 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   if (!task) return <Modal title="Loading..." onClose={onClose} wide><p className="text-sm">Loading task...</p></Modal>;
 
   const myId = String(user?.id || user?._id);
-  const isOwner = String(task.assignedTo?._id) === myId || user?.role === "super_admin";
+  const acc = accOf(task);
+  const isAssignee = String(task.assignedTo?._id) === myId;
+  const isOwner = isAssignee || user?.role === "super_admin";
   const closed = task.status === "Completed";
-  const editable = isOwner && !closed;
+  const editable = isOwner && !closed && acc === "Accepted";
   const isLate = !closed && new Date() > new Date(task.deadline);
 
   const run = async (fn, okMsg) => {
@@ -235,12 +261,40 @@ function TaskDetail({ id, user, onClose, onChanged }) {
     }
   };
 
+  /* ----- accept / reject ----- */
+  const respond = (decision) => {
+    let reason = "";
+    if (decision === "Rejected") {
+      reason = (window.prompt("Reason for rejecting this task?") || "").trim();
+      if (!reason) return toast.error("A reason is required to reject");
+    }
+    return run(
+      () => api.post(`/tasks/${id}/respond`, { decision, reason }),
+      decision === "Accepted" ? "Task accepted" : "Task rejected"
+    );
+  };
+
   /* ----- materials ----- */
   const setRow = (i, k, v) => setMaterials((rows) => rows.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
   const addRow = () =>
-    setMaterials((rows) => [...rows, { item: "", qty: 1, uom: "Nos", collectedFrom: "IT", date: todayStr() }]);
+    setMaterials((rows) => [
+      ...rows,
+      { serialNo: "", item: "", qty: 1, uom: "Nos", collectedFrom: "IT", consumedAt: toLocalInput(new Date()) },
+    ]);
   const removeRow = (i) => setMaterials((rows) => rows.filter((_, idx) => idx !== i));
-  const saveMaterials = () => run(() => api.put(`/tasks/${id}/materials`, { materials }), "Materials saved");
+  const saveMaterials = () => {
+    if (materials.some((m) => m.item.trim() && !m.serialNo.trim()))
+      return toast.error("Serial number is required for every row");
+    if (materials.some((m) => m.item.trim() && !m.consumedAt))
+      return toast.error("Consumed date & time is required for every row");
+    return run(
+      () =>
+        api.put(`/tasks/${id}/materials`, {
+          materials: materials.map((m) => ({ ...m, consumedAt: new Date(m.consumedAt).toISOString() })),
+        }),
+      "Materials saved"
+    );
+  };
 
   /* ----- daily update ----- */
   const addDaily = () => {
@@ -262,7 +316,15 @@ function TaskDetail({ id, user, onClose, onChanged }) {
     fd.append("delayJustification", closing.delayJustification);
     fd.append("note", closing.note);
     files.forEach((f) => fd.append("photos", f));
-    return run(() => api.post(`/tasks/${id}/close`, fd), "Task closed");
+    return run(
+      async () => {
+        const { data } = await api.post(`/tasks/${id}/close`, fd);
+        if (data?.nextTask) {
+          toast.success(`Next ${data.nextTask.recurrence} task created: ${data.nextTask.taskNumber || ""}`);
+        }
+      },
+      "Task closed"
+    );
   };
 
   const onPickFiles = (e) => {
@@ -276,15 +338,41 @@ function TaskDetail({ id, user, onClose, onChanged }) {
       {/* ASSIGNMENT */}
       <Section title="Assignment" aside={<Badge label={task.status} colors={STATUS_STYLE[task.status]} />}>
         {task.description && <p className="text-sm mb-3 whitespace-pre-wrap">{task.description}</p>}
-        <dl className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+        <dl className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
           <div><dt className="text-xs font-semibold" style={{ color: T.muted }}>Assigned to</dt><dd>{task.assignedTo?.name || "—"}</dd></div>
           <div><dt className="text-xs font-semibold" style={{ color: T.muted }}>Assigned time</dt><dd>{fmt(task.assignedAt)}</dd></div>
           <div>
             <dt className="text-xs font-semibold" style={{ color: T.muted }}>Deadline</dt>
             <dd style={{ color: isLate ? T.bad : T.text }}>{fmt(task.deadline)}{isLate && " (overdue)"}</dd>
           </div>
+          <div>
+            <dt className="text-xs font-semibold" style={{ color: T.muted }}>Repeat</dt>
+            <dd>{task.recurrence && task.recurrence !== "None" ? task.recurrence : "One-time"}</dd>
+          </div>
           <div><dt className="text-xs font-semibold" style={{ color: T.muted }}>Progress</dt><dd><ProgressBar value={task.progress} /></dd></div>
         </dl>
+      </Section>
+
+      {/* ACCEPTANCE */}
+      <Section title="Acceptance" aside={<Badge label={acc} colors={ACCEPT_STYLE[acc]} />}>
+        {acc === "Pending" && isAssignee && !closed ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <button className={btnPrimary} style={{ backgroundColor: T.good }} disabled={busy} onClick={() => respond("Accepted")}>
+              Accept
+            </button>
+            <button className={btnGhost} style={{ borderColor: T.border, color: T.bad }} disabled={busy} onClick={() => respond("Rejected")}>
+              Reject
+            </button>
+            <span className="text-xs" style={{ color: T.muted }}>Accept before adding materials or updates.</span>
+          </div>
+        ) : (
+          <p className="text-sm">
+            {acc === "Pending"
+              ? "Waiting for the assignee to accept."
+              : `${acc} on ${fmt(task.acceptance?.respondedAt)}`}
+            {task.acceptance?.reason && <span style={{ color: T.muted }}> - {task.acceptance.reason}</span>}
+          </p>
+        )}
       </Section>
 
       {/* MATERIAL CONSUMED */}
@@ -301,10 +389,10 @@ function TaskDetail({ id, user, onClose, onChanged }) {
           <p className="text-sm text-center py-4" style={{ color: T.muted }}>No material recorded</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left min-w-[720px]">
+            <table className="w-full text-sm text-left min-w-[900px]">
               <thead>
                 <tr className="border-b" style={{ borderColor: T.border }}>
-                  {["SN", "Item", "Qty", "UOM", "Collected from", "Date", ""].map((h) => (
+                  {["SN", "Serial No", "Item", "Qty", "UOM", "Collected from", "Consumed time", ""].map((h) => (
                     <th key={h} className="py-2 px-1 text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
                   ))}
                 </tr>
@@ -313,6 +401,10 @@ function TaskDetail({ id, user, onClose, onChanged }) {
                 {materials.map((m, i) => (
                   <tr key={i} className="border-b last:border-0" style={{ borderColor: T.borderSoft }}>
                     <td className="py-2 px-1 w-10">{i + 1}</td>
+                    <td className="py-2 px-1 w-36">
+                      <input className={inputCls} style={{ borderColor: T.border }} value={m.serialNo} disabled={!editable}
+                        onChange={(e) => setRow(i, "serialNo", e.target.value)} />
+                    </td>
                     <td className="py-2 px-1">
                       <input className={inputCls} style={{ borderColor: T.border }} value={m.item} disabled={!editable}
                         onChange={(e) => setRow(i, "item", e.target.value)} />
@@ -333,9 +425,9 @@ function TaskDetail({ id, user, onClose, onChanged }) {
                         {SOURCES.map((s) => <option key={s}>{s}</option>)}
                       </select>
                     </td>
-                    <td className="py-2 px-1 w-40">
-                      <input type="date" className={inputCls} style={{ borderColor: T.border }} value={m.date} disabled={!editable}
-                        onChange={(e) => setRow(i, "date", e.target.value)} />
+                    <td className="py-2 px-1 w-52">
+                      <input type="datetime-local" className={inputCls} style={{ borderColor: T.border }} value={m.consumedAt} disabled={!editable}
+                        onChange={(e) => setRow(i, "consumedAt", e.target.value)} />
                     </td>
                     <td className="py-2 px-1 w-8">
                       {editable && <button onClick={() => removeRow(i)} aria-label="Remove row" className="text-lg" style={{ color: T.bad }}>×</button>}
@@ -471,7 +563,11 @@ function TaskDetail({ id, user, onClose, onChanged }) {
             </div>
           </div>
         ) : (
-          <p className="text-sm" style={{ color: T.muted }}>Only the assigned IT support user can close this task.</p>
+          <p className="text-sm" style={{ color: T.muted }}>
+            {acc !== "Accepted"
+              ? "Accept the task before closing it."
+              : "Only the assigned IT support user can close this task."}
+          </p>
         )}
       </Section>
     </Modal>
@@ -534,31 +630,40 @@ export default function TaskManagement() {
         </div>
 
         <div className="bg-white border rounded-[3px] overflow-x-auto" style={{ borderColor: T.border }}>
-          <table className="w-full text-sm text-left min-w-[940px]">
+          <table className="w-full text-sm text-left min-w-[1040px]">
             <thead>
               <tr className="border-b" style={{ borderColor: T.border }}>
-                {["Task No", "Task", "Assigned to", "Assigned time", "Deadline", "Progress", "Status"].map((h) => (
+                {["Task No", "Task", "Assigned to", "Assigned time", "Deadline", "Action", "Progress", "Status"].map((h) => (
                   <th key={h} className="py-3 px-4 text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="py-10 text-center" style={{ color: T.muted }}>Loading...</td></tr>
+                <tr><td colSpan={8} className="py-10 text-center" style={{ color: T.muted }}>Loading...</td></tr>
               ) : tasks.length === 0 ? (
-                <tr><td colSpan={7} className="py-10 text-center" style={{ color: T.muted }}>No tasks found</td></tr>
+                <tr><td colSpan={8} className="py-10 text-center" style={{ color: T.muted }}>No tasks found</td></tr>
               ) : (
                 tasks.map((t) => {
                   const overdue = t.status !== "Completed" && new Date(t.deadline) < new Date();
+                  const acc = accOf(t);
                   return (
                     <tr key={t._id} onClick={() => setOpenId(t._id)}
                       className="border-b last:border-0 cursor-pointer hover:bg-[#F7F8F9]" style={{ borderColor: T.borderSoft }}>
                       <td className="py-3 px-4 font-semibold whitespace-nowrap" style={{ color: T.brand }}>{taskLabel(t) || "—"}</td>
-                      <td className="py-3 px-4 font-medium">{t.title}</td>
+                      <td className="py-3 px-4 font-medium">
+                        {t.title}
+                        {t.recurrence && t.recurrence !== "None" && (
+                          <span className="block text-[11px] font-normal" style={{ color: T.muted }}>↻ {t.recurrence}</span>
+                        )}
+                      </td>
                       <td className="py-3 px-4">{t.assignedTo?.name || "—"}</td>
                       <td className="py-3 px-4">{fmt(t.assignedAt)}</td>
                       <td className="py-3 px-4" style={{ color: overdue ? T.bad : T.text }}>
                         {fmt(t.deadline)}{overdue && <span className="ml-1 text-xs font-semibold">OVERDUE</span>}
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge label={acc} colors={ACCEPT_STYLE[acc]} />
                       </td>
                       <td className="py-3 px-4"><ProgressBar value={t.progress} /></td>
                       <td className="py-3 px-4"><Badge label={t.status} colors={STATUS_STYLE[t.status]} /></td>

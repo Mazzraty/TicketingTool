@@ -5,6 +5,7 @@ const { Schema } = mongoose;
 
 /* Material consumed (table rows: SN is just the row index) */
 const materialSchema = new Schema({
+  serialNo: { type: String, trim: true, maxlength: 100 },
   item: { type: String, required: true, trim: true, maxlength: 200 },
   qty: { type: Number, required: true, min: 1 },
   uom: { type: String, required: true, trim: true, maxlength: 50 },
@@ -13,7 +14,8 @@ const materialSchema = new Schema({
     enum: ["IT", "Store", "New Purchase"],
     required: true,
   },
-  date: { type: Date },
+  consumedAt: { type: Date }, // date AND time the material was consumed
+  date: { type: Date }, // legacy field (rows saved before consumedAt existed)
 });
 
 /* Daily updation: one entry per calendar day */
@@ -53,6 +55,25 @@ const taskSchema = new Schema(
     assignedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     assignedAt: { type: Date, default: Date.now },
     deadline: { type: Date, required: true },
+
+    /* Continuous option: a new task is created automatically when this one is closed */
+    recurrence: {
+      type: String,
+      enum: ["None", "Daily", "Weekly", "Monthly", "Quarterly"],
+      default: "None",
+    },
+    parentTaskId: { type: Schema.Types.ObjectId, ref: "Task" }, // set on auto-created repeats
+
+    /* IT support accepts or rejects the assignment */
+    acceptance: {
+      status: {
+        type: String,
+        enum: ["Pending", "Accepted", "Rejected"],
+        default: "Pending",
+      },
+      respondedAt: { type: Date },
+      reason: { type: String, trim: true, maxlength: 1000, default: "" },
+    },
 
     status: {
       type: String,
