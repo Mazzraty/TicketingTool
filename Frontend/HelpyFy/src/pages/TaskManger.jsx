@@ -392,7 +392,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
             <table className="w-full text-sm text-left min-w-[800px]">
               <thead>
                 <tr className="border-b" style={{ borderColor: T.border }}>
-                  {["SN", "Serial No", "Item", "Qty", "UOM", "Collected from", "Consumed time", ""].map((h) => (
+                  {["SN", "Item", "Serial No", "Qty", "UOM", "Collected from", "Consumed time", ""].map((h) => (
                     <th key={h} className="py-2 px-1 text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
                   ))}
                 </tr>
@@ -401,13 +401,13 @@ function TaskDetail({ id, user, onClose, onChanged }) {
                 {materials.map((m, i) => (
                   <tr key={i} className="border-b last:border-0" style={{ borderColor: T.borderSoft }}>
                     <td className="py-2 px-1 w-10">{i + 1}</td>
-                    <td className="py-2 px-1 w-28">
-                      <input className={inputCls} style={{ borderColor: T.border }} value={m.serialNo} disabled={!editable}
-                        onChange={(e) => setRow(i, "serialNo", e.target.value)} />
-                    </td>
                     <td className="py-2 px-1">
                       <input className={inputCls} style={{ borderColor: T.border }} value={m.item} disabled={!editable}
                         onChange={(e) => setRow(i, "item", e.target.value)} />
+                    </td>
+                    <td className="py-2 px-1 w-28">
+                      <input className={inputCls} style={{ borderColor: T.border }} value={m.serialNo} disabled={!editable}
+                        onChange={(e) => setRow(i, "serialNo", e.target.value)} />
                     </td>
                     <td className="py-2 px-1 w-20">
                       <input type="number" min={1} className={inputCls} style={{ borderColor: T.border }} value={m.qty} disabled={!editable}
