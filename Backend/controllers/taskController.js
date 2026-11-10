@@ -10,7 +10,7 @@ import { getCompanyFilter } from "./dashboardController.js";
 
 const SOURCES = ["IT", "Store", "New Purchase"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
-const RECURRENCES = ["None", "Daily", "Weekly", "Monthly", "Quarterly"];
+const RECURRENCES = ["None", "Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
 
 const uid = (user) => String(user.id || user._id);
 const isSuper = (user) => user.role === "super_admin";
@@ -50,14 +50,37 @@ const nextDeadline = (d, rec) => {
   else if (rec === "Weekly") n.setDate(n.getDate() + 7);
   else if (rec === "Monthly") n.setMonth(n.getMonth() + 1);
   else if (rec === "Quarterly") n.setMonth(n.getMonth() + 3);
+  else if (rec === "Yearly") n.setFullYear(n.getFullYear() + 1);
   return n;
 };
 
-// Saves a notification; a failure here never breaks the main request
-const notify = (userId, task, type, message) =>
-  Notification.create({ userId, taskId: task._id, type, message }).catch((e) =>
-    console.error("NOTIFY ERROR:", e)
-  );
+const TASK_TITLES = {
+  task_assigned: "New task assigned",
+  task_accepted: "Task accepted",
+  task_rejected: "Task rejected",
+  materials_saved: "Materials updated",
+  task_closed: "Task closed",
+  task_repeated: "Repeat task created",
+};
+
+// Saves a notification in the shared notification collection.
+// companyId is taken from the RECIPIENT so it matches buildNotificationFilter
+// (which filters by the logged-in user's companyId). A failure here never breaks the request.
+const notify = async (userId, task, type, message) => {
+  try {
+    const recipient = await User.findById(userId).select("companyId").lean();
+    await Notification.create({
+      userId,
+      companyId: recipient?.companyId || null,
+      taskId: task._id,
+      type,
+      title: TASK_TITLES[type],
+      message,
+    });
+  } catch (e) {
+    console.error("NOTIFY ERROR:", e);
+  }
+};
 
 // Work (materials, daily updates, closing) is blocked until the task is accepted
 const requireAccepted = (task) =>

@@ -59,7 +59,7 @@ const taskSchema = new Schema(
     /* Continuous option: a new task is created automatically when this one is closed */
     recurrence: {
       type: String,
-      enum: ["None", "Daily", "Weekly", "Monthly", "Quarterly"],
+      enum: ["None", "Daily", "Weekly", "Monthly", "Quarterly", "Yearly"],
       default: "None",
     },
     parentTaskId: { type: Schema.Types.ObjectId, ref: "Task" }, // set on auto-created repeats

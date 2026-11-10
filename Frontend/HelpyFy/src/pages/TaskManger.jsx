@@ -19,7 +19,7 @@ const T = {
 const SOURCES = ["IT", "Store", "New Purchase"];
 const UOMS = ["Nos", "Pcs", "Set", "Box", "Roll", "Meter", "Kg", "Ltr"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
-const RECURRENCES = ["None", "Daily", "Weekly", "Monthly", "Quarterly"];
+const RECURRENCES = ["None", "Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
 
 const STATUS_STYLE = {
   Assigned: ["#DEEBFF", "#0747A6"],
