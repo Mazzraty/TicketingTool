@@ -9,6 +9,7 @@ import {
   createTask,
   getTasks,
   getTask,
+  respondTask,
   saveMaterials,
   addDailyUpdate,
   closeTask,
@@ -45,6 +46,7 @@ router.get("/assignees", getAssignees); // must be above "/:id"
 router.get("/", getTasks);
 router.post("/", createTask);
 router.get("/:id", getTask);
+router.post("/:id/respond", respondTask); // IT support accepts / rejects
 router.put("/:id/materials", saveMaterials);
 router.post("/:id/daily", addDailyUpdate);
 router.post("/:id/close", upload.array("photos", 5), closeTask);
