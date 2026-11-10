@@ -352,6 +352,11 @@ const getReporterSubtext = (ticket) => {
   return "—";
 };
 
+// Job position of the reporter: `designation` on the EmployeeMaster record
+// (falls back to the user record if it carries one)
+const getReporterPosition = (ticket) =>
+  ticket.employeeId?.designation || ticket.userId?.designation || "";
+
 /* ================= HANDLED-BY (who moved the ticket, from statusHistory) ================= */
 // Only genuine status changes count. Reminders, priority changes and escalations
 // also push statusHistory entries (with the current status), so they are ignored here.
@@ -944,6 +949,7 @@ export default function AdminTickets() {
         t.title?.toLowerCase().includes(s) ||
         t.ticketNumber?.toLowerCase().includes(s) ||
         getReporterName(t).toLowerCase().includes(s) ||
+        getReporterPosition(t).toLowerCase().includes(s) ||
         t.userId?.email?.toLowerCase().includes(s) ||
         t.priority?.toLowerCase().includes(s) ||
         t.status?.toLowerCase().includes(s) ||
@@ -1206,6 +1212,9 @@ export default function AdminTickets() {
                       <Avatar name={getReporterName(selected)} size="w-6 h-6 text-[11px]" />
                       <div className="min-w-0">
                         <p className="text-sm truncate">{getReporterName(selected)}</p>
+                        {getReporterPosition(selected) && (
+                          <p className="text-xs font-medium text-[#44546F] truncate">{getReporterPosition(selected)}</p>
+                        )}
                         <p className="text-xs text-[#626F86] truncate">{getReporterSubtext(selected)}</p>
                       </div>
                     </div>
@@ -1472,6 +1481,7 @@ export default function AdminTickets() {
             <div className="md:hidden flex flex-col gap-2">
               {pageTickets.map((t) => {
                 const reporterName = getReporterName(t);
+                const reporterPosition = getReporterPosition(t);
                 const reminded = hasActiveReminder(t);
                 return (
                   <div key={t._id} className={`bg-white border border-[#DCDFE4] rounded-[3px] p-3 ${reminded ? "shadow-[inset_3px_0_0_#E56910]" : ""}`}>
@@ -1485,7 +1495,10 @@ export default function AdminTickets() {
 
                     <div className="flex items-center gap-2 mb-2">
                       <Avatar name={reporterName} size="w-6 h-6 text-[11px]" />
-                      <p className="text-sm text-[#172B4D] truncate">{reporterName}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm text-[#172B4D] truncate">{reporterName}</p>
+                        {reporterPosition && <p className="text-xs text-[#44546F] truncate">{reporterPosition}</p>}
+                      </div>
                       {t.companyId?.name && <p className="text-xs text-[#626F86] truncate">· {t.companyId.name}</p>}
                     </div>
 
@@ -1561,6 +1574,7 @@ export default function AdminTickets() {
                   <tbody className="divide-y divide-[#EBECF0]">
                     {pageTickets.map((t) => {
                       const reporterName = getReporterName(t);
+                      const reporterPosition = getReporterPosition(t);
                       const reminded = hasActiveReminder(t);
                       const isSelected = selected?._id === t._id;
                       const closedDate = t.closedAt || t.resolvedAt;
@@ -1610,7 +1624,12 @@ export default function AdminTickets() {
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2 min-w-0">
                               <Avatar name={reporterName} size="w-6 h-6 text-[11px]" />
-                              <span className="truncate max-w-[150px]" title={getReporterSubtext(t)}>{reporterName}</span>
+                              <div className="min-w-0">
+                                <span className="block truncate max-w-[150px]" title={getReporterSubtext(t)}>{reporterName}</span>
+                                {reporterPosition && (
+                                  <span className="block truncate max-w-[150px] text-xs text-[#626F86]" title={reporterPosition}>{reporterPosition}</span>
+                                )}
+                              </div>
                             </div>
                           </td>
 
