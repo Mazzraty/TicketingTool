@@ -389,7 +389,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
           <p className="text-sm text-center py-4" style={{ color: T.muted }}>No material recorded</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left min-w-[900px]">
+            <table className="w-full text-sm text-left min-w-[800px]">
               <thead>
                 <tr className="border-b" style={{ borderColor: T.border }}>
                   {["SN", "Serial No", "Item", "Qty", "UOM", "Collected from", "Consumed time", ""].map((h) => (
@@ -401,7 +401,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
                 {materials.map((m, i) => (
                   <tr key={i} className="border-b last:border-0" style={{ borderColor: T.borderSoft }}>
                     <td className="py-2 px-1 w-10">{i + 1}</td>
-                    <td className="py-2 px-1 w-36">
+                    <td className="py-2 px-1 w-28">
                       <input className={inputCls} style={{ borderColor: T.border }} value={m.serialNo} disabled={!editable}
                         onChange={(e) => setRow(i, "serialNo", e.target.value)} />
                     </td>
@@ -413,19 +413,19 @@ function TaskDetail({ id, user, onClose, onChanged }) {
                       <input type="number" min={1} className={inputCls} style={{ borderColor: T.border }} value={m.qty} disabled={!editable}
                         onChange={(e) => setRow(i, "qty", e.target.value)} />
                     </td>
-                    <td className="py-2 px-1 w-28">
+                    <td className="py-2 px-1 w-24">
                       <select className={inputCls} style={{ borderColor: T.border }} value={m.uom} disabled={!editable}
                         onChange={(e) => setRow(i, "uom", e.target.value)}>
                         {UOMS.map((u) => <option key={u}>{u}</option>)}
                       </select>
                     </td>
-                    <td className="py-2 px-1 w-40">
+                    <td className="py-2 px-1 w-32">
                       <select className={inputCls} style={{ borderColor: T.border }} value={m.collectedFrom} disabled={!editable}
                         onChange={(e) => setRow(i, "collectedFrom", e.target.value)}>
                         {SOURCES.map((s) => <option key={s}>{s}</option>)}
                       </select>
                     </td>
-                    <td className="py-2 px-1 w-52">
+                    <td className="py-2 px-1 w-48">
                       <input type="datetime-local" className={inputCls} style={{ borderColor: T.border }} value={m.consumedAt} disabled={!editable}
                         onChange={(e) => setRow(i, "consumedAt", e.target.value)} />
                     </td>
