@@ -478,3 +478,35 @@ export const closeTask = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+export const deleteTaskPhoto = async (req, res) => {
+  try {
+    if (!isSuper(req.user))
+      return res.status(403).json({ message: "Only super admin can delete files" });
+
+    const { id } = req.params;
+    const filePath = req.body?.path;
+
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ message: "Invalid task id" });
+    if (typeof filePath !== "string" || !filePath.startsWith("/uploads/tasks/"))
+      return res.status(400).json({ message: "Invalid file path" });
+
+    const task = await Task.findById(id);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    if (!task.closing?.photos?.includes(filePath))
+      return res.status(404).json({ message: "File not found on this task" });
+
+    task.closing.photos = task.closing.photos.filter((p) => p !== filePath);
+    await task.save();
+
+    // path.basename blocks directory traversal
+    const abs = path.join(process.cwd(), "uploads", "tasks", path.basename(filePath));
+    fs.unlink(abs, () => {});
+
+    res.json({ success: true, photos: task.closing.photos });
+  } catch (err) {
+    console.error("DELETE TASK PHOTO ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
