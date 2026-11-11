@@ -21,8 +21,13 @@ const UOMS = ["Nos", "Pcs", "Set", "Box", "Roll", "Meter", "Kg", "Ltr"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
 const RECURRENCES = ["None", "Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
 
-const MAX_PHOTOS = 5;
-const MAX_PHOTO_MB = 5;
+// Attachments on closing: pictures + Excel / CSV / PDF
+const MAX_FILES = 5;
+const MAX_FILE_MB = 10;
+const ACCEPT_FILES = "image/*,.xlsx,.xls,.csv,.pdf";
+const ALLOWED_EXT = /\.(png|jpe?g|gif|webp|bmp|xlsx|xls|csv|pdf)$/i;
+const isImageName = (n = "") => /\.(png|jpe?g|gif|webp|bmp)$/i.test(n);
+const fileExt = (n = "") => (n.split(".").pop() || "").toUpperCase();
 
 const STATUS_STYLE = {
   Assigned: ["#DEEBFF", "#0747A6"],
@@ -36,7 +41,7 @@ const ACCEPT_STYLE = {
   Rejected: ["#FFEDEB", "#AE2E24"],
 };
 
-// Uploaded photos are served from the server root, not from /api
+// Uploaded files are served from the server root, not from /api
 const FILE_BASE = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
 
 const inputCls =
@@ -117,26 +122,53 @@ const ProgressBar = ({ value }) => (
   </div>
 );
 
-// Thumbnail with a remove (×) button in the corner
+// Small red × button used on thumbnails / file chips
+const RemoveBtn = ({ onClick, label }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label={label}
+    title={label}
+    className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white text-xs leading-none flex items-center justify-center shadow focus:outline-none focus:ring-2 focus:ring-[#4C9AFF]"
+    style={{ backgroundColor: T.bad }}
+  >
+    ×
+  </button>
+);
+
+// Picture thumbnail with an optional remove (×) button
 const PhotoThumb = ({ src, alt, size = "h-20 w-20", onRemove, removeLabel = "Remove photo", href }) => {
   const img = (
     <img src={src} alt={alt} className={`${size} object-cover rounded-[3px] border`} style={{ borderColor: T.border }} />
   );
   return (
-    <div className="relative group">
+    <div className="relative">
       {href ? <a href={href} target="_blank" rel="noreferrer">{img}</a> : img}
-      {onRemove && (
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={removeLabel}
-          title={removeLabel}
-          className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white text-xs leading-none flex items-center justify-center shadow focus:outline-none focus:ring-2 focus:ring-[#4C9AFF]"
-          style={{ backgroundColor: T.bad }}
-        >
-          ×
-        </button>
-      )}
+      {onRemove && <RemoveBtn onClick={onRemove} label={removeLabel} />}
+    </div>
+  );
+};
+
+// Chip for non-image files (Excel, CSV, PDF) with an optional remove (×) button
+const FileChip = ({ name, href, onRemove, removeLabel = "Remove file" }) => {
+  const body = (
+    <div
+      className="h-20 w-44 rounded-[3px] border bg-white flex items-center gap-2 px-2 hover:bg-[#F7F8F9]"
+      style={{ borderColor: T.border }}
+    >
+      <span
+        className="h-9 w-9 shrink-0 rounded-[3px] flex items-center justify-center text-[10px] font-bold"
+        style={{ backgroundColor: "#DCFFF1", color: "#216E4E" }}
+      >
+        {fileExt(name)}
+      </span>
+      <span className="text-xs break-all line-clamp-3" title={name}>{name}</span>
+    </div>
+  );
+  return (
+    <div className="relative">
+      {href ? <a href={href} target="_blank" rel="noreferrer">{body}</a> : body}
+      {onRemove && <RemoveBtn onClick={onRemove} label={removeLabel} />}
     </div>
   );
 };
@@ -243,14 +275,14 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   const [daily, setDaily] = useState({ date: todayStr(), percentToday: "", note: "" });
   const [closing, setClosing] = useState({ delayJustification: "", note: "" });
   const [files, setFiles] = useState([]);
-  const [previews, setPreviews] = useState([]); // object URLs, same order as `files`
+  const [previews, setPreviews] = useState([]); // object URLs for images, null for other files
   const [busy, setBusy] = useState(false);
 
-  // Build preview URLs for the picked files and free them when the list changes / modal closes
+  // Preview URLs only for images; freed when the list changes / modal closes
   useEffect(() => {
-    const urls = files.map((f) => URL.createObjectURL(f));
+    const urls = files.map((f) => (f.type.startsWith("image/") ? URL.createObjectURL(f) : null));
     setPreviews(urls);
-    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+    return () => urls.forEach((u) => u && URL.revokeObjectURL(u));
   }, [files]);
 
   const load = useCallback(async () => {
@@ -351,7 +383,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
     const fd = new FormData();
     fd.append("delayJustification", closing.delayJustification);
     fd.append("note", closing.note);
-    files.forEach((f) => fd.append("photos", f));
+    files.forEach((f) => fd.append("photos", f)); // field name stays "photos" (matches the backend)
     return run(
       async () => {
         const { data } = await api.post(`/tasks/${id}/close`, fd);
@@ -364,8 +396,8 @@ function TaskDetail({ id, user, onClose, onChanged }) {
     );
   };
 
-  /* ----- photos (before closing) ----- */
-  // Adds to the current selection (does not replace it), skips duplicates and oversize files
+  /* ----- attachments (before closing) ----- */
+  // Adds to the current selection (does not replace it); skips duplicates, wrong types and oversize files
   const onPickFiles = (e) => {
     const picked = Array.from(e.target.files || []);
     e.target.value = ""; // lets the same file be picked again after removing it
@@ -376,14 +408,15 @@ function TaskDetail({ id, user, onClose, onChanged }) {
       let overLimit = false;
 
       for (const f of picked) {
-        if (f.size > MAX_PHOTO_MB * 1024 * 1024) { tooBig++; continue; }
+        if (!ALLOWED_EXT.test(f.name)) { toast.error(`${f.name}: file type not allowed`); continue; }
+        if (f.size > MAX_FILE_MB * 1024 * 1024) { tooBig++; continue; }
         if (next.some((x) => x.name === f.name && x.size === f.size && x.lastModified === f.lastModified)) continue;
-        if (next.length >= MAX_PHOTOS) { overLimit = true; continue; }
+        if (next.length >= MAX_FILES) { overLimit = true; continue; }
         next.push(f);
       }
 
-      if (tooBig) toast.error(`${tooBig} file(s) skipped - max ${MAX_PHOTO_MB} MB each`);
-      if (overLimit) toast.error(`Max ${MAX_PHOTOS} photos`);
+      if (tooBig) toast.error(`${tooBig} file(s) skipped - max ${MAX_FILE_MB} MB each`);
+      if (overLimit) toast.error(`Max ${MAX_FILES} files`);
       return next;
     });
   };
@@ -391,12 +424,12 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   const removeFile = (index) => setFiles((current) => current.filter((_, i) => i !== index));
   const clearFiles = () => setFiles([]);
 
-  /* ----- photos (already saved on a closed task, Super Admin only) ----- */
-  const deleteSavedPhoto = (path) => {
-    if (!window.confirm("Delete this photo permanently?")) return;
+  /* ----- attachments (already saved on a closed task, Super Admin only) ----- */
+  const deleteSavedFile = (path) => {
+    if (!window.confirm("Delete this file permanently?")) return;
     return run(
       () => api.delete(`/tasks/${id}/photos`, { data: { path } }),
-      "Photo deleted"
+      "File deleted"
     );
   };
 
@@ -414,7 +447,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
           </div>
           <div>
             <dt className="text-xs font-semibold" style={{ color: T.muted }}>Repeat</dt>
-            <dd>{task.recurrence && task.recurrence !== "None" ? task.recurrence : "One-time"}</dd>
+            <dd>{task.recurrence && task.recurrence.toLowerCase() !== "none" ? task.recurrence : "One-time"}</dd>
           </div>
           <div><dt className="text-xs font-semibold" style={{ color: T.muted }}>Progress</dt><dd><ProgressBar value={task.progress} /></dd></div>
         </dl>
@@ -579,19 +612,19 @@ function TaskDetail({ id, user, onClose, onChanged }) {
             )}
             {task.closing?.photos?.length > 0 && (
               <div>
-                <p className="text-xs font-semibold mb-1.5" style={{ color: T.muted }}>Photos</p>
+                <p className="text-xs font-semibold mb-1.5" style={{ color: T.muted }}>Attachments</p>
                 <div className="flex flex-wrap gap-3">
-                  {task.closing.photos.map((p) => (
-                    <PhotoThumb
-                      key={p}
-                      src={`${FILE_BASE}${p}`}
-                      href={`${FILE_BASE}${p}`}
-                      alt="Task photo"
-                      size="h-24 w-24"
-                      onRemove={isSuperAdmin && !busy ? () => deleteSavedPhoto(p) : undefined}
-                      removeLabel="Delete photo"
-                    />
-                  ))}
+                  {task.closing.photos.map((p) => {
+                    const name = decodeURIComponent(p.split("/").pop() || "");
+                    const url = `${FILE_BASE}${p}`;
+                    const remove = isSuperAdmin && !busy ? () => deleteSavedFile(p) : undefined;
+                    return isImageName(name) ? (
+                      <PhotoThumb key={p} src={url} href={url} alt="Attachment" size="h-24 w-24"
+                        onRemove={remove} removeLabel="Delete file" />
+                    ) : (
+                      <FileChip key={p} name={name} href={url} onRemove={remove} removeLabel="Delete file" />
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -613,15 +646,15 @@ function TaskDetail({ id, user, onClose, onChanged }) {
             )}
 
             <Field
-              label="Upload picture (optional)"
-              hint={`Up to ${MAX_PHOTOS} images, ${MAX_PHOTO_MB} MB each. You can add more pictures or remove any before closing.`}
+              label="Attachments (optional)"
+              hint={`Pictures, Excel (.xlsx / .xls), CSV or PDF. Up to ${MAX_FILES} files, ${MAX_FILE_MB} MB each. You can add more or remove any before closing.`}
             >
               <input
                 type="file"
-                accept="image/*"
+                accept={ACCEPT_FILES}
                 multiple
                 onChange={onPickFiles}
-                disabled={files.length >= MAX_PHOTOS}
+                disabled={files.length >= MAX_FILES}
                 className="block text-sm disabled:opacity-50"
               />
             </Field>
@@ -629,21 +662,22 @@ function TaskDetail({ id, user, onClose, onChanged }) {
             {files.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs" style={{ color: T.muted }}>{files.length} of {MAX_PHOTOS} selected</p>
+                  <p className="text-xs" style={{ color: T.muted }}>{files.length} of {MAX_FILES} selected</p>
                   <button type="button" onClick={clearFiles} className="text-xs hover:underline" style={{ color: T.bad }}>
                     Remove all
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {files.map((f, i) => (
-                    <PhotoThumb
-                      key={`${f.name}-${f.size}-${f.lastModified}`}
-                      src={previews[i]}
-                      alt={f.name}
-                      onRemove={() => removeFile(i)}
-                      removeLabel={`Remove ${f.name}`}
-                    />
-                  ))}
+                  {files.map((f, i) => {
+                    const key = `${f.name}-${f.size}-${f.lastModified}`;
+                    return previews[i] ? (
+                      <PhotoThumb key={key} src={previews[i]} alt={f.name}
+                        onRemove={() => removeFile(i)} removeLabel={`Remove ${f.name}`} />
+                    ) : (
+                      <FileChip key={key} name={f.name}
+                        onRemove={() => removeFile(i)} removeLabel={`Remove ${f.name}`} />
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -744,13 +778,14 @@ export default function TaskManagement() {
                 tasks.map((t) => {
                   const overdue = t.status !== "Completed" && new Date(t.deadline) < new Date();
                   const acc = accOf(t);
+                  const repeats = t.recurrence && t.recurrence.toLowerCase() !== "none";
                   return (
                     <tr key={t._id} onClick={() => setOpenId(t._id)}
                       className="border-b last:border-0 cursor-pointer hover:bg-[#F7F8F9]" style={{ borderColor: T.borderSoft }}>
                       <td className="py-3 px-4 font-semibold whitespace-nowrap" style={{ color: T.brand }}>{taskLabel(t) || "—"}</td>
                       <td className="py-3 px-4 font-medium">
                         {t.title}
-                        {t.recurrence && t.recurrence !== "None" && (
+                        {repeats && (
                           <span className="block text-[11px] font-normal" style={{ color: T.muted }}>↻ {t.recurrence}</span>
                         )}
                       </td>
