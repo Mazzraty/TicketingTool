@@ -3,9 +3,9 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 
 /* ================= ICONS ================= */
-const Icon = ({ children, className = "w-4 h-4" }) => (
+const Icon = ({ children, className = "w-4 h-4", style }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-    strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    strokeLinecap="round" strokeLinejoin="round" className={className} style={style} aria-hidden="true">
     {children}
   </svg>
 );
@@ -13,6 +13,7 @@ const IconSearch = (p) => <Icon {...p}><circle cx="11" cy="11" r="7" /><path d="
 const IconClip = (p) => <Icon {...p}><path d="M21.44 11.05 12.25 20.24a5 5 0 1 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95L9.64 18.36a2 2 0 1 1-2.83-2.83l8.49-8.48" /></Icon>;
 const IconEye = (p) => <Icon {...p}><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" /><circle cx="12" cy="12" r="3" /></Icon>;
 const IconX = (p) => <Icon {...p}><path d="M18 6 6 18M6 6l12 12" /></Icon>;
+const IconPlus = (p) => <Icon {...p}><path d="M12 5v14M5 12h14" /></Icon>;
 const IconChevronLeft = (p) => <Icon {...p}><path d="m15 18-6-6 6-6" /></Icon>;
 const IconChevronRight = (p) => <Icon {...p}><path d="m9 18 6-6-6-6" /></Icon>;
 const IconChevronDown = (p) => <Icon {...p}><path d="m6 9 6 6 6-6" /></Icon>;
@@ -330,7 +331,7 @@ const SlaDetailPanel = ({ ticket, now, onOpenReason }) => {
 const getReporterName = (ticket) => {
   if (ticket.userId?.name) return ticket.userId.name;
   if (ticket.employeeId?.name) return ticket.employeeId.name;
-  if (ticket.externalName) return ticket.externalName; // outside-company requester
+  if (ticket.externalName) return ticket.externalName; // outside-company / manual requester
   if (ticket.assignedTo?.name) return ticket.assignedTo.name;
   const creatorLabel =
     ticket.createdByType === "super_admin" ? "Super Admin"
@@ -343,7 +344,7 @@ const getReporterName = (ticket) => {
 const getReporterSubtext = (ticket) => {
   if (ticket.userId?.email) return ticket.userId.email;
   if (ticket.employeeId?.staffCode) return `Staff Code: ${ticket.employeeId.staffCode}`;
-  if (ticket.externalName) return "Outside company";
+  if (ticket.externalName) return ticket.source === "manual" ? "Manual ticket" : "Outside company";
   if (ticket.assignedTo?.email) return ticket.assignedTo.email;
   if (ticket.createdByType) {
     const label = ticket.createdByType.replace("_", " ");
@@ -540,9 +541,18 @@ export default function AdminTickets() {
   const [companyFilter, setCompanyFilter] = useState("All");
   const [companies, setCompanies] = useState([]);
 
+  // ---- manual ticket creation ----
+  const emptyCreateForm = { title: "", description: "", priority: "Medium", companyId: "", requesterName: "" };
+  const [createModal, setCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState(emptyCreateForm);
+  const [createFiles, setCreateFiles] = useState([]);
+
   const user = JSON.parse(localStorage.getItem("user"));
   const isSuperAdmin = user?.role === "super_admin";
   const canEditPriority = user?.role === "super_admin" || user?.role === "it_support";
+  // who may log a ticket by hand (adjust roles to match your backend)
+  const canCreateTicket = ["super_admin", "it_support", "company_admin"].includes(user?.role);
   const [now, setNow] = useState(() => new Date());
 
   const initialStats = { total: 0, open: 0, inProgress: 0, resolved: 0, closed: 0 };
@@ -646,6 +656,12 @@ export default function AdminTickets() {
   };
 
   const handleStatusChange = (ticket, targetStatus) => {
+    // Only Super Admin can close a ticket
+    if (targetStatus === "Closed" && !isSuperAdmin) {
+      toast.error("Only Super Admin can close a ticket");
+      return;
+    }
+
     if (targetStatus === "Resolved" || targetStatus === "Closed" || targetStatus === "Rejected") {
       if (targetStatus === "Rejected" && !isSuperAdmin) {
         toast.error("Only Super Admin can reject a ticket");
@@ -744,6 +760,44 @@ export default function AdminTickets() {
       loadStats();
     } catch (err) {
       toast.error(err.response?.data?.message || "Update failed");
+    }
+  };
+
+  /* ---------- manual ticket creation ---------- */
+  const closeCreateModal = () => {
+    if (creating) return;
+    setCreateModal(false);
+    setCreateForm(emptyCreateForm);
+    setCreateFiles([]);
+  };
+
+  const submitManualTicket = async () => {
+    if (!createForm.title.trim()) return toast.error("Title is required");
+    if (!createForm.description.trim()) return toast.error("Description is required");
+    if (isSuperAdmin && !createForm.companyId) return toast.error("Please select a company");
+
+    try {
+      setCreating(true);
+      const fd = new FormData();
+      fd.append("title", createForm.title.trim());
+      fd.append("description", createForm.description.trim());
+      fd.append("priority", createForm.priority);
+      fd.append("source", "manual"); // ticket number + SLA are still generated by the backend
+      if (createForm.companyId) fd.append("companyId", createForm.companyId);
+      if (createForm.requesterName.trim()) fd.append("externalName", createForm.requesterName.trim());
+      createFiles.forEach((f) => fd.append("files", f));
+
+      await api.post("/tickets/manual", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      toast.success("Ticket created");
+      setCreating(false);
+      setCreateModal(false);
+      setCreateForm(emptyCreateForm);
+      setCreateFiles([]);
+      load();
+      loadStats();
+    } catch (err) {
+      setCreating(false);
+      toast.error(err.response?.data?.message || "Failed to create ticket");
     }
   };
 
@@ -1035,11 +1089,15 @@ export default function AdminTickets() {
   /* ---------- shared render helpers (plain functions, so selects keep focus across re-renders) ---------- */
   const renderStatusSelect = (t) => {
     const [bg, fg] = STATUS_LOZ[t.status] || STATUS_LOZ.Open;
+    // Non Super Admins can't touch a ticket that is already Closed
+    const locked = !isSuperAdmin && t.status === "Closed";
     return (
       <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
         <select
           aria-label="Change status"
-          className="appearance-none h-6 pl-1.5 pr-5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide cursor-pointer outline-none focus:ring-2 focus:ring-[#4C9AFF] hover:brightness-95"
+          disabled={locked}
+          title={locked ? "Only Super Admin can change a closed ticket" : undefined}
+          className="appearance-none h-6 pl-1.5 pr-5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide cursor-pointer outline-none focus:ring-2 focus:ring-[#4C9AFF] hover:brightness-95 disabled:cursor-not-allowed disabled:hover:brightness-100"
           style={{ backgroundColor: bg, color: fg }}
           value={t.status}
           onChange={(e) => handleStatusChange(t, e.target.value)}
@@ -1047,7 +1105,7 @@ export default function AdminTickets() {
           <option>Open</option>
           <option>In Progress</option>
           <option>Resolved</option>
-          <option>Closed</option>
+          {(isSuperAdmin || t.status === "Closed") && <option>Closed</option>}
           {isSuperAdmin && <option>Rejected</option>}
         </select>
         <IconChevronDown className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3" style={{ color: fg }} />
@@ -1330,11 +1388,16 @@ export default function AdminTickets() {
 
         {/* TITLE */}
         <nav className="text-xs text-[#626F86] mb-2">Service desk <span className="mx-1">/</span> Queues</nav>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
           <div>
             <h1 className="text-2xl font-medium text-[#172B4D]">Tickets</h1>
             <p className="text-sm text-[#626F86] mt-1">Track, resolve and review support requests</p>
           </div>
+          {canCreateTicket && (
+            <button onClick={() => setCreateModal(true)} className={BTN_PRIMARY}>
+              <IconPlus className="w-4 h-4" /> Create ticket
+            </button>
+          )}
         </div>
 
         {/* SUMMARY / QUICK FILTERS */}
@@ -1689,6 +1752,100 @@ export default function AdminTickets() {
           </div>
         )}
       </div>
+
+      {/* ================= CREATE MANUAL TICKET MODAL ================= */}
+      {createModal && (
+        <Modal
+          maxWidth="max-w-lg"
+          icon={<IconNote className="w-4 h-4" />}
+          iconTone="bg-[#E9F2FF] text-[#0C66E4]"
+          title="Create ticket"
+          subtitle="Log a request manually (phone call, walk-in, outside company)"
+          footer={
+            <>
+              <button onClick={closeCreateModal} disabled={creating} className={BTN_SUBTLE}>Cancel</button>
+              <button onClick={submitManualTicket} disabled={creating} className={BTN_PRIMARY}>
+                {creating ? "Creating…" : "Create ticket"}
+              </button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3">
+            {isSuperAdmin && (
+              <div>
+                <label className={LABEL}>Company <span className="text-[#C9372C]">*</span></label>
+                <select
+                  className={`${FIELD} h-8 cursor-pointer`}
+                  value={createForm.companyId}
+                  onChange={(e) => setCreateForm({ ...createForm, companyId: e.target.value })}
+                >
+                  <option value="">Select company</option>
+                  {companies.map((c) => (
+                    <option key={c._id} value={c._id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className={LABEL}>Requester name (optional)</label>
+              <input
+                className={`${FIELD} h-8`}
+                value={createForm.requesterName}
+                onChange={(e) => setCreateForm({ ...createForm, requesterName: e.target.value })}
+                placeholder="Who is this ticket for?"
+              />
+            </div>
+
+            <div>
+              <label className={LABEL}>Title <span className="text-[#C9372C]">*</span></label>
+              <input
+                className={`${FIELD} h-8`}
+                value={createForm.title}
+                onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className={LABEL}>Description <span className="text-[#C9372C]">*</span></label>
+              <textarea
+                rows={4}
+                className={`${FIELD} py-2 resize-none`}
+                value={createForm.description}
+                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className={LABEL}>Priority</label>
+              <select
+                className={`${FIELD} h-8 cursor-pointer`}
+                value={createForm.priority}
+                onChange={(e) => setCreateForm({ ...createForm, priority: e.target.value })}
+              >
+                {PRIORITY_OPTIONS.map((p) => (
+                  <option key={p}>{p}</option>
+                ))}
+              </select>
+              <p className="text-xs text-[#626F86] mt-1.5">Ticket number and SLA are set automatically from the priority.</p>
+            </div>
+
+            <div>
+              <label className={LABEL}>Attachments (optional)</label>
+              <input
+                type="file"
+                multiple
+                onChange={(e) => setCreateFiles(Array.from(e.target.files || []))}
+                className="w-full text-xs text-[#44546F] file:mr-3 file:h-7 file:px-3 file:rounded-[3px] file:border-0 file:text-xs file:font-medium file:bg-[#091E420F] file:text-[#172B4D] hover:file:bg-[#091E4224]"
+              />
+              {createFiles.length > 0 && (
+                <p className="text-xs text-[#626F86] mt-1">{createFiles.length} file{createFiles.length > 1 ? "s" : ""} selected</p>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* ================= RESOLVE / CLOSE / REJECT MODAL ================= */}
       {statusModal && (
