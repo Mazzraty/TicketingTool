@@ -21,6 +21,9 @@ const UOMS = ["Nos", "Pcs", "Set", "Box", "Roll", "Meter", "Kg", "Ltr"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
 const RECURRENCES = ["None", "Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
 
+const MAX_PHOTOS = 5;
+const MAX_PHOTO_MB = 5;
+
 const STATUS_STYLE = {
   Assigned: ["#DEEBFF", "#0747A6"],
   "In Progress": ["#FFF0B3", "#7F5F01"],
@@ -113,6 +116,30 @@ const ProgressBar = ({ value }) => (
     <span className="text-xs w-9 text-right" style={{ color: T.muted }}>{value}%</span>
   </div>
 );
+
+// Thumbnail with a remove (×) button in the corner
+const PhotoThumb = ({ src, alt, size = "h-20 w-20", onRemove, removeLabel = "Remove photo", href }) => {
+  const img = (
+    <img src={src} alt={alt} className={`${size} object-cover rounded-[3px] border`} style={{ borderColor: T.border }} />
+  );
+  return (
+    <div className="relative group">
+      {href ? <a href={href} target="_blank" rel="noreferrer">{img}</a> : img}
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={removeLabel}
+          title={removeLabel}
+          className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white text-xs leading-none flex items-center justify-center shadow focus:outline-none focus:ring-2 focus:ring-[#4C9AFF]"
+          style={{ backgroundColor: T.bad }}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+};
 
 /* ================= CREATE TASK (super_admin) ================= */
 function CreateTaskModal({ onClose, onCreated }) {
@@ -216,7 +243,15 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   const [daily, setDaily] = useState({ date: todayStr(), percentToday: "", note: "" });
   const [closing, setClosing] = useState({ delayJustification: "", note: "" });
   const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]); // object URLs, same order as `files`
   const [busy, setBusy] = useState(false);
+
+  // Build preview URLs for the picked files and free them when the list changes / modal closes
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [files]);
 
   const load = useCallback(async () => {
     const { data } = await api.get(`/tasks/${id}`);
@@ -242,7 +277,8 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   const myId = String(user?.id || user?._id);
   const acc = accOf(task);
   const isAssignee = String(task.assignedTo?._id) === myId;
-  const isOwner = isAssignee || user?.role === "super_admin";
+  const isSuperAdmin = user?.role === "super_admin";
+  const isOwner = isAssignee || isSuperAdmin;
   const closed = task.status === "Completed";
   const editable = isOwner && !closed && acc === "Accepted";
   const isLate = !closed && new Date() > new Date(task.deadline);
@@ -322,15 +358,46 @@ function TaskDetail({ id, user, onClose, onChanged }) {
         if (data?.nextTask) {
           toast.success(`Next ${data.nextTask.recurrence} task created: ${data.nextTask.taskNumber || ""}`);
         }
+        setFiles([]);
       },
       "Task closed"
     );
   };
 
+  /* ----- photos (before closing) ----- */
+  // Adds to the current selection (does not replace it), skips duplicates and oversize files
   const onPickFiles = (e) => {
     const picked = Array.from(e.target.files || []);
-    if (picked.length > 5) toast.error("Max 5 photos");
-    setFiles(picked.slice(0, 5));
+    e.target.value = ""; // lets the same file be picked again after removing it
+
+    setFiles((current) => {
+      const next = [...current];
+      let tooBig = 0;
+      let overLimit = false;
+
+      for (const f of picked) {
+        if (f.size > MAX_PHOTO_MB * 1024 * 1024) { tooBig++; continue; }
+        if (next.some((x) => x.name === f.name && x.size === f.size && x.lastModified === f.lastModified)) continue;
+        if (next.length >= MAX_PHOTOS) { overLimit = true; continue; }
+        next.push(f);
+      }
+
+      if (tooBig) toast.error(`${tooBig} file(s) skipped - max ${MAX_PHOTO_MB} MB each`);
+      if (overLimit) toast.error(`Max ${MAX_PHOTOS} photos`);
+      return next;
+    });
+  };
+
+  const removeFile = (index) => setFiles((current) => current.filter((_, i) => i !== index));
+  const clearFiles = () => setFiles([]);
+
+  /* ----- photos (already saved on a closed task, Super Admin only) ----- */
+  const deleteSavedPhoto = (path) => {
+    if (!window.confirm("Delete this photo permanently?")) return;
+    return run(
+      () => api.delete(`/tasks/${id}/photos`, { data: { path } }),
+      "Photo deleted"
+    );
   };
 
   return (
@@ -512,12 +579,18 @@ function TaskDetail({ id, user, onClose, onChanged }) {
             )}
             {task.closing?.photos?.length > 0 && (
               <div>
-                <p className="text-xs font-semibold mb-1" style={{ color: T.muted }}>Photos</p>
-                <div className="flex flex-wrap gap-2">
+                <p className="text-xs font-semibold mb-1.5" style={{ color: T.muted }}>Photos</p>
+                <div className="flex flex-wrap gap-3">
                   {task.closing.photos.map((p) => (
-                    <a key={p} href={`${FILE_BASE}${p}`} target="_blank" rel="noreferrer">
-                      <img src={`${FILE_BASE}${p}`} alt="Task photo" className="h-24 w-24 object-cover rounded-[3px] border" style={{ borderColor: T.border }} />
-                    </a>
+                    <PhotoThumb
+                      key={p}
+                      src={`${FILE_BASE}${p}`}
+                      href={`${FILE_BASE}${p}`}
+                      alt="Task photo"
+                      size="h-24 w-24"
+                      onRemove={isSuperAdmin && !busy ? () => deleteSavedPhoto(p) : undefined}
+                      removeLabel="Delete photo"
+                    />
                   ))}
                 </div>
               </div>
@@ -539,15 +612,39 @@ function TaskDetail({ id, user, onClose, onChanged }) {
               </Field>
             )}
 
-            <Field label="Upload picture (optional)" hint="Up to 5 images, 5 MB each">
-              <input type="file" accept="image/*" multiple onChange={onPickFiles} className="block text-sm" />
+            <Field
+              label="Upload picture (optional)"
+              hint={`Up to ${MAX_PHOTOS} images, ${MAX_PHOTO_MB} MB each. You can add more pictures or remove any before closing.`}
+            >
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={onPickFiles}
+                disabled={files.length >= MAX_PHOTOS}
+                className="block text-sm disabled:opacity-50"
+              />
             </Field>
+
             {files.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {files.map((f) => (
-                  <img key={f.name + f.size} src={URL.createObjectURL(f)} alt={f.name}
-                    className="h-20 w-20 object-cover rounded-[3px] border" style={{ borderColor: T.border }} />
-                ))}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs" style={{ color: T.muted }}>{files.length} of {MAX_PHOTOS} selected</p>
+                  <button type="button" onClick={clearFiles} className="text-xs hover:underline" style={{ color: T.bad }}>
+                    Remove all
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {files.map((f, i) => (
+                    <PhotoThumb
+                      key={`${f.name}-${f.size}-${f.lastModified}`}
+                      src={previews[i]}
+                      alt={f.name}
+                      onRemove={() => removeFile(i)}
+                      removeLabel={`Remove ${f.name}`}
+                    />
+                  ))}
+                </div>
               </div>
             )}
 
