@@ -21,7 +21,7 @@ const UOMS = ["Nos", "Pcs", "Set", "Box", "Roll", "Meter", "Kg", "Ltr"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
 const RECURRENCES = ["None", "Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
 
-// Attachments on closing: pictures + Excel / CSV / PDF
+// Attachments: pictures + Excel / CSV / PDF
 const MAX_FILES = 5;
 const MAX_FILE_MB = 10;
 const ACCEPT_FILES = "image/*,.xlsx,.xls,.csv,.pdf";
@@ -173,6 +173,122 @@ const FileChip = ({ name, href, onRemove, removeLabel = "Remove file" }) => {
   );
 };
 
+/* ================= ATTACHMENTS (IT support saves anytime; super admin views) ================= */
+function AttachmentsSection({ task, canUpload, isSuperAdmin, myId, busy, run }) {
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+
+  // Preview URLs only for images; freed when the list changes / modal closes
+  useEffect(() => {
+    const urls = files.map((f) => (f.type.startsWith("image/") ? URL.createObjectURL(f) : null));
+    setPreviews(urls);
+    return () => urls.forEach((u) => u && URL.revokeObjectURL(u));
+  }, [files]);
+
+  const saved = task.attachments || [];
+  const fileKey = (f) => `${f.name}-${f.size}-${f.lastModified}`;
+
+  const onPick = (e) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = ""; // lets the same file be picked again after removing it
+
+    setFiles((current) => {
+      const next = [...current];
+      for (const f of picked) {
+        if (!ALLOWED_EXT.test(f.name)) { toast.error(`${f.name}: file type not allowed`); continue; }
+        if (f.size > MAX_FILE_MB * 1024 * 1024) { toast.error(`${f.name}: max ${MAX_FILE_MB} MB`); continue; }
+        if (next.some((x) => fileKey(x) === fileKey(f))) continue;
+        if (next.length >= MAX_FILES) { toast.error(`Max ${MAX_FILES} files at a time`); break; }
+        next.push(f);
+      }
+      return next;
+    });
+  };
+
+  const removePicked = (index) => setFiles((c) => c.filter((_, i) => i !== index));
+
+  const upload = () => {
+    if (!files.length) return toast.error("Select at least one file");
+    const fd = new FormData();
+    files.forEach((f) => fd.append("files", f)); // field name "files" (matches the backend route)
+    return run(async () => {
+      await api.post(`/tasks/${task._id}/files`, fd);
+      setFiles([]);
+    }, "Files saved");
+  };
+
+  const canDelete = (a) =>
+    isSuperAdmin || (canUpload && String(a.uploadedBy?._id || a.uploadedBy) === myId);
+
+  const del = (a) => {
+    if (!window.confirm("Delete this file permanently?")) return;
+    return run(() => api.delete(`/tasks/${task._id}/files`, { data: { path: a.path } }), "File deleted");
+  };
+
+  return (
+    <Section title={`Attachments${saved.length ? ` (${saved.length})` : ""}`}>
+      {canUpload && (
+        <div className="mb-4 space-y-3">
+          <Field
+            label="Add files"
+            hint={`Pictures, Excel, CSV or PDF. Up to ${MAX_FILES} files per upload, ${MAX_FILE_MB} MB each.`}
+          >
+            <input type="file" accept={ACCEPT_FILES} multiple onChange={onPick} disabled={busy} className="block text-sm disabled:opacity-50" />
+          </Field>
+
+          {files.length > 0 && (
+            <>
+              <div className="flex flex-wrap gap-3">
+                {files.map((f, i) =>
+                  previews[i] ? (
+                    <PhotoThumb key={fileKey(f)} src={previews[i]} alt={f.name}
+                      onRemove={() => removePicked(i)} removeLabel={`Remove ${f.name}`} />
+                  ) : (
+                    <FileChip key={fileKey(f)} name={f.name}
+                      onRemove={() => removePicked(i)} removeLabel={`Remove ${f.name}`} />
+                  )
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button type="button" className={btnPrimary} style={{ backgroundColor: T.brand }} onClick={upload} disabled={busy}>
+                  Save {files.length} file{files.length > 1 ? "s" : ""}
+                </button>
+                <button type="button" className={btnGhost} style={{ borderColor: T.border }} onClick={() => setFiles([])} disabled={busy}>
+                  Clear
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {saved.length === 0 ? (
+        <p className="text-sm text-center py-3" style={{ color: T.muted }}>No files saved</p>
+      ) : (
+        <div className="flex flex-wrap gap-4">
+          {saved.map((a) => {
+            const name = a.originalName || decodeURIComponent(a.path.split("/").pop() || "");
+            const url = `${FILE_BASE}${a.path}`;
+            const remove = canDelete(a) && !busy ? () => del(a) : undefined;
+            return (
+              <div key={a.path} className="space-y-1">
+                {isImageName(name) ? (
+                  <PhotoThumb src={url} href={url} alt={name} size="h-24 w-24" onRemove={remove} removeLabel="Delete file" />
+                ) : (
+                  <FileChip name={name} href={url} onRemove={remove} removeLabel="Delete file" />
+                )}
+                <p className="text-[11px]" style={{ color: T.muted }}>
+                  {a.uploadedBy?.name || "—"} · {fmt(a.uploadedAt)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Section>
+  );
+}
+
 /* ================= CREATE TASK (super_admin) ================= */
 function CreateTaskModal({ onClose, onCreated }) {
   const [companies, setCompanies] = useState([]);
@@ -274,7 +390,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   const [materials, setMaterials] = useState([]);
   const [daily, setDaily] = useState({ date: todayStr(), percentToday: "", note: "" });
   const [closing, setClosing] = useState({ delayJustification: "", note: "" });
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState([]); // files chosen at closing time
   const [previews, setPreviews] = useState([]); // object URLs for images, null for other files
   const [busy, setBusy] = useState(false);
 
@@ -396,7 +512,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
     );
   };
 
-  /* ----- attachments (before closing) ----- */
+  /* ----- attachments chosen at closing time ----- */
   // Adds to the current selection (does not replace it); skips duplicates, wrong types and oversize files
   const onPickFiles = (e) => {
     const picked = Array.from(e.target.files || []);
@@ -424,7 +540,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   const removeFile = (index) => setFiles((current) => current.filter((_, i) => i !== index));
   const clearFiles = () => setFiles([]);
 
-  /* ----- attachments (already saved on a closed task, Super Admin only) ----- */
+  /* ----- files already saved on a closed task (Super Admin only) ----- */
   const deleteSavedFile = (path) => {
     if (!window.confirm("Delete this file permanently?")) return;
     return run(
@@ -463,7 +579,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
             <button className={btnGhost} style={{ borderColor: T.border, color: T.bad }} disabled={busy} onClick={() => respond("Rejected")}>
               Reject
             </button>
-            <span className="text-xs" style={{ color: T.muted }}>Accept before adding materials or updates.</span>
+            <span className="text-xs" style={{ color: T.muted }}>Accept before adding materials, files or updates.</span>
           </div>
         ) : (
           <p className="text-sm">
@@ -587,6 +703,16 @@ function TaskDetail({ id, user, onClose, onChanged }) {
         )}
       </Section>
 
+      {/* ATTACHMENTS */}
+      <AttachmentsSection
+        task={task}
+        canUpload={editable}
+        isSuperAdmin={isSuperAdmin}
+        myId={myId}
+        busy={busy}
+        run={run}
+      />
+
       {/* CLOSING DETAILS */}
       <Section title="Closing details">
         {closed ? (
@@ -612,7 +738,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
             )}
             {task.closing?.photos?.length > 0 && (
               <div>
-                <p className="text-xs font-semibold mb-1.5" style={{ color: T.muted }}>Attachments</p>
+                <p className="text-xs font-semibold mb-1.5" style={{ color: T.muted }}>Closing attachments</p>
                 <div className="flex flex-wrap gap-3">
                   {task.closing.photos.map((p) => {
                     const name = decodeURIComponent(p.split("/").pop() || "");
@@ -646,8 +772,8 @@ function TaskDetail({ id, user, onClose, onChanged }) {
             )}
 
             <Field
-              label="Attachments (optional)"
-              hint={`Pictures, Excel (.xlsx / .xls), CSV or PDF. Up to ${MAX_FILES} files, ${MAX_FILE_MB} MB each. You can add more or remove any before closing.`}
+              label="Closing attachments (optional)"
+              hint={`Pictures, Excel (.xlsx / .xls), CSV or PDF. Up to ${MAX_FILES} files, ${MAX_FILE_MB} MB each. You can add more or remove any before closing. Files saved in the Attachments section above are kept as well.`}
             >
               <input
                 type="file"
@@ -732,6 +858,8 @@ export default function TaskManagement() {
 
   const closeDetail = useCallback(() => setOpenId(null), []);
 
+  const COLS = ["Task No", "Task", "Assigned to", "Assigned time", "Deadline", "Action", "Files", "Progress", "Status"];
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: T.canvas, color: T.text }}>
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-6">
@@ -761,24 +889,25 @@ export default function TaskManagement() {
         </div>
 
         <div className="bg-white border rounded-[3px] overflow-x-auto" style={{ borderColor: T.border }}>
-          <table className="w-full text-sm text-left min-w-[1040px]">
+          <table className="w-full text-sm text-left min-w-[1100px]">
             <thead>
               <tr className="border-b" style={{ borderColor: T.border }}>
-                {["Task No", "Task", "Assigned to", "Assigned time", "Deadline", "Action", "Progress", "Status"].map((h) => (
+                {COLS.map((h) => (
                   <th key={h} className="py-3 px-4 text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="py-10 text-center" style={{ color: T.muted }}>Loading...</td></tr>
+                <tr><td colSpan={COLS.length} className="py-10 text-center" style={{ color: T.muted }}>Loading...</td></tr>
               ) : tasks.length === 0 ? (
-                <tr><td colSpan={8} className="py-10 text-center" style={{ color: T.muted }}>No tasks found</td></tr>
+                <tr><td colSpan={COLS.length} className="py-10 text-center" style={{ color: T.muted }}>No tasks found</td></tr>
               ) : (
                 tasks.map((t) => {
                   const overdue = t.status !== "Completed" && new Date(t.deadline) < new Date();
                   const acc = accOf(t);
                   const repeats = t.recurrence && t.recurrence.toLowerCase() !== "none";
+                  const fileCount = (t.attachments?.length || 0) + (t.closing?.photos?.length || 0);
                   return (
                     <tr key={t._id} onClick={() => setOpenId(t._id)}
                       className="border-b last:border-0 cursor-pointer hover:bg-[#F7F8F9]" style={{ borderColor: T.borderSoft }}>
@@ -796,6 +925,9 @@ export default function TaskManagement() {
                       </td>
                       <td className="py-3 px-4">
                         <Badge label={acc} colors={ACCEPT_STYLE[acc]} />
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap" style={{ color: fileCount ? T.text : T.muted }}>
+                        {fileCount ? `📎 ${fileCount}` : "—"}
                       </td>
                       <td className="py-3 px-4"><ProgressBar value={t.progress} /></td>
                       <td className="py-3 px-4"><Badge label={t.status} colors={STATUS_STYLE[t.status]} /></td>

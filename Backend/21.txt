@@ -1,0 +1,38 @@
+import "dotenv/config";
+import mongoose from "mongoose";
+
+// change MONGO_URI if your .env uses a different name
+await mongoose.connect(process.env.MONGO_URI);
+
+const tasks = mongoose.connection.db.collection("tasks");
+
+const result = await tasks.updateMany(
+  { "materials.0": { $exists: true } },
+  [
+    {
+      $set: {
+        materials: {
+          $map: {
+            input: "$materials",
+            as: "m",
+            in: {
+              $mergeObjects: [
+                "$$m",
+                {
+                  serialNo: { $ifNull: ["$$m.serialNo", "-"] },
+                  consumedAt: { $ifNull: ["$$m.consumedAt", "$$m.date"] },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+  ]
+);
+console.log("Materials fixed. Matched:", result.matchedCount, "Modified:", result.modifiedCount);
+
+const rec = await tasks.updateMany({ recurrence: "none" }, { $set: { recurrence: "None" } });
+console.log("Recurrence fixed. Modified:", rec.modifiedCount);
+
+await mongoose.disconnect();

@@ -29,6 +29,14 @@ const dailyUpdateSchema = new Schema(
   { timestamps: true }
 );
 
+/* Files saved by IT support while working (before closing) */
+const attachmentSchema = new Schema({
+  path: { type: String, required: true }, // e.g. /uploads/tasks/123.pdf
+  originalName: { type: String, trim: true, maxlength: 255 },
+  uploadedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  uploadedAt: { type: Date, default: Date.now },
+});
+
 const taskSchema = new Schema(
   {
     companyId: {
@@ -85,6 +93,9 @@ const taskSchema = new Schema(
 
     materials: [materialSchema],
     dailyUpdates: [dailyUpdateSchema],
+
+    /* Files saved while the task is open (IT support uploads, super admin views) */
+    attachments: [attachmentSchema],
 
     /* Closing details */
     closing: {

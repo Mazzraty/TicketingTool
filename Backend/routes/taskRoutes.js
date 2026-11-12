@@ -12,14 +12,16 @@ import {
   respondTask,
   saveMaterials,
   addDailyUpdate,
+  uploadTaskFiles,
+  deleteTaskAttachment,
   closeTask,
-  deleteTaskPhoto, // add this export to taskController.js
+  deleteTaskPhoto,
 } from "../controllers/taskController.js";
 
 const router = express.Router();
 
-/* Closing attachments -> uploads/tasks
-   pictures + Excel / CSV / PDF, 10 MB each, max 5 files */
+/* Attachments -> uploads/tasks
+   pictures + Excel / CSV / PDF, 10 MB each, max 5 files per request */
 const uploadDir = path.join(process.cwd(), "uploads", "tasks");
 fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -43,9 +45,10 @@ const upload = multer({
       : cb(new Error("File type not allowed (pictures, Excel, CSV or PDF only)")),
 });
 
-// Upload errors (too big, too many, wrong type) become a clear 400 instead of a 500
-const uploadAttachments = (req, res, next) =>
-  upload.array("photos", 5)(req, res, (err) => {
+// Upload errors (too big, too many, wrong type) become a clear 400 instead of a 500.
+// fieldName must match what the frontend appends to FormData.
+const uploadFiles = (fieldName) => (req, res, next) =>
+  upload.array(fieldName, 5)(req, res, (err) => {
     if (!err) return next();
     const message =
       err.code === "LIMIT_FILE_SIZE" ? "File too large (max 10 MB each)"
@@ -53,6 +56,9 @@ const uploadAttachments = (req, res, next) =>
       : err.message || "Upload failed";
     res.status(400).json({ message });
   });
+
+const uploadClosingFiles = uploadFiles("photos"); // used when closing a task
+const uploadWorkFiles = uploadFiles("files");     // used while working on a task
 
 router.use(protect);
 
@@ -63,7 +69,12 @@ router.get("/:id", getTask);
 router.post("/:id/respond", respondTask); // IT support accepts / rejects
 router.put("/:id/materials", saveMaterials);
 router.post("/:id/daily", addDailyUpdate);
-router.post("/:id/close", uploadAttachments, closeTask);
-router.delete("/:id/photos", deleteTaskPhoto); // Super Admin deletes a saved file
+
+// Files saved before closing: IT support uploads, super admin views
+router.post("/:id/files", uploadWorkFiles, uploadTaskFiles);
+router.delete("/:id/files", deleteTaskAttachment);
+
+router.post("/:id/close", uploadClosingFiles, closeTask);
+router.delete("/:id/photos", deleteTaskPhoto); // Super Admin deletes a closing file
 
 export default router;

@@ -11,6 +11,7 @@ import { getCompanyFilter } from "./dashboardController.js";
 const SOURCES = ["IT", "Store", "New Purchase"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
 const RECURRENCES = ["None", "Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
+const MAX_ATTACHMENTS = 20; // total saved files per task
 
 const uid = (user) => String(user.id || user._id);
 const isSuper = (user) => user.role === "super_admin";
@@ -59,6 +60,7 @@ const TASK_TITLES = {
   task_accepted: "Task accepted",
   task_rejected: "Task rejected",
   materials_saved: "Materials updated",
+  attachment_added: "File uploaded",
   task_closed: "Task closed",
   task_repeated: "Repeat task created",
 };
@@ -82,7 +84,7 @@ const notify = async (userId, task, type, message) => {
   }
 };
 
-// Work (materials, daily updates, closing) is blocked until the task is accepted
+// Work (materials, daily updates, files, closing) is blocked until the task is accepted
 const requireAccepted = (task) =>
   task.acceptance?.status === "Accepted" ? null : "Accept the task first";
 
@@ -172,6 +174,7 @@ export const createTask = async (req, res) => {
 /* =========================
    LIST TASKS
    super_admin: all (optionally one company) | it_support: only own tasks
+   (attachments are returned so the list can show a file count)
 ========================= */
 export const getTasks = async (req, res) => {
   try {
@@ -209,6 +212,7 @@ export const getTask = async (req, res) => {
       .populate("assignedTo", "name email")
       .populate("assignedBy", "name")
       .populate("dailyUpdates.updatedBy", "name")
+      .populate("attachments.uploadedBy", "name")
       .lean();
 
     if (!task) return res.status(404).json({ message: "Task not found" });
@@ -384,6 +388,99 @@ export const addDailyUpdate = async (req, res) => {
 };
 
 /* =========================
+   SAVE FILES (any time before the task is closed)
+   IT support (assignee) or super admin. Multer field name: "files"
+========================= */
+export const uploadTaskFiles = async (req, res) => {
+  try {
+    const { task, error } = await loadTask(req.params.id, req.user);
+    if (error) {
+      removeFiles(req.files);
+      return res.status(error[0]).json({ message: error[1] });
+    }
+    if (task.status === "Completed") {
+      removeFiles(req.files);
+      return res.status(400).json({ message: "Task is already closed" });
+    }
+
+    const notAccepted = requireAccepted(task);
+    if (notAccepted) {
+      removeFiles(req.files);
+      return res.status(400).json({ message: notAccepted });
+    }
+
+    const files = req.files || [];
+    if (!files.length) return res.status(400).json({ message: "Select at least one file" });
+
+    if (task.attachments.length + files.length > MAX_ATTACHMENTS) {
+      removeFiles(files);
+      return res.status(400).json({ message: `Maximum ${MAX_ATTACHMENTS} files per task` });
+    }
+
+    files.forEach((f) =>
+      task.attachments.push({
+        path: `/uploads/tasks/${path.basename(f.path)}`,
+        originalName: f.originalname,
+        uploadedBy: uid(req.user),
+      })
+    );
+    await task.save();
+
+    // tell the super admin when IT support uploads
+    if (!isSuper(req.user)) {
+      notify(
+        task.assignedBy,
+        task,
+        "attachment_added",
+        `${files.length} file${files.length === 1 ? "" : "s"} uploaded on ${task.taskNumber || task.title}`
+      );
+    }
+
+    res.json({ success: true, attachments: task.attachments });
+  } catch (err) {
+    removeFiles(req.files);
+    console.error("UPLOAD TASK FILES ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* =========================
+   DELETE A SAVED FILE
+   super admin: any file | assignee: only own files, and only while the task is open
+========================= */
+export const deleteTaskAttachment = async (req, res) => {
+  try {
+    const { task, error } = await loadTask(req.params.id, req.user);
+    if (error) return res.status(error[0]).json({ message: error[1] });
+
+    const filePath = req.body?.path;
+    if (typeof filePath !== "string" || !filePath.startsWith("/uploads/tasks/"))
+      return res.status(400).json({ message: "Invalid file path" });
+
+    const att = task.attachments.find((a) => a.path === filePath);
+    if (!att) return res.status(404).json({ message: "File not found on this task" });
+
+    if (!isSuper(req.user)) {
+      if (task.status === "Completed")
+        return res.status(400).json({ message: "Task is already closed" });
+      if (String(att.uploadedBy) !== uid(req.user))
+        return res.status(403).json({ message: "You can only delete your own files" });
+    }
+
+    task.attachments = task.attachments.filter((a) => a.path !== filePath);
+    await task.save();
+
+    // path.basename blocks directory traversal
+    fs.unlink(path.join(process.cwd(), "uploads", "tasks", path.basename(filePath)), () => {});
+
+    res.json({ success: true, attachments: task.attachments });
+  } catch (err) {
+    console.error("DELETE ATTACHMENT ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* =========================
    CLOSE TASK
    completedOnTime is computed on the server (now <= deadline).
    If it is late, a justification is mandatory.
@@ -478,6 +575,10 @@ export const closeTask = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+/* =========================
+   DELETE A CLOSING FILE (super admin only)
+========================= */
 export const deleteTaskPhoto = async (req, res) => {
   try {
     if (!isSuper(req.user))
