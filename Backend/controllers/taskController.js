@@ -31,7 +31,7 @@ const removeFiles = (files = []) =>
 
 // <companyCode>-TSK-<year>-<6 digit sequence>
 const TASK_TYPE_CODE = "TSK";
-const generateTaskNumber = async (companyId, companyCode) => {
+export const generateTaskNumber = async (companyId, companyCode) => {
   const year = new Date().getFullYear();
 
   const counter = await TaskCounter.findOneAndUpdate(
@@ -44,14 +44,24 @@ const generateTaskNumber = async (companyId, companyCode) => {
   return `${companyCode}-${TASK_TYPE_CODE}-${year}-${sequence}`;
 };
 
-// Move a deadline forward by one repeat interval
-const nextDeadline = (d, rec) => {
+// Move a date forward by one repeat interval.
+// Month-based intervals are clamped to the last day of the target month
+// (Jan 31 + 1 month = Feb 28/29, not Mar 3).
+export const nextDeadline = (d, rec) => {
   const n = new Date(d);
+  const addMonths = (months) => {
+    const day = n.getDate();
+    n.setDate(1);
+    n.setMonth(n.getMonth() + months);
+    const lastDay = new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate();
+    n.setDate(Math.min(day, lastDay));
+  };
+
   if (rec === "Daily") n.setDate(n.getDate() + 1);
   else if (rec === "Weekly") n.setDate(n.getDate() + 7);
-  else if (rec === "Monthly") n.setMonth(n.getMonth() + 1);
-  else if (rec === "Quarterly") n.setMonth(n.getMonth() + 3);
-  else if (rec === "Yearly") n.setFullYear(n.getFullYear() + 1);
+  else if (rec === "Monthly") addMonths(1);
+  else if (rec === "Quarterly") addMonths(3);
+  else if (rec === "Yearly") addMonths(12);
   return n;
 };
 
@@ -68,7 +78,7 @@ const TASK_TITLES = {
 // Saves a notification in the shared notification collection.
 // companyId is taken from the RECIPIENT so it matches buildNotificationFilter
 // (which filters by the logged-in user's companyId). A failure here never breaks the request.
-const notify = async (userId, task, type, message) => {
+export const notify = async (userId, task, type, message) => {
   try {
     const recipient = await User.findById(userId).select("companyId").lean();
     await Notification.create({
@@ -115,6 +125,8 @@ export const getAssignees = async (req, res) => {
 
 /* =========================
    CREATE TASK - super_admin only
+   Recurring tasks get a nextRunAt; the scheduler (services/recurringTasks.js)
+   creates the next occurrence automatically when that time arrives.
 ========================= */
 export const createTask = async (req, res) => {
   try {
@@ -147,6 +159,9 @@ export const createTask = async (req, res) => {
 
     const taskNumber = await generateTaskNumber(cid, company.code);
 
+    const rec = RECURRENCES.includes(recurrence) ? recurrence : "None";
+    const now = new Date();
+
     const task = await Task.create({
       companyId: cid,
       taskNumber,
@@ -156,9 +171,10 @@ export const createTask = async (req, res) => {
       ticketId: mongoose.Types.ObjectId.isValid(ticketId) ? ticketId : undefined,
       assignedTo,
       assignedBy: uid(req.user),
-      assignedAt: new Date(),
+      assignedAt: now,
       deadline: due,
-      recurrence: RECURRENCES.includes(recurrence) ? recurrence : "None",
+      recurrence: rec,
+      nextRunAt: rec === "None" ? null : nextDeadline(now, rec),
       acceptance: { status: "Pending" },
     });
 
@@ -484,7 +500,8 @@ export const deleteTaskAttachment = async (req, res) => {
    CLOSE TASK
    completedOnTime is computed on the server (now <= deadline).
    If it is late, a justification is mandatory.
-   If the task repeats, the next one is created here.
+   Repeating tasks are NOT created here any more - the scheduler does that
+   automatically (see services/recurringTasks.js).
 ========================= */
 export const closeTask = async (req, res) => {
   try {
@@ -530,48 +547,34 @@ export const closeTask = async (req, res) => {
 
     notify(task.assignedBy, task, "task_closed", `${task.taskNumber || task.title} was closed`);
 
-    /* ----- continuous task: create the next one ----- */
-    let nextTask = null;
-    if (task.recurrence && task.recurrence !== "None") {
-      try {
-        let due = nextDeadline(task.deadline, task.recurrence);
-        while (due <= now) due = nextDeadline(due, task.recurrence); // skip periods already past
-
-        const company = await mongoose.model("Company").findById(task.companyId).select("code").lean();
-        if (company?.code) {
-          nextTask = await Task.create({
-            companyId: task.companyId,
-            taskNumber: await generateTaskNumber(task.companyId, company.code),
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            ticketId: task.ticketId,
-            assignedTo: task.assignedTo,
-            assignedBy: task.assignedBy,
-            assignedAt: now,
-            deadline: due,
-            recurrence: task.recurrence,
-            parentTaskId: task._id,
-            acceptance: { status: "Accepted", respondedAt: now }, // series already accepted
-          });
-
-          notify(
-            task.assignedTo,
-            nextTask,
-            "task_repeated",
-            `${task.recurrence} task repeated: ${nextTask.taskNumber} due ${due.toLocaleDateString()}`
-          );
-        }
-      } catch (repeatErr) {
-        // The task is already closed - don't fail the request because of the repeat
-        console.error("CREATE REPEAT TASK ERROR:", repeatErr);
-      }
-    }
-
-    res.json({ success: true, task, nextTask });
+    res.json({ success: true, task });
   } catch (err) {
     removeFiles(req.files);
     console.error("CLOSE TASK ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* =========================
+   STOP REPEATING (super admin) - ends a recurring series
+   Clears nextRunAt on the task that is still waiting to spawn the next one.
+========================= */
+export const stopRecurrence = async (req, res) => {
+  try {
+    if (!isSuper(req.user)) return res.status(403).json({ message: "Only super admin can stop repeating" });
+    if (!mongoose.Types.ObjectId.isValid(req.params.id))
+      return res.status(400).json({ message: "Invalid task id" });
+
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    task.nextRunAt = null;
+    task.recurrence = "None";
+    await task.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("STOP RECURRENCE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

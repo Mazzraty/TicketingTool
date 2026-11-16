@@ -24,6 +24,10 @@ import superAdminRoutes from "./routes/superAdminRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import ticketDashboardRoutes from "./routes/adminTicketRooutes.js";
 import taskRoutes from "./routes/taskRoutes.js"; // NEW: IT support tasks
+import { startRecurringTaskJob } from "./services/recurringTasks.js";
+
+// after mongoose is connected:
+startRecurringTaskJob();
 // 🔗 Connect DB
 connectDB();
 

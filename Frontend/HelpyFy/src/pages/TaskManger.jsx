@@ -66,6 +66,7 @@ const toLocalInput = (d) => {
 };
 // Older tasks have no acceptance field - treat them as accepted
 const accOf = (t) => t?.acceptance?.status || "Accepted";
+const isRepeating = (t) => !!t?.recurrence && t.recurrence.toLowerCase() !== "none";
 
 /* ================= SMALL PIECES ================= */
 const Badge = ({ label, colors }) => {
@@ -362,7 +363,10 @@ function CreateTaskModal({ onClose, onCreated }) {
           <Field label="Deadline *">
             <input type="datetime-local" className={inputCls} style={{ borderColor: T.border }} value={form.deadline} onChange={set("deadline")} />
           </Field>
-          <Field label="Continuous (repeat)" hint="A new task is created automatically when this one is closed">
+          <Field
+            label="Continuous (repeat)"
+            hint="A new task is assigned automatically every day / week / month etc., even if the previous one is still open"
+          >
             <select className={inputCls} style={{ borderColor: T.border }} value={form.recurrence} onChange={set("recurrence")}>
               {RECURRENCES.map((r) => (
                 <option key={r} value={r}>{r === "None" ? "One-time" : r}</option>
@@ -458,6 +462,12 @@ function TaskDetail({ id, user, onClose, onChanged }) {
     );
   };
 
+  /* ----- stop repeating (super admin) ----- */
+  const stopRepeat = () => {
+    if (!window.confirm("Stop repeating this task? No new tasks will be created automatically.")) return;
+    return run(() => api.post(`/tasks/${id}/stop-repeat`), "Repeat stopped");
+  };
+
   /* ----- materials ----- */
   const setRow = (i, k, v) => setMaterials((rows) => rows.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
   const addRow = () =>
@@ -502,10 +512,8 @@ function TaskDetail({ id, user, onClose, onChanged }) {
     files.forEach((f) => fd.append("photos", f)); // field name stays "photos" (matches the backend)
     return run(
       async () => {
-        const { data } = await api.post(`/tasks/${id}/close`, fd);
-        if (data?.nextTask) {
-          toast.success(`Next ${data.nextTask.recurrence} task created: ${data.nextTask.taskNumber || ""}`);
-        }
+        // Repeat tasks are created automatically by the server scheduler, not here
+        await api.post(`/tasks/${id}/close`, fd);
         setFiles([]);
       },
       "Task closed"
@@ -563,7 +571,23 @@ function TaskDetail({ id, user, onClose, onChanged }) {
           </div>
           <div>
             <dt className="text-xs font-semibold" style={{ color: T.muted }}>Repeat</dt>
-            <dd>{task.recurrence && task.recurrence.toLowerCase() !== "none" ? task.recurrence : "One-time"}</dd>
+            <dd>
+              {isRepeating(task) ? task.recurrence : "One-time"}
+              {isRepeating(task) && task.nextRunAt && (
+                <span className="block text-[11px]" style={{ color: T.muted }}>Next: {fmt(task.nextRunAt)}</span>
+              )}
+              {isSuperAdmin && isRepeating(task) && task.nextRunAt && (
+                <button
+                  type="button"
+                  onClick={stopRepeat}
+                  disabled={busy}
+                  className="block text-[11px] hover:underline disabled:opacity-50"
+                  style={{ color: T.bad }}
+                >
+                  Stop repeating
+                </button>
+              )}
+            </dd>
           </div>
           <div><dt className="text-xs font-semibold" style={{ color: T.muted }}>Progress</dt><dd><ProgressBar value={task.progress} /></dd></div>
         </dl>
@@ -906,7 +930,7 @@ export default function TaskManagement() {
                 tasks.map((t) => {
                   const overdue = t.status !== "Completed" && new Date(t.deadline) < new Date();
                   const acc = accOf(t);
-                  const repeats = t.recurrence && t.recurrence.toLowerCase() !== "none";
+                  const repeats = isRepeating(t);
                   const fileCount = (t.attachments?.length || 0) + (t.closing?.photos?.length || 0);
                   return (
                     <tr key={t._id} onClick={() => setOpenId(t._id)}

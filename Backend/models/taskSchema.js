@@ -65,12 +65,14 @@ const taskSchema = new Schema(
     deadline: { type: Date, required: true },
 
     /* Continuous option: a new task is created automatically when this one is closed */
+      /* Continuous option: the scheduler creates the next task automatically when nextRunAt arrives */
     recurrence: {
       type: String,
       enum: ["None", "Daily", "Weekly", "Monthly", "Quarterly", "Yearly"],
       default: "None",
     },
-    parentTaskId: { type: Schema.Types.ObjectId, ref: "Task" }, // set on auto-created repeats
+    nextRunAt: { type: Date, default: null, index: true }, // <-- add this
+    parentTaskId: { type: Schema.Types.ObjectId, ref: "Task" },
 
     /* IT support accepts or rejects the assignment */
     acceptance: {
