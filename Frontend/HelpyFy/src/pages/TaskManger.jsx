@@ -68,6 +68,128 @@ const toLocalInput = (d) => {
 const accOf = (t) => t?.acceptance?.status || "Accepted";
 const isRepeating = (t) => !!t?.recurrence && t.recurrence.toLowerCase() !== "none";
 
+/* ================= UPDATE PERIOD (follows the task's repeat type) ================= */
+// Daily -> date | Weekly -> week | Monthly -> month | Quarterly -> quarter | Yearly -> year
+const PERIOD = {
+  None: { title: "Daily updation", col: "Date", field: "Date", pct: "% completed today" },
+  Daily: { title: "Daily updation", col: "Date", field: "Date", pct: "% completed today" },
+  Weekly: { title: "Weekly updation", col: "Week", field: "Week", pct: "% completed this week" },
+  Monthly: { title: "Monthly updation", col: "Month", field: "Month", pct: "% completed this month" },
+  Quarterly: { title: "Quarterly updation", col: "Quarter", field: "Quarter", pct: "% completed this quarter" },
+  Yearly: { title: "Yearly updation", col: "Year", field: "Year", pct: "% completed this year" },
+};
+
+// "today" / "this week" ... used in the update-status badges
+const UPDATE_WORD = {
+  None: "today", Daily: "today", Weekly: "this week",
+  Monthly: "this month", Quarterly: "this quarter", Yearly: "this year",
+};
+
+const pad2 = (n) => String(n).padStart(2, "0");
+
+// "YYYY-Www" for the week that contains the given date (ISO week)
+const isoWeekValue = (d = new Date()) => {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dow = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - dow);
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((t - yearStart) / 86400000 + 1) / 7);
+  return `${t.getUTCFullYear()}-W${pad2(week)}`;
+};
+
+// "YYYY-Www" -> "YYYY-MM-DD" (Monday of that week)
+const weekToMonday = (v) => {
+  const [y, w] = v.split("-W").map(Number);
+  const jan4 = new Date(Date.UTC(y, 0, 4));
+  const dow = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - dow + 1 + (w - 1) * 7);
+  return monday.toISOString().split("T")[0];
+};
+
+const currentQuarterValue = () => {
+  const n = new Date();
+  return `${n.getFullYear()}-Q${Math.floor(n.getMonth() / 3) + 1}`;
+};
+
+// current quarter + the 7 before it, newest first
+const quarterOptions = () => {
+  const n = new Date();
+  let y = n.getFullYear();
+  let q = Math.floor(n.getMonth() / 3) + 1;
+  const out = [];
+  for (let i = 0; i < 8; i++) {
+    out.push({ value: `${y}-Q${q}`, label: `Q${q} ${y}` });
+    q--;
+    if (q === 0) { q = 4; y--; }
+  }
+  return out;
+};
+
+// current year + the 4 before it
+const yearOptions = () => {
+  const y = new Date().getFullYear();
+  return Array.from({ length: 5 }, (_, i) => String(y - i));
+};
+
+// Default value of the period input (the current period)
+const defaultPeriodValue = (rec) => {
+  const n = new Date();
+  if (rec === "Weekly") return isoWeekValue(n);
+  if (rec === "Monthly") return `${n.getFullYear()}-${pad2(n.getMonth() + 1)}`;
+  if (rec === "Quarterly") return currentQuarterValue();
+  if (rec === "Yearly") return String(n.getFullYear());
+  return todayStr();
+};
+
+// Input value -> "YYYY-MM-DD" sent to the server (the server snaps it to the period start)
+const toPeriodDate = (rec, v) => {
+  if (rec === "Weekly") return weekToMonday(v);
+  if (rec === "Monthly") return `${v}-01`;
+  if (rec === "Quarterly") {
+    const [y, q] = v.split("-Q");
+    return `${y}-${pad2((Number(q) - 1) * 3 + 1)}-01`;
+  }
+  if (rec === "Yearly") return `${v}-01-01`;
+  return v;
+};
+
+// Stored period start (UTC) -> readable label for the table
+const fmtPeriod = (d, rec) => {
+  const x = new Date(d);
+  const utc = { timeZone: "UTC" };
+  if (rec === "Weekly")
+    return `Week of ${x.toLocaleDateString(undefined, { ...utc, day: "numeric", month: "short", year: "numeric" })}`;
+  if (rec === "Monthly") return x.toLocaleDateString(undefined, { ...utc, month: "long", year: "numeric" });
+  if (rec === "Quarterly") return `Q${Math.floor(x.getUTCMonth() / 3) + 1} ${x.getUTCFullYear()}`;
+  if (rec === "Yearly") return String(x.getUTCFullYear());
+  return x.toLocaleDateString(undefined, utc);
+};
+
+// Shows ONLY the input that matches the task's repeat type
+const PeriodPicker = ({ rec, value, onChange }) => {
+  const st = { borderColor: T.border };
+  const set = (e) => onChange(e.target.value);
+
+  if (rec === "Weekly")
+    return <input type="week" className={inputCls} style={st} max={defaultPeriodValue("Weekly")} value={value} onChange={set} />;
+  if (rec === "Monthly")
+    return <input type="month" className={inputCls} style={st} max={defaultPeriodValue("Monthly")} value={value} onChange={set} />;
+  if (rec === "Quarterly")
+    return (
+      <select className={inputCls} style={st} value={value} onChange={set}>
+        {quarterOptions().map((q) => <option key={q.value} value={q.value}>{q.label}</option>)}
+      </select>
+    );
+  if (rec === "Yearly")
+    return (
+      <select className={inputCls} style={st} value={value} onChange={set}>
+        {yearOptions().map((y) => <option key={y} value={y}>{y}</option>)}
+      </select>
+    );
+  return <input type="date" className={inputCls} style={st} max={todayStr()} value={value} onChange={set} />;
+};
+
 /* ================= SMALL PIECES ================= */
 const Badge = ({ label, colors }) => {
   const [bg, fg] = colors || ["#DFE1E6", "#42526E"];
@@ -392,7 +514,8 @@ function CreateTaskModal({ onClose, onCreated }) {
 function TaskDetail({ id, user, onClose, onChanged }) {
   const [task, setTask] = useState(null);
   const [materials, setMaterials] = useState([]);
-  const [daily, setDaily] = useState({ date: todayStr(), percentToday: "", note: "" });
+  // value "" = current period (the picker shows the default for the task's repeat type)
+  const [daily, setDaily] = useState({ value: "", percentToday: "", note: "" });
   const [closing, setClosing] = useState({ delayJustification: "", note: "" });
   const [files, setFiles] = useState([]); // files chosen at closing time
   const [previews, setPreviews] = useState([]); // object URLs for images, null for other files
@@ -434,6 +557,11 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   const closed = task.status === "Completed";
   const editable = isOwner && !closed && acc === "Accepted";
   const isLate = !closed && new Date() > new Date(task.deadline);
+
+  // Update period follows the repeat type: Daily -> day, Weekly -> week, Monthly -> month ...
+  const rec = isRepeating(task) ? task.recurrence : "None";
+  const P = PERIOD[rec] || PERIOD.None;
+  const periodValue = daily.value || defaultPeriodValue(rec);
 
   const run = async (fn, okMsg) => {
     setBusy(true);
@@ -492,11 +620,15 @@ function TaskDetail({ id, user, onClose, onChanged }) {
 
   /* ----- daily update ----- */
   const addDaily = () => {
-    if (daily.percentToday === "") return toast.error("Enter the % completed today");
+    if (daily.percentToday === "") return toast.error(`Enter the ${P.pct.toLowerCase()}`);
     return run(async () => {
-      await api.post(`/tasks/${id}/daily`, daily);
-      setDaily({ date: todayStr(), percentToday: "", note: "" });
-    }, "Daily update saved");
+      await api.post(`/tasks/${id}/daily`, {
+        date: toPeriodDate(rec, periodValue),
+        percentToday: daily.percentToday,
+        note: daily.note,
+      });
+      setDaily({ value: "", percentToday: "", note: "" });
+    }, `${P.title.replace(" updation", "")} update saved`);
   };
 
   /* ----- close ----- */
@@ -681,14 +813,14 @@ function TaskDetail({ id, user, onClose, onChanged }) {
       </Section>
 
       {/* DAILY UPDATION */}
-      <Section title="Daily updation">
+      <Section title={P.title}>
         {editable && (
-          <div className="grid grid-cols-1 sm:grid-cols-[160px_160px_1fr_auto] gap-3 items-end mb-4">
-            <Field label="Date">
-              <input type="date" className={inputCls} style={{ borderColor: T.border }} max={todayStr()}
-                value={daily.date} onChange={(e) => setDaily((d) => ({ ...d, date: e.target.value }))} />
+          <div className="grid grid-cols-1 sm:grid-cols-[190px_190px_1fr_auto] gap-3 items-end mb-4">
+            <Field label={P.field}>
+              <PeriodPicker rec={rec} value={periodValue}
+                onChange={(v) => setDaily((d) => ({ ...d, value: v }))} />
             </Field>
-            <Field label="% completed today">
+            <Field label={P.pct}>
               <input type="number" min={0} max={100} className={inputCls} style={{ borderColor: T.border }}
                 value={daily.percentToday} onChange={(e) => setDaily((d) => ({ ...d, percentToday: e.target.value }))} />
             </Field>
@@ -704,7 +836,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
           <table className="w-full text-sm text-left">
             <thead>
               <tr className="border-b" style={{ borderColor: T.border }}>
-                {["Date", "% today", "Note", "By"].map((h) => (
+                {[P.col, "% done", "Note", "By"].map((h) => (
                   <th key={h} className="py-2 px-1 text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
                 ))}
               </tr>
@@ -714,7 +846,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .map((u) => (
                   <tr key={u._id} className="border-b last:border-0" style={{ borderColor: T.borderSoft }}>
-                    <td className="py-2 px-1">{new Date(u.date).toLocaleDateString(undefined, { timeZone: "UTC" })}</td>
+                    <td className="py-2 px-1">{fmtPeriod(u.date, rec)}</td>
                     <td className="py-2 px-1 font-medium">{u.percentToday}%</td>
                     <td className="py-2 px-1">{u.note || "—"}</td>
                     <td className="py-2 px-1" style={{ color: T.muted }}>{u.updatedBy?.name || "—"}</td>
@@ -865,6 +997,7 @@ export default function TaskManagement() {
   const [statusFilter, setStatusFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [openId, setOpenId] = useState(null);
+  const [updStatus, setUpdStatus] = useState(null); // super admin: who has updated this period
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -876,13 +1009,28 @@ export default function TaskManagement() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+
+    // Has each open task been updated for the current period (today / week / month ...)?
+    if (isSuper) {
+      try {
+        const { data } = await api.get("/tasks/update-status");
+        setUpdStatus(data);
+      } catch {
+        setUpdStatus(null);
+      }
+    }
+  }, [statusFilter, isSuper]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
   const closeDetail = useCallback(() => setOpenId(null), []);
 
-  const COLS = ["Task No", "Task", "Assigned to", "Assigned time", "Deadline", "Action", "Files", "Progress", "Status"];
+  const COLS = [
+    "Task No", "Task", "Assigned to", "Assigned time", "Deadline", "Action", "Files", "Progress",
+    ...(isSuper ? ["Update"] : []),
+    "Status",
+  ];
+  const updMap = Object.fromEntries((updStatus?.items || []).map((i) => [i._id, i]));
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: T.canvas, color: T.text }}>
@@ -912,8 +1060,20 @@ export default function TaskManagement() {
           </div>
         </div>
 
+        {isSuper && updStatus && updStatus.total > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-1 bg-white border rounded-[3px] px-4 py-2.5 text-sm"
+            style={{ borderColor: T.border }}>
+            <span className="font-semibold">Updates</span>
+            <span><b style={{ color: T.good }}>{updStatus.updated}</b> updated</span>
+            <span><b style={{ color: updStatus.pending ? T.bad : T.good }}>{updStatus.pending}</b> not updated yet</span>
+            <span className="text-xs" style={{ color: T.muted }}>
+              Daily tasks = today · Weekly = this week · Monthly = this month
+            </span>
+          </div>
+        )}
+
         <div className="bg-white border rounded-[3px] overflow-x-auto" style={{ borderColor: T.border }}>
-          <table className="w-full text-sm text-left min-w-[1100px]">
+          <table className="w-full text-sm text-left min-w-[1250px]">
             <thead>
               <tr className="border-b" style={{ borderColor: T.border }}>
                 {COLS.map((h) => (
@@ -954,6 +1114,20 @@ export default function TaskManagement() {
                         {fileCount ? `📎 ${fileCount}` : "—"}
                       </td>
                       <td className="py-3 px-4"><ProgressBar value={t.progress} /></td>
+                      {isSuper && (
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {(() => {
+                            const u = updMap[t._id];
+                            if (!u) return <span style={{ color: T.muted }}>—</span>;
+                            const word = UPDATE_WORD[u.recurrence] || "today";
+                            return u.updatedThisPeriod ? (
+                              <Badge label={`Done ${word} · ${u.percentThisPeriod}%`} colors={["#DCFFF1", "#216E4E"]} />
+                            ) : (
+                              <Badge label={`Not updated ${word}`} colors={["#FFEDEB", "#AE2E24"]} />
+                            );
+                          })()}
+                        </td>
+                      )}
                       <td className="py-3 px-4"><Badge label={t.status} colors={STATUS_STYLE[t.status]} /></td>
                     </tr>
                   );

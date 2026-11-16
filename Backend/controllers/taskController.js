@@ -26,6 +26,23 @@ const dayStart = (str) => {
 };
 const dayKey = (d) => new Date(d).toISOString().split("T")[0];
 
+// Snap a date to the START of its reporting period (UTC), based on the task's repeat type:
+// Daily/None -> that day | Weekly -> Monday | Monthly -> 1st | Quarterly -> 1st of quarter | Yearly -> Jan 1
+const periodStart = (d, rec) => {
+  const x = new Date(d);
+  const y = x.getUTCFullYear();
+  const m = x.getUTCMonth();
+  const day = x.getUTCDate();
+  if (rec === "Weekly") {
+    const dow = (x.getUTCDay() + 6) % 7; // Monday = 0
+    return new Date(Date.UTC(y, m, day - dow));
+  }
+  if (rec === "Monthly") return new Date(Date.UTC(y, m, 1));
+  if (rec === "Quarterly") return new Date(Date.UTC(y, Math.floor(m / 3) * 3, 1));
+  if (rec === "Yearly") return new Date(Date.UTC(y, 0, 1));
+  return new Date(Date.UTC(y, m, day));
+};
+
 const removeFiles = (files = []) =>
   files.forEach((f) => fs.unlink(f.path, () => {}));
 
@@ -370,9 +387,12 @@ export const addDailyUpdate = async (req, res) => {
     const notAccepted = requireAccepted(task);
     if (notAccepted) return res.status(400).json({ message: notAccepted });
 
-    const date = dayStart(req.body.date);
-    if (!date) return res.status(400).json({ message: "Select a valid date" });
-    if (date > new Date()) return res.status(400).json({ message: "Date cannot be in the future" });
+    // The update period follows the task's repeat type (day / week / month / quarter / year)
+    const rec = task.recurrence || "None";
+    const picked = dayStart(req.body.date);
+    if (!picked) return res.status(400).json({ message: "Select a valid period" });
+    const date = periodStart(picked, rec);
+    if (date > new Date()) return res.status(400).json({ message: "Period cannot be in the future" });
 
     const percent = Number(req.body.percentToday);
     if (!Number.isFinite(percent) || percent < 0 || percent > 100)
@@ -380,7 +400,8 @@ export const addDailyUpdate = async (req, res) => {
 
     const note = typeof req.body.note === "string" ? req.body.note.trim().slice(0, 1000) : "";
 
-    const existing = task.dailyUpdates.find((u) => dayKey(u.date) === dayKey(date));
+    // one entry per period - re-submitting the same period overwrites it
+    const existing = task.dailyUpdates.find((u) => dayKey(periodStart(u.date, rec)) === dayKey(date));
     if (existing) {
       existing.percentToday = percent;
       existing.note = note;
