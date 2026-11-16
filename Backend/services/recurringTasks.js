@@ -10,11 +10,11 @@ export const runRecurringTasks = async () => {
 
   while (true) {
     // Atomically claim ONE due task so two runs (or two servers) can't both create it.
-    // new:false returns the document as it was, so we still know the old nextRunAt.
+    // returnDocument "before" returns the document as it was, so we still know the old nextRunAt.
     const src = await Task.findOneAndUpdate(
       { recurrence: { $nin: [null, "None"] }, nextRunAt: { $ne: null, $lte: now } },
       { $set: { nextRunAt: null } },
-      { new: false }
+      { returnDocument: "before" }
     );
     if (!src) break;
 

@@ -17,6 +17,7 @@ import {
   closeTask,
   deleteTaskPhoto,
   stopRecurrence,
+  getUpdateStatus,
 } from "../controllers/taskController.js";
 
 const router = express.Router();
@@ -67,6 +68,7 @@ router.get("/assignees", getAssignees); // must be above "/:id"
 router.get("/", getTasks);
 router.post("/", createTask);
 router.get("/:id", getTask);
+router.get("/update-status", getUpdateStatus); 
 router.post("/:id/respond", respondTask); // IT support accepts / rejects
 router.post("/:id/stop-repeat", stopRecurrence); // Super Admin ends a recurring series
 router.put("/:id/materials", saveMaterials);

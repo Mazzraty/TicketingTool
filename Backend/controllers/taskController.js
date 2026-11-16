@@ -54,7 +54,7 @@ export const generateTaskNumber = async (companyId, companyCode) => {
   const counter = await TaskCounter.findOneAndUpdate(
     { companyId, year },
     { $inc: { sequence: 1 }, $setOnInsert: { companyId, year } },
-    { new: true, upsert: true }
+    { returnDocument: "after", upsert: true }
   );
 
   const sequence = String(counter.sequence).padStart(6, "0");
@@ -632,6 +632,62 @@ export const deleteTaskPhoto = async (req, res) => {
     res.json({ success: true, photos: task.closing.photos });
   } catch (err) {
     console.error("DELETE TASK PHOTO ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* =========================
+   UPDATE STATUS (super admin dashboard)
+   For every open, accepted task: has the update for the CURRENT period
+   (today / this week / this month / quarter / year) been submitted yet?
+========================= */
+export const getUpdateStatus = async (req, res) => {
+  try {
+    if (!isSuper(req.user)) return res.status(403).json({ message: "Not allowed" });
+
+    const filter = {
+      ...getCompanyFilter(req.user, req.query),
+      status: { $ne: "Completed" },
+      // waiting-for-accept tasks can't be updated yet; older tasks have no acceptance field
+      "acceptance.status": { $in: ["Accepted", null] },
+    };
+
+    const tasks = await Task.find(filter)
+      .select("taskNumber title assignedTo recurrence deadline progress dailyUpdates.date dailyUpdates.percentToday")
+      .populate("assignedTo", "name")
+      .sort({ deadline: 1 })
+      .lean();
+
+    const now = new Date();
+    const items = tasks.map((t) => {
+      const rec = t.recurrence || "None";
+      const current = dayKey(periodStart(now, rec));
+      const updates = t.dailyUpdates || [];
+      const doneUpdate = updates.find((u) => dayKey(periodStart(u.date, rec)) === current);
+      const last = updates.reduce((a, u) => (!a || new Date(u.date) > new Date(a) ? u.date : a), null);
+
+      return {
+        _id: t._id,
+        taskNumber: t.taskNumber || "",
+        title: t.title,
+        assignedTo: t.assignedTo?.name || "—",
+        recurrence: rec,
+        deadline: t.deadline,
+        progress: t.progress,
+        updatedThisPeriod: !!doneUpdate,
+        percentThisPeriod: doneUpdate ? doneUpdate.percentToday : null,
+        lastUpdateDate: last,
+      };
+    });
+
+    res.json({
+      total: items.length,
+      updated: items.filter((i) => i.updatedThisPeriod).length,
+      pending: items.filter((i) => !i.updatedThisPeriod).length,
+      items,
+    });
+  } catch (err) {
+    console.error("UPDATE STATUS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

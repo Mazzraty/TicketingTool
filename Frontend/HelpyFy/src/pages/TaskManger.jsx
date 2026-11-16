@@ -1015,7 +1015,9 @@ export default function TaskManagement() {
       try {
         const { data } = await api.get("/tasks/update-status");
         setUpdStatus(data);
-      } catch {
+      } catch (e) {
+        console.error("UPDATE STATUS ERROR:", e?.response?.status, e?.response?.data || e);
+        toast.error(`Update status failed (${e?.response?.status || "no response"}): ${errMsg(e)}`, { id: "upd-status" });
         setUpdStatus(null);
       }
     }
