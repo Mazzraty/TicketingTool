@@ -65,10 +65,10 @@ const uploadWorkFiles = uploadFiles("files");     // used while working on a tas
 router.use(protect);
 
 router.get("/assignees", getAssignees); // must be above "/:id"
+router.get("/update-status", getUpdateStatus); // super admin dashboard card (above "/:id")
 router.get("/", getTasks);
 router.post("/", createTask);
 router.get("/:id", getTask);
-router.get("/update-status", getUpdateStatus); 
 router.post("/:id/respond", respondTask); // IT support accepts / rejects
 router.post("/:id/stop-repeat", stopRecurrence); // Super Admin ends a recurring series
 router.put("/:id/materials", saveMaterials);
