@@ -1393,11 +1393,11 @@ export default function AdminTickets() {
             <h1 className="text-2xl font-medium text-[#172B4D]">Tickets</h1>
             <p className="text-sm text-[#626F86] mt-1">Track, resolve and review support requests</p>
           </div>
-          {canCreateTicket && (
+          {/* {canCreateTicket && (
             <button onClick={() => setCreateModal(true)} className={BTN_PRIMARY}>
               <IconPlus className="w-4 h-4" /> Create ticket
             </button>
-          )}
+          )} */}
         </div>
 
         {/* SUMMARY / QUICK FILTERS */}
