@@ -255,6 +255,73 @@ const Stat = ({ label, value, color, sub, onClick, active }) => {
   );
 };
 
+const PAGE_SIZES = [10, 25, 50, 100];
+
+// Page controls under the table: range text, rows-per-page, prev / numbers / next
+const Pagination = ({ page, pageSize, total, onPage, onPageSize }) => {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+
+  // 1 … 4 5 6 … 12
+  const nums = [];
+  for (let n = 1; n <= pages; n++) {
+    if (n === 1 || n === pages || Math.abs(n - page) <= 1) nums.push(n);
+    else if (nums[nums.length - 1] !== "…") nums.push("…");
+  }
+
+  const pageBtn = "h-8 min-w-[2rem] px-2 rounded-[3px] border text-sm bg-white hover:bg-[#F7F8F9] disabled:opacity-40 disabled:hover:bg-white";
+
+  return (
+    <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
+      <div className="flex items-center gap-3" style={{ color: T.muted }}>
+        <span>Showing <b style={{ color: T.text }}>{from}–{to}</b> of <b style={{ color: T.text }}>{total}</b></span>
+        <label className="flex items-center gap-2">
+          <span className="text-xs">Rows per page</span>
+          <select
+            aria-label="Rows per page"
+            className="h-8 rounded-[3px] border bg-white text-sm px-1 outline-none focus:ring-2 focus:ring-[#4C9AFF]"
+            style={{ borderColor: T.border, color: T.text }}
+            value={pageSize}
+            onChange={(e) => onPageSize(Number(e.target.value))}
+          >
+            {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <button type="button" className={pageBtn} style={{ borderColor: T.border }}
+          onClick={() => onPage(page - 1)} disabled={page <= 1} aria-label="Previous page">
+          ‹ Prev
+        </button>
+        {nums.map((n, i) =>
+          n === "…" ? (
+            <span key={`gap-${i}`} className="px-1" style={{ color: T.muted }}>…</span>
+          ) : (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onPage(n)}
+              aria-current={n === page ? "page" : undefined}
+              className={pageBtn}
+              style={n === page
+                ? { backgroundColor: T.brand, borderColor: T.brand, color: "#fff" }
+                : { borderColor: T.border }}
+            >
+              {n}
+            </button>
+          )
+        )}
+        <button type="button" className={pageBtn} style={{ borderColor: T.border }}
+          onClick={() => onPage(page + 1)} disabled={page >= pages} aria-label="Next page">
+          Next ›
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Field = ({ label, children, hint }) => (
   <label className="block">
     <span className="block text-xs font-semibold mb-1" style={{ color: T.muted }}>{label}</span>
@@ -1056,6 +1123,9 @@ export default function TaskManagement() {
   const [showCreate, setShowCreate] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [updStatus, setUpdStatus] = useState(null); // super admin: who has updated this period
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [search, setSearch] = useState("");
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -1130,11 +1200,44 @@ export default function TaskManagement() {
   }, [tasks, updMap]);
 
   const visibleTasks = useMemo(() => {
-    if (!statusFilter) return tasks;
-    // "In Progress" card/filter also covers tasks that are only "Assigned"
-    if (statusFilter === "Open") return tasks.filter((t) => ["Assigned", "In Progress"].includes(statusOf(t)));
-    return tasks.filter((t) => statusOf(t) === statusFilter);
-  }, [tasks, statusFilter]);
+    let list = tasks;
+
+    if (statusFilter === "Open") {
+      // "In progress" card also covers tasks that are only "Assigned"
+      list = list.filter((t) => ["Assigned", "In Progress"].includes(statusOf(t)));
+    } else if (statusFilter) {
+      list = list.filter((t) => statusOf(t) === statusFilter);
+    }
+
+    // Search: task no, title, description, assignee, repeat type, status
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((t) =>
+        [
+          t.taskNumber,
+          t.title,
+          t.description,
+          t.assignedTo?.name,
+          isRepeating(t) ? t.recurrence : "one-time",
+          statusOf(t),
+        ]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [tasks, statusFilter, search]);
+
+  // Back to page 1 when the filter or page size changes
+  useEffect(() => { setPage(1); }, [statusFilter, pageSize, search]);
+
+  // Keep the page valid if the list shrinks (e.g. after a refresh)
+  const totalPages = Math.max(1, Math.ceil(visibleTasks.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedTasks = useMemo(
+    () => visibleTasks.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [visibleTasks, currentPage, pageSize]
+  );
 
   const completedFilterActive = statusFilter === "Completed" || statusFilter === "Completed Late";
 
@@ -1150,7 +1253,30 @@ export default function TaskManagement() {
               {isSuper ? "Assign work and track progress" : "Tasks assigned to you"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <input
+                type="text"
+                aria-label="Search tasks"
+                placeholder="Search task no, title, person..."
+                className={inputCls + " !w-64 !pr-7"}
+                style={{ borderColor: T.border }}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Escape" && setSearch("")}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 text-base leading-none rounded-full hover:bg-[#EBECF0]"
+                  style={{ color: T.muted }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
             <select aria-label="Status" className={inputCls + " !w-52"} style={{ borderColor: T.border }}
               value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All statuses</option>
@@ -1207,9 +1333,9 @@ export default function TaskManagement() {
               {loading ? (
                 <tr><td colSpan={COLS.length} className="py-10 text-center" style={{ color: T.muted }}>Loading...</td></tr>
               ) : visibleTasks.length === 0 ? (
-                <tr><td colSpan={COLS.length} className="py-10 text-center" style={{ color: T.muted }}>No tasks found</td></tr>
+                <tr><td colSpan={COLS.length} className="py-10 text-center" style={{ color: T.muted }}>{search.trim() ? `No tasks match “${search.trim()}”` : "No tasks found"}</td></tr>
               ) : (
-                visibleTasks.map((t) => {
+                pagedTasks.map((t) => {
                   const st = statusOf(t);
                   const done = t.status === "Completed";
                   const overdue = !done && new Date(t.deadline) < new Date();
@@ -1273,6 +1399,16 @@ export default function TaskManagement() {
             </tbody>
           </table>
         </div>
+
+        {!loading && visibleTasks.length > 0 && (
+          <Pagination
+            page={currentPage}
+            pageSize={pageSize}
+            total={visibleTasks.length}
+            onPage={setPage}
+            onPageSize={setPageSize}
+          />
+        )}
       </div>
 
       {showCreate && <CreateTaskModal onClose={() => setShowCreate(false)} onCreated={fetchTasks} />}
