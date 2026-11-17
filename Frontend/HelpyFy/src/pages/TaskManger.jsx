@@ -1,5 +1,5 @@
 // pages/TaskManagement.jsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import { useAuth } from "../auth/AuthContext";
@@ -14,6 +14,8 @@ const T = {
   brand: "#0C66E4",
   good: "#1F845A",
   bad: "#C9372C",
+  warn: "#7F5F01",
+  purple: "#403294",
 };
 
 const SOURCES = ["IT", "Store", "New Purchase"];
@@ -29,11 +31,27 @@ const ALLOWED_EXT = /\.(png|jpe?g|gif|webp|bmp|xlsx|xls|csv|pdf)$/i;
 const isImageName = (n = "") => /\.(png|jpe?g|gif|webp|bmp)$/i.test(n);
 const fileExt = (n = "") => (n.split(".").pop() || "").toUpperCase();
 
+// Colours for every state a task can show
 const STATUS_STYLE = {
   Assigned: ["#DEEBFF", "#0747A6"],
   "In Progress": ["#FFF0B3", "#7F5F01"],
+  "Awaiting Acceptance": ["#FFF0B3", "#7F5F01"],
+  "Ready to Close": ["#EAE6FF", "#403294"],
+  Rejected: ["#FFEDEB", "#AE2E24"],
   Completed: ["#DCFFF1", "#216E4E"],
+  "Completed Late": ["#FFEDEB", "#AE2E24"],
 };
+
+// Options in the status filter dropdown
+const STATUS_FILTERS = [
+  "Awaiting Acceptance",
+  "Assigned",
+  "In Progress",
+  "Ready to Close",
+  "Completed",
+  "Completed Late",
+  "Rejected",
+];
 
 const ACCEPT_STYLE = {
   Pending: ["#FFF0B3", "#7F5F01"],
@@ -67,6 +85,23 @@ const toLocalInput = (d) => {
 // Older tasks have no acceptance field - treat them as accepted
 const accOf = (t) => t?.acceptance?.status || "Accepted";
 const isRepeating = (t) => !!t?.recurrence && t.recurrence.toLowerCase() !== "none";
+
+/* What the user actually sees as the task's state.
+   - closed on time  -> Completed
+   - closed late     -> Completed Late
+   - not accepted    -> Awaiting Acceptance / Rejected
+   - 100% but open   -> Ready to Close (one-time tasks only: a repeating task
+                        adds up its period percentages, so it is never "ready")
+   - otherwise       -> Assigned / In Progress */
+const statusOf = (t) => {
+  if (t.status === "Completed")
+    return t.closing?.completedOnTime === false ? "Completed Late" : "Completed";
+  const acc = accOf(t);
+  if (acc === "Pending") return "Awaiting Acceptance";
+  if (acc === "Rejected") return "Rejected";
+  if ((t.progress || 0) >= 100 && !isRepeating(t)) return "Ready to Close";
+  return t.status;
+};
 
 /* ================= UPDATE PERIOD (follows the task's repeat type) ================= */
 // Daily -> date | Weekly -> week | Monthly -> month | Quarterly -> quarter | Yearly -> year
@@ -200,6 +235,23 @@ const Badge = ({ label, colors }) => {
     >
       {label}
     </span>
+  );
+};
+
+// Summary card above the table (clickable when onClick is given)
+const Stat = ({ label, value, color, sub, onClick, active }) => {
+  const Tag = onClick ? "button" : "div";
+  return (
+    <Tag
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={`text-left bg-white border rounded-[3px] px-4 py-3 ${onClick ? "hover:bg-[#F7F8F9] cursor-pointer" : ""} ${active ? "ring-2 ring-[#4C9AFF]" : ""}`}
+      style={{ borderColor: T.border }}
+    >
+      <div className="text-xs font-semibold" style={{ color: T.muted }}>{label}</div>
+      <div className="text-2xl font-medium leading-tight" style={{ color: color || T.text }}>{value}</div>
+      {sub && <div className="text-[11px]" style={{ color: T.muted }}>{sub}</div>}
+    </Tag>
   );
 };
 
@@ -557,6 +609,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   const closed = task.status === "Completed";
   const editable = isOwner && !closed && acc === "Accepted";
   const isLate = !closed && new Date() > new Date(task.deadline);
+  const shownStatus = statusOf(task);
 
   // Update period follows the repeat type: Daily -> day, Weekly -> week, Monthly -> month ...
   const rec = isRepeating(task) ? task.recurrence : "None";
@@ -692,7 +745,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
   return (
     <Modal title={taskLabel(task) ? `${taskLabel(task)} - ${task.title}` : task.title} onClose={onClose} wide>
       {/* ASSIGNMENT */}
-      <Section title="Assignment" aside={<Badge label={task.status} colors={STATUS_STYLE[task.status]} />}>
+      <Section title="Assignment" aside={<Badge label={shownStatus} colors={STATUS_STYLE[shownStatus]} />}>
         {task.description && <p className="text-sm mb-3 whitespace-pre-wrap">{task.description}</p>}
         <dl className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
           <div><dt className="text-xs font-semibold" style={{ color: T.muted }}>Assigned to</dt><dd>{task.assignedTo?.name || "—"}</dd></div>
@@ -876,7 +929,7 @@ function TaskDetail({ id, user, onClose, onChanged }) {
             <div className="flex flex-wrap items-center gap-3">
               <Badge
                 label={task.closing?.completedOnTime ? "Completed on time" : "Completed late"}
-                colors={task.closing?.completedOnTime ? STATUS_STYLE.Completed : ["#FFEDEB", "#AE2E24"]}
+                colors={task.closing?.completedOnTime ? STATUS_STYLE.Completed : STATUS_STYLE["Completed Late"]}
               />
               <span style={{ color: T.muted }}>Closed {fmt(task.closing?.completedAt)}</span>
             </div>
@@ -913,6 +966,11 @@ function TaskDetail({ id, user, onClose, onChanged }) {
           </div>
         ) : editable ? (
           <div className="space-y-4">
+            {shownStatus === "Ready to Close" && (
+              <p className="text-sm rounded-[3px] px-3 py-2" style={{ backgroundColor: "#EAE6FF", color: T.purple }}>
+                Progress is 100%. Review the details and close the task to complete it.
+              </p>
+            )}
             <p className="text-sm">
               Completed on time:{" "}
               <b style={{ color: isLate ? T.bad : T.good }}>{isLate ? "No - deadline passed" : "Yes"}</b>
@@ -1002,7 +1060,9 @@ export default function TaskManagement() {
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get("/tasks", { params: statusFilter ? { status: statusFilter } : {} });
+      // Load everything once; the status filter is applied on the client
+      // so the summary cards always show the full picture.
+      const { data } = await api.get("/tasks");
       setTasks(data);
     } catch (e) {
       toast.error(errMsg(e));
@@ -1021,7 +1081,7 @@ export default function TaskManagement() {
         setUpdStatus(null);
       }
     }
-  }, [statusFilter, isSuper]);
+  }, [isSuper]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
@@ -1032,7 +1092,51 @@ export default function TaskManagement() {
     ...(isSuper ? ["Update"] : []),
     "Status",
   ];
-  const updMap = Object.fromEntries((updStatus?.items || []).map((i) => [i._id, i]));
+
+  const updMap = useMemo(
+    () => Object.fromEntries((updStatus?.items || []).map((i) => [i._id, i])),
+    [updStatus]
+  );
+
+  // Numbers for the summary cards
+  const stats = useMemo(() => {
+    const s = {
+      total: tasks.length,
+      awaiting: 0,
+      inProgress: 0,
+      ready: 0,
+      completed: 0,
+      overdue: 0,
+      updated: 0,
+      notUpdated: 0,
+    };
+    const now = new Date();
+
+    for (const t of tasks) {
+      const st = statusOf(t);
+
+      if (st === "Completed" || st === "Completed Late") { s.completed++; continue; }
+      if (new Date(t.deadline) < now) s.overdue++;
+
+      if (st === "Awaiting Acceptance") s.awaiting++;
+      else if (st === "Ready to Close") s.ready++;
+      else if (st === "Assigned" || st === "In Progress") {
+        s.inProgress++;
+        const u = updMap[t._id];
+        if (u) (u.updatedThisPeriod ? s.updated++ : s.notUpdated++);
+      }
+    }
+    return s;
+  }, [tasks, updMap]);
+
+  const visibleTasks = useMemo(() => {
+    if (!statusFilter) return tasks;
+    // "In Progress" card/filter also covers tasks that are only "Assigned"
+    if (statusFilter === "Open") return tasks.filter((t) => ["Assigned", "In Progress"].includes(statusOf(t)));
+    return tasks.filter((t) => statusOf(t) === statusFilter);
+  }, [tasks, statusFilter]);
+
+  const completedFilterActive = statusFilter === "Completed" || statusFilter === "Completed Late";
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: T.canvas, color: T.text }}>
@@ -1047,12 +1151,11 @@ export default function TaskManagement() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <select aria-label="Status" className={inputCls + " !w-40"} style={{ borderColor: T.border }}
+            <select aria-label="Status" className={inputCls + " !w-52"} style={{ borderColor: T.border }}
               value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All statuses</option>
-              <option>Assigned</option>
-              <option>In Progress</option>
-              <option>Completed</option>
+              <option value="Open">Open (Assigned + In Progress)</option>
+              {STATUS_FILTERS.map((s) => <option key={s}>{s}</option>)}
             </select>
             {isSuper && (
               <button className={btnPrimary} style={{ backgroundColor: T.brand }} onClick={() => setShowCreate(true)}>
@@ -1062,17 +1165,34 @@ export default function TaskManagement() {
           </div>
         </div>
 
-        {isSuper && updStatus && updStatus.total > 0 && (
-          <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-1 bg-white border rounded-[3px] px-4 py-2.5 text-sm"
-            style={{ borderColor: T.border }}>
-            <span className="font-semibold">Updates</span>
-            <span><b style={{ color: T.good }}>{updStatus.updated}</b> updated</span>
-            <span><b style={{ color: updStatus.pending ? T.bad : T.good }}>{updStatus.pending}</b> not updated yet</span>
-            <span className="text-xs" style={{ color: T.muted }}>
-              Daily tasks = today · Weekly = this week · Monthly = this month
-            </span>
-          </div>
-        )}
+        {/* SUMMARY CARDS */}
+        <div className={`grid grid-cols-2 md:grid-cols-4 ${isSuper ? "lg:grid-cols-7" : "lg:grid-cols-6"} gap-3 mb-4`}>
+          <Stat label="Total tasks" value={stats.total}
+            onClick={() => setStatusFilter("")} active={!statusFilter} />
+          <Stat label="Awaiting acceptance" value={stats.awaiting} color={T.warn}
+            onClick={() => setStatusFilter("Awaiting Acceptance")} active={statusFilter === "Awaiting Acceptance"} />
+          <Stat label="In progress" value={stats.inProgress} color={T.brand}
+            onClick={() => setStatusFilter("Open")} active={statusFilter === "Open"} />
+          <Stat label="Ready to close" value={stats.ready} color={T.purple}
+            onClick={() => setStatusFilter("Ready to Close")} active={statusFilter === "Ready to Close"} />
+          <Stat label="Completed" value={stats.completed} color={T.good}
+            onClick={() => setStatusFilter("Completed")} active={completedFilterActive} />
+          <Stat label="Overdue" value={stats.overdue} color={stats.overdue ? T.bad : T.text}
+            sub="open tasks past deadline" />
+          {isSuper && (
+            <Stat
+              label="Updates this period"
+              value={
+                <>
+                  <span style={{ color: T.good }}>{stats.updated}</span>
+                  <span style={{ color: T.muted }}> / </span>
+                  <span style={{ color: stats.notUpdated ? T.bad : T.good }}>{stats.notUpdated}</span>
+                </>
+              }
+              sub="updated / not updated"
+            />
+          )}
+        </div>
 
         <div className="bg-white border rounded-[3px] overflow-x-auto" style={{ borderColor: T.border }}>
           <table className="w-full text-sm text-left min-w-[1250px]">
@@ -1086,11 +1206,13 @@ export default function TaskManagement() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={COLS.length} className="py-10 text-center" style={{ color: T.muted }}>Loading...</td></tr>
-              ) : tasks.length === 0 ? (
+              ) : visibleTasks.length === 0 ? (
                 <tr><td colSpan={COLS.length} className="py-10 text-center" style={{ color: T.muted }}>No tasks found</td></tr>
               ) : (
-                tasks.map((t) => {
-                  const overdue = t.status !== "Completed" && new Date(t.deadline) < new Date();
+                visibleTasks.map((t) => {
+                  const st = statusOf(t);
+                  const done = t.status === "Completed";
+                  const overdue = !done && new Date(t.deadline) < new Date();
                   const acc = accOf(t);
                   const repeats = isRepeating(t);
                   const fileCount = (t.attachments?.length || 0) + (t.closing?.photos?.length || 0);
@@ -1107,7 +1229,13 @@ export default function TaskManagement() {
                       <td className="py-3 px-4">{t.assignedTo?.name || "—"}</td>
                       <td className="py-3 px-4">{fmt(t.assignedAt)}</td>
                       <td className="py-3 px-4" style={{ color: overdue ? T.bad : T.text }}>
-                        {fmt(t.deadline)}{overdue && <span className="ml-1 text-xs font-semibold">OVERDUE</span>}
+                        {fmt(t.deadline)}
+                        {overdue && <span className="ml-1 text-xs font-semibold">OVERDUE</span>}
+                        {done && (
+                          <span className="block text-[11px]" style={{ color: T.muted }}>
+                            Closed {fmt(t.closing?.completedAt)}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <Badge label={acc} colors={ACCEPT_STYLE[acc]} />
@@ -1119,6 +1247,13 @@ export default function TaskManagement() {
                       {isSuper && (
                         <td className="py-3 px-4 whitespace-nowrap">
                           {(() => {
+                            if (st === "Completed" || st === "Completed Late")
+                              return <span style={{ color: T.muted }}>Closed</span>;
+                            if (st === "Ready to Close")
+                              return <Badge label="100% – awaiting closure" colors={STATUS_STYLE["Ready to Close"]} />;
+                            if (st === "Awaiting Acceptance" || st === "Rejected")
+                              return <span style={{ color: T.muted }}>—</span>;
+
                             const u = updMap[t._id];
                             if (!u) return <span style={{ color: T.muted }}>—</span>;
                             const word = UPDATE_WORD[u.recurrence] || "today";
@@ -1130,7 +1265,7 @@ export default function TaskManagement() {
                           })()}
                         </td>
                       )}
-                      <td className="py-3 px-4"><Badge label={t.status} colors={STATUS_STYLE[t.status]} /></td>
+                      <td className="py-3 px-4"><Badge label={st} colors={STATUS_STYLE[st]} /></td>
                     </tr>
                   );
                 })
